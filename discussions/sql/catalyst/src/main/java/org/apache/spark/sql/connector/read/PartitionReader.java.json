@@ -1,0 +1,134 @@
+[
+  {
+    "id" : "878d55c9-2c9a-4132-85f9-e4e8f804d3c1",
+    "prId" : 31451,
+    "prUrl" : "https://github.com/apache/spark/pull/31451#pullrequestreview-627966633",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a9cbbd65-bd90-4c4d-bd02-f169204aa3ee",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Normally, this method should be very cheap, as it just returns the current metrics values that are being tracked. The implementation may track the metrics per-row or per-batch, but that's out of our control.\r\n\r\nThat said, even if we call this method only at the end of partition read, the perf overhead can still be big if the data source tracks the metrics per-row under the hood.\r\n\r\n@wypoon does it answer your concern?",
+        "createdAt" : "2021-03-31T03:41:53Z",
+        "updatedAt" : "2021-04-20T06:45:33Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c34408b8-d384-4c37-a2a2-c23a2e933669",
+        "parentId" : "a9cbbd65-bd90-4c4d-bd02-f169204aa3ee",
+        "authorId" : "119f7711-a251-4127-b455-51a922a097f1",
+        "body" : "My interest is in the batch scan use case. It is true that, under the hood, a particular DS v2 may well need to track some particular metric per row, but there are definitely cases where a metric does not need to be updated per row; in those cases, simply reporting the metric value at the end of the read would be cheaper.\r\n",
+        "createdAt" : "2021-03-31T17:41:11Z",
+        "updatedAt" : "2021-04-20T06:45:33Z",
+        "lastEditedBy" : "119f7711-a251-4127-b455-51a922a097f1",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8ab97464-8a34-4afe-9299-b46872563c71",
+        "parentId" : "a9cbbd65-bd90-4c4d-bd02-f169204aa3ee",
+        "authorId" : "119f7711-a251-4127-b455-51a922a097f1",
+        "body" : "I think it is worth spelling out when `PartitionReader#currentMetricsValues()` is called on the DS v2, and how the values are used (in this case, they are used to set the long in the `SQLMetric`, not added to it).",
+        "createdAt" : "2021-03-31T18:48:03Z",
+        "updatedAt" : "2021-04-20T06:45:33Z",
+        "lastEditedBy" : "119f7711-a251-4127-b455-51a922a097f1",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c7af0f20-f17a-4992-8a70-ec1eca524a9d",
+        "parentId" : "a9cbbd65-bd90-4c4d-bd02-f169204aa3ee",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Since we can't control how frequently the underlying data source tracks the metrics, this is all about how frequently we want to update the SQL metrics.\r\n\r\nSince the actual metrics update is sent to the driver via heartbeat, it's not very useful if we update the metrics per-row. How about we do it like per 100 rows? Only update once may be problematic if the task runs for a long time.",
+        "createdAt" : "2021-04-01T04:53:18Z",
+        "updatedAt" : "2021-04-20T06:45:33Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7bf85a24-b522-4303-be60-6cd107696ee5",
+        "parentId" : "a9cbbd65-bd90-4c4d-bd02-f169204aa3ee",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "If the iterator is not consumed to the end, doesn't it mean we will produce inaccurate metrics if it stops in the middle of 100?",
+        "createdAt" : "2021-04-01T05:52:08Z",
+        "updatedAt" : "2021-04-20T06:45:33Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ec0c9926-2695-49c5-859b-b3390984e0df",
+        "parentId" : "a9cbbd65-bd90-4c4d-bd02-f169204aa3ee",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "That's a good point. For whole stage codegen with limit, we may stop earlier before consuming the entire iterator.\r\n\r\nIf we want to do per 100 rows update, we also need to do one more update at the end of the task.",
+        "createdAt" : "2021-04-01T06:47:11Z",
+        "updatedAt" : "2021-04-20T06:45:33Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5a66dd3c-fa83-495b-9c79-37b6bc1efa17",
+        "parentId" : "a9cbbd65-bd90-4c4d-bd02-f169204aa3ee",
+        "authorId" : "119f7711-a251-4127-b455-51a922a097f1",
+        "body" : "It sounds like the DS v2 should be prepared to compute and provide the metrics whenever `PartitionReader#currentMetricsValues()` is called. I think if we always call it at the end of the task (not precluding calling it more often), we should be able to get accurate metrics.",
+        "createdAt" : "2021-04-01T23:16:01Z",
+        "updatedAt" : "2021-04-20T06:45:33Z",
+        "lastEditedBy" : "119f7711-a251-4127-b455-51a922a097f1",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d1552021-c895-4e51-93bd-d1ae1a4ea5c0",
+        "parentId" : "a9cbbd65-bd90-4c4d-bd02-f169204aa3ee",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "So sounds like a feasible approach is to call `currentMetricsValues` and update metrics per some rows and also update it at the end of the task?",
+        "createdAt" : "2021-04-02T07:28:30Z",
+        "updatedAt" : "2021-04-20T06:45:33Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5cd2b2c5-4ae2-4944-9da6-46358f176b2a",
+        "parentId" : "a9cbbd65-bd90-4c4d-bd02-f169204aa3ee",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "yea I think so",
+        "createdAt" : "2021-04-05T07:03:00Z",
+        "updatedAt" : "2021-04-20T06:45:33Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d0f43085-4f80-4bb6-a5f2-284bec135fa4",
+        "parentId" : "a9cbbd65-bd90-4c4d-bd02-f169204aa3ee",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "We can probably add the \"update metrics per some rows\" in a followup as it's an improvement.",
+        "createdAt" : "2021-04-05T07:03:32Z",
+        "updatedAt" : "2021-04-20T06:45:33Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b8613c3a-efc6-4204-96e1-0deb0ef1ee1c",
+        "parentId" : "a9cbbd65-bd90-4c4d-bd02-f169204aa3ee",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "okay, sgtm.",
+        "createdAt" : "2021-04-05T16:23:38Z",
+        "updatedAt" : "2021-04-20T06:45:33Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "06eb9c79a3fdd807ec08540deb2234939396325a",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +53,57 @@  /**\n   * Returns an array of custom task metrics. By default it returns empty array. Note that it is\n   * not recommended to put heavy logic in this method as it may affect reading performance.\n   */\n  default CustomTaskMetric[] currentMetricsValues() {"
+  }
+]

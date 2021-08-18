@@ -295,5 +295,104 @@
     "commit" : "6f6d511e571a2109cba4dcd6b31fa3def4e44e21",
     "line" : 35,
     "diffHunk" : "@@ -1,1 +404,408 @@  }\n\n  override def needCopyResult: Boolean = true\n\n  override def doProduce(ctx: CodegenContext): String = {"
+  },
+  {
+    "id" : "b6cdece9-5946-4e52-beb6-5831ea0ab12a",
+    "prId" : 31477,
+    "prUrl" : "https://github.com/apache/spark/pull/31477#pullrequestreview-584023056",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "da36066e-630d-4c9d-a09c-43af450c5780",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "If `condition` is empty, `numOutputRows` == `numMatchedPairs `? If so, could we only show this new metric in the web UI when `condition` defined?",
+        "createdAt" : "2021-02-04T23:54:33Z",
+        "updatedAt" : "2021-03-15T15:03:56Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "896e83aa-e262-4d5f-87df-e258b353e739",
+        "parentId" : "da36066e-630d-4c9d-a09c-43af450c5780",
+        "authorId" : "cdcefa9a-1880-4b7a-ae6a-ece33e944188",
+        "body" : "If the condition is empty, then `numOutputRows == numMatchedPairs` only in the case of InnerJoin. It is not necessarily the case for other types of join, because numMatchedPairs is only measuring the records when there is a common key on both the build side and the stream side.  For instance, in the case of leftOuterJoin `numOutputRows  = numMatchedPairs  + (number of non matched pairs on the left side of the join)`.",
+        "createdAt" : "2021-02-05T02:08:19Z",
+        "updatedAt" : "2021-03-15T15:03:56Z",
+        "lastEditedBy" : "cdcefa9a-1880-4b7a-ae6a-ece33e944188",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2a96cd2a-1fe4-4c76-b72f-f8662e33c959",
+        "parentId" : "da36066e-630d-4c9d-a09c-43af450c5780",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Ah, I see. What is the merit of being able to see this number for a user? I read the PR description and, at first, I thought this PR mainly targets at the case where a `condition` is given.",
+        "createdAt" : "2021-02-05T04:15:46Z",
+        "updatedAt" : "2021-03-15T15:03:56Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cc0fe8a0-f358-4112-bde8-45c9a2aef6fd",
+        "parentId" : "da36066e-630d-4c9d-a09c-43af450c5780",
+        "authorId" : "cdcefa9a-1880-4b7a-ae6a-ece33e944188",
+        "body" : "- Yes, the metric is very useful especially when there is a condition. It helps the users to recognize skew. But even if there is no condition, it could help the users to see the number of matched rows. For instance, in case of outer joins users will be able to see just how many rows matched between the stream side and the build side without explicitly doing another inner join.   \r\n\r\n- I also faced an implementation problem when I originally tried to show the metric only when there is a condition. If there is a metric defined, but if the metric is not used in some cases (For example if we don't increment the metric when there is no condition), then the tests in SQLMetricsSuite will fail because the accumulatorIds corresponding the metrics would get messed up. The size of metric values in `val metricValues = statusStore.executionMetrics(executionId)` and the metrics in `node.metrics` would become inconsistent. \r\n\r\n- It might also confuse the users to see the metric in some cases and not see the metric in other cases. It would probably be best to show the metric everytime there is a join node in the UI to avoid any confusion.",
+        "createdAt" : "2021-02-05T04:57:33Z",
+        "updatedAt" : "2021-03-15T15:03:56Z",
+        "lastEditedBy" : "cdcefa9a-1880-4b7a-ae6a-ece33e944188",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4c35275fa7c670cd18c16548f36cd6184ec155ff",
+    "line" : 18,
+    "diffHunk" : "@@ -1,1 +94,98 @@\n  @transient private lazy val boundCondition: InternalRow => Boolean =\n    if (condition.isDefined) {\n      Predicate.create(condition.get, streamed.output ++ broadcast.output).eval _\n    } else {"
+  },
+  {
+    "id" : "3c34a1b4-abc9-4a8e-82d1-79ab205957f1",
+    "prId" : 31477,
+    "prUrl" : "https://github.com/apache/spark/pull/31477#pullrequestreview-592830653",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9b89f08e-cdd9-4c59-b25d-cfacd311f612",
+        "parentId" : null,
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "shouldn't this be `lazy`? otherwise `metrics` becomes non lazy...",
+        "createdAt" : "2021-02-17T10:06:35Z",
+        "updatedAt" : "2021-03-15T15:03:56Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c95995dd-d890-47e7-b598-52e649ccf0f3",
+        "parentId" : "9b89f08e-cdd9-4c59-b25d-cfacd311f612",
+        "authorId" : "cdcefa9a-1880-4b7a-ae6a-ece33e944188",
+        "body" : "Done. Fixed in latest commit.",
+        "createdAt" : "2021-02-18T00:44:02Z",
+        "updatedAt" : "2021-03-15T15:03:56Z",
+        "lastEditedBy" : "cdcefa9a-1880-4b7a-ae6a-ece33e944188",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "47d06506-ce20-48c1-9c44-fcbf3868830a",
+        "parentId" : "9b89f08e-cdd9-4c59-b25d-cfacd311f612",
+        "authorId" : "cdcefa9a-1880-4b7a-ae6a-ece33e944188",
+        "body" : "Actually making it lazy is causing a NullPointerException in SqlQuerySuite, ExistenceJoinSuite, OuterJoinSuite.  Somehow the sqlContext object in line 67 is turning out to be null. I am still trying to understand why that is the case. For now I reverted the change.\r\n`java.lang.NullPointerException\r\n\tat org.apache.spark.sql.execution.SparkPlan.sparkContext(SparkPlan.scala:67)\r\n\tat org.apache.spark.sql.execution.joins.BroadcastNestedLoopJoinExec.metrics$lzycompute(BroadcastNestedLoopJoinExec.scala:42)\r\n\tat org.apache.spark.sql.execution.joins.BroadcastNestedLoopJoinExec.metrics(BroadcastNestedLoopJoinExec.scala:41)\r\n\tat org.apache.spark.sql.execution.SparkPlan.longMetric(SparkPlan.scala:135)\r\n\tat org.apache.spark.sql.execution.joins.BroadcastNestedLoopJoinExec.numMatchedRows$lzycompute(BroadcastNestedLoopJoinExec.scala:93)",
+        "createdAt" : "2021-02-18T03:47:34Z",
+        "updatedAt" : "2021-03-15T15:03:56Z",
+        "lastEditedBy" : "cdcefa9a-1880-4b7a-ae6a-ece33e944188",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4c35275fa7c670cd18c16548f36cd6184ec155ff",
+    "line" : 15,
+    "diffHunk" : "@@ -1,1 +91,95 @@  }\n\n  private val numMatchedRows = longMetric(\"numMatchedRows\")\n\n  @transient private lazy val boundCondition: InternalRow => Boolean ="
   }
 ]

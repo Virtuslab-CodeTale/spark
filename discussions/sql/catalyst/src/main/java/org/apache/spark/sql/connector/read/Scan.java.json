@@ -20,5 +20,170 @@
     "commit" : "881d2b2b7246d9453bfa7e074ab19334bf8d9876",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +67,71 @@   * {@link Table#capabilities()}.\n   * <p>\n   * If the scan supports runtime filtering and implements {@link SupportsRuntimeFiltering},\n   * this method may be called multiple times. Therefore, implementations can cache some state\n   * to avoid planning the job twice."
+  },
+  {
+    "id" : "6e789272-6ac7-4228-956d-b7b63fb0d6af",
+    "prId" : 31476,
+    "prUrl" : "https://github.com/apache/spark/pull/31476#pullrequestreview-587928734",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "60d7ce4a-1365-4626-a1fd-c7af461f6615",
+        "parentId" : null,
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "maybe we should have a `SupportsReportMetrics` trait with this default implementation?",
+        "createdAt" : "2021-02-04T20:00:25Z",
+        "updatedAt" : "2021-03-23T09:01:13Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b1e46d3e-5dd5-47a1-ae28-ba8a2dbee779",
+        "parentId" : "60d7ce4a-1365-4626-a1fd-c7af461f6615",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Hmm, I'm okay on putting it into `SupportsReportMetrics`.\r\n\r\nFrom implementation view, I don't see it is much different. Seems we just need to additionally check if a `Scan` is a `SupportsReportMetrics` when we want to get the supported metric list.\r\n\r\nSemantically it sounds the same. A scan reports no custom metrics v.s. A scan does not support custom metrics.",
+        "createdAt" : "2021-02-04T20:11:33Z",
+        "updatedAt" : "2021-03-23T09:01:13Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "22e6b45c-3250-482f-9e4e-1605820a8eee",
+        "parentId" : "60d7ce4a-1365-4626-a1fd-c7af461f6615",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "I also thought like @sunchao . +1 for a new trait.",
+        "createdAt" : "2021-02-04T22:00:14Z",
+        "updatedAt" : "2021-03-23T09:01:13Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "00b00e8d-9156-4db6-9e50-798ab64e2c53",
+        "parentId" : "60d7ce4a-1365-4626-a1fd-c7af461f6615",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "I can see the argument for a separate trait, but I would opt not to add this in one. We want to encourage sources to provide metrics. It's easier to see that there's a method that can be implemented than to see an interface that can be mixed in, especially when that interface might extend both `Scan` and `Write` (and not extend from either). There's also just more cost with having a lot of interfaces for very specific things.\r\n\r\nI think an optional method is a good balance of concerns: it is optional, but easily discovered and doesn't add another interface that an implementer needs to know about and know which class to implement it in.",
+        "createdAt" : "2021-02-04T23:11:53Z",
+        "updatedAt" : "2021-03-23T09:01:13Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f34c6a25-7ffd-4b89-a5ba-27d58f0be259",
+        "parentId" : "60d7ce4a-1365-4626-a1fd-c7af461f6615",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "I'd prefer an optional method so it sounds good. @dongjoon-hyun @sunchao WDYT?",
+        "createdAt" : "2021-02-04T23:43:41Z",
+        "updatedAt" : "2021-03-23T09:01:13Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9256a423-20f0-40c5-a4aa-2e6b44c8cd24",
+        "parentId" : "60d7ce4a-1365-4626-a1fd-c7af461f6615",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "it's a nit from me so I'm fine either way. About the method naming, should we make it shorter like `metrics`? ",
+        "createdAt" : "2021-02-04T23:52:42Z",
+        "updatedAt" : "2021-03-23T09:01:13Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f5ff0865-4779-432e-af82-462a572760c5",
+        "parentId" : "60d7ce4a-1365-4626-a1fd-c7af461f6615",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Encourage is different from enforcing.\r\n>  We want to encourage sources to provide metrics.\r\n\r\nIn addition, if we tightly couple this together, we are unable to split it permanently without a breaking change. That's a design risk to me.\r\n> There's also just more cost with having a lot of interfaces for very specific things.\r\n\r\nGiven that, I'd recommend to put orthogonal concept separately.\r\n\r\nSince this is a design issue, cc @cloud-fan , @gatorsmile , @gengliangwang , too.",
+        "createdAt" : "2021-02-05T01:02:30Z",
+        "updatedAt" : "2021-03-23T09:01:13Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c6eed72c-7040-4a4a-8777-1dacf9b5ae69",
+        "parentId" : "60d7ce4a-1365-4626-a1fd-c7af461f6615",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "I'm fine for a separate trait. It is great if we can have a consensus so this can move forward. @rdblue Please let me know if you have strong option here.",
+        "createdAt" : "2021-02-07T04:32:32Z",
+        "updatedAt" : "2021-03-23T09:01:13Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6f9ca254-dc6a-44f6-b61d-5918fc140faf",
+        "parentId" : "60d7ce4a-1365-4626-a1fd-c7af461f6615",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "I'm okay with a separate trait. I wouldn't want to block this on a minor issue, but I don't think it is the right choice. If the general consensus is to go with a trait, please more forward.",
+        "createdAt" : "2021-02-08T17:42:01Z",
+        "updatedAt" : "2021-03-23T09:01:13Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3490be10-d02f-4bf0-b5b2-9e8c36fd44c2",
+        "parentId" : "60d7ce4a-1365-4626-a1fd-c7af461f6615",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Thank you @rdblue.",
+        "createdAt" : "2021-02-08T18:16:34Z",
+        "updatedAt" : "2021-03-23T09:01:13Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b561197c-75da-4f61-a2d5-0b38eb5e8537",
+        "parentId" : "60d7ce4a-1365-4626-a1fd-c7af461f6615",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "No problem! I didn't intend to delay this, I just thought that other people might agree with my reasoning.",
+        "createdAt" : "2021-02-08T18:24:49Z",
+        "updatedAt" : "2021-03-23T09:01:13Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e4008c1b-3c7a-42d9-8a2f-5b5da7331147",
+        "parentId" : "60d7ce4a-1365-4626-a1fd-c7af461f6615",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I don't see how a mixin trait helps avoid breaking change. Removing the trait later is also a breaking change. Agree with @rdblue that an optional method is simple and sufficient. Some other features have mixin trait because they don't have a reasonable default if made into optional methods. Metrics is OK as we can return empty metrics as the default.",
+        "createdAt" : "2021-02-08T19:09:20Z",
+        "updatedAt" : "2021-03-23T09:01:13Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "33259151-331b-42cc-a7f4-a60dc3dc4406",
+        "parentId" : "60d7ce4a-1365-4626-a1fd-c7af461f6615",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "cc @dongjoon-hyun Does it convincing for you?",
+        "createdAt" : "2021-02-08T22:13:27Z",
+        "updatedAt" : "2021-03-23T09:01:13Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6049e575-2afa-4801-8ed5-245dad438519",
+        "parentId" : "60d7ce4a-1365-4626-a1fd-c7af461f6615",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "I confirmed with @dongjoon-hyun offline and it's okay to move towards optional methods. Thanks all for the discussion.",
+        "createdAt" : "2021-02-10T18:37:28Z",
+        "updatedAt" : "2021-03-23T09:01:13Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "eb9d94a07a38d6efcd71f12cc1c2db22bf8a7019",
+    "line" : 17,
+    "diffHunk" : "@@ -1,1 +109,113 @@   * By default it returns empty array.\n   */\n  default CustomMetric[] supportedCustomMetrics() {\n    CustomMetric[] NO_METRICS = {};\n    return NO_METRICS;"
   }
 ]
