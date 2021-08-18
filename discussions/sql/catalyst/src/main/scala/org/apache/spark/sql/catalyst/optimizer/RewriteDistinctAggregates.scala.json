@@ -97,5 +97,236 @@
     "commit" : "ba7c3a4d3ad5827f03c09356f93079732284e29d",
     "line" : 6,
     "diffHunk" : "@@ -1,1 +228,232 @@            }\n            val filterOpt = e.filter.map(_.transform {\n              case a: Attribute => distinctAggChildAttrLookup.getOrElse(a, a)\n            })\n            (e, e.copy(aggregateFunction = naf, isDistinct = false, filter = filterOpt))"
+  },
+  {
+    "id" : "f04a1757-096b-4a44-9bdf-2eb5bfce9c91",
+    "prId" : 27428,
+    "prUrl" : "https://github.com/apache/spark/pull/27428#pullrequestreview-447001530",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1a186aa0-fbe2-4417-8b6f-cf88846159af",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "This plan rewriting LGTM. Shall we update the second example to make it consistent with this example?\r\n```\r\n   ...\r\n   Aggregate(\r\n      key = ...\r\n      functions = [sum('value)]\r\n      output = ...\r\n     Expand(\r\n        projections = [('key, null, null, 0, if ('id > 1) cast('value as bigint) else null, 'id),\r\n                       (...),\r\n                       (...)]\r\n        output = [...])\r\n       LocalTableScan [...]\r\n```\r\n",
+        "createdAt" : "2020-07-08T15:31:41Z",
+        "updatedAt" : "2020-07-14T02:20:56Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0814ea9c-5076-4443-980c-2ede656f2885",
+        "parentId" : "1a186aa0-fbe2-4417-8b6f-cf88846159af",
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "This means to revert some code like\r\nhttps://github.com/apache/spark/commit/d59e7195f6051820c95f84c83b01148975412d85#diff-8075628c8d39481271059f6fb2dd1e62L160\r\n?",
+        "createdAt" : "2020-07-09T10:55:19Z",
+        "updatedAt" : "2020-07-14T02:20:56Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8009e94b-ef9b-42f4-96ba-1af64c435b8e",
+        "parentId" : "1a186aa0-fbe2-4417-8b6f-cf88846159af",
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "OK. I got it.",
+        "createdAt" : "2020-07-13T06:06:46Z",
+        "updatedAt" : "2020-07-14T02:20:56Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "20ad143c620ef75e8d446f8f1e595992a1959b4a",
+    "line" : 113,
+    "diffHunk" : "@@ -1,1 +180,184 @@ * This rule rewrites this logical plan to the following (pseudo) logical plan:\n * {{{\n *   Aggregate(\n *      key = ['key]\n *      functions = [count(if (('gid = 1)) '_gen_attr_1 else null),"
+  },
+  {
+    "id" : "f214b9a9-aa2e-4c14-b420-5f36f2348400",
+    "prId" : 27428,
+    "prUrl" : "https://github.com/apache/spark/pull/27428#pullrequestreview-445315053",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f4f75d0d-32f0-4792-b740-45e9f85d66ec",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "can you update the comment?",
+        "createdAt" : "2020-07-08T15:32:13Z",
+        "updatedAt" : "2020-07-14T02:20:56Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5c6ab7fe-8c02-4ba7-bdd0-c6bb7993f6c9",
+        "parentId" : "f4f75d0d-32f0-4792-b740-45e9f85d66ec",
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "1. If sql seems like\r\n`SELECT b, COUNT(DISTINCT cat1), COUNT(DISTINCT cat1) FILTER (WHERE id > 0) FROM cachedData GROUP BY b`\r\nIn the first phase, project the data.\r\nIn the second phase will expand the data and merge project with expand.\r\nI added some comments at https://github.com/apache/spark/blob/16d8c1d26681c875d61e50305de43f3ca5e75154/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/optimizer/RewriteDistinctAggregates.scala#L206\r\n\r\n2. If sql seems like\r\n`SELECT b, COUNT(DISTINCT cat1) FILTER (WHERE id > 0) FROM cachedData GROUP BY b`\r\nIn the first phase, project the data.\r\nIn the second phase, will not expand the data and still preserve the project.\r\n",
+        "createdAt" : "2020-07-09T06:13:29Z",
+        "updatedAt" : "2020-07-14T02:20:56Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "20ad143c620ef75e8d446f8f1e595992a1959b4a",
+    "line" : 135,
+    "diffHunk" : "@@ -1,1 +202,206 @@ * In the first phase, if the aggregate query exists filter clauses, project the output of\n * the child of the aggregate query:\n * 1. Project the data. There are three aggregation groups in this query:\n *    i. the non-distinct group without filter clause;\n *    ii. the distinct 'cat1 group without filter clause;"
+  },
+  {
+    "id" : "07a3320a-e1aa-4213-beb0-fcef098ea54f",
+    "prId" : 27428,
+    "prUrl" : "https://github.com/apache/spark/pull/27428#pullrequestreview-447111905",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "437c218c-2773-4102-8ee5-fbdfcbe0bc40",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "This doesn't match the group. Maybe just make it general `the distinct group without filter clause` and `the distinct group with filter clause`",
+        "createdAt" : "2020-07-13T09:15:48Z",
+        "updatedAt" : "2020-07-14T02:20:56Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2a0da236-1427-4628-9b1d-4f3f269c7951",
+        "parentId" : "437c218c-2773-4102-8ee5-fbdfcbe0bc40",
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "OK",
+        "createdAt" : "2020-07-13T10:05:14Z",
+        "updatedAt" : "2020-07-14T02:20:56Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "20ad143c620ef75e8d446f8f1e595992a1959b4a",
+    "line" : 138,
+    "diffHunk" : "@@ -1,1 +205,209 @@ *    i. the non-distinct group without filter clause;\n *    ii. the distinct 'cat1 group without filter clause;\n *    iii. the distinct 'cat2 group with filter clause.\n *    When there is at least one aggregate function having the filter clause, we add a project\n *    node on the input plan."
+  },
+  {
+    "id" : "9314bf22-22f5-4113-8f88-0063119187b7",
+    "prId" : 27428,
+    "prUrl" : "https://github.com/apache/spark/pull/27428#pullrequestreview-447113408",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1550dea4-01a5-4968-b133-c19f1a3e3bb7",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "We don't need to repeat these 3 groups.",
+        "createdAt" : "2020-07-13T09:17:57Z",
+        "updatedAt" : "2020-07-14T02:20:56Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ada3e644-6766-4f82-b7cd-9443e6d24424",
+        "parentId" : "1550dea4-01a5-4968-b133-c19f1a3e3bb7",
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "They are different",
+        "createdAt" : "2020-07-13T10:08:30Z",
+        "updatedAt" : "2020-07-14T02:20:56Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "20ad143c620ef75e8d446f8f1e595992a1959b4a",
+    "line" : 145,
+    "diffHunk" : "@@ -1,1 +212,216 @@ *    i. the non-distinct 'cat1 group without filter clause;\n *    ii. the distinct 'cat1 group without filter clause;\n *    iii. the distinct 'cat1 group with filter clause.\n *    The attributes referenced by different aggregate expressions are likely to overlap,\n *    and if no additional processing is performed, data loss will occur. If we directly output"
+  },
+  {
+    "id" : "eff8e5cc-7491-4031-a7e6-4f82b09b9b67",
+    "prId" : 27428,
+    "prUrl" : "https://github.com/apache/spark/pull/27428#pullrequestreview-447117395",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0a4b5a8e-2c0e-4cb7-8553-5f066ae078de",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Do we need to rewrite this query? The planner can handle single distinct agg func AFAIK.",
+        "createdAt" : "2020-07-13T09:22:02Z",
+        "updatedAt" : "2020-07-14T02:20:56Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f6268ea7-292a-43ba-b03a-5c8060a29b04",
+        "parentId" : "0a4b5a8e-2c0e-4cb7-8553-5f066ae078de",
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "I think we can keep the previous behavior. `AggregationIterator` already done this.",
+        "createdAt" : "2020-07-13T10:13:07Z",
+        "updatedAt" : "2020-07-14T02:20:56Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "20ad143c620ef75e8d446f8f1e595992a1959b4a",
+    "line" : 71,
+    "diffHunk" : "@@ -1,1 +138,142 @@ *                 sum('value)]\n *    output = ['key, 'cat1_cnt, 'total])\n *   LocalTableScan [...]\n * }}}\n *"
+  },
+  {
+    "id" : "5e33f264-4693-4a63-814e-e4170acf6eba",
+    "prId" : 27428,
+    "prUrl" : "https://github.com/apache/spark/pull/27428#pullrequestreview-448152350",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2511005d-cf6b-444c-8154-5d99906ed7a9",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Is this necessary? The query can work fine even if we don't add this Project in this rule, right?",
+        "createdAt" : "2020-07-14T12:41:21Z",
+        "updatedAt" : "2020-07-14T12:41:21Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f2f8206f-3d02-4de3-9a21-1d154e3fc70c",
+        "parentId" : "2511005d-cf6b-444c-8154-5d99906ed7a9",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "This rule should be skipped if there is only one distinct. Having a filter or not shouldn't change it.",
+        "createdAt" : "2020-07-14T12:42:20Z",
+        "updatedAt" : "2020-07-14T12:42:20Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c319874e-2503-4181-94d2-75cb6613fb4e",
+        "parentId" : "2511005d-cf6b-444c-8154-5d99906ed7a9",
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "If not apply this rule, can't support the case that have only one distinct with filter clause.\r\nFor unification, the rules are used uniformly here",
+        "createdAt" : "2020-07-14T14:13:12Z",
+        "updatedAt" : "2020-07-14T14:36:54Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bdcfa47c-4b1c-4e1a-b31d-7c251250a125",
+        "parentId" : "2511005d-cf6b-444c-8154-5d99906ed7a9",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I mean to unify the implementations of the filter clause that are handled by this rule. This case is not handled by this rule before your PR. Sorry if I didn't make myself clear enough.",
+        "createdAt" : "2020-07-14T14:19:43Z",
+        "updatedAt" : "2020-07-14T14:19:44Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "20ad143c620ef75e8d446f8f1e595992a1959b4a",
+    "line" : 82,
+    "diffHunk" : "@@ -1,1 +149,153 @@ *      output = ['key, 'cat1_cnt, 'total])\n *     Project(\n *        projectionList = ['key, if ('id > 1) 'cat1 else null, cast('value as bigint)]\n *        output = ['key, '_gen_attr_1, '_gen_attr_2])\n *       LocalTableScan [...]"
   }
 ]

@@ -1021,5 +1021,60 @@
     "commit" : "8dfee675f6bfaf04068b856fc15158cea307f188",
     "line" : 4,
     "diffHunk" : "@@ -1,1 +225,229 @@  - Since Spark 3.0, when casting string value to integral types(tinyint, smallint, int and bigint), datetime types(date, timestamp and interval) and boolean type, the leading and trailing whitespaces (<= ASCII 32) will be trimmed before converted to these type values, e.g. `cast(' 1\\t' as int)` results `1`, `cast(' 1\\t' as boolean)` results `true`, `cast('2019-10-10\\t as date)` results the date value `2019-10-10`. In Spark version 2.4 and earlier, while casting string to integrals and booleans, it will not trim the whitespaces from both ends, the foregoing results will be `null`, while to datetimes, only the trailing spaces (= ASCII 32) will be removed.\n\n  - Since Spark 3.0, An analysis exception will be thrown when hash expressions are applied on elements of MapType. To restore the behavior before Spark 3.0, set `spark.sql.legacy.useHashOnMapType` to true.\n    \n  - Since Spark 3.0, numbers written in scientific notation(e.g. `1E2`) would be parsed as Double. In Spark version 2.4 and earlier, they're parsed as Decimal. To restore the behavior before Spark 3.0, you can set `spark.sql.legacy.exponentLiteralAsDecimal.enabled` to `true`."
+  },
+  {
+    "id" : "85a3aef7-f1e3-4fb4-9a25-406be4df9b23",
+    "prId" : 27456,
+    "prUrl" : "https://github.com/apache/spark/pull/27456#pullrequestreview-353295654",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c1a4d4f7-5f07-4a3f-85eb-1c8289fa907a",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Thank you for updating this, @viirya .",
+        "createdAt" : "2020-02-04T20:57:32Z",
+        "updatedAt" : "2020-02-04T21:04:06Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "fd62b4b048dcb93ab65d2a62130cc3f10dcafd79",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +38,42 @@  - Since Spark 3.0, the Dataset and DataFrame API `unionAll` is not deprecated any more. It is an alias for `union`.\n\n  - In Spark version 2.4 and earlier, the parser of JSON data source treats empty strings as null for some data types such as `IntegerType`. For `FloatType`, `DoubleType`, `DateType` and `TimestampType`, it fails on empty strings and throws exceptions. Since Spark 3.0, we disallow empty strings and will throw exceptions for data types except for `StringType` and `BinaryType`. The previous behaviour of allowing empty string can be restored by setting `spark.sql.legacy.json.allowEmptyString.enabled` to `true`.\n\n  - Since Spark 3.0, the `from_json` functions supports two modes - `PERMISSIVE` and `FAILFAST`. The modes can be set via the `mode` option. The default mode became `PERMISSIVE`. In previous versions, behavior of `from_json` did not conform to either `PERMISSIVE` nor `FAILFAST`, especially in processing of malformed JSON records. For example, the JSON string `{\"a\" 1}` with the schema `a INT` is converted to `null` by previous versions but Spark 3.0 converts it to `Row(null)`."
+  },
+  {
+    "id" : "4dec551f-6874-4004-b085-3fabae2f1d1d",
+    "prId" : 27441,
+    "prUrl" : "https://github.com/apache/spark/pull/27441#pullrequestreview-353554905",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c092862a-a7b1-4474-830d-874887a019d0",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "is this really related to the Proleptic Gregorian calendar switch? It looks to me that we just switch to a better pattern string implementation.",
+        "createdAt" : "2020-02-05T08:43:43Z",
+        "updatedAt" : "2020-02-05T08:43:44Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a00210d4-1491-411b-8be2-0901350c99a5",
+        "parentId" : "c092862a-a7b1-4474-830d-874887a019d0",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "Yes, it is related because `SimpleDateFormat` and `DateTimeFormatter` use different calendars underneath. Slightly different patterns are just a consequence of switching.",
+        "createdAt" : "2020-02-05T09:04:00Z",
+        "updatedAt" : "2020-02-05T09:04:01Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "19a47c1cd08ce6e2e00e37abdc8fd6c4b4311b4e",
+    "line" : 7,
+    "diffHunk" : "@@ -1,1 +68,72 @@  - Since Spark 3.0, Proleptic Gregorian calendar is used in parsing, formatting, and converting dates and timestamps as well as in extracting sub-components like years, days and etc. Spark 3.0 uses Java 8 API classes from the java.time packages that based on ISO chronology (https://docs.oracle.com/javase/8/docs/api/java/time/chrono/IsoChronology.html). In Spark version 2.4 and earlier, those operations are performed by using the hybrid calendar (Julian + Gregorian, see https://docs.oracle.com/javase/7/docs/api/java/util/GregorianCalendar.html). The changes impact on the results for dates before October 15, 1582 (Gregorian) and affect on the following Spark 3.0 API:\n\n    - Parsing/formatting of timestamp/date strings. This effects on CSV/JSON datasources and on the `unix_timestamp`, `date_format`, `to_unix_timestamp`, `from_unixtime`, `to_date`, `to_timestamp` functions when patterns specified by users is used for parsing and formatting. Since Spark 3.0, the conversions are based on `java.time.format.DateTimeFormatter`, see https://docs.oracle.com/javase/8/docs/api/java/time/format/DateTimeFormatter.html. New implementation performs strict checking of its input. For example, the `2015-07-22 10:00:00` timestamp cannot be parse if pattern is `yyyy-MM-dd` because the parser does not consume whole input. Another example is the `31/01/2015 00:00` input cannot be parsed by the `dd/MM/yyyy hh:mm` pattern because `hh` supposes hours in the range `1-12`. In Spark version 2.4 and earlier, `java.text.SimpleDateFormat` is used for timestamp/date string conversions, and the supported patterns are described in https://docs.oracle.com/javase/7/docs/api/java/text/SimpleDateFormat.html. The old behavior can be restored by setting `spark.sql.legacy.timeParser.enabled` to `true`.\n\n    - The `weekofyear`, `weekday`, `dayofweek`, `date_trunc`, `from_utc_timestamp`, `to_utc_timestamp`, and `unix_timestamp` functions use java.time API for calculation week number of year, day number of week as well for conversion from/to TimestampType values in UTC time zone."
   }
 ]

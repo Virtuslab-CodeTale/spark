@@ -53,5 +53,137 @@
     "commit" : "79831c2a6f3e527cebaff70f1546b31876e25e28",
     "line" : 36,
     "diffHunk" : "@@ -1,1 +102,106 @@      },\n      combOp = { case (counts1, counts2) =>\n        counts2.foreach { case (t, c) => counts1.changeValue(t, c, _ + c) }\n        counts1\n      }"
+  },
+  {
+    "id" : "320cc7d9-dae4-4203-8530-c588a819b175",
+    "prId" : 27461,
+    "prUrl" : "https://github.com/apache/spark/pull/27461#pullrequestreview-354218833",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "cc3eb451-76da-49b9-815c-2e9e6d48cf71",
+        "parentId" : null,
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "Making `ChiSqTestResult` serializable always cause odd failure in the py side, so I have to work around it",
+        "createdAt" : "2020-02-06T06:11:25Z",
+        "updatedAt" : "2020-02-17T07:30:03Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a59724e87e84ca09e6d59a6b8a10f0e035ee4d61",
+    "line" : 120,
+    "diffHunk" : "@@ -1,1 +133,137 @@\n      val result = ChiSqTest.chiSquaredMatrix(contingency, methodName)\n      (col, result.pValue, result.degreesOfFreedom, result.statistic, result.nullHypothesis)\n    }.collect().sortBy(_._1).map {\n      case (_, pValue, degreesOfFreedom, statistic, nullHypothesis) =>"
+  },
+  {
+    "id" : "f51f828e-a8d3-4fb0-87ef-c950573b95f8",
+    "prId" : 27461,
+    "prUrl" : "https://github.com/apache/spark/pull/27461#pullrequestreview-355522326",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4f4a3082-dca2-4c5c-9e26-0c2b78a19819",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Heh, now I'm trying to think through whether there is any issue with sparse vectors here. This can't just examine nonzeros of course. I'm guessing you wouldn't usually be running a chi-squared test on very sparse large data anyway right?",
+        "createdAt" : "2020-02-07T16:10:37Z",
+        "updatedAt" : "2020-02-17T07:30:03Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6585a223-89de-440d-b8cc-7ff0224a624e",
+        "parentId" : "4f4a3082-dca2-4c5c-9e26-0c2b78a19819",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "Since ChiSquare is for categorical features, so maybe not supposed to used on very sparse datasets.\r\nMaybe it is doable to only use active elements, I will have a try.",
+        "createdAt" : "2020-02-08T01:06:13Z",
+        "updatedAt" : "2020-02-17T07:30:03Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "772550b2-51a6-417c-9bbe-e1440a4ad5f6",
+        "parentId" : "4f4a3082-dca2-4c5c-9e26-0c2b78a19819",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "I dont' think you can skip 0 elements; the count still matters for chi-squared",
+        "createdAt" : "2020-02-08T02:08:50Z",
+        "updatedAt" : "2020-02-17T07:30:03Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a59724e87e84ca09e6d59a6b8a10f0e035ee4d61",
+    "line" : 82,
+    "diffHunk" : "@@ -1,1 +95,99 @@    data.flatMap { case LabeledPoint(label, features) =>\n      require(features.size == numFeatures)\n      features.iterator.map { case (col, value) =>\n        (col, (value, label))\n      }"
+  },
+  {
+    "id" : "247f962c-26d4-44dd-b2f3-7464951c436b",
+    "prId" : 27461,
+    "prUrl" : "https://github.com/apache/spark/pull/27461#pullrequestreview-355754225",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ac633f29-d3fd-4ca1-87fb-fc07c1e5bc2b",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "You skip counting 0 elements here - this is accounted for by checking num non zero below?",
+        "createdAt" : "2020-02-09T16:35:50Z",
+        "updatedAt" : "2020-02-17T07:30:03Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "58100676-22bd-458a-b106-e1ebacc44936",
+        "parentId" : "ac633f29-d3fd-4ca1-87fb-fc07c1e5bc2b",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "Yes, num of zeros = total count - num of non-zeros",
+        "createdAt" : "2020-02-10T08:28:30Z",
+        "updatedAt" : "2020-02-17T07:30:03Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a59724e87e84ca09e6d59a6b8a10f0e035ee4d61",
+    "line" : 145,
+    "diffHunk" : "@@ -1,1 +158,162 @@    val results = data.flatMap { case LabeledPoint(label, features) =>\n      require(features.size == numFeatures)\n      features.nonZeroIterator.map { case (col, value) =>\n        (col, (value, label))\n      }"
+  },
+  {
+    "id" : "a597219a-5112-4721-88fd-3a759b8fe6b5",
+    "prId" : 27461,
+    "prUrl" : "https://github.com/apache/spark/pull/27461#pullrequestreview-355753882",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0cc20b75-4653-47e1-8f45-68d07f894d04",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Just so I understand what this is doing ... this is forming a (feature value, label value) contingency matrix for each column, and then reporting a chi-squared test result for each column vs the label?",
+        "createdAt" : "2020-02-09T16:40:19Z",
+        "updatedAt" : "2020-02-17T07:30:03Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "93bdf878-3534-4f4d-a8ac-dfde20b431b1",
+        "parentId" : "0cc20b75-4653-47e1-8f45-68d07f894d04",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "Yes",
+        "createdAt" : "2020-02-10T08:27:51Z",
+        "updatedAt" : "2020-02-17T07:30:03Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a59724e87e84ca09e6d59a6b8a10f0e035ee4d61",
+    "line" : 182,
+    "diffHunk" : "@@ -1,1 +190,194 @@      val contingency = new DenseMatrix(numValues, numLabels,\n        Array.ofDim[Double](numValues * numLabels))\n      count.foreach { case ((value, label), c) =>\n        val i = value2Index(value)\n        val j = label2Index(label)"
   }
 ]

@@ -1340,5 +1340,115 @@
     "commit" : "7d045fbfb1b6bf35c5cc49e9948db2c5140bb15d",
     "line" : 14,
     "diffHunk" : "@@ -1,1 +1433,1437 @@  def select(cols: Column*): DataFrame = withPlan {\n    val untypedCols = cols.map {\n      case typedCol: TypedColumn[_, _] =>\n        // Checks if a `TypedColumn` has been inserted with\n        // specific input type and schema by `withInputType`."
+  },
+  {
+    "id" : "34f8b8ba-62d5-484f-8c49-84a4cac97aea",
+    "prId" : 27387,
+    "prUrl" : "https://github.com/apache/spark/pull/27387#pullrequestreview-358094289",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d0ef24a6-f1b5-443e-8b79-18093342daac",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "do we need to scope the active session here? The operations below, `sparkSession.sessionState.executePlan` and `new Dataset`, both seem to scope the active session themselves.",
+        "createdAt" : "2020-02-12T17:06:20Z",
+        "updatedAt" : "2020-02-13T14:38:24Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d02548dc-4482-4e2f-85d5-4652363d02cf",
+        "parentId" : "d0ef24a6-f1b5-443e-8b79-18093342daac",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I see, the creation of `RowEncoder` may access active session",
+        "createdAt" : "2020-02-12T17:09:56Z",
+        "updatedAt" : "2020-02-13T14:38:24Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "24883f3a-92fe-40d6-97ae-60efcab35525",
+        "parentId" : "d0ef24a6-f1b5-443e-8b79-18093342daac",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "shall we only wrap it?",
+        "createdAt" : "2020-02-12T17:10:15Z",
+        "updatedAt" : "2020-02-13T14:38:24Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a907c69c-af5a-403e-a414-5a6c5965ccd9",
+        "parentId" : "d0ef24a6-f1b5-443e-8b79-18093342daac",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "nvm, it's too tricky to find out which part uses active session. It's safer to wrap the entire method.",
+        "createdAt" : "2020-02-13T10:10:40Z",
+        "updatedAt" : "2020-02-13T14:38:24Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7f6274d1605aaef56e2cf978d9d0db927e6386b6",
+    "line" : 9,
+    "diffHunk" : "@@ -1,1 +84,88 @@\n  def ofRows(sparkSession: SparkSession, logicalPlan: LogicalPlan): DataFrame =\n    sparkSession.withActive {\n      val qe = sparkSession.sessionState.executePlan(logicalPlan)\n      qe.assertAnalyzed()"
+  },
+  {
+    "id" : "d92507c0-ed5d-4df1-a2c1-92727b9b00fd",
+    "prId" : 27387,
+    "prUrl" : "https://github.com/apache/spark/pull/27387#pullrequestreview-357629982",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3cef60b9-4e53-4462-b509-f73001f75c0d",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "ditto",
+        "createdAt" : "2020-02-12T17:06:38Z",
+        "updatedAt" : "2020-02-13T14:38:24Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7f6274d1605aaef56e2cf978d9d0db927e6386b6",
+    "line" : 18,
+    "diffHunk" : "@@ -1,1 +92,96 @@  /** A variant of ofRows that allows passing in a tracker so we can track query parsing time. */\n  def ofRows(sparkSession: SparkSession, logicalPlan: LogicalPlan, tracker: QueryPlanningTracker)\n    : DataFrame = sparkSession.withActive {\n    val qe = new QueryExecution(sparkSession, logicalPlan, tracker)\n    qe.assertAnalyzed()"
+  },
+  {
+    "id" : "2fa21402-26c9-431a-92b6-6f7af3c7dff4",
+    "prId" : 27387,
+    "prUrl" : "https://github.com/apache/spark/pull/27387#pullrequestreview-357856120",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "cc3aee76-1fbf-4c48-9e70-3e6c235ffce3",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "does this operation involve active session?",
+        "createdAt" : "2020-02-12T17:08:29Z",
+        "updatedAt" : "2020-02-13T14:38:24Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "00797cbe-f479-4123-bf71-a5c7cea56e30",
+        "parentId" : "cc3aee76-1fbf-4c48-9e70-3e6c235ffce3",
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "Unfortunately it does. We were seeing errors in one of the thrift suites, the behavior of some expressions depends on SQLConf.get. In this particular case `IntegralDivide` is the offender. This is actually super bad since it can lead to correctness problems, and we should fix this in more a complete way.",
+        "createdAt" : "2020-02-12T23:12:06Z",
+        "updatedAt" : "2020-02-13T14:38:24Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7f6274d1605aaef56e2cf978d9d0db927e6386b6",
+    "line" : 74,
+    "diffHunk" : "@@ -1,1 +505,509 @@   */\n  def schema: StructType = sparkSession.withActive {\n    queryExecution.analyzed.schema\n  }\n"
   }
 ]

@@ -163,5 +163,93 @@
     "commit" : "ac9015d1df4ee37504b602111267422461e4262d",
     "line" : 23,
     "diffHunk" : "@@ -1,1 +282,286 @@    val rdd0 = sc.parallelize(Seq(0, 1, 2, 3), 2)\n    val dep = new OneToOneDependency[Int](rdd0)\n    // set up a barrier stage with 2 tasks and both tasks prefer executor 0 (only 1 core) for\n    // scheduling. So, one of tasks won't be scheduled in one round of resource offer.\n    val rdd = new MyRDD(sc, 2, List(dep), Seq(Seq(\"executor_h_0\"), Seq(\"executor_h_0\")))"
+  },
+  {
+    "id" : "f6222fd5-1346-41fc-b410-04e7dd5d184e",
+    "prId" : 27395,
+    "prUrl" : "https://github.com/apache/spark/pull/27395#pullrequestreview-358532942",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7cd89203-ce29-4321-ab32-3426128af6c9",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Shall we add extra tests for mix-in barrier & allGather, e.g.:\r\n\r\n```\r\nrdd.barrier().mapPartitions { it =>\r\n      val context = BarrierTaskContext.get()\r\n      val partitionId = context.partitionId\r\n      if (partitionId == 0) {\r\n        context.barrier()\r\n      } else {\r\n        context.allGather(\"partitionId.toString\")\r\n      }\r\n}\r\n```\r\n\r\nAnd,\r\n\r\n```\r\nrdd.barrier().mapPartitions { it =>\r\n      val context = BarrierTaskContext.get()\r\n      ...\r\n      context.barrier()\r\n      ...\r\n      context.allGather(\"\")\r\n}\r\n```",
+        "createdAt" : "2020-02-13T01:34:23Z",
+        "updatedAt" : "2020-02-19T01:29:01Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b184781e-ed78-429e-8eae-3a1cbdcd72b2",
+        "parentId" : "7cd89203-ce29-4321-ab32-3426128af6c9",
+        "authorId" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "body" : "maybe we should add the first one you mentioned, but that can be left as a followup. What do we expect to cover from the second test case ?",
+        "createdAt" : "2020-02-13T04:33:18Z",
+        "updatedAt" : "2020-02-19T01:29:01Z",
+        "lastEditedBy" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4fd5e470-6daf-49ad-9f8b-32449b4c7ffd",
+        "parentId" : "7cd89203-ce29-4321-ab32-3426128af6c9",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Just want to make sure that different barrier methods can work well  in the same stage, since they'll share some data in `BarrierCoordinator`.",
+        "createdAt" : "2020-02-13T06:05:53Z",
+        "updatedAt" : "2020-02-19T01:29:01Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2e4322bb-1398-46a2-af53-776402481bf2",
+        "parentId" : "7cd89203-ce29-4321-ab32-3426128af6c9",
+        "authorId" : "0c812942-02cb-4975-9748-394d1387affa",
+        "body" : "+1. Btw, the first one shall fail.",
+        "createdAt" : "2020-02-13T17:49:41Z",
+        "updatedAt" : "2020-02-19T01:29:01Z",
+        "lastEditedBy" : "0c812942-02cb-4975-9748-394d1387affa",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b1d1cc8c-7cd9-4aa7-bbbd-546fd49b2acd",
+        "parentId" : "7cd89203-ce29-4321-ab32-3426128af6c9",
+        "authorId" : "e61b3cb6-56c6-4e7f-9cca-9e4c8ed5c8c1",
+        "body" : "Thanks all! Added",
+        "createdAt" : "2020-02-13T20:36:30Z",
+        "updatedAt" : "2020-02-19T01:29:01Z",
+        "lastEditedBy" : "e61b3cb6-56c6-4e7f-9cca-9e4c8ed5c8c1",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d2fffe1df73973962302c898bf90c67bb6714cd1",
+    "line" : 12,
+    "diffHunk" : "@@ -1,1 +54,58 @@  }\n\n  test(\"share messages with allGather() call\") {\n    val conf = new SparkConf()\n      .setMaster(\"local-cluster[4, 1, 1024]\")"
+  },
+  {
+    "id" : "b12c39e0-fe58-41af-b9c6-627d26a6bc9d",
+    "prId" : 27395,
+    "prUrl" : "https://github.com/apache/spark/pull/27395#pullrequestreview-358532331",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "38840d60-9f10-49ad-950f-42d6b790b240",
+        "parentId" : null,
+        "authorId" : "e61b3cb6-56c6-4e7f-9cca-9e4c8ed5c8c1",
+        "body" : "cc @Ngone51 @jiangxb1987 @mengxr ",
+        "createdAt" : "2020-02-13T20:35:30Z",
+        "updatedAt" : "2020-02-19T01:29:01Z",
+        "lastEditedBy" : "e61b3cb6-56c6-4e7f-9cca-9e4c8ed5c8c1",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d2fffe1df73973962302c898bf90c67bb6714cd1",
+    "line" : 33,
+    "diffHunk" : "@@ -1,1 +75,79 @@  }\n\n  test(\"throw exception if we attempt to synchronize with different blocking calls\") {\n    val conf = new SparkConf()\n      .setMaster(\"local-cluster[4, 1, 1024]\")"
   }
 ]

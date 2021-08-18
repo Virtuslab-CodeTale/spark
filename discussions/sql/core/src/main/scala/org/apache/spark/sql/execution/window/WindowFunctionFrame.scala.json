@@ -306,5 +306,82 @@
     "commit" : "301a847982445b01fdd75794d9780d23c4e58276",
     "line" : 122,
     "diffHunk" : "@@ -1,1 +204,208 @@  }\n\n  override def write(index: Int, current: InternalRow): Unit = {\n    // The results are the same for each row in the partition, and have been evaluated in prepare.\n    // Don't need to recalculate here."
+  },
+  {
+    "id" : "29c77690-4eae-4e5a-9b68-6207ff91a6b4",
+    "prId" : 27440,
+    "prUrl" : "https://github.com/apache/spark/pull/27440#pullrequestreview-356549677",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "98c44836-2e2c-4fc9-b53a-a9b2c27486dd",
+        "parentId" : null,
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "NTH_VALUE should return the same value for all rows in the window partition right? So why are you doing so much heavy lifting here? Everything can be computed in prepare.\r\n\r\nIf you think about it, then this could also be treated as an unbounded window frame. You could even move this into the `UnboundedWindowFunctionFrame` if you add the update logic to the NTH_VALUE aggregate.",
+        "createdAt" : "2020-02-09T14:05:43Z",
+        "updatedAt" : "2020-05-30T12:22:52Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "810241f0-b84a-4975-bfe8-650203919e48",
+        "parentId" : "98c44836-2e2c-4fc9-b53a-a9b2c27486dd",
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "Because the behavior of `NTH_VALUE/FIRST_VALUE/LAST_VALUE` more similar to `LEAD/LAG`, so I make `FixedOffsetWindowFunctionFrame`  extends `OffsetWindowFunctionFrame`. `OffsetWindowFunctionFrame` only to fetch projects but `UnboundedWindowFunctionFrame` will `update` and `execute` expressions.\r\nIf you think so, I can abstract a base class for `FixedOffsetWindowFunctionFrame` and `OffsetWindowFunctionFrame`.",
+        "createdAt" : "2020-02-10T06:47:22Z",
+        "updatedAt" : "2020-05-30T12:22:52Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c6fe5b8a-574b-4785-b543-ce9d618a1939",
+        "parentId" : "98c44836-2e2c-4fc9-b53a-a9b2c27486dd",
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "I have optimized the code so that the skip operator runs once in `prepare`.",
+        "createdAt" : "2020-02-11T10:31:41Z",
+        "updatedAt" : "2020-05-30T12:22:52Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f3930f626877014e61c1635741e351ed0d1591d8",
+    "line" : 114,
+    "diffHunk" : "@@ -1,1 +196,200 @@  }\n\n  override def write(index: Int, current: InternalRow): Unit = {\n    if (rowOption.isDefined) {\n      projection(rowOption.get)"
+  },
+  {
+    "id" : "7ad36bbe-9e3f-40aa-b1f6-23ab3ab2913e",
+    "prId" : 27440,
+    "prUrl" : "https://github.com/apache/spark/pull/27440#pullrequestreview-355713812",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3f2f2523-3a60-409a-b258-afb1b9ee7dee",
+        "parentId" : null,
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "Add documentation.\r\n\r\nI would like to see a unit test for this.",
+        "createdAt" : "2020-02-09T14:13:22Z",
+        "updatedAt" : "2020-05-30T12:22:52Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2fb0c67d-2a9e-423e-8c33-e4b8dbd7f3d7",
+        "parentId" : "3f2f2523-3a60-409a-b258-afb1b9ee7dee",
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "I want reference the unit test for `OffsetWindowFunctionFrame`, can you tell me where they are? Thanks.",
+        "createdAt" : "2020-02-10T06:36:50Z",
+        "updatedAt" : "2020-05-30T12:22:52Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f3930f626877014e61c1635741e351ed0d1591d8",
+    "line" : 93,
+    "diffHunk" : "@@ -1,1 +176,180 @@ * The fixed offset windwo frame return the same value for all rows in the window partition.\n */\nclass FixedOffsetWindowFunctionFrame(\n    target: InternalRow,\n    ordinal: Int,"
   }
 ]

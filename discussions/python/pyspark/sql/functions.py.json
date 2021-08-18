@@ -856,5 +856,148 @@
     "commit" : "12b42396f058569354040d466962904794fa5c5e",
     "line" : 7,
     "diffHunk" : "@@ -1,1 +1431,1435 @@def timestamp_seconds(col):\n    \"\"\"\n    >>> from pyspark.sql.functions import timestamp_seconds\n    >>> time_df = spark.createDataFrame([(1230219000,)], ['unix_time'])\n    >>> time_df.select(timestamp_seconds(time_df.unix_time).alias('ts')).collect()"
+  },
+  {
+    "id" : "4db7dd8a-5085-4592-8020-d7ed0a517797",
+    "prId" : 27406,
+    "prUrl" : "https://github.com/apache/spark/pull/27406#pullrequestreview-351094602",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d89578e4-1ce0-477a-9864-966c304c3ac5",
+        "parentId" : null,
+        "authorId" : "981b170c-729a-429c-b115-0350ea50b32b",
+        "body" : "If SPARK-27052 is won't fix, we could be more proactive and inspect the closure here:\r\n\r\n```python\r\nimport inspect\r\nfrom itertools import chain\r\nfrom pyspark.sql.udf import UserDefinedFunction\r\n\r\n\r\ndef _is_udf(f):\r\n    return isinstance(f, UserDefinedFunction) or (\r\n        hasattr(f, \"returnType\")\r\n        and hasattr(f, \"evalType\")\r\n        and f.__closure__\r\n        and isinstance(f.__closure__[0].cell_contents, UserDefinedFunction)\r\n    )\r\n\r\n\r\ndef _check_conatins_udf(f):\r\n    closurevars = inspect.getclosurevars(f)\r\n    for name, f in chain.from_iterable(\r\n        [closurevars.nonlocals.items(), closurevars.globals.items()]\r\n    ):\r\n        if _is_udf(f):\r\n\r\n            raise ValueError(\r\n                \"Higher order functions cannot use UserDefinedFunctions \",\r\n                \"Detected following udf {}: {}\".format(name, f),\r\n            )\r\n```\r\n\r\nor throw an exception at the analyzer level",
+        "createdAt" : "2020-01-30T19:45:50Z",
+        "updatedAt" : "2020-02-04T01:19:26Z",
+        "lastEditedBy" : "981b170c-729a-429c-b115-0350ea50b32b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "05741c8422364a77389d13ba0a85b7ad92392be6",
+    "line" : 139,
+    "diffHunk" : "@@ -1,1 +2976,2980 @@        :py:mod:`pyspark.sql.functions` and Scala ``UserDefinedFunctions``.\n        Python ``UserDefinedFunctions`` are not supported\n        (`SPARK-27052 <https://issues.apache.org/jira/browse/SPARK-27052>`__).\n\n    :return: a :class:`pyspark.sql.Column`"
+  },
+  {
+    "id" : "bb26be34-efa7-4332-a01a-33dde04f4690",
+    "prId" : 27406,
+    "prUrl" : "https://github.com/apache/spark/pull/27406#pullrequestreview-351115778",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e5fb741c-f306-4f39-9aef-7c0ac08aa0cd",
+        "parentId" : null,
+        "authorId" : "fd6ebc48-7da4-490b-8d41-2e8530d92720",
+        "body" : "Just curious: Do we have doc tests, and do they import all the functions for this to work?",
+        "createdAt" : "2020-01-30T19:52:04Z",
+        "updatedAt" : "2020-02-04T01:19:26Z",
+        "lastEditedBy" : "fd6ebc48-7da4-490b-8d41-2e8530d92720",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "36d71279-a07d-43a7-ad75-cce765cafd20",
+        "parentId" : "e5fb741c-f306-4f39-9aef-7c0ac08aa0cd",
+        "authorId" : "981b170c-729a-429c-b115-0350ea50b32b",
+        "body" : "We do. As far as I remember all modules invoke doctests when executed as `__main__`. He's relevant part of `functions.py`:\r\n\r\nhttps://github.com/apache/spark/blob/f59685acaa3e9c227f14fe4d8f9e94a1ac664b05/python/pyspark/sql/functions.py#L2939-L2961",
+        "createdAt" : "2020-01-30T20:21:31Z",
+        "updatedAt" : "2020-02-04T01:19:26Z",
+        "lastEditedBy" : "981b170c-729a-429c-b115-0350ea50b32b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "05741c8422364a77389d13ba0a85b7ad92392be6",
+    "line" : 242,
+    "diffHunk" : "@@ -1,1 +3079,3083 @@    ... )\n    >>> def after_second_quarter(x):\n    ...     return month(to_date(x)) > 6\n    >>> df.select(\n    ...     filter(\"values\", after_second_quarter).alias(\"after_second_quarter\")"
+  },
+  {
+    "id" : "46c794e3-7bea-4fec-824b-1492ac93ba5a",
+    "prId" : 27406,
+    "prUrl" : "https://github.com/apache/spark/pull/27406#pullrequestreview-352197991",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4bf8e763-8ec3-4d49-86de-62ab626d5268",
+        "parentId" : null,
+        "authorId" : "981b170c-729a-429c-b115-0350ea50b32b",
+        "body" : "Now, when this targets 3.1, this shouldn't be necessary anymore, though we still have to wait for official resolution of SPARK-29909.",
+        "createdAt" : "2020-02-03T11:49:17Z",
+        "updatedAt" : "2020-02-04T01:19:27Z",
+        "lastEditedBy" : "981b170c-729a-429c-b115-0350ea50b32b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "05741c8422364a77389d13ba0a85b7ad92392be6",
+    "line" : 53,
+    "diffHunk" : "@@ -1,1 +2890,2894 @@\n\ndef _get_lambda_parameters_legacy(f):\n    # TODO (SPARK-29909) Remove once 2.7 support is dropped\n    import inspect"
+  },
+  {
+    "id" : "46cc3a32-1cbb-4f70-bc3b-fc643cd4768a",
+    "prId" : 27406,
+    "prUrl" : "https://github.com/apache/spark/pull/27406#pullrequestreview-355156172",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "173d8d34-7305-437b-a02e-45f310904069",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "@zero323, can we remove `_get_lambda_parameters` and `_get_lambda_parameters_legacy` here too for now? Let's discuss and figure out a better way in the next PR about this.",
+        "createdAt" : "2020-02-06T03:42:15Z",
+        "updatedAt" : "2020-02-06T03:42:15Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0320e706-7f3d-4b40-a8a7-ec17534dc545",
+        "parentId" : "173d8d34-7305-437b-a02e-45f310904069",
+        "authorId" : "981b170c-729a-429c-b115-0350ea50b32b",
+        "body" : "Sorry, but I don't see this.\r\n\r\n- Argument type validation is not covered by planner, and some combinations of argument types will either lead to cryptic exceptions or ambiguous behavior. How would you generate placeholders for example for `*args` (or similarly `...` in R).\r\n- Having consistent placeholders with Scala counterpart is good. And even to get to `x1`, x2`, `...,`  cannot be done without inspecting signature. And even if we did only that (which still keeps most of the complexity, calling things `_(**kwargs)` or `_(*args)` or different keyword variants would be rather sloppy.\r\n",
+        "createdAt" : "2020-02-06T08:50:21Z",
+        "updatedAt" : "2020-02-06T08:50:21Z",
+        "lastEditedBy" : "981b170c-729a-429c-b115-0350ea50b32b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d22a4fc8-75f1-406c-8420-4e4429d860ba",
+        "parentId" : "173d8d34-7305-437b-a02e-45f310904069",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "I am not particularly against this codes. I just thought it's easier to logically separate two PRs. This PR just to add higher order functions relying on JVM check. The other PR to add argument checking in Python (or R) sides.\r\n\r\nFor the former case, I am totally supportive and I can sign-off. For the latter I am not completely sure. I would like to collect some feedback from some more people. So .. asking to remove it is just to make it rolling quicker :-).",
+        "createdAt" : "2020-02-07T10:45:50Z",
+        "updatedAt" : "2020-02-07T10:45:50Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "39fb9861-1af4-4672-846e-df8f2d0ce015",
+        "parentId" : "173d8d34-7305-437b-a02e-45f310904069",
+        "authorId" : "981b170c-729a-429c-b115-0350ea50b32b",
+        "body" : "I get you point but right now I consider this core logic. We can shuffle things around and shave a line or two, but I don't see it improving overall \"reviewability\".\r\n\r\nSomewhere here we have to decide out how many placeholders  should be provided (if it wasn't for polymorphic behavior of some variants, we could just assume ‒ if we for example had `transform` and `transform_with_index`. But now have to do it at least for a few of functions, and there might be more to come). So we can only push things around and\r\n\r\n```python\r\n    import inspect\r\n\r\n    signature = inspect.signature(f)\r\n    parameters = signature.parameters.values()\r\n```\r\n\r\nas well as the legacy part (I hope it is going to be dropped before 3.1 release anyway) are here to stay (could be inlined, but personally I think it would makes things worse not better).\r\n\r\nIf we wanted to condense things as much as possible, it could be condensed into something like\r\n\r\n```python\r\n\r\n    args = [\r\n        _unresolved_named_lambda_variable(f\"x{i}\") for i, _ in \r\n        enumerate(\r\n          inspect.signature(f).parameters if sys.version_info >= (3, 3) \r\n          else inspect.getargspec(f) \r\n        )\r\n    ]\r\n\r\n```\r\n\r\nbut I don't think that it makes things any clearer, do you?  Also leaves the below.\r\n\r\n\r\nIf we keep just this part and leave variadic argument validation out, I'd be concerned that it will to all kinds of confusing or potentially incorrect behaviors. Users are extremely imaginative and delayed resolution doesn't help*. \r\n\r\nAnd since it is neither heavy in logic nor duplicates (for some definition of duplication) JVM logic, it shouldn't be controversial. \r\n\r\n\r\n\r\n\r\n----------------\r\n\\*  We can be pretty sure that  attempts to apply some-general-purpose-library in func will happen, if this is merged. \r\n\r\nAnd let's be honest ‒ higher order functions are already pretty hard to work with. There are sensitive to minor type mismatches (numeric precision and such) and corresponding expressions are pretty large.\r\n\r\n",
+        "createdAt" : "2020-02-07T12:00:22Z",
+        "updatedAt" : "2020-02-07T12:00:23Z",
+        "lastEditedBy" : "981b170c-729a-429c-b115-0350ea50b32b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1e2aec44-1c62-4f97-8922-42b82a9f9e5f",
+        "parentId" : "173d8d34-7305-437b-a02e-45f310904069",
+        "authorId" : "981b170c-729a-429c-b115-0350ea50b32b",
+        "body" : "Just to be clear ‒ my reservations are now purely practical (in contrast to my opposition to removal of function specific validation). Certain things have to be done one way or another, some parts of the logic will be removed soon so it is better to keep these clearly separated and preventing ambiguity while keeping things || with Scala  is just basic sanity :)",
+        "createdAt" : "2020-02-07T13:32:10Z",
+        "updatedAt" : "2020-02-07T13:32:10Z",
+        "lastEditedBy" : "981b170c-729a-429c-b115-0350ea50b32b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "05741c8422364a77389d13ba0a85b7ad92392be6",
+    "line" : 21,
+    "diffHunk" : "@@ -1,1 +2858,2862 @@\n\ndef _get_lambda_parameters(f):\n    import inspect\n"
   }
 ]
