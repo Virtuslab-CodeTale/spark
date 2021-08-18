@@ -1,0 +1,112 @@
+[
+  {
+    "id" : "663f6344-3982-45bc-9a5f-ad038c8192d6",
+    "prId" : 31286,
+    "prUrl" : "https://github.com/apache/spark/pull/31286#pullrequestreview-578050742",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "92c45edf-deaa-47c2-9701-bf835a145536",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "`count(t2.*)` means `count(1)` in pgsql?",
+        "createdAt" : "2021-01-26T15:22:56Z",
+        "updatedAt" : "2021-02-02T03:04:18Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "efba7879-e9ad-4866-8138-b0a1f3ecf20f",
+        "parentId" : "92c45edf-deaa-47c2-9701-bf835a145536",
+        "authorId" : "29c89154-22f7-40ee-b295-115a55734d6c",
+        "body" : "Yes, in pgsql\r\n```\r\nselect * from (select 1 as a, null as b) as t1 join (select 1 as a, 'c' as b) as t2 on t1.a = t2.a\r\noutput:\r\n\r\na  | b      | a  | b\r\n-- | --     | -- | --\r\n1  | (null) | 1  | c\r\n\r\nselect count(t1.*) from (select 1 as a, null as b) as t1 join (select 1 as a, 'c' as b) as t2 on t1.a = t2.a\r\noutput:\r\n\r\ncount\r\n--\r\n1\r\n``",
+        "createdAt" : "2021-01-27T01:57:59Z",
+        "updatedAt" : "2021-02-02T03:04:18Z",
+        "lastEditedBy" : "29c89154-22f7-40ee-b295-115a55734d6c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "640f13ff-fefb-4450-a300-733d72b47c66",
+        "parentId" : "92c45edf-deaa-47c2-9701-bf835a145536",
+        "authorId" : "29c89154-22f7-40ee-b295-115a55734d6c",
+        "body" : "in spark, the second query will output 0",
+        "createdAt" : "2021-01-27T02:20:11Z",
+        "updatedAt" : "2021-02-02T03:04:18Z",
+        "lastEditedBy" : "29c89154-22f7-40ee-b295-115a55734d6c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "794d5362-cbdc-4771-aec3-61f1209946fa",
+        "parentId" : "92c45edf-deaa-47c2-9701-bf835a145536",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "since it's pgsql test, shall we use `count(1)` to match pgsql test intention?",
+        "createdAt" : "2021-01-27T05:09:12Z",
+        "updatedAt" : "2021-02-02T03:04:18Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fbd94aae-aca6-47c5-b3c9-5e5af2852b94",
+        "parentId" : "92c45edf-deaa-47c2-9701-bf835a145536",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "+1 for the @cloud-fan advice. Also, could you leave some comment there about why we change the original test query?",
+        "createdAt" : "2021-01-28T02:16:06Z",
+        "updatedAt" : "2021-02-02T03:04:18Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e8a554df-5d8e-41a6-a7d9-4995321a316f",
+        "parentId" : "92c45edf-deaa-47c2-9701-bf835a145536",
+        "authorId" : "29c89154-22f7-40ee-b295-115a55734d6c",
+        "body" : "@cloud-fan , @maropu , I did more tests on pgsql, seems it is much more weird than I thought.\r\nTLDR: in pgsql, `count(t2.*)` means how many MATCHING rows from t2 table. and spark doesn't have such a semantic. Here, if we want to keep the output unchanged. it should be `count(t2.q1, t2.q2)`\r\n\r\nHere is the example:\r\n```\r\nCREATE TABLE INT8_TBL AS SELECT * FROM (VALUES (1, 2), (2, 1), (3, NULL), (NULL, NULL)) AS v(q1, q2);\r\nselect * from int8_tbl as t1 left join int8_tbl as t2 on t1.q1 = t2.q2;\r\n\r\nt1.q1  | t1.q2  | t2.q1  | t2.q2\r\n--     | --     | --     | --\r\n1      | 2      | 2      | 1\r\n2      | 1      | 1      | 2\r\n3      | (null) | (null) | (null)\r\n(null) | (null) | (null) | (null)\r\n\r\nselect count(t1.*), count(t2.*) from int8_tbl as t1 left join int8_tbl as t2 on t1.q1 = t2.q2;\r\n\r\nt1.count | t2.count\r\n--       | --\r\n4        | 2\r\n\r\n```  \r\n",
+        "createdAt" : "2021-01-28T07:34:53Z",
+        "updatedAt" : "2021-02-02T03:04:18Z",
+        "lastEditedBy" : "29c89154-22f7-40ee-b295-115a55734d6c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "19340d4fadffc4efe9d4adc823b381c2ec76d590",
+    "line" : 10,
+    "diffHunk" : "@@ -1,1 +749,753 @@--- So here we use `count(t2.q1, t2.q2)` instead of `count(1)` to keep the query output\n--- unchanged.\nselect t1.q2, count(t2.q1, t2.q2)\nfrom int8_tbl t1 left join int8_tbl t2 on (t1.q2 = t2.q1)\ngroup by t1.q2 order by 1;"
+  },
+  {
+    "id" : "fec2b319-05dd-4c67-9107-9c4f5fc5be2f",
+    "prId" : 31286,
+    "prUrl" : "https://github.com/apache/spark/pull/31286#pullrequestreview-580949545",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "14a2a1ba-fa55-441b-9315-48a4f6cb281d",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "nit: Could you leave some comments here about why we updated the tests?",
+        "createdAt" : "2021-02-02T01:34:50Z",
+        "updatedAt" : "2021-02-02T03:04:18Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "afd6b647-c8a6-4e76-9d0d-868456e4306b",
+        "parentId" : "14a2a1ba-fa55-441b-9315-48a4f6cb281d",
+        "authorId" : "29c89154-22f7-40ee-b295-115a55734d6c",
+        "body" : "fixed",
+        "createdAt" : "2021-02-02T03:05:51Z",
+        "updatedAt" : "2021-02-02T03:05:52Z",
+        "lastEditedBy" : "29c89154-22f7-40ee-b295-115a55734d6c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "19340d4fadffc4efe9d4adc823b381c2ec76d590",
+    "line" : 10,
+    "diffHunk" : "@@ -1,1 +749,753 @@--- So here we use `count(t2.q1, t2.q2)` instead of `count(1)` to keep the query output\n--- unchanged.\nselect t1.q2, count(t2.q1, t2.q2)\nfrom int8_tbl t1 left join int8_tbl t2 on (t1.q2 = t2.q1)\ngroup by t1.q2 order by 1;"
+  }
+]

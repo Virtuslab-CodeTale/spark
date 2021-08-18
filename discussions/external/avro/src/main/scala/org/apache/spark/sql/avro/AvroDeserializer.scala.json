@@ -64,5 +64,82 @@
     "commit" : "e18b8b2b56b8f1b2ac83c0a9a8ebf3d42d37ffde",
     "line" : 14,
     "diffHunk" : "@@ -1,1 +149,153 @@\n      case (LONG, TimestampNTZType) => avroType.getLogicalType match {\n        // For backward compatibility, if the Avro type is Long and it is not logical type\n        // (the `null` case), the value is processed as timestamp without time zone type\n        // with millisecond precision."
+  },
+  {
+    "id" : "7c34317d-af74-49d9-8dca-164e1a8163d1",
+    "prId" : 31329,
+    "prUrl" : "https://github.com/apache/spark/pull/31329#pullrequestreview-576094754",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4a9bcab7-616f-492d-b991-20ba2a138b0d",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "So here we create the Decimal of precision/scale for the logical type of avro, not for Catalyst type?",
+        "createdAt" : "2021-01-25T23:11:19Z",
+        "updatedAt" : "2021-01-25T23:11:19Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "32dcafee-17eb-4eda-8640-0d1fc11eb824",
+        "parentId" : "4a9bcab7-616f-492d-b991-20ba2a138b0d",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Yes, it should be because `createDecimal` do `Decimal(decimal.unscaledValue().longValue(), precision, scale)`.",
+        "createdAt" : "2021-01-25T23:17:27Z",
+        "updatedAt" : "2021-01-25T23:17:27Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "02822d0b-2da5-4d22-9d33-185763adf96c",
+        "parentId" : "4a9bcab7-616f-492d-b991-20ba2a138b0d",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Will we cast the decimal value to the catalyst decimal type precision and scale? It looks risky if the value inside `InternalRow` doesn't match the data type.\r\n\r\nI'm also curious about behaviors when the precision from avro file schema is much larger than the catalyst decimal tyoe, do we truncate the value?",
+        "createdAt" : "2021-01-26T05:33:05Z",
+        "updatedAt" : "2021-01-26T05:33:06Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b85e879f-925b-496d-af28-ea44690a7d8c",
+        "parentId" : "4a9bcab7-616f-492d-b991-20ba2a138b0d",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "For now, we don't cast here yet. Are you suggesting it?\r\n> Will we cast the decimal value to the catalyst decimal type precision and scale? It looks risky if the value inside InternalRow doesn't match the data type.\r\n\r\nFor the following, could you give me some example? `much larger` is ambiguous to me. I can take a look.\r\n> I'm also curious about behaviors when the precision from avro file schema is much larger than the catalyst decimal tyoe, do we truncate the value?\r\n\r\nIn general, the following is the expected behavior for decimal range. \r\n```scala\r\nscala> spark.read.format(\"avro\").load(\"/tmp/avro\").show\r\n+----+\r\n|   a|\r\n+----+\r\n|3.14|\r\n+----+\r\n\r\n\r\nscala> spark.read.format(\"avro\").load(\"/tmp/avro\").printSchema\r\nroot\r\n |-- a: decimal(3,2) (nullable = true)\r\n\r\n\r\nscala> spark.read.schema(\"a DECIMAL(2, 1)\").format(\"avro\").load(\"/tmp/avro\").show()\r\n+---+\r\n|  a|\r\n+---+\r\n|3.1|\r\n+---+\r\n\r\n\r\nscala> spark.read.schema(\"a DECIMAL(4, 3)\").format(\"avro\").load(\"/tmp/avro\").show()\r\n+-----+\r\n|    a|\r\n+-----+\r\n|3.140|\r\n+-----+\r\n```",
+        "createdAt" : "2021-01-26T07:47:56Z",
+        "updatedAt" : "2021-01-26T07:47:56Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9fdeb4b0-3c02-43de-a528-18156ff55c3d",
+        "parentId" : "4a9bcab7-616f-492d-b991-20ba2a138b0d",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "BTW, @cloud-fan . I want to make it sure the following.\r\n1. This PR have no side-effect when the physical schema matches the catalyst schema.\r\n2. This PR fixes the incorrect result when the physical schema mismatches the catalyst schema.\r\n\r\nThis is much better than before. And, we can fix the inconsistency in the upper-layer still because we have the original decimal's precision and scale still.",
+        "createdAt" : "2021-01-26T07:52:07Z",
+        "updatedAt" : "2021-01-26T07:52:07Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "19b68385-0f5f-42b4-a281-a8bc9e31d323",
+        "parentId" : "4a9bcab7-616f-492d-b991-20ba2a138b0d",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "```\r\nscala> spark.read.schema(\"a DECIMAL(2, 1)\").format(\"avro\").load(\"/tmp/avro\").show()\r\n+---+\r\n|  a|\r\n+---+\r\n|3.1|\r\n+---+\r\n```\r\n\r\nThis answers my question. So truncation happens, but I don't know where it happens yet.\r\n\r\nYea it's better than before, I just want to make sure there are no more correctness bugs here.",
+        "createdAt" : "2021-01-26T07:56:25Z",
+        "updatedAt" : "2021-01-26T07:56:25Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d474f3555a31ec62a2336f91fb75b04654438d74",
+    "line" : 11,
+    "diffHunk" : "@@ -1,1 +173,177 @@        val d = avroType.getLogicalType.asInstanceOf[LogicalTypes.Decimal]\n        val bigDecimal = decimalConversions.fromFixed(value.asInstanceOf[GenericFixed], avroType, d)\n        val decimal = createDecimal(bigDecimal, d.getPrecision, d.getScale)\n        updater.setDecimal(ordinal, decimal)\n"
   }
 ]

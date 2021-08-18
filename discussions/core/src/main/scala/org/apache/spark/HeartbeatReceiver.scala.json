@@ -1,0 +1,35 @@
+[
+  {
+    "id" : "d58300ca-75eb-46ae-b2a1-287aaf28810a",
+    "prId" : 31373,
+    "prUrl" : "https://github.com/apache/spark/pull/31373#pullrequestreview-578575706",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b9095a8f-474b-4248-bf7d-3c83c1b27f33",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "This sounds like a race condition that happens during SparkContext shutdown. So it's also possible that the SparkContext is stopped right after we sent the `HeartbeatResponse`. In that case, IIUC, the issue will still exist.\r\n\r\nDoes the current behavior cause any real issue?",
+        "createdAt" : "2021-01-28T09:45:09Z",
+        "updatedAt" : "2021-01-28T09:45:15Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7e3cbcf9-874a-4a89-8dac-93d4130c1a7e",
+        "parentId" : "b9095a8f-474b-4248-bf7d-3c83c1b27f33",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Thank. you for review, @Ngone51 . That's true. In the production environment, I hit those intermediate status. And, this will help us simplify the situation.\r\n\r\n1. The case you mentioned, `Send HeartbeatResponse and  sc.stop invoked`, is a normal situation. The users don't complain about this.\r\n2. The case in this PR, `sc.stop invoked and Spark works inefficiently by sending HeartbeatResponse(true)` is a problem. The users complain about this.\r\n\r\nFor the following, yes. We are After the apps `sc.stop` takes a longer time than we expect.\r\n> Does the current behavior cause any real issue?",
+        "createdAt" : "2021-01-28T17:31:37Z",
+        "updatedAt" : "2021-01-28T17:51:35Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "510a505bd226d684ae771b911e0eed04946019d6",
+    "line" : 4,
+    "diffHunk" : "@@ -1,1 +129,133 @@    // Messages received from executors\n    case heartbeat @ Heartbeat(executorId, accumUpdates, blockManagerId, executorUpdates) =>\n      var reregisterBlockManager = !sc.isStopped\n      if (scheduler != null) {\n        if (executorLastSeen.contains(executorId)) {"
+  }
+]

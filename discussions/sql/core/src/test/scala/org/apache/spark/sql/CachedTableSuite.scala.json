@@ -53,5 +53,49 @@
     "commit" : "27e86350b7d3802db7e8fcd22e3ec732693570c6",
     "line" : 9,
     "diffHunk" : "@@ -1,1 +1432,1436 @@      withSQLConf(SQLConf.STORE_ANALYZED_PLAN_FOR_VIEW.key -> storeAnalyzed.toString) {\n        withTempView(\"view1\", \"view2\") {\n          sql(\"CREATE TEMPORARY VIEW view1 AS SELECT * FROM testData WHERE key > 1\")\n          sql(\"CACHE TABLE view2 AS SELECT * FROM view1 WHERE value > 1\")\n          assert(spark.catalog.isCached(\"view2\"))"
+  },
+  {
+    "id" : "8f4a9297-91a2-4500-90ba-6152a1661afd",
+    "prId" : 31300,
+    "prUrl" : "https://github.com/apache/spark/pull/31300#pullrequestreview-574873865",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "52ee1f68-d207-4d10-85e3-f097c3f24cee",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Hm? Shouldn't we invalid t2 in any of cases if its source table t1 is dropped?",
+        "createdAt" : "2021-01-23T08:26:56Z",
+        "updatedAt" : "2021-01-23T08:26:56Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "392b4a24-1a0c-4533-8023-d7e92f520d7a",
+        "parentId" : "52ee1f68-d207-4d10-85e3-f097c3f24cee",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "If the config `STORE_ANALYZED_PLAN_FOR_VIEW` is enabled, it means we store analyzed logical plan for temp view. Therefore, even in this case `t1` is dropped, the plan won't be updated and `t2` is still in cache, and `isCached(\"t2\")` will succeed.",
+        "createdAt" : "2021-01-23T16:12:58Z",
+        "updatedAt" : "2021-01-23T16:12:58Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f7d7257e-91ca-4764-a65a-dd487c41d5e3",
+        "parentId" : "52ee1f68-d207-4d10-85e3-f097c3f24cee",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Oh oh I see.",
+        "createdAt" : "2021-01-23T20:17:43Z",
+        "updatedAt" : "2021-01-23T20:17:43Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "57a07ac4007a881957b44053bad38835895bece6",
+    "line" : 77,
+    "diffHunk" : "@@ -1,1 +981,985 @@                val e = intercept[AnalysisException](spark.catalog.isCached(\"t2\"))\n                assert(e.message.contains(s\"Table or view not found\"))\n              }\n            }\n          }"
   }
 ]

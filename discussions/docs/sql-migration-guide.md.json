@@ -306,5 +306,82 @@
     "commit" : "971ccbd5947924992a0c24acd40d40f1587d7741",
     "line" : 4,
     "diffHunk" : "@@ -1,1 +42,46 @@  - In Spark 3.2, the auto-generated `Cast` (such as those added by type coercion rules) will be stripped when generating column alias names. E.g., `sql(\"SELECT floor(1)\").columns` will be `FLOOR(1)` instead of `FLOOR(CAST(1 AS DOUBLE))`.\n\n  - In Spark 3.2, a null partition value is parsed as it is. In Spark 3.1 or earlier, it is parsed as a string literal of its text representation, e.g., string \"null\". To restore the legacy behavior, you can set `spark.sql.legacy.parseNullPartitionSpecAsStringLiteral` as true.\n\n  - In Spark 3.2, table refreshing clears cached data of the table as well as of all its dependents such as views while keeping the dependents cached. The following commands perform table refreshing:"
+  },
+  {
+    "id" : "4fcb2975-c7f1-49c3-a73e-71a5327bd664",
+    "prId" : 31309,
+    "prUrl" : "https://github.com/apache/spark/pull/31309#pullrequestreview-576351870",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "95fe9e25-5f87-41c3-8f42-66837e185c49",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "This doc change is for only `master`, right?",
+        "createdAt" : "2021-01-24T19:56:06Z",
+        "updatedAt" : "2021-01-24T19:56:07Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0feecb07-18b1-4c96-9e5f-a3a597d8b5b8",
+        "parentId" : "95fe9e25-5f87-41c3-8f42-66837e185c49",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "@dongjoon-hyun This one, yes but we made some fixes in 3.0/3.1 regarding to cache refreshing:\r\n- 3.0: #31006, #31060, #31236, #31116, #31305\r\n- 3.1: #31006, #31060, #31235, #31115, #31304\r\n\r\nShould I update the SQL migration guide about the changes, and say that \"the commands clear cached table data\"? cc @cloud-fan @HyukjinKwon ",
+        "createdAt" : "2021-01-25T15:41:33Z",
+        "updatedAt" : "2021-01-25T15:41:33Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d5b243e9-3b56-4ebb-a43e-6c94065817ca",
+        "parentId" : "95fe9e25-5f87-41c3-8f42-66837e185c49",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "In that case, for each branch, we may need a separate PR and independent update (if we want to update the doc).",
+        "createdAt" : "2021-01-26T01:29:57Z",
+        "updatedAt" : "2021-01-26T01:29:57Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e9a1c318-5bcc-475f-a5a0-0e758a8bd60f",
+        "parentId" : "95fe9e25-5f87-41c3-8f42-66837e185c49",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "@HyukjinKwon @cloud-fan Do we want to update the SQL migration guide?",
+        "createdAt" : "2021-01-26T11:43:28Z",
+        "updatedAt" : "2021-01-26T11:43:28Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cf833bfc-2037-4e2c-a9e3-32ddff242c42",
+        "parentId" : "95fe9e25-5f87-41c3-8f42-66837e185c49",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "\"the commands clear cached table data\" seems like a correctness bug fix that doesn't need a migration guide?",
+        "createdAt" : "2021-01-26T12:45:08Z",
+        "updatedAt" : "2021-01-26T12:45:08Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bfe25b78-d654-42fc-ae04-bee563214809",
+        "parentId" : "95fe9e25-5f87-41c3-8f42-66837e185c49",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "I would expect that currently users have to uncache and cache tables before any table modifications like:\r\n```\r\nUNCACHE TABLE tbl;\r\nALTER TABLE tbl ...;\r\nCACHE tbl;\r\n```\r\nAfter reading the SQL migration guide, they could remove the legacy code.",
+        "createdAt" : "2021-01-26T13:36:31Z",
+        "updatedAt" : "2021-01-26T13:36:31Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d484830639850806488136023a5dc27fb5fd2950",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +48,52 @@    * `ALTER TABLE .. RECOVER PARTITIONS`\n    * `MSCK REPAIR TABLE`\n    * `LOAD DATA`\n    * `REFRESH TABLE`\n    * and the method `spark.catalog.refreshTable`"
   }
 ]

@@ -75,5 +75,258 @@
     "commit" : "3b69021044bdcbab59e9767039e2a290a8e488b6",
     "line" : 6,
     "diffHunk" : "@@ -1,1 +2043,2047 @@\n  test(\"SPARK-36210: withColumns preserve insertion ordering\") {\n    val df = Seq(1, 2, 3).toDS()\n\n    val colNames = (1 to 10).map(i => s\"value${i}\")"
+  },
+  {
+    "id" : "14ce30a0-aef2-40b6-9a32-cf5b3f9b544b",
+    "prId" : 31296,
+    "prUrl" : "https://github.com/apache/spark/pull/31296#pullrequestreview-574669730",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a27b7abd-f88f-4ddd-8964-34f1ebe47f3f",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Thank you for making this sure!",
+        "createdAt" : "2021-01-22T22:28:51Z",
+        "updatedAt" : "2021-01-26T08:19:19Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ac7460b0431e7012f17c3ac293226bb4f428bd15",
+    "line" : 54,
+    "diffHunk" : "@@ -1,1 +2049,2053 @@  }\n\n  test(\"SPARK-34205: pipe Dataset with empty partition\") {\n    val data = Seq(123, 4567).toDF(\"num\").repartition(8, $\"num\")\n    val piped = data.pipe(\"wc -l\", (row, printFunc) => printFunc(row.getInt(0).toString))"
+  },
+  {
+    "id" : "6a32799e-f8bc-4109-98f7-b7e4cc5a5259",
+    "prId" : 31296,
+    "prUrl" : "https://github.com/apache/spark/pull/31296#pullrequestreview-577015565",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f2c2ab0f-d21d-49a0-a6a4-b85c5d697994",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "@viirya, what do you think about we expose an `transform` equivalent expression exposed as DSL? e.g.)\r\n\r\n```scala\r\nscala> val data = Seq((123, \"first\"), (4567, \"second\")).toDF(\"num\", \"word\")\r\ndata: org.apache.spark.sql.DataFrame = [num: int, word: string]\r\n\r\nscala> data.createOrReplaceTempView(\"t1\")\r\n\r\nscala> sql(\"select transform(*) using 'cat' from t1\").show()\r\n+----+------+\r\n| key| value|\r\n+----+------+\r\n| 123| first|\r\n|4567|second|\r\n+----+------+\r\n```\r\n\r\n```scala\r\nscala> data.repartition(1).createOrReplaceTempView(\"t1\")\r\n\r\nscala> sql(\"select transform(*) using 'wc -l' as (echo) from t1\").show()\r\n+--------+\r\n|    echo|\r\n+--------+\r\n|       2|\r\n+--------+\r\n```\r\n\r\nSpark lately added the native support of script transformation, and I think it could do what you want.",
+        "createdAt" : "2021-01-26T00:44:21Z",
+        "updatedAt" : "2021-01-26T08:19:19Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "59faf1ed-b4d3-4797-8e79-02edc753676b",
+        "parentId" : "f2c2ab0f-d21d-49a0-a6a4-b85c5d697994",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "I think this could address most of comments here such as https://github.com/apache/spark/pull/31296#issuecomment-765877782, being typed or non-standard stuff (as it follows Hive's feature) - at least we have one format to follow, etc.",
+        "createdAt" : "2021-01-26T00:47:58Z",
+        "updatedAt" : "2021-01-26T08:19:19Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e42bfc9c-4ef9-4933-8bb8-c110898d99a0",
+        "parentId" : "f2c2ab0f-d21d-49a0-a6a4-b85c5d697994",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "It would be great if we can leverage the script transform #29414.",
+        "createdAt" : "2021-01-26T01:39:38Z",
+        "updatedAt" : "2021-01-26T08:19:19Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b9aee393-c989-4f06-ba6a-8665805f481a",
+        "parentId" : "f2c2ab0f-d21d-49a0-a6a4-b85c5d697994",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Great point! I don't know how exhaustive Spark implements the Hive's transform feature, but the description in Hive's manual for transform looks pretty much powerful, and much beyond on what we plan to provide with pipe.\r\n\r\nhttps://cwiki.apache.org/confluence/display/Hive/LanguageManual+Transform#LanguageManualTransform-Transform/Map-ReduceSyntax\r\n\r\n~Looks like the reason of absence of pipe in DataFrame is obvious - transform just replaced it.~ (Not valid as it was only available for Hive support) That looks to be only available in SQL statement so we still need DSL support for using it in SS.",
+        "createdAt" : "2021-01-26T01:40:12Z",
+        "updatedAt" : "2021-01-26T08:19:19Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6646675e-150e-4070-ab5e-af3de8a8861a",
+        "parentId" : "f2c2ab0f-d21d-49a0-a6a4-b85c5d697994",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "I considered `transform` at the beginning as it looks close to pipe. I don't pick it for this because I only see it is exposed as SQL syntax and I am not sure if it works for streaming Dataset? Another reason is that it is designed for untyped Dataset. So if you want to pipe complex object T with custom output instead of column-wise output, \"transform\"  isn't as powerful as \"pipe\".\r\n\r\nAlthough I asked our customer and they only use primitive type Dataset for now. So untyped Dataset should be enough for the purpose.\r\n\r\nAnother reason is although the query looks like \"SELECT TRANSFORM(...) FROM ...\", it is actually not an expression but implemented as an operator. If we have it as DSL expression, there will be some problems.\r\n\r\nUnlike Window function, it seems to me that we cannot have a query like \"SELECT a, TRANSFORM(...), c FROM ...\" or in DSL format like:\r\n\r\n```scala\r\ndf.select($\"a\", $\"b\", transform(...) ...)\r\n```\r\n\r\nBut for Window function we can do:\r\n\r\n```scala\r\ndf.select($\"a\", $\"b\", lead(\"key\", 1).over(window) ...)\r\n```\r\n\r\nThat being said, in the end it is also `Dataset.transform`, instead of an expression DSL.",
+        "createdAt" : "2021-01-26T02:14:44Z",
+        "updatedAt" : "2021-01-26T08:19:19Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "875ca659-ce61-42c5-933f-081626d15123",
+        "parentId" : "f2c2ab0f-d21d-49a0-a6a4-b85c5d697994",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> Unlike Window function, it seems to me that we cannot have a query like \"SELECT a, TRANSFORM(...), c FROM ...\" or in DSL format like:\r\n> \r\n> ```scala\r\n> df.select($\"a\", $\"b\", transform(...) ...)\r\n> ```\r\n> \r\n> But for Window function we can do:\r\n> \r\n> ```scala\r\n> df.select($\"a\", $\"b\", lead(\"key\", 1).over(window) ...)\r\n> ```\r\n> \r\n> That being said, in the end it is also `Dataset.transform`, instead of an expression DSL.\r\n\r\nI have thought this problem too, first I want to add transform as a DSL function,  in this way, we need to make an equivalent  ScriptTransformation expression first.  We can think that this is just a new expression, or a new function. \r\n\r\n\r\nAlso add a `Dataset.scriptTransform` could be fine since we can support more flexible usage case and larger scope. Also important, it has a standard to follow and it‘s consistent with SQL.\r\n\r\nWe don’t necessarily need to write as\r\n```\r\ndf.select($\"a\", $\"b\", transform(xx))\r\n```\r\nwe can write it as \r\n```\r\ndf.scriptTransform(input, script, output...) \r\n```\r\n\r\nIf there is an decision, I can start work in this area these days.",
+        "createdAt" : "2021-01-26T09:03:26Z",
+        "updatedAt" : "2021-01-26T09:04:31Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "97f484c0-1d0d-4556-8a49-94c47f4ebfa0",
+        "parentId" : "f2c2ab0f-d21d-49a0-a6a4-b85c5d697994",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "Personally, I prefer to have ScriptTransformation expression to make this work in the first place. If we find there are more flexible usage needed, then we can add the new API in Dataset. WDYT?",
+        "createdAt" : "2021-01-26T09:52:06Z",
+        "updatedAt" : "2021-01-26T09:52:06Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d3664698-37a6-453b-baf9-98528de1b8ac",
+        "parentId" : "f2c2ab0f-d21d-49a0-a6a4-b85c5d697994",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Err..I don't think you get the discussed points above. Let me clarify it...\r\n\r\n@HyukjinKwon suggested to use \"TRANSFORM\" for the purpose of piping through external process, instead of adding \"pipe\" to Dataset API. The idea is basically to add DSL. But the problem is, \"TRANSFORM\" is not an expression and cannot be used in a DSL approach. So in the end in order to use \"TRANSFORM\" for piping through external process for streaming Dataset, you will need a top-level API too...But the point of DSL is to avoid a top-level API. So...\r\n\r\n\r\n\r\n\r\n",
+        "createdAt" : "2021-01-26T09:53:11Z",
+        "updatedAt" : "2021-01-26T09:53:11Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c336492e-cd84-4dc3-8184-24477a284cd3",
+        "parentId" : "f2c2ab0f-d21d-49a0-a6a4-b85c5d697994",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "> Personally, I prefer to have ScriptTransformation expression to make this work in the first place. If we find there are more flexible usage needed, then we can add the new API in Dataset. WDYT?\r\n\r\nCan you share how to make transformation as an expression? I don't think It is an expression at all.",
+        "createdAt" : "2021-01-26T09:58:19Z",
+        "updatedAt" : "2021-01-26T09:58:19Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "341d0cf2-8930-4e4c-825a-ba69fd147335",
+        "parentId" : "f2c2ab0f-d21d-49a0-a6a4-b85c5d697994",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> So in the end in order to use \"TRANSFORM\" for piping through external process for streaming Dataset, you will need a top-level API too...But the point of DSL is to avoid a top-level API. So...\r\n\r\nSince I did not participate in the community very early, so I don’t know much about the underlying design...\r\nEmmm IMO as a normal developer, we can have things that are useful to users.\r\n\r\n>  you will need a top-level API too...\r\n\r\nWhat's the top-level API,  you mean Plan node like `CollectSet` or other thing?\r\n",
+        "createdAt" : "2021-01-26T10:05:32Z",
+        "updatedAt" : "2021-01-26T10:05:33Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a00307f3-8b54-455b-b568-51f3a6cac2d0",
+        "parentId" : "f2c2ab0f-d21d-49a0-a6a4-b85c5d697994",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "I see what @viirya said. I'd agree that transform looks to behave as an operation (not sure that is intended or not, but looks like at least for now) and transform also requires top level API to cover up like we did for `mapPartition`.\r\n\r\nIf we are OK to add the top level API (again not yet decided so just a 2 cents) then which one? I'd rather say `transform` is something we'd like to be consistent with, instead of `pipe`. They have been exposed as SQL statement, and probably used widely for Spark SQL users, and even Hive users. If we want feature parity then my vote goes to `transform`.",
+        "createdAt" : "2021-01-26T11:40:42Z",
+        "updatedAt" : "2021-01-26T11:40:42Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "206ca4a4-e451-4188-94a8-1085f44d9c18",
+        "parentId" : "f2c2ab0f-d21d-49a0-a6a4-b85c5d697994",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "```\r\nWhat's the top-level API, you mean Plan node like CollectSet or other thing?\r\n```\r\n@AngersZhuuuu The top-level API here means the new API added in Dataset.\r\n\r\n```\r\nCan you share how to make transformation as an expression? I don't think It is an expression at all.\r\n```\r\n@viirya Sure. I followed the comment \"`I have thought this problem too, first I want to add transform as a DSL function, in this way, we need to make an equivalent ScriptTransformation expression first. We can think that this is just a new expression, or a new function`\" from @AngersZhuuuu. To add a new expression `ScriptTransformationExpression` for `ScriptTransformation` and turn to `ScriptTransformationExec`.\r\n\r\nTwo limitations here might need more discussion:\r\n- The script transformation may produce more than one row for a single row, so it cannot use together with other expressions. \r\n- The script in hive transformation is partition-based, but if we make it an expression, it becomes row based.",
+        "createdAt" : "2021-01-26T13:26:35Z",
+        "updatedAt" : "2021-01-26T13:26:35Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b5c833b7-d410-45df-aa8c-9e16f9ddcf36",
+        "parentId" : "f2c2ab0f-d21d-49a0-a6a4-b85c5d697994",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Thanks @HeartSaVioR. At least I am glad that the discussion can go forward no matter which one you prefer to add.\r\n\r\nHonestly I think transform is a weird stuff and it is only for to have pipe feature under Hive SQL syntax. I don't like the transform syntax which is inconvenient to use and verbose. It is not as flexible as pipe's custom print-out function. BTW, for typed dataset, because transform is for untyped, so it is bound to its serialization row format. In the early discussion there are some comments against that, although it is clarified later pipe doesn't suffer from this issue.\r\n\r\nIf we still cannot get a consensus, maybe I should raise a discussion on dev mailing list to decide pipe or transform top-level API should be added.\r\n\r\n@xuanyuanking @AngersZhuuuu The SQL syntax of transform \"SELECT TRANSFORM(...)\" is pretty confusing. It looks like expression but actually it is an operator, and IMHO you cannot turn it to an expression. If you force it to be an expression, you will create some inconsistency and weird cases. transform is like pipe and their input/output relation is not 1:1 or N:1 but arbitrary.\r\n\r\n",
+        "createdAt" : "2021-01-26T18:40:45Z",
+        "updatedAt" : "2021-01-26T20:11:30Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d7e9511a-a651-4e68-8d21-2068ac82e5eb",
+        "parentId" : "f2c2ab0f-d21d-49a0-a6a4-b85c5d697994",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "Hmmm, just a clarify, we mean we can add an expression (or function?) like `TRANSFORM`, not convert `TRANSFORM` to it. And we can extract some common logic with `ScriptTransformationExec`.  The usage such as\r\n```\r\n script_transform(input, script, output)\r\n```\r\ninput can be a list of input col such as `a, b, c`\r\nout put can a define such as `col1 string, col2 Int` \r\nand the return type is  `Array<Struct<col1: String, col2: Int>>` (This DataType can cover all case, and let user to handle)\r\n\r\nThen when execute we can make it just run as default format such as `ROW FORMAT DELIMIT`\r\nA simple and general way to implement and then we can add it as a DSL.\r\n\r\n",
+        "createdAt" : "2021-01-27T06:14:19Z",
+        "updatedAt" : "2021-01-27T06:14:19Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "889e9aee-29ba-4a1c-be69-b6850abc43a0",
+        "parentId" : "f2c2ab0f-d21d-49a0-a6a4-b85c5d697994",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Do you think this expression can cover all kind of external process output? Transform and pipe have arbitrary relation between input and output. External process can output a line for each input line, can do aggregation-like output like `wc -l`, can output a line per 2 or 3 input lines, etc. I don't know how do you define an expression that the output type is not deterministic.\r\n\r\n",
+        "createdAt" : "2021-01-27T06:22:45Z",
+        "updatedAt" : "2021-01-27T06:29:06Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ac7460b0431e7012f17c3ac293226bb4f428bd15",
+    "line" : 18,
+    "diffHunk" : "@@ -1,1 +2013,2017 @@\n    val nums = spark.range(4)\n    val piped = nums.pipe(\"cat\", (l, printFunc) => printFunc(l.toString)).toDF\n\n    checkAnswer(piped, Row(\"0\") :: Row(\"1\") :: Row(\"2\") :: Row(\"3\") :: Nil)"
+  },
+  {
+    "id" : "150fa6e4-1ac2-4fd5-82a3-8b46608fca46",
+    "prId" : 31296,
+    "prUrl" : "https://github.com/apache/spark/pull/31296#pullrequestreview-578853751",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "da80544a-099f-410f-889e-da9e18b8123f",
+        "parentId" : null,
+        "authorId" : "8c82da5a-f351-4a37-a8a9-13809311b07b",
+        "body" : "nit: any reason for `toDF` (as `pipe` gives a `Dataset[String]`)?",
+        "createdAt" : "2021-01-28T22:33:05Z",
+        "updatedAt" : "2021-01-28T22:35:03Z",
+        "lastEditedBy" : "8c82da5a-f351-4a37-a8a9-13809311b07b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6ea5d3c9-d552-49df-9de8-bc27c3755cfa",
+        "parentId" : "da80544a-099f-410f-889e-da9e18b8123f",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "It is just for `checkAnswer`. ",
+        "createdAt" : "2021-01-29T00:31:51Z",
+        "updatedAt" : "2021-01-29T00:31:51Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ac7460b0431e7012f17c3ac293226bb4f428bd15",
+    "line" : 18,
+    "diffHunk" : "@@ -1,1 +2013,2017 @@\n    val nums = spark.range(4)\n    val piped = nums.pipe(\"cat\", (l, printFunc) => printFunc(l.toString)).toDF\n\n    checkAnswer(piped, Row(\"0\") :: Row(\"1\") :: Row(\"2\") :: Row(\"3\") :: Nil)"
+  },
+  {
+    "id" : "60729be4-12f0-4291-9c62-57d941cce96d",
+    "prId" : 31296,
+    "prUrl" : "https://github.com/apache/spark/pull/31296#pullrequestreview-578798168",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2bc20d50-1b8f-463e-8274-a457755e843b",
+        "parentId" : null,
+        "authorId" : "8c82da5a-f351-4a37-a8a9-13809311b07b",
+        "body" : "nit: Why `toDF`?",
+        "createdAt" : "2021-01-28T22:33:21Z",
+        "updatedAt" : "2021-01-28T22:35:03Z",
+        "lastEditedBy" : "8c82da5a-f351-4a37-a8a9-13809311b07b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ac7460b0431e7012f17c3ac293226bb4f428bd15",
+    "line" : 22,
+    "diffHunk" : "@@ -1,1 +2017,2021 @@    checkAnswer(piped, Row(\"0\") :: Row(\"1\") :: Row(\"2\") :: Row(\"3\") :: Nil)\n\n    val piped2 = nums.pipe(\"wc -l\", (l, printFunc) => printFunc(l.toString)).toDF.collect()\n    assert(piped2.size == 2)\n    assert(piped2(0).getString(0).trim == \"2\")"
   }
 ]

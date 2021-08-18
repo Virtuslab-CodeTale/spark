@@ -1,0 +1,222 @@
+[
+  {
+    "id" : "3618d4ec-4169-4c0a-915e-b9cc6a389d51",
+    "prId" : 31318,
+    "prUrl" : "https://github.com/apache/spark/pull/31318#pullrequestreview-594422796",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "685961d2-529f-4f1f-afba-a7e293049074",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Could you update the comment about how to handle this case?\r\n\r\nhttps://github.com/apache/spark/pull/31318/files#diff-d43484d56a4d9991066b5c00d12ec2465c75131e055fc02ee7fb6dfd45b5006fR347-R351",
+        "createdAt" : "2021-02-18T00:41:01Z",
+        "updatedAt" : "2021-03-02T17:16:19Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0ae75ce4-2e4f-4568-889d-8c65c0d26cb1",
+        "parentId" : "685961d2-529f-4f1f-afba-a7e293049074",
+        "authorId" : "605e7a2d-bf9d-4823-9271-c5d6bf39e485",
+        "body" : "updated the comment, thanks.",
+        "createdAt" : "2021-02-19T17:49:12Z",
+        "updatedAt" : "2021-03-02T17:16:19Z",
+        "lastEditedBy" : "605e7a2d-bf9d-4823-9271-c5d6bf39e485",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "699c1f4241354f623b996643b0b44c15e623dd7b",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +354,358 @@        //    for example lhs = (a && b), rhs = (a && c) => all = (a, b, a, c), distinct = (a, b, c)\n        //    optimized predicate: (a && b && c)\n        val lhs = splitDisjunctivePredicates(left)\n        val rhs = splitDisjunctivePredicates(right)\n        val common = lhs.filter(e => rhs.exists(e.semanticEquals))"
+  },
+  {
+    "id" : "5ca82e50-c558-47ce-a4bc-7cc408ec637e",
+    "prId" : 31318,
+    "prUrl" : "https://github.com/apache/spark/pull/31318#pullrequestreview-594423197",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4644fbcb-c63d-40de-9ba1-3c2d23b3a59e",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "nit: could you add an example case here like the comment above (` // (a || b || c || ...) && (a || b) => (a || b)`)?",
+        "createdAt" : "2021-02-18T00:42:19Z",
+        "updatedAt" : "2021-03-02T17:16:19Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "da2a6ad5-579a-40b3-8070-f933e3205d63",
+        "parentId" : "4644fbcb-c63d-40de-9ba1-3c2d23b3a59e",
+        "authorId" : "605e7a2d-bf9d-4823-9271-c5d6bf39e485",
+        "body" : "done, added comment `// (((a && b) && a && (a && c))) => a && b && c`",
+        "createdAt" : "2021-02-19T17:49:44Z",
+        "updatedAt" : "2021-03-02T17:16:19Z",
+        "lastEditedBy" : "605e7a2d-bf9d-4823-9271-c5d6bf39e485",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "699c1f4241354f623b996643b0b44c15e623dd7b",
+    "line" : 34,
+    "diffHunk" : "@@ -1,1 +369,373 @@          }\n        } else {\n          // No common factors from disjunctive predicates, reduce common factor from conjunction\n          val all = splitConjunctivePredicates(left) ++ splitConjunctivePredicates(right)\n          val distinct = ExpressionSet(all)"
+  },
+  {
+    "id" : "b781ab61-8f74-4fce-b3e0-4fae4fbeb4b1",
+    "prId" : 31318,
+    "prUrl" : "https://github.com/apache/spark/pull/31318#pullrequestreview-605682626",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "bb7f56cb-48ba-4c4e-bbc6-b264bcedab28",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "so the improvement is to handle the mix of `&` and `|` ?",
+        "createdAt" : "2021-02-18T09:01:08Z",
+        "updatedAt" : "2021-03-02T17:16:19Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "497a1363-fe13-4256-be46-4ca6bea51cf2",
+        "parentId" : "bb7f56cb-48ba-4c4e-bbc6-b264bcedab28",
+        "authorId" : "605e7a2d-bf9d-4823-9271-c5d6bf39e485",
+        "body" : "Currently, `and` of common disjunctive predicates is optimized  Example: `(a || b || c || ...) && (a || b) => (a || b)`\r\nbut `and` of common conjunctive predicates is not optimized. Example: `((a && b) && (a && c))) => a && b && c`\r\nThe improvement is to optimize for common conjunctive predicate which can have mix of `&` and `|`\r\n\r\nSimilarly for `Or`, case of common disjunctive predicate is added in this PR.\r\n",
+        "createdAt" : "2021-02-19T18:01:56Z",
+        "updatedAt" : "2021-03-02T17:16:19Z",
+        "lastEditedBy" : "605e7a2d-bf9d-4823-9271-c5d6bf39e485",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d17a011d-c679-42d3-8185-2cb6fa30e91d",
+        "parentId" : "bb7f56cb-48ba-4c4e-bbc6-b264bcedab28",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "It seems that we are improving to handle conjunctive and disjunctive cases separately. I am wondering could we do a better job to handle the expression with mix of `&&` and `||`?\r\n\r\ne.g.\r\n\r\n```\r\n(a || b) && (a && b)\r\n```\r\n\r\nto\r\n\r\n```\r\na && b\r\n```",
+        "createdAt" : "2021-02-22T09:36:41Z",
+        "updatedAt" : "2021-03-02T17:16:19Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0cad9a90-ca4f-4fa1-b2d0-58f4fd6632aa",
+        "parentId" : "bb7f56cb-48ba-4c4e-bbc6-b264bcedab28",
+        "authorId" : "605e7a2d-bf9d-4823-9271-c5d6bf39e485",
+        "body" : "Many thanks @c21 for suggestion and review.\r\nI was thinking about this. We can handle this as described in 3.\r\nFor `And(left, right)`\r\n1. CommonFactorsInDisjunctions\r\n2. else CommonFactorsInConjunctions.\r\n3. else Mix of && and ||'s.\r\n```\r\nsplit lhs on || to get leftOrs.\r\n\tif( leftOrs.size > 1)\r\n\t\tsplit rhs on && to get rightAnds.\r\n\t\tforeach p in leftOrs\r\n\t\t\tdistinct = Set(p, rightAnds)\r\n\t\t\tif (distinct < rightAnds.size + 1)\r\n\t\t\t\tOutputOrs +=  distinct.reduce(And)\r\n\t\tOutputOrs.reduce(||)\r\n\telse\r\n\t\tsplit rhs on || to gt rightOrs\r\n\t\tif( rightOrs.size > 1)\r\n\t\t\tsplit lhs on && to get leftAnds.\r\n\t\t\tforeach p in rightOrs\r\n\t\t\t\tdistinct = Set(p, leftAnds)\r\n\t\t\t\tif (distinct < rightAnds.size + 1)\r\n\t\t\t\t\tOutputOrs +=  distinct.reduce(And)\r\n\t\t\tOutputOrs.reduce(||)                                      //OutputOrs is a set.\r\n```\r\n\r\nGiven example would be optimized:\r\n```\r\n=> (a || b) && (a && b)\r\n=> (a && (a && b)) || (b && (a && b))\r\n=> a && b || a && b\r\n=> a && b\r\n```\r\nBut for examples like this: \r\n```\r\n=> (a || b) && (a && c)\r\n=> (a && (a && c)) || (b && (a && c))\r\n=> (a && c) || (a && b && c)\r\n```\r\n`(a && c) || (a && b && c)` will be reduced in next iteration of `BooleanSimplification` rule to `a && b && c`.\r\nHence handling mix of &&'s and ||'s in this way can be inefficient. Do you have any suggestions around how to optimize this in single iteration of `BooleanSimplification` rule.",
+        "createdAt" : "2021-03-02T03:33:44Z",
+        "updatedAt" : "2021-03-02T17:16:20Z",
+        "lastEditedBy" : "605e7a2d-bf9d-4823-9271-c5d6bf39e485",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d0197395-f023-4941-b7d4-96c5bca8f128",
+        "parentId" : "bb7f56cb-48ba-4c4e-bbc6-b264bcedab28",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "Thank you @Swinky ! let me think more about this and get back to you later.",
+        "createdAt" : "2021-03-05T23:27:22Z",
+        "updatedAt" : "2021-03-05T23:27:22Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "699c1f4241354f623b996643b0b44c15e623dd7b",
+    "line" : 35,
+    "diffHunk" : "@@ -1,1 +370,374 @@        } else {\n          // No common factors from disjunctive predicates, reduce common factor from conjunction\n          val all = splitConjunctivePredicates(left) ++ splitConjunctivePredicates(right)\n          val distinct = ExpressionSet(all)\n          if (all.size == distinct.size) {"
+  },
+  {
+    "id" : "31971391-124b-4378-8ed7-1a386abc2f93",
+    "prId" : 31318,
+    "prUrl" : "https://github.com/apache/spark/pull/31318#pullrequestreview-605914589",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e1c8bfaa-5719-4ff3-99ee-79c11153324b",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Do we consider determinism here? \r\n\r\n```\r\n(a && b) && a && (a && c) => a && b && c\r\n```\r\n\r\ne.g.) if multiple calls of `a` changes its return value, the result would be incorrect here.",
+        "createdAt" : "2021-03-07T23:55:05Z",
+        "updatedAt" : "2021-03-07T23:55:05Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4788f8ad-8c85-46e7-99ac-19b964b9160d",
+        "parentId" : "e1c8bfaa-5719-4ff3-99ee-79c11153324b",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "In the case above, `ExpressionSet` regards `a` elements as different ones and it seems no optimisation happens? Anyway, we forgot to add tests for the case, so I think we need to add them. cc: @Swinky ",
+        "createdAt" : "2021-03-08T01:05:35Z",
+        "updatedAt" : "2021-03-08T01:05:35Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b4b53554-3031-4dd1-bc50-db75b44598e4",
+        "parentId" : "e1c8bfaa-5719-4ff3-99ee-79c11153324b",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Oh I see. Thanks @maropu.",
+        "createdAt" : "2021-03-08T01:32:54Z",
+        "updatedAt" : "2021-03-08T01:32:54Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "699c1f4241354f623b996643b0b44c15e623dd7b",
+    "line" : 41,
+    "diffHunk" : "@@ -1,1 +376,380 @@            and\n          } else {\n            // (a && b) && a && (a && c) => a && b && c\n            buildBalancedPredicate(distinct.toSeq, And)\n          }"
+  },
+  {
+    "id" : "77359e39-8d67-458f-a18b-ee69c4fd2509",
+    "prId" : 31318,
+    "prUrl" : "https://github.com/apache/spark/pull/31318#pullrequestreview-610353664",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4db53ca9-156e-4e14-b931-94319d7a8080",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Is it okay to call `distinct.toSeq` here? The current implementation of `ExpressionSet` keeps the original order of expressions, but I'm not sure that its design guarantees the order.",
+        "createdAt" : "2021-03-08T01:09:43Z",
+        "updatedAt" : "2021-03-08T01:09:43Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "913720d1-3db1-4759-af9d-03b46a52e0a5",
+        "parentId" : "4db53ca9-156e-4e14-b931-94319d7a8080",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@maropu - `ExpressionSet` implements [`Iterable.iterator()` method](https://github.com/apache/spark/blob/master/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/expressions/ExpressionSet.scala#L132), so `.toSeq` will return the expressions in original order, right? Do you think we need to add more documentation on `ExpressionSet` to harden this assumption? ",
+        "createdAt" : "2021-03-11T21:25:59Z",
+        "updatedAt" : "2021-03-11T21:25:59Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0094705a-aaa3-4db5-a36a-cc61c35ad1e9",
+        "parentId" : "4db53ca9-156e-4e14-b931-94319d7a8080",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "> Do you think we need to add more documentation on ExpressionSet to harden this assumption?\r\n\r\nYea, documenting it explicitly looks better to me.",
+        "createdAt" : "2021-03-12T00:25:22Z",
+        "updatedAt" : "2021-03-12T00:25:22Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "699c1f4241354f623b996643b0b44c15e623dd7b",
+    "line" : 87,
+    "diffHunk" : "@@ -1,1 +415,419 @@          } else {\n            // (a || b) || a || (a || c) => a || b || c\n            buildBalancedPredicate(distinct.toSeq, Or)\n          }\n        }"
+  }
+]

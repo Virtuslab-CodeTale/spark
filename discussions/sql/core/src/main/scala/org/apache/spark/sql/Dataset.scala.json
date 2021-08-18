@@ -328,5 +328,104 @@
     "commit" : "e7f167fb0103d7e62127421cf5ad2a594d5f4337",
     "line" : 4,
     "diffHunk" : "@@ -1,1 +225,229 @@    // to happen right away to let these side effects take place eagerly.\n    val plan = queryExecution.analyzed match {\n      case _: V2MicroBatchWriteCommand =>\n        queryExecution.analyzed\n      case c: Command =>"
+  },
+  {
+    "id" : "8ffc264d-f77e-4f0b-a5ea-3c177b4b63bd",
+    "prId" : 31296,
+    "prUrl" : "https://github.com/apache/spark/pull/31296#pullrequestreview-574581181",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "be5f28fe-ab33-4a9f-a70e-bc43da980261",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "This sounds a little risky to me, `A process is invoked even for empty partitions`.\r\nThis may cause a hang situation if the command is expecting input.\r\nFor example, this PR's test case is using `cat`. And, `cat | wc -l` hangs.\r\nIf we are okay, could you add a test case of empty partition to make it sure that we handle those cases?",
+        "createdAt" : "2021-01-22T19:46:20Z",
+        "updatedAt" : "2021-01-26T08:19:19Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "43fdbdd5-2d91-41f5-bb54-dc97dddba7db",
+        "parentId" : "be5f28fe-ab33-4a9f-a70e-bc43da980261",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Otherwise, you may want to add some warnings here.",
+        "createdAt" : "2021-01-22T19:47:00Z",
+        "updatedAt" : "2021-01-26T08:19:19Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4720812f-396b-4e8d-82cb-b10b41160b4e",
+        "parentId" : "be5f28fe-ab33-4a9f-a70e-bc43da980261",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "This is a good point. As you see this uses RDD.pipe, let me check if it addresses this or not. And yeah I will add a test case too.",
+        "createdAt" : "2021-01-22T20:06:58Z",
+        "updatedAt" : "2021-01-26T08:19:19Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ac7460b0431e7012f17c3ac293226bb4f428bd15",
+    "line" : 10,
+    "diffHunk" : "@@ -1,1 +2896,2900 @@   * separated by a newline. The resulting partition consists of the process's stdout output, with\n   * each line of stdout resulting in one element of the output partition. A process is invoked\n   * even for empty partitions.\n   *\n   * Note that for micro-batch streaming Dataset, the effect of pipe is only per micro-batch, not"
+  },
+  {
+    "id" : "4f7bfd83-ebef-42ce-8996-0848bcd8e7d0",
+    "prId" : 31296,
+    "prUrl" : "https://github.com/apache/spark/pull/31296#pullrequestreview-576113504",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a0097328-eb51-4da1-838b-84837840acae",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "I see all examples are simply calling print function with converted string. Could we simply get serializer func like `serializeFn: (T => String)` instead, or have two overloaded methods allowing both cases if we are unsure printElement might be necessary in some cases? This should simplify the test codes and actual user codes (as `_.toString` would simply work).",
+        "createdAt" : "2021-01-25T09:19:47Z",
+        "updatedAt" : "2021-01-26T08:19:19Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7142ce92-c25a-46b6-8b22-9fc0ee120ff6",
+        "parentId" : "a0097328-eb51-4da1-838b-84837840acae",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "I think it is okay. Most cases there should be no difference. Only difference might be when we want to print out multi-lines per obj:\r\n\r\n```scala\r\ndef printElement(obj: T, printFunc: String => Unit) = {\r\n  printFunc(obj.a)\r\n  printFunc(obj.b)\r\n  ...\r\n}\r\n```\r\n\r\n```scala\r\ndef serializeFn(obj: T): String = {\r\n  s\"${obj.a}\\n${obj.b}\\n...\"\r\n}\r\n```\r\n\r\nI'm fine with either one as they are working the same effect although taking different form.\r\n\r\n",
+        "createdAt" : "2021-01-26T08:24:52Z",
+        "updatedAt" : "2021-01-26T08:24:52Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ac7460b0431e7012f17c3ac293226bb4f428bd15",
+    "line" : 25,
+    "diffHunk" : "@@ -1,1 +2911,2915 @@   * @since 3.2.0\n   */\n  def pipe(command: String, printElement: (T, String => Unit) => Unit): Dataset[String] = {\n    implicit val stringEncoder = Encoders.STRING\n    withTypedPlan[String](PipeElements[T]("
+  },
+  {
+    "id" : "2f3f1c1f-2639-44b4-8fbf-d09a8bbeace4",
+    "prId" : 31296,
+    "prUrl" : "https://github.com/apache/spark/pull/31296#pullrequestreview-575197994",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "187211e1-3614-4ec0-b231-a2b4ab2016b6",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "I'd kindly explain the case they need to be careful, like `e.g. If your external process does aggregation on inputs, the aggregation is applied per a partition in micro-batch. You may want to aggregate these outputs after calling pipe to get global aggregation across partitions and also across micro-batches.`",
+        "createdAt" : "2021-01-25T09:27:53Z",
+        "updatedAt" : "2021-01-26T08:19:19Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ac7460b0431e7012f17c3ac293226bb4f428bd15",
+    "line" : 12,
+    "diffHunk" : "@@ -1,1 +2898,2902 @@   * even for empty partitions.\n   *\n   * Note that for micro-batch streaming Dataset, the effect of pipe is only per micro-batch, not\n   * cross entire stream. If your external process does aggregation-like on inputs, e.g. `wc -l`,\n   * the aggregation is applied per a partition in micro-batch. You may want to aggregate these"
   }
 ]

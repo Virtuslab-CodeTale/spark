@@ -86,5 +86,104 @@
     "commit" : "42c105c4755542e657d7e3069cc4dd522f1f5ab3",
     "line" : 39,
     "diffHunk" : "@@ -1,1 +76,80 @@   * to the greater than 0.\n   */\n  def prefixScan(prefixKey: UnsafeRow): Iterator[UnsafeRowPair]\n\n  /** Return an iterator containing all the key-value pairs in the StateStore. */"
+  },
+  {
+    "id" : "eea0ef4a-e4fd-48ca-bbcf-e64492ad4ae2",
+    "prId" : 31369,
+    "prUrl" : "https://github.com/apache/spark/pull/31369#pullrequestreview-579466033",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "30f5baf3-885e-44a3-a1ce-a04b52fbef02",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Just a question. Is it valid for all classes using `StateStoreCustomMetric` trait? At least for the following three in Spark.\r\n```\r\ncase class StateStoreCustomSumMetric(name: String, desc: String) extends StateStoreCustomMetric\r\ncase class StateStoreCustomSizeMetric(name: String, desc: String) extends StateStoreCustomMetric\r\ncase class StateStoreCustomTimingMetric(name: String, desc: String) extends StateStoreCustomMetric\r\n```",
+        "createdAt" : "2021-01-29T17:24:23Z",
+        "updatedAt" : "2021-01-29T17:40:50Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fe2954f0-ad85-4274-b951-eb1464436d19",
+        "parentId" : "30f5baf3-885e-44a3-a1ce-a04b52fbef02",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "yes",
+        "createdAt" : "2021-01-29T17:25:55Z",
+        "updatedAt" : "2021-01-29T17:40:50Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "da80d2f3ba816d308121387a8739dad5cab2fa36",
+    "line" : 8,
+    "diffHunk" : "@@ -1,1 +170,174 @@    val combinedCustomMetrics = distinctCustomMetrics.map { customMetric =>\n      val sameMetrics = customMetrics.filter(_._1 == customMetric)\n      val sumOfMetrics = sameMetrics.map(_._2).sum\n      customMetric -> sumOfMetrics\n    }.toMap"
+  },
+  {
+    "id" : "4d859b03-531f-469b-a90c-03c8e721f3ad",
+    "prId" : 31369,
+    "prUrl" : "https://github.com/apache/spark/pull/31369#pullrequestreview-580989364",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4fac776b-75da-4151-919e-d8e6d7c2189d",
+        "parentId" : null,
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "nit but might be necessary: should we only do the sum logic for distinctCustomMetrics only when the overwriting happens? If you agree I'll submit a follow-up PR and let you review. @viirya @HeartSaVioR ",
+        "createdAt" : "2021-02-02T02:57:52Z",
+        "updatedAt" : "2021-02-02T02:58:45Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7e044f9b-5921-4194-933a-936d0af150e1",
+        "parentId" : "4fac776b-75da-4151-919e-d8e6d7c2189d",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "My understanding is that combine is only called with multiple elements, where we expect these elements will have same custom metrics (as these are from state store provider). Please correct me if I'm missing here. ",
+        "createdAt" : "2021-02-02T03:06:27Z",
+        "updatedAt" : "2021-02-02T03:06:27Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7f1050af-c201-45de-ae03-e52cf65ed9d5",
+        "parentId" : "4fac776b-75da-4151-919e-d8e6d7c2189d",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Hm? You mean when there is only one custom metric without duplication? I think doing sum does not get incorrect result. Is there any benefit?",
+        "createdAt" : "2021-02-02T03:07:53Z",
+        "updatedAt" : "2021-02-02T03:07:53Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b5f8485d-56cd-4518-aac1-9b02ba28c17e",
+        "parentId" : "4fac776b-75da-4151-919e-d8e6d7c2189d",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "So if you assume the chance allMetrics is only having one element, then all these calculations are unnecessary. But this method already assumes the case we want multiple metrics to be combined, and I think we don't blindly call this method with one element. No benefit then.",
+        "createdAt" : "2021-02-02T03:12:48Z",
+        "updatedAt" : "2021-02-02T03:12:48Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a710a17a-f998-4674-a31c-283112dd01b4",
+        "parentId" : "4fac776b-75da-4151-919e-d8e6d7c2189d",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "```\r\nI think we don't blindly call this method with one element. No benefit then.\r\n```\r\nMake sense.",
+        "createdAt" : "2021-02-02T05:09:16Z",
+        "updatedAt" : "2021-02-02T05:09:16Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "da80d2f3ba816d308121387a8739dad5cab2fa36",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +168,172 @@    val distinctCustomMetrics = allMetrics.flatMap(_.customMetrics.keys).distinct\n    val customMetrics = allMetrics.flatMap(_.customMetrics)\n    val combinedCustomMetrics = distinctCustomMetrics.map { customMetric =>\n      val sameMetrics = customMetrics.filter(_._1 == customMetric)\n      val sumOfMetrics = sameMetrics.map(_._2).sum"
   }
 ]

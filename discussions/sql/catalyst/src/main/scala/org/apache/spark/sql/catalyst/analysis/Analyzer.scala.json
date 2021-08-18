@@ -1373,5 +1373,104 @@
     "commit" : "a5af58bde544985d152bd974aa18cf0bdbfad2d5",
     "line" : 6,
     "diffHunk" : "@@ -1,1 +3165,3169 @@      case WindowExpression(wf: AggregateWindowFunction, s: WindowSpecDefinition)\n        if wf.frame != UnspecifiedFrame =>\n        WindowExpression(wf, s.copy(frameSpecification = wf.frame))\n      case WindowExpression(wf: WindowFunction, WindowSpecDefinition(_, _, f: SpecifiedWindowFrame))\n          if wf.frame != UnspecifiedFrame && wf.frame != f =>"
+  },
+  {
+    "id" : "df568288-5e1b-437e-a9ac-62b3c00e60a9",
+    "prId" : 31339,
+    "prUrl" : "https://github.com/apache/spark/pull/31339#pullrequestreview-576123965",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4daf0939-47a6-4ba3-b529-ddcae3080d21",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "for `INSERT OVERWRITE t PARTITION (c=null) ...`, we do need to drop data if the column `c` is null, so `EqualNullSafe` is corrected here.",
+        "createdAt" : "2021-01-26T08:38:13Z",
+        "updatedAt" : "2021-01-26T08:38:13Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "987051d7-eb2b-4ddf-91a2-492d11904570",
+        "parentId" : "4daf0939-47a6-4ba3-b529-ddcae3080d21",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "@aokolnychyi  can you also take a look?",
+        "createdAt" : "2021-01-26T08:39:15Z",
+        "updatedAt" : "2021-01-26T08:39:15Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6a40120137ea6140e196873015cc5f020624f853",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +1336,1340 @@              // table names at that point. because resolution happens after a future rule, create\n              // an UnresolvedAttribute.\n              EqualNullSafe(UnresolvedAttribute(attr.name), Cast(Literal(value), attr.dataType))\n            case None =>\n              throw QueryCompilationErrors.unknownStaticPartitionColError(name)"
+  },
+  {
+    "id" : "fc51c80e-27d6-4b53-836a-0acb6ef0b951",
+    "prId" : 31286,
+    "prUrl" : "https://github.com/apache/spark/pull/31286#pullrequestreview-577991364",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0c4cc40a-5677-4e20-8588-9397252336cd",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Why `count(t1.*, t2.*)` is well-defined but `count(table.*)` is not? Isn't `count(t1.*, t2.*)` also expended like `count(table.*)` too?",
+        "createdAt" : "2021-01-27T18:00:43Z",
+        "updatedAt" : "2021-02-02T03:04:18Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "06fd018a-7ebe-49d9-b59f-8c546ccdb31e",
+        "parentId" : "0c4cc40a-5677-4e20-8588-9397252336cd",
+        "authorId" : "29c89154-22f7-40ee-b295-115a55734d6c",
+        "body" : "Thanks @viirya for reviewing.\r\nbecause expand `count(t1.*, t2.*)` is not ambiguous, I think no one will argue that `count(t1.*, t2.*)` should equal `count(1)`. Also this usage is not supported by the common database (MySQL, oracle, pgsql), so we are not in conflict with others.\r\nbut `count(table.*)` is not same. spark SQL expands the columns, pgsql converts it to `count(1)`, MySQL, Oracle (as well as ANSI) thinks this should be disallowed.\r\nSo I think block `count(table.*)` can avoid ambiguous while keeping `count(t1.*, t2.*)` can reduce the side effects.",
+        "createdAt" : "2021-01-28T01:59:58Z",
+        "updatedAt" : "2021-02-02T03:04:18Z",
+        "lastEditedBy" : "29c89154-22f7-40ee-b295-115a55734d6c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e19eb5de-d1ef-4013-8863-605897387a74",
+        "parentId" : "0c4cc40a-5677-4e20-8588-9397252336cd",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "How about the case `select count(t.*, t.*) from values (1, null) t(a, b)`? Btw, If the other databases don't support the syntax, `count(t1.*, t2.*)`, we still need to keep supporting it?",
+        "createdAt" : "2021-01-28T02:35:16Z",
+        "updatedAt" : "2021-02-02T03:04:18Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "31479a2b-9a8f-4f61-83f5-f62eeeec966d",
+        "parentId" : "0c4cc40a-5677-4e20-8588-9397252336cd",
+        "authorId" : "29c89154-22f7-40ee-b295-115a55734d6c",
+        "body" : "Thanks @maropu  for reviewing.\r\n\r\n`select count(t.*, t.*) from values (1, null) t(a, b)` will output 0.\r\n\r\nI'm fine with blocking `count(t1.*, t2.*)` as well but since in spark, we are allowing other similar cases that other databases don't support (and not follow ANSI), it's not harmful to keep `count(t1.*, t2.*)` as one more case. After all, introducing unnecessary behavior change (blocking `count(t1.*, t2.*)`) doesn't benefit users.\r\nThe similar usages:\r\n`count(col_a, col_b)` - count multiple columns is not supported by pgsql, oracel. MySQL only support with distinct\r\n`count(struct_col.*)` - expand columns in struct data type is not supported by the mentioned databases.",
+        "createdAt" : "2021-01-28T04:53:40Z",
+        "updatedAt" : "2021-02-02T03:04:18Z",
+        "lastEditedBy" : "29c89154-22f7-40ee-b295-115a55734d6c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "30d3ba47-8b81-4c8e-8f34-b9a51615418a",
+        "parentId" : "0c4cc40a-5677-4e20-8588-9397252336cd",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Let's minimize the change for now. We can open a new PR to discuss if we should forbid other cases.",
+        "createdAt" : "2021-01-28T05:09:05Z",
+        "updatedAt" : "2021-02-02T03:04:18Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "19340d4fadffc4efe9d4adc823b381c2ec76d590",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +1766,1770 @@          // SPECIAL CASE: We want to block count(tblName.*) because in spark, count(tblName.*) will\n          // be expanded while count(*) will be converted to count(1). They will produce different\n          // results and confuse users if there is any null values. For count(t1.*, t2.*), it is\n          // still allowed, since it's well-defined in spark.\n          if (!conf.allowStarWithSingleTableIdentifierInCount &&"
   }
 ]
