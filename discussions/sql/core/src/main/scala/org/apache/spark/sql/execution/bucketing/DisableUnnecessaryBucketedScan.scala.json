@@ -108,5 +108,137 @@
     "commit" : "266a5f1bedb640b0adfc2a07a0f0cb7d66188c5c",
     "line" : 14,
     "diffHunk" : "@@ -1,1 +121,125 @@  private def hasInterestingPartition(plan: SparkPlan): Boolean = {\n    plan.requiredChildDistribution.exists {\n      case _: ClusteredDistribution | _: HashClusteredDistribution | AllTuples => true\n      case _ => false\n    }"
+  },
+  {
+    "id" : "43cee069-4635-4924-9f9b-4b225c48bee9",
+    "prId" : 29804,
+    "prUrl" : "https://github.com/apache/spark/pull/29804#pullrequestreview-495274166",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "596c4a2d-049c-489c-9c56-b43ce5af0214",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "What if a scan operator reads most buckets? e.g., 999 of 1000 buckets. We select bucket scans even in this case?",
+        "createdAt" : "2020-09-23T00:07:19Z",
+        "updatedAt" : "2020-10-01T01:11:06Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "519da7ce-e718-46c3-a36c-be757ef29f57",
+        "parentId" : "596c4a2d-049c-489c-9c56-b43ce5af0214",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@maropu - this is a good question, and I think it is kind of out of scope for this PR and needs more thoughts later. We don't have a cost model to decide whether to do (bucketed filter + bucketed scan) vs (normal filter + non-bucketed scan). It can depend on number of buckets, size of filtered buckets, CPU cost for filter, etc.",
+        "createdAt" : "2020-09-23T06:22:10Z",
+        "updatedAt" : "2020-10-01T01:11:06Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "067d4cc4-4902-4932-ac5e-df750cdd02f1",
+        "parentId" : "596c4a2d-049c-489c-9c56-b43ce5af0214",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I'm fine with it for now. Technically I think filter by bucket ID and bucketed scan don't need to be coupled. We can always filter files by bucket id, and then do bucketed scan or not according to this rule.",
+        "createdAt" : "2020-09-23T06:44:25Z",
+        "updatedAt" : "2020-10-01T01:11:06Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1113fe33-8b28-4b38-bccf-b7b8bd27384f",
+        "parentId" : "596c4a2d-049c-489c-9c56-b43ce5af0214",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Yea, okay. Could you file jira later, @c21 ?",
+        "createdAt" : "2020-09-24T01:21:23Z",
+        "updatedAt" : "2020-10-01T01:11:06Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2141e120-74ac-4ac5-9631-f21bc60d657b",
+        "parentId" : "596c4a2d-049c-489c-9c56-b43ce5af0214",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@maropu - sure, filed https://issues.apache.org/jira/browse/SPARK-32985 .",
+        "createdAt" : "2020-09-24T07:04:27Z",
+        "updatedAt" : "2020-10-01T01:11:06Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b29f688fc4a06bc35effa6d24632d2a64501c9fd",
+    "line" : 146,
+    "diffHunk" : "@@ -1,1 +144,148 @@    // because bucketed table scan is still useful here to save CPU/IO cost with\n    // only reading selected bucket files.\n    scan.bucketedScan && scan.optionalBucketSet.isEmpty\n  }\n"
+  },
+  {
+    "id" : "2a812fd2-e0d0-4e87-a406-08d0bc224e4d",
+    "prId" : 29804,
+    "prUrl" : "https://github.com/apache/spark/pull/29804#pullrequestreview-497705097",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "fca93e6d-5e81-4401-9706-1268330e74fe",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Can you add description why this is needed? HasInterestingPartition and at lease one Exchange sounds obvious condition, but this allowed unary exec node is not. Why we can disable bucketed scan only if those exec nodes?",
+        "createdAt" : "2020-09-28T06:48:08Z",
+        "updatedAt" : "2020-10-01T01:11:06Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "55fe1ab6-af7a-4f8c-a107-d631364707e8",
+        "parentId" : "fca93e6d-5e81-4401-9706-1268330e74fe",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@viirya - this is good question. I agree we can be more bold and we probably don't need a whitelist operators here, e.g. SMJ - shuffle - BHJ - scan, SMJ - Shuffle - union - Scan (and another scan) should also work, but my feeling is to start with more confidence change first and improve later. With a whitelist operators here, we have a high confidence that this feature should work without introducing regression, but much less confidence if we allow arbitrary operators in the middle (at least for me). For now, to be honest, I cannot find a case why arbitrary operators cannot work. But I want to play safer in the beginning and any future improvement for this is much welcomed. cc @cloud-fan and @maropu for thoughts.\r\n\r\nAdded a comment for now.",
+        "createdAt" : "2020-09-28T08:15:48Z",
+        "updatedAt" : "2020-10-01T01:11:06Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "160063a4-bcc7-44fe-a17d-794668ded264",
+        "parentId" : "fca93e6d-5e81-4401-9706-1268330e74fe",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "In my opnion, it is okay for this PR to focus on a basic (minimal) support for the auto bucket scan. In followup activities, I think we can optimize it step-by-step by adding test cases and checking performance improvements... (Anyway, it would be better to leave some comment there about it as @viirya suggested above)",
+        "createdAt" : "2020-09-28T12:02:38Z",
+        "updatedAt" : "2020-10-01T01:11:06Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f5fc659f-0a51-4830-84f3-caccc709e314",
+        "parentId" : "fca93e6d-5e81-4401-9706-1268330e74fe",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "We should make the code clear for developer and maintainer, so leaving some comment is nicer if we want to constrain the scope of this rule for now.",
+        "createdAt" : "2020-09-28T16:15:43Z",
+        "updatedAt" : "2020-10-01T01:11:06Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "16937fba-e386-4db2-a84a-d1c52040963f",
+        "parentId" : "fca93e6d-5e81-4401-9706-1268330e74fe",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "I already added a comment in last iteration. Please suggest concretely for alternative comment if it's not looking good. Thanks.",
+        "createdAt" : "2020-09-28T16:34:33Z",
+        "updatedAt" : "2020-10-01T01:11:06Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b29f688fc4a06bc35effa6d24632d2a64501c9fd",
+    "line" : 133,
+    "diffHunk" : "@@ -1,1 +131,135 @@   * bucketed table scan and operator with interesting partition.\n   */\n  private def isAllowedUnaryExecNode(plan: SparkPlan): Boolean = {\n    plan match {\n      case _: SortExec | _: ProjectExec | _: FilterExec => true"
   }
 ]

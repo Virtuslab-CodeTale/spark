@@ -20,5 +20,104 @@
     "commit" : "e431fb8edd16f9d112c7a6ead44e6e871db1e17f",
     "line" : 59,
     "diffHunk" : "@@ -1,1 +367,371 @@          throw e;\n        }\n        // The new array could not be allocated, but that is not an issue as it is longer needed,\n        // as all records were spilled.\n      }"
+  },
+  {
+    "id" : "8abe6d64-912d-4b6f-a207-ad2f0abe78e5",
+    "prId" : 29787,
+    "prUrl" : "https://github.com/apache/spark/pull/29787#pullrequestreview-490693561",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a798021e-a184-4e1f-8ec5-9bae6fff64fe",
+        "parentId" : null,
+        "authorId" : "ff1f962a-1f58-4eea-92c9-0f188dc7dd78",
+        "body" : "`spill()` synchronizes on `UnsafeExternalSorter.this` when accessing `allocatedPages`. I presume this is to avoid concurrency issues with `cleanupResources`. However, I think we're pretty much screwed here anyway if there's a concurrent call to `cleanupResources` as that will free the page of the record that we are loading here.",
+        "createdAt" : "2020-09-17T14:59:56Z",
+        "updatedAt" : "2020-09-18T08:04:27Z",
+        "lastEditedBy" : "ff1f962a-1f58-4eea-92c9-0f188dc7dd78",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "1728eb32621ee9fcf1c05fd4825f5bf2623bf2f0",
+    "line" : 72,
+    "diffHunk" : "@@ -1,1 +602,606 @@            // `TaskMemoryManager.acquireExecutionMemory`.\n            pageToFree = lastPage;\n            allocatedPages.clear();\n            lastPage = null;\n          }"
+  },
+  {
+    "id" : "68dd563f-b04f-4654-a8b1-f1c873b80988",
+    "prId" : 29787,
+    "prUrl" : "https://github.com/apache/spark/pull/29787#pullrequestreview-491239950",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "82bf485d-fe75-4c31-8b7d-8e35fbdf3064",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "when all records have been read, the `numRecords` will be 0, and we will reach the else branch here, which doesn't do spill either?",
+        "createdAt" : "2020-09-18T06:42:41Z",
+        "updatedAt" : "2020-09-18T08:04:27Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9d492500-ef92-4d7d-b576-27c49b1b4553",
+        "parentId" : "82bf485d-fe75-4c31-8b7d-8e35fbdf3064",
+        "authorId" : "ff1f962a-1f58-4eea-92c9-0f188dc7dd78",
+        "body" : "There is nothing to spill to disk here, as all records have already been read, but we still need to free the memory. Before this PR we would keep the memory allocated.\r\nAdded a comment to the code to clarify this.",
+        "createdAt" : "2020-09-18T08:06:20Z",
+        "updatedAt" : "2020-09-18T08:06:20Z",
+        "lastEditedBy" : "ff1f962a-1f58-4eea-92c9-0f188dc7dd78",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "1728eb32621ee9fcf1c05fd4825f5bf2623bf2f0",
+    "line" : 37,
+    "diffHunk" : "@@ -1,1 +545,549 @@          // Nothing to spill as all records have been read already, but do not return yet, as the\n          // memory still has to be freed.\n          upstream = null;\n        }\n"
+  },
+  {
+    "id" : "8212972e-efb7-4626-840c-40f22472d7ca",
+    "prId" : 29785,
+    "prUrl" : "https://github.com/apache/spark/pull/29785#pullrequestreview-490564847",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c77abb12-e447-41cb-9968-6d12f7884ab5",
+        "parentId" : null,
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "The inMemSorter currently preallocates memory in its constructor right? What happens to that memory when we hit this block? I think it leaks :)... BTW shouldn't we just check whether the inMemorySorter has memory allocated?",
+        "createdAt" : "2020-09-17T12:32:33Z",
+        "updatedAt" : "2020-09-25T10:44:05Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "27eee8c3-fd86-412f-b880-1bbea88eef4c",
+        "parentId" : "c77abb12-e447-41cb-9968-6d12f7884ab5",
+        "authorId" : "ff1f962a-1f58-4eea-92c9-0f188dc7dd78",
+        "body" : "We won't hit this block with the preallocated memory. Initially `inMemSorter.hasSpaceForAnotherRecord()` will be true, which can only become false after records have been inserted, at which point `inMemSorter.numRecords() <= 0` won't be true anymore.\r\n\r\nWe could just check whether `inMemSorter` has memory allocated, but I tried to somewhat abstract the internals of `inMemSorter`. Not sure if that was the right decision though, given how tightly coupled `UnsafeExternalSorter` and `UnsafeInMemorySorter` currently are.",
+        "createdAt" : "2020-09-17T12:46:36Z",
+        "updatedAt" : "2020-09-25T10:44:05Z",
+        "lastEditedBy" : "ff1f962a-1f58-4eea-92c9-0f188dc7dd78",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3381c21a-921b-4d6d-a4c0-73b51792dd02",
+        "parentId" : "c77abb12-e447-41cb-9968-6d12f7884ab5",
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "Ok, makes sense.",
+        "createdAt" : "2020-09-17T12:59:10Z",
+        "updatedAt" : "2020-09-25T10:44:05Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "fc510ebb94ea54228dc004d63b79b898b8203dde",
+    "line" : 33,
+    "diffHunk" : "@@ -1,1 +344,348 @@    assert(inMemSorter != null);\n    if (!inMemSorter.hasSpaceForAnotherRecord()) {\n      if (inMemSorter.numRecords() <= 0) {\n        // Spilling was triggered just before this method was called. The pointer array was freed\n        // during the spill, so a new pointer array needs to be allocated here."
   }
 ]

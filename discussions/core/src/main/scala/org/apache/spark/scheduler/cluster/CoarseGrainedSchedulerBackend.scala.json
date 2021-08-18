@@ -152,5 +152,93 @@
     "commit" : "3afa99ae6393e9a3be88c24aa764e793839eec02",
     "line" : 14,
     "diffHunk" : "@@ -1,1 +559,563 @@\n  def getExecutorsWithRegistrationTs(): Map[String, Long] = synchronized {\n    executorDataMap.mapValues(v => v.registrationTs).toMap\n  }\n"
+  },
+  {
+    "id" : "6da85dbd-2ea4-4541-b38f-c7c86fc395cb",
+    "prId" : 29817,
+    "prUrl" : "https://github.com/apache/spark/pull/29817#pullrequestreview-495104382",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7d2385a3-852f-404c-ad7c-fc0c845fb0e2",
+        "parentId" : null,
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Here might be where you break the test suite last time, so double check it.",
+        "createdAt" : "2020-09-23T23:10:33Z",
+        "updatedAt" : "2020-10-22T13:56:45Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3c1e033089e392066425139d7ccb52cd501dcc31",
+    "line" : 21,
+    "diffHunk" : "@@ -1,1 +271,275 @@      // Do not change this code without running the K8s integration suites\n      case ExecutorDecommissioning(executorId) =>\n        logWarning(s\"Received executor $executorId decommissioned message\")\n        context.reply(\n          decommissionExecutor("
+  },
+  {
+    "id" : "ffdfe21d-909b-4d98-8e59-4f1436a95856",
+    "prId" : 29817,
+    "prUrl" : "https://github.com/apache/spark/pull/29817#pullrequestreview-506177818",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9cd8298e-af2c-448d-95f9-58616969dccc",
+        "parentId" : null,
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Not 100% sure, but I do remember that the locking mechanism withLock did manage to deadlock before, it might be good to add a logging statement in here that verifies this block is called in the integration test.",
+        "createdAt" : "2020-10-06T21:31:08Z",
+        "updatedAt" : "2020-10-22T13:56:45Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "12c51bd9-d8fb-4b9a-99d4-5f9940cb6537",
+        "parentId" : "9cd8298e-af2c-448d-95f9-58616969dccc",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "> Not 100% sure, but I do remember that the locking mechanism withLock did manage to deadlock before\r\n\r\nYeah. We need to avoid the deadlock now because we need both CoarseGrainedSchedulerBackend's lock and TaskSchedulerImpl's lock within the same code block. \r\n\r\n\r\n> it might be good to add a logging statement in here that verifies this block is called in the integration test.\r\n\r\nUpdated the logs and the integration test.\r\n",
+        "createdAt" : "2020-10-11T13:06:37Z",
+        "updatedAt" : "2020-10-22T13:56:45Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3c1e033089e392066425139d7ccb52cd501dcc31",
+    "line" : 43,
+    "diffHunk" : "@@ -1,1 +471,475 @@      executorsAndDecomInfo: Array[(String, ExecutorDecommissionInfo)],\n      adjustTargetNumExecutors: Boolean,\n      triggeredByExecutor: Boolean): Seq[String] = withLock {\n    // Do not change this code without running the K8s integration suites\n    val executorsToDecommission = executorsAndDecomInfo.flatMap { case (executorId, decomInfo) =>"
+  },
+  {
+    "id" : "30f4df61-106c-4c34-9a52-c647c2529855",
+    "prId" : 29817,
+    "prUrl" : "https://github.com/apache/spark/pull/29817#pullrequestreview-506176873",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b8dc41e8-937d-46f5-9b09-8a20743b6996",
+        "parentId" : null,
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "I think we might want to move this up because doing the storage decommissioning before the executor it's self is marked for decommissioning could mean that local blocks get stored in a manner where we might not know to migrate them. If you've dug through the code here and you don't believe that happens that's fine.",
+        "createdAt" : "2020-10-06T21:34:05Z",
+        "updatedAt" : "2020-10-22T13:56:45Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a9cd13f2-1324-4d9d-b156-8776b9f61cfe",
+        "parentId" : "b8dc41e8-937d-46f5-9b09-8a20743b6996",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "We don't really migrate blocks when decommissioning BlockManagers above. We only mark them as being decommissioning at driver side. So I think the problem you mentioned won't exist.",
+        "createdAt" : "2020-10-11T12:56:04Z",
+        "updatedAt" : "2020-10-22T13:56:45Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3c1e033089e392066425139d7ccb52cd501dcc31",
+    "line" : 102,
+    "diffHunk" : "@@ -1,1 +499,503 @@    scheduler.sc.env.blockManager.master.decommissionBlockManagers(executorsToDecommission)\n\n    if (!triggeredByExecutor) {\n      executorsToDecommission.foreach { executorId =>\n        logInfo(s\"Notify executor $executorId to decommissioning.\")"
   }
 ]

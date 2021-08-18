@@ -1,0 +1,68 @@
+[
+  {
+    "id" : "50c3f96f-61ef-43f3-a744-45d38abb03c9",
+    "prId" : 29855,
+    "prUrl" : "https://github.com/apache/spark/pull/29855#pullrequestreview-506411978",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "484d7492-7d7f-402e-9a3c-4bb89a60f345",
+        "parentId" : null,
+        "authorId" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "body" : "would it be a bit late to check the bitmaps size here? when the assertion fails, you already lost the context when the MergedBlockMeta is created?",
+        "createdAt" : "2020-10-12T04:49:58Z",
+        "updatedAt" : "2020-10-13T15:54:30Z",
+        "lastEditedBy" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6153020e-3221-42c5-8271-48ed88da681c",
+        "parentId" : "484d7492-7d7f-402e-9a3c-4bb89a60f345",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "The MergedBlockMeta is created on the shuffle service side.\r\nNumber of bitmaps should match number of chunks for a given merged shuffle file. (more details in the 2nd PR)\r\nThe read operation happens when `ShuffleBlockFetcherIterator` gets the serialized bitmaps buffer from shuffle service.\r\nSince it's on shuffle client side, it won't have the context when the MergedBlockMeta is created.\r\n",
+        "createdAt" : "2020-10-12T08:41:45Z",
+        "updatedAt" : "2020-10-13T15:54:30Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2c95f18d2bdf9ac373b0d5319b686a1d66c1e72b",
+    "line" : 61,
+    "diffHunk" : "@@ -1,1 +59,63 @@      bitmaps.add(Encoders.Bitmaps.decode(buf));\n    }\n    assert (bitmaps.size() == numChunks);\n    return bitmaps.toArray(new RoaringBitmap[0]);\n  }"
+  },
+  {
+    "id" : "4512a232-0df1-4ac9-994b-4b606158bdf8",
+    "prId" : 29855,
+    "prUrl" : "https://github.com/apache/spark/pull/29855#pullrequestreview-506408229",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7f6a1945-5f9e-4958-a0ee-4545855220ba",
+        "parentId" : null,
+        "authorId" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "body" : "If the read action happens for multiple times, we would repeatedly wrap from the bitmap buffer, right?",
+        "createdAt" : "2020-10-12T04:50:47Z",
+        "updatedAt" : "2020-10-13T15:54:30Z",
+        "lastEditedBy" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d2861d87-bdf9-4c44-914b-9bb18ee8734b",
+        "parentId" : "7f6a1945-5f9e-4958-a0ee-4545855220ba",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "The read action happens only once per MergedBlockMeta.\r\nThis is used on the read path for push-based shuffle, when ShuffleBlockFetcherIterator attempts to read a merged shuffle partition.\r\nIt would first send a request to the shuffle service to request this MergedBlockMeta, so it can break down a merged shuffle file into multiple smaller MB-sized chunks and fetch them separately, and handle fetch failure of individual chunks by falling back to fetching original blocks.\r\nNetty zero-copy transfer is leveraged there for transferring the bitmap buffer which is stored on shuffle service side as a file.\r\nMore details around this would be more clear as we send out the following PRs.",
+        "createdAt" : "2020-10-12T08:37:04Z",
+        "updatedAt" : "2020-10-13T15:54:30Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2c95f18d2bdf9ac373b0d5319b686a1d66c1e72b",
+    "line" : 55,
+    "diffHunk" : "@@ -1,1 +53,57 @@  }\n\n  public RoaringBitmap[] readChunkBitmaps() throws IOException {\n    ByteBuf buf = Unpooled.wrappedBuffer(chunksBitmapBuffer.nioByteBuffer());\n    List<RoaringBitmap> bitmaps = new ArrayList<>();"
+  }
+]

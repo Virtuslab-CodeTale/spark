@@ -1,0 +1,134 @@
+[
+  {
+    "id" : "0fbf0245-afec-4670-91ac-3bf4b34ec791",
+    "prId" : 29862,
+    "prUrl" : "https://github.com/apache/spark/pull/29862#pullrequestreview-534239955",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9665ce0a-bf08-4093-9acb-b2a0acee2f96",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Can you check how R's `read_csv` works in this case? This behaviour was inspired by R's one.",
+        "createdAt" : "2020-09-24T10:16:22Z",
+        "updatedAt" : "2020-11-19T13:02:54Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "68a1c43f-1419-4824-b435-d5a7bf50d8ba",
+        "parentId" : "9665ce0a-bf08-4093-9acb-b2a0acee2f96",
+        "authorId" : "d10d1d81-50d2-468f-8056-2c338a32070d",
+        "body" : "Thanks for your review.\r\n\r\nR uses`.` as the delimiter and a non-repeated increasing number as the suffix.\r\nFor example, the header is `a, a, a, a, a.2`\r\n```R\r\n> read.csv(\"x.csv\", header = TRUE, sep = \",\")\r\n[1] a   a.1 a.3 a.4 a.2\r\n```",
+        "createdAt" : "2020-09-24T10:44:56Z",
+        "updatedAt" : "2020-11-19T13:02:54Z",
+        "lastEditedBy" : "d10d1d81-50d2-468f-8056-2c338a32070d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "37846c36-6c57-450c-a164-a3ed49731e9d",
+        "parentId" : "9665ce0a-bf08-4093-9acb-b2a0acee2f96",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Can we follow this behaviour?",
+        "createdAt" : "2020-09-24T22:57:10Z",
+        "updatedAt" : "2020-11-19T13:02:54Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9c583d94-9d9a-41ae-8972-7ddc7a26cd70",
+        "parentId" : "9665ce0a-bf08-4093-9acb-b2a0acee2f96",
+        "authorId" : "d10d1d81-50d2-468f-8056-2c338a32070d",
+        "body" : "Current behavior of Spark and R for CSV headers:\r\n\r\n| CSV             | SPARK             | R               |\r\n| --------------- | ----------------- | --------------- |\r\n| `a,a,a,a`       | `a0,a1,a2,a3`     | `a,a.1,a.2,a.3` |\r\n| `a,,,`          | `a,_c1,_c2,_c3`   | `a,X,X.1,X.2`   |\r\n| *header: false* | `_c0,_c1,_c2,_c3` | `V1,V2,V3,V4`   |\r\n\r\nIf we follow R's behavior, we will introduce a user-facing change. This may cause errors in the user's legacy code. \r\nMaybe we should keep the behavior of Spark.",
+        "createdAt" : "2020-09-25T08:03:43Z",
+        "updatedAt" : "2020-11-19T13:02:54Z",
+        "lastEditedBy" : "d10d1d81-50d2-468f-8056-2c338a32070d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f48a1604-e8cf-44bb-915a-794dcaf06db0",
+        "parentId" : "9665ce0a-bf08-4093-9acb-b2a0acee2f96",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "I mean the numbering. Can. we create a name like `a1 a3 a4 a2` for `a, a, a, a, a.2`?",
+        "createdAt" : "2020-09-25T09:22:00Z",
+        "updatedAt" : "2020-11-19T13:02:54Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ab90480f-6abe-437b-8cdc-ea24322b1caa",
+        "parentId" : "9665ce0a-bf08-4093-9acb-b2a0acee2f96",
+        "authorId" : "d10d1d81-50d2-468f-8056-2c338a32070d",
+        "body" : "Before that, spark added column index numbers as suffixes for duplicate column names, instead of adding incremental numbers as suffixes.\r\nIn my opinion, following R's behavior here may introduce an unnecessary user-facing change.\r\nE.g:\r\n`a0, b, c, a, d, a`\r\nFollow the original behavior of Spark will be replaced with `a0, b, c, a3, d, a4`\r\nThe behavior that follows R will be replaced with `a0, b, c, a1, d, a2`",
+        "createdAt" : "2020-11-19T09:42:34Z",
+        "updatedAt" : "2020-11-19T13:02:54Z",
+        "lastEditedBy" : "d10d1d81-50d2-468f-8056-2c338a32070d",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2d17d97819588551f6887e6b156366f3c78c8b4f",
+    "line" : 56,
+    "diffHunk" : "@@ -1,1 +97,101 @@        }\n        name\n      }\n    } else {\n      row.zipWithIndex.map { case (_, index) =>"
+  },
+  {
+    "id" : "165ef571-a15a-4450-bc7b-ed8f7f4248d4",
+    "prId" : 29862,
+    "prUrl" : "https://github.com/apache/spark/pull/29862#pullrequestreview-534241004",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a83b9e44-ba03-41f4-ac5c-8f6a58517bb2",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "I think we can modify the logic here to make sure we generate non-duplicate header in just one run?",
+        "createdAt" : "2020-09-24T22:40:34Z",
+        "updatedAt" : "2020-11-19T13:02:54Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "473725a8-c739-4c96-9cfa-6541f9632349",
+        "parentId" : "a83b9e44-ba03-41f4-ac5c-8f6a58517bb2",
+        "authorId" : "d10d1d81-50d2-468f-8056-2c338a32070d",
+        "body" : "Thanks for your review, I modified the code.",
+        "createdAt" : "2020-11-19T09:43:51Z",
+        "updatedAt" : "2020-11-19T13:02:54Z",
+        "lastEditedBy" : "d10d1d81-50d2-468f-8056-2c338a32070d",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2d17d97819588551f6887e6b156366f3c78c8b4f",
+    "line" : 22,
+    "diffHunk" : "@@ -1,1 +71,75 @@      options: CSVOptions): Array[String] = {\n    if (options.headerFlag) {\n      val header = row.zipWithIndex.map { case (value, index) =>\n        if (value == null || value.isEmpty || value == options.nullValue) {\n          // When there are empty strings or the values set in `nullValue`, put the"
+  },
+  {
+    "id" : "698c5a7a-42d9-47c9-b8b9-782b19e5f3f3",
+    "prId" : 29862,
+    "prUrl" : "https://github.com/apache/spark/pull/29862#pullrequestreview-534245918",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "aad14fa8-102f-47b8-9f25-297cef4187ed",
+        "parentId" : null,
+        "authorId" : "d10d1d81-50d2-468f-8056-2c338a32070d",
+        "body" : "The initial value of Set here is to keep the user-facing behavior(from SPARK-16896) unchanged.",
+        "createdAt" : "2020-11-19T09:49:30Z",
+        "updatedAt" : "2020-11-19T13:02:54Z",
+        "lastEditedBy" : "d10d1d81-50d2-468f-8056-2c338a32070d",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2d17d97819588551f6887e6b156366f3c78c8b4f",
+    "line" : 43,
+    "diffHunk" : "@@ -1,1 +84,88 @@        val headerNames = header.map(name => if (caseSensitive) name else name.toLowerCase)\n        // scalastyle:on caselocale\n        headerNames.diff(headerNames.distinct)\n      }\n      header.zipWithIndex.map { case (value, index) =>"
+  }
+]

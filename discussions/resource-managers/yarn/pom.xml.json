@@ -1,0 +1,90 @@
+[
+  {
+    "id" : "3cb6856a-2ea9-4866-bcfc-3c7822d95ed7",
+    "prId" : 29824,
+    "prUrl" : "https://github.com/apache/spark/pull/29824#pullrequestreview-493349359",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "14870b06-18a0-4940-bb80-6c7e9dff0d47",
+        "parentId" : null,
+        "authorId" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "body" : "cc  @srowen I found that we add `org.glassfish.jersey.test-framework.providers` dependency after #25455 and brings the test dependence `jakarta.servlet-api` , It has different version from `javax.servlet-api`.\r\n\r\nBut I'm not sure should we use `jakarta.servlet-api` as a compile dependency  instead of `javax.servlet-api` directly",
+        "createdAt" : "2020-09-21T15:55:24Z",
+        "updatedAt" : "2020-09-21T15:58:10Z",
+        "lastEditedBy" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "daa03dfe-f11f-4389-b586-dc4e4467e901",
+        "parentId" : "14870b06-18a0-4940-bb80-6c7e9dff0d47",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "How about instead excluding the 4.0.x dependency from wherever it comes in? My guess is we want the 3.x version.",
+        "createdAt" : "2020-09-21T15:56:52Z",
+        "updatedAt" : "2020-09-21T15:56:52Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fd3413e2-7e66-4e6f-950d-77d926734b3a",
+        "parentId" : "14870b06-18a0-4940-bb80-6c7e9dff0d47",
+        "authorId" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "body" : "And I'm not sure should we need add this test dependency, but it failed in my test environment without this dependency\r\n\r\n",
+        "createdAt" : "2020-09-21T16:00:15Z",
+        "updatedAt" : "2020-09-21T16:00:15Z",
+        "lastEditedBy" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9a4415af-8936-440a-809e-63fd9681782c",
+        "parentId" : "14870b06-18a0-4940-bb80-6c7e9dff0d47",
+        "authorId" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "body" : "I've tried it once, but failed. It looks like really need 4.0.x, but I'll re-check this.",
+        "createdAt" : "2020-09-21T16:03:32Z",
+        "updatedAt" : "2020-09-21T16:03:32Z",
+        "lastEditedBy" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "86587754-64a9-4444-bcac-c4e94fa0106d",
+        "parentId" : "14870b06-18a0-4940-bb80-6c7e9dff0d47",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "OK, then this approach seems OK. We are in jar hell but what else is new!",
+        "createdAt" : "2020-09-21T16:09:53Z",
+        "updatedAt" : "2020-09-21T16:09:53Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d63061a7-a756-4fcf-b4e1-b3048ca80e00",
+        "parentId" : "14870b06-18a0-4940-bb80-6c7e9dff0d47",
+        "authorId" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "body" : "Try to excluding 4.0.x from parent pom.xml and `core/pom.xml` as follow:\r\n\r\n![image](https://user-images.githubusercontent.com/1475305/93795937-b580b500-fc6c-11ea-8bf0-2e5a9f7a4e48.png)\r\n\r\nthen and remove `jakarta.servlet-api` dependency from `resource-managers/yarn/pom.xml` and rebuild&rerun the test case but still failed :( ..., It seems that 4.0.x is needed in the test\r\n",
+        "createdAt" : "2020-09-21T16:47:24Z",
+        "updatedAt" : "2020-09-21T16:47:24Z",
+        "lastEditedBy" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f4982f4e-a714-4721-bb0c-06372602a067",
+        "parentId" : "14870b06-18a0-4940-bb80-6c7e9dff0d47",
+        "authorId" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "body" : "Fortunately, there are no real failed test cases of yarn module in Scala 2.13 :)\r\n",
+        "createdAt" : "2020-09-22T11:07:30Z",
+        "updatedAt" : "2020-09-22T11:07:31Z",
+        "lastEditedBy" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "250e397e32ac6b55ea84d68cacd340c4cbc37870",
+    "line" : 10,
+    "diffHunk" : "@@ -1,1 +95,99 @@      <scope>test</scope>\n    </dependency>\n\n    <!-- Explicit listing of transitive deps that are shaded. Otherwise, odd compiler crashes. -->\n    <dependency>"
+  }
+]

@@ -152,5 +152,82 @@
     "commit" : "9b3bbe9291e12a7decca46874dfe007285c9d562",
     "line" : 27,
     "diffHunk" : "@@ -1,1 +182,186 @@      });\n    } catch (Exception e) {\n      logger.error(\"Exception while sending finalizeShuffleMerge request to {}:{}\",\n        host, port, e);\n      listener.onShuffleMergeFailure(e);"
+  },
+  {
+    "id" : "93485076-17f9-45ca-a03e-40e566454ddd",
+    "prId" : 29855,
+    "prUrl" : "https://github.com/apache/spark/pull/29855#pullrequestreview-506290854",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3d244711-2ccb-4789-a767-48dd6bfe2a5e",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Is `buffersWithId` necessary since `blockIds` and `buffers` sharing the same index? Inside `OneForOneBlockPusher` we can also identify them by the index.",
+        "createdAt" : "2020-10-11T13:44:15Z",
+        "updatedAt" : "2020-10-13T15:54:30Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "13035f01-f117-42a6-9986-0713ea4260ab",
+        "parentId" : "3d244711-2ccb-4789-a767-48dd6bfe2a5e",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "This is necessary, due to `RetryingBlockFetcher` could supply a subrange of blockIds during retry.\r\n`OneForOneBlockPusher` is created by `RetryingBlockFetcher.BlockFetchStarter` during the invocation its `createAndStart`.\r\n`RetryingBlockFetcher` could supply an array of blockIds which is a subset of the original blockIds, based on how many blocks have already been successfully pushed.\r\nSince that API does not have an array of buffers, and we want to reuse `RetryingBlockFetcher` between both block fetch and push, creating this hashmap is thus necessary to keep track of the mapping between blockId and the buffer throughout multiple retries of this batch.",
+        "createdAt" : "2020-10-11T15:27:12Z",
+        "updatedAt" : "2020-10-13T15:54:30Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "61975b96-bb06-45c8-ae36-16e5ffe4d9a9",
+        "parentId" : "3d244711-2ccb-4789-a767-48dd6bfe2a5e",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "I see.",
+        "createdAt" : "2020-10-12T04:53:18Z",
+        "updatedAt" : "2020-10-13T15:54:30Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2c95f18d2bdf9ac373b0d5319b686a1d66c1e72b",
+    "line" : 68,
+    "diffHunk" : "@@ -1,1 +134,138 @@    Map<String, ManagedBuffer> buffersWithId = new HashMap<>();\n    for (int i = 0; i < blockIds.length; i++) {\n      buffersWithId.put(blockIds[i], buffers[i]);\n    }\n    logger.debug(\"Push {} shuffle blocks to {}:{}\", blockIds.length, host, port);"
+  },
+  {
+    "id" : "c371b36f-2186-463b-b5db-6778ce47af2f",
+    "prId" : 29855,
+    "prUrl" : "https://github.com/apache/spark/pull/29855#pullrequestreview-506389238",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "895c8b93-9814-42c9-bac3-f6b1be3d627e",
+        "parentId" : null,
+        "authorId" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "body" : "What's the benefit of handle this case separately here, instead of just create a `RetryingBlockFetcher` anyway?",
+        "createdAt" : "2020-10-12T04:46:29Z",
+        "updatedAt" : "2020-10-13T15:54:30Z",
+        "lastEditedBy" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a0d1a783-0756-4014-937f-c1958cc0cb8d",
+        "parentId" : "895c8b93-9814-42c9-bac3-f6b1be3d627e",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "This follows the way it is done in the `fetchBlocks` API.\r\nShould we remove it?",
+        "createdAt" : "2020-10-12T08:12:57Z",
+        "updatedAt" : "2020-10-13T15:54:30Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2c95f18d2bdf9ac373b0d5319b686a1d66c1e72b",
+    "line" : 83,
+    "diffHunk" : "@@ -1,1 +149,153 @@          conf, blockPushStarter, blockIds, listener, PUSH_ERROR_HANDLER).start();\n      } else {\n        blockPushStarter.createAndStart(blockIds, listener);\n      }\n    } catch (Exception e) {"
   }
 ]

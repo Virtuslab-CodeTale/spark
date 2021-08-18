@@ -262,5 +262,159 @@
     "commit" : "16f53dc0e88927d0a80f6d87f0311cce90d4ef9a",
     "line" : 12,
     "diffHunk" : "@@ -1,1 +307,311 @@    // Time latency for processing finalize shuffle merge request latency in ms\n    private final Timer finalizeShuffleMergeLatencyMillis = new Timer();\n    // Block transfer rate in blocks per second\n    private final Meter blockTransferRate = new Meter();\n    // Block fetch message rate per second. When using non-batch fetches"
+  },
+  {
+    "id" : "202f0180-88f3-4237-b03b-36ece0aca8fc",
+    "prId" : 29855,
+    "prUrl" : "https://github.com/apache/spark/pull/29855#pullrequestreview-506095674",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7835cbf2-12ce-441c-a8fb-6a66053e454c",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Why we need `user` here? Is it a system user or something else?",
+        "createdAt" : "2020-09-24T13:13:43Z",
+        "updatedAt" : "2020-10-13T15:54:30Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1d41d2dd-9d65-468e-8fc7-efdb870801da",
+        "parentId" : "7835cbf2-12ce-441c-a8fb-6a66053e454c",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "The `user` is the ID for the user running the Spark app. The `appId` and `user` together indicates the unique local dir paths where merged shuffle files for executors on a given node are stored.\r\n\r\nIs your concern that this API might be too YARN specific?",
+        "createdAt" : "2020-09-25T17:14:09Z",
+        "updatedAt" : "2020-10-13T15:54:30Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3a477c22-f2a2-4736-95f6-bd40555cc0bb",
+        "parentId" : "7835cbf2-12ce-441c-a8fb-6a66053e454c",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "that is definitely a good question. For other external shuffle services is this enough or should it be behind another interface that different ones could specify different arguments.",
+        "createdAt" : "2020-09-28T14:47:06Z",
+        "updatedAt" : "2020-10-13T15:54:30Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7c50262b-b452-44d2-9656-8288cd0da16c",
+        "parentId" : "7835cbf2-12ce-441c-a8fb-6a66053e454c",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "It's a bit unclear at this moment, especially on that part of what's needed in different schedulers.\r\nOur current approach for determining the merged shuffle file directory path is the following:\r\n\r\n1. The implementation of MergedShuffleFileManager (RPC handler for block push requests) will be initialized with a relative directory path pattern, which is relative to the list of executor local dirs (a common concept across all schedulers).\r\n2. The actual path for storing the merged shuffle files for a given application on a given host is then decided based on the local dirs and the materialization of the relative path pattern with the appId and user ID.\r\n\r\nThe assumption is that once we know the local dirs for a given app, the remaining portion of the directory path to the merged shuffle files will be mostly the same across different applications except the app Id and the user Id portion in the path.",
+        "createdAt" : "2020-09-29T21:42:03Z",
+        "updatedAt" : "2020-10-13T15:54:30Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b9b10659-0297-4bd4-a86d-a2f426f569e7",
+        "parentId" : "7835cbf2-12ce-441c-a8fb-6a66053e454c",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "I'd prefer to resolve this comment for now, and revisit when it's more clear what the requirement for  a potentially more generic API would be.",
+        "createdAt" : "2020-10-10T12:57:09Z",
+        "updatedAt" : "2020-10-13T15:54:30Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2c95f18d2bdf9ac373b0d5319b686a1d66c1e72b",
+    "line" : 140,
+    "diffHunk" : "@@ -1,1 +445,449 @@\n    @Override\n    public void registerApplication(String appId, String user) {\n      // No-op. Do nothing.\n    }"
+  },
+  {
+    "id" : "ec55c2df-5bf4-4b41-b1f8-0af7772abd7b",
+    "prId" : 29855,
+    "prUrl" : "https://github.com/apache/spark/pull/29855#pullrequestreview-506764912",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c8bf291a-8fcd-4bab-a2a6-b7ec723b79fb",
+        "parentId" : null,
+        "authorId" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "body" : "we should also make it a NoOp?",
+        "createdAt" : "2020-10-12T04:29:41Z",
+        "updatedAt" : "2020-10-13T15:54:30Z",
+        "lastEditedBy" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "aea365ba-d62a-4b7e-bdb4-c12942cf43e2",
+        "parentId" : "c8bf291a-8fcd-4bab-a2a6-b7ec723b79fb",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "This API is right now only invoked by YarnShuffleService during YARN application shutdown sequence.\r\nMaking this a no-op is more generic in case we could potentially invoke this API from other places down the way.",
+        "createdAt" : "2020-10-12T16:31:35Z",
+        "updatedAt" : "2020-10-13T15:54:30Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2c95f18d2bdf9ac373b0d5319b686a1d66c1e72b",
+    "line" : 151,
+    "diffHunk" : "@@ -1,1 +456,460 @@    @Override\n    public void applicationRemoved(String appId, boolean cleanupLocalDirs) {\n      throw new UnsupportedOperationException(\"Cannot handle shuffle block merge\");\n    }\n"
+  },
+  {
+    "id" : "c6170550-a5e5-4ae5-9b80-215a5f9b5607",
+    "prId" : 29855,
+    "prUrl" : "https://github.com/apache/spark/pull/29855#pullrequestreview-506381632",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "25592bf6-8996-48a8-8ca8-b225b5f9898e",
+        "parentId" : null,
+        "authorId" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "body" : "rename to `receivePushBlockStream` ?",
+        "createdAt" : "2020-10-12T04:33:09Z",
+        "updatedAt" : "2020-10-13T15:54:30Z",
+        "lastEditedBy" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a06138d8-05ee-4eee-aaf9-baaeb70edd0d",
+        "parentId" : "25592bf6-8996-48a8-8ca8-b225b5f9898e",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "This is from the API introduced in SPARK-6237.\r\nThat API was used for transferring large RDD partition blocks (>2GB), and we reused it for transferring shuffle partition blocks.\r\nPrefer to keep this API's name generic in case there are other use cases that could reuse this as well.",
+        "createdAt" : "2020-10-12T08:02:37Z",
+        "updatedAt" : "2020-10-13T15:54:30Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2c95f18d2bdf9ac373b0d5319b686a1d66c1e72b",
+    "line" : 56,
+    "diffHunk" : "@@ -1,1 +112,116 @@\n  @Override\n  public StreamCallbackWithID receiveStream(\n      TransportClient client,\n      ByteBuffer messageHeader,"
+  },
+  {
+    "id" : "3eec0bee-94e4-4ac3-b855-3ab89e2db19f",
+    "prId" : 29855,
+    "prUrl" : "https://github.com/apache/spark/pull/29855#pullrequestreview-506267260",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "29f78378-2543-4476-a7cd-18a31650b010",
+        "parentId" : null,
+        "authorId" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "body" : "Should we also append the original IOException in the new RuntimeException?",
+        "createdAt" : "2020-10-12T04:36:44Z",
+        "updatedAt" : "2020-10-13T15:54:30Z",
+        "lastEditedBy" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2c95f18d2bdf9ac373b0d5319b686a1d66c1e72b",
+    "line" : 94,
+    "diffHunk" : "@@ -1,1 +203,207 @@        callback.onSuccess(statuses.toByteBuffer());\n      } catch(IOException e) {\n        throw new RuntimeException(String.format(\"Error while finalizing shuffle merge \"\n          + \"for application %s shuffle %d\", msg.appId, msg.shuffleId), e);\n      } finally {"
   }
 ]

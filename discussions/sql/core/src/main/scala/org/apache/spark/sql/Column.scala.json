@@ -86,5 +86,115 @@
     "commit" : "73b99dc7a98f5d0673d309adba457cd19144be92",
     "line" : 16,
     "diffHunk" : "@@ -1,1 +1184,1188 @@  def cast(to: DataType): Column = withExpr {\n    Cast(expr, CharVarcharUtils.replaceCharVarcharWithString(to))\n  }\n\n  /**"
+  },
+  {
+    "id" : "36cc3f46-8971-4f3d-9e11-e0beeca9d224",
+    "prId" : 29795,
+    "prUrl" : "https://github.com/apache/spark/pull/29795#pullrequestreview-492782599",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "daf91a11-a13f-405b-9bd6-32c619e78cd7",
+        "parentId" : null,
+        "authorId" : "6fc88871-fca6-485c-a47e-5e17709c7b68",
+        "body" : "One of the issues in master branch with the current `Column.withField` implementation is the size of the parsed logical plan scales non-linearly with the number of directly-add-**nested**-column operations. This results in the driver spending a considerable amount of time analyzing and optimizing the logical plan (literally minutes, if it ever completes). \r\nUsers can avoid this issue entirely by writing their queries in a performant manner. \r\nFor example: \r\n\r\n```\r\n  lazy val nullableStructLevel2: DataFrame = spark.createDataFrame(\r\n    sparkContext.parallelize(Row(Row(Row(0))) :: Nil),\r\n    StructType(Seq(\r\n      StructField(\"a1\", StructType(Seq(\r\n        StructField(\"a2\", StructType(Seq(\r\n          StructField(\"col0\", IntegerType, nullable = false))),\r\n          nullable = true))),\r\n        nullable = true))))\r\n\r\n  val numColsToAdd = 100\r\n\r\n  val expectedRows = Row(Row(Row(0 to numColsToAdd: _*))) :: Nil\r\n  val expectedSchema =\r\n    StructType(Seq(\r\n      StructField(\"a1\", StructType(Seq(\r\n        StructField(\"a2\", StructType((0 to numColsToAdd).map(num =>\r\n          StructField(s\"col$num\", IntegerType, nullable = false))),\r\n          nullable = true))),\r\n        nullable = true)))\r\n\r\n  test(\"good way of writing query\") {\r\n    // Spark can easily analyze and optimize the parsed logical plan in seconds\r\n    checkAnswer(\r\n      nullableStructLevel2\r\n        .select(col(\"a1\").withField(\"a2\", (1 to numColsToAdd).foldLeft(col(\"a1.a2\")) {\r\n          (column, num) => column.withField(s\"col$num\", lit(num))\r\n        }).as(\"a1\")),\r\n      expectedRows,\r\n      expectedSchema)\r\n  }\r\n\r\n  test(\"bad way of writing the same query that will eventually fail with timeout exception with as little as numColsToAdd = 10\") {\r\n    checkAnswer(\r\n      nullableStructLevel2\r\n        .select((1 to numColsToAdd).foldLeft(col(\"a1\")) {\r\n          (column, num) => column.withField(s\"a2.col$num\", lit(num))\r\n        }.as(\"a1\")),\r\n      expectedRows,\r\n      expectedSchema)\r\n  }\r\n```\r\n\r\nThis issue and its solution is what I've attempted to capture here as part of the method doc. \r\n\r\nThere are other options here instead of method-doc-note: \r\n- We could potentially write some kind of optimization in `updateFieldsHelper` (I've bashed my head against this for a while but haven't been able to come up with anything satisfactory).\r\n- Remove the ability to change nested fields directly entirely. While this has the advantage that there will be absolutely no way to run into this \"performance\" issue, the user-experience definitely suffers for more advanced users who would know how to use these methods properly.  \r\n\r\nI've gone with what made most sense to me (method-doc-note) but am open to hearing other people's thoughts on the matter. \r\n",
+        "createdAt" : "2020-09-21T00:58:42Z",
+        "updatedAt" : "2020-09-29T20:56:48Z",
+        "lastEditedBy" : "6fc88871-fca6-485c-a47e-5e17709c7b68",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c3a227ae-ddbf-4736-90f4-b43646cf6acf",
+        "parentId" : "daf91a11-a13f-405b-9bd6-32c619e78cd7",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I think the same issue happens in `withColumn` as well. I'm fine with method doc.",
+        "createdAt" : "2020-09-21T16:23:25Z",
+        "updatedAt" : "2020-09-29T20:56:48Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7e51f35580db72fda11153d76caf232b83e617cd",
+    "line" : 20,
+    "diffHunk" : "@@ -1,1 +918,922 @@   *   // result: {\"a\":{\"a\":1,\"b\":2,\"c\":3,\"d\":4}}\n   * }}}\n   *\n   * @group expr_ops\n   * @since 3.1.0"
+  },
+  {
+    "id" : "39a13d51-6f69-431a-9021-b2fbb76a9634",
+    "prId" : 29795,
+    "prUrl" : "https://github.com/apache/spark/pull/29795#pullrequestreview-496108643",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2b53db96-d6c1-46b8-a042-6a256a43a10e",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Let's explicitly mention that, if the name doesn't match any field, it's noop.",
+        "createdAt" : "2020-09-23T04:43:29Z",
+        "updatedAt" : "2020-09-29T20:56:48Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2e51a2dd-54a3-4d07-9f8f-b61ce74a0668",
+        "parentId" : "2b53db96-d6c1-46b8-a042-6a256a43a10e",
+        "authorId" : "6fc88871-fca6-485c-a47e-5e17709c7b68",
+        "body" : "I've made this change but now that I think about it, I don't think its actually classifies as a \"noop\". We still reconstruct the struct unfortunately e.g.\r\n```\r\nval structType = StructType(Seq(\r\n    StructField(\"a\", IntegerType, nullable = false),\r\n    StructField(\"b\", IntegerType, nullable = true),\r\n    StructField(\"c\", IntegerType, nullable = false)))\r\n\r\nval structLevel1: DataFrame = spark.createDataFrame(\r\n    sparkContext.parallelize(Row(Row(1, null, 3)) :: Nil),\r\n    StructType(Seq(StructField(\"a\", structType, nullable = false))))\r\n\r\nstructLevel1.withColumn(\"a\", 'a.dropFields(\"d\")).explain()\r\n\r\n== Physical Plan ==\r\n*(1) Project [named_struct(a, a#1.a, b, a#1.b, c, a#1.c) AS a#3]\r\n+- *(1) Scan ExistingRDD[a#1]\r\n```\r\nShould I revert this?",
+        "createdAt" : "2020-09-25T01:44:45Z",
+        "updatedAt" : "2020-09-29T20:56:48Z",
+        "lastEditedBy" : "6fc88871-fca6-485c-a47e-5e17709c7b68",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "27031667-c330-4839-84c1-0a01175f414a",
+        "parentId" : "2b53db96-d6c1-46b8-a042-6a256a43a10e",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "It's semantically noop. We can optimize away the struct reconstructing later.",
+        "createdAt" : "2020-09-25T04:51:13Z",
+        "updatedAt" : "2020-09-29T20:56:48Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7e51f35580db72fda11153d76caf232b83e617cd",
+    "line" : 34,
+    "diffHunk" : "@@ -1,1 +931,935 @@  // scalastyle:off line.size.limit\n  /**\n   * An expression that drops fields in `StructType` by name.\n   * This is a no-op if schema doesn't contain field name(s).\n   *"
+  },
+  {
+    "id" : "981e9d3f-0158-4cbd-b3b1-94a60aee9645",
+    "prId" : 29795,
+    "prUrl" : "https://github.com/apache/spark/pull/29795#pullrequestreview-496057700",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c99d489f-e7f1-400d-b5f9-c53d62cce6aa",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "shall we fail here? I don't think the field name can be an empty string.\r\n\r\nIt's not related to this PR and we can consider it later.",
+        "createdAt" : "2020-09-23T04:45:06Z",
+        "updatedAt" : "2020-09-29T20:56:48Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "98dfe4fc-4d1b-454f-8623-7e3f5167de43",
+        "parentId" : "c99d489f-e7f1-400d-b5f9-c53d62cce6aa",
+        "authorId" : "6fc88871-fca6-485c-a47e-5e17709c7b68",
+        "body" : "we've discussed this before [here](https://github.com/apache/spark/pull/27066#discussion_r448416127) :)\r\nIts needed for `withField` and I think we should support it in `dropFields` as well because `Dataset.drop` supports it: \r\n```\r\nscala> Seq((1, 2)).toDF(\"a\", \"\").drop(\"\").printSchema\r\nroot\r\n |-- a: integer (nullable = false)\r\n```\r\nI've added a test case to demonstrate this works on the `dropFields` side but otherwise left the code unchanged. \r\n",
+        "createdAt" : "2020-09-25T01:45:48Z",
+        "updatedAt" : "2020-09-29T20:56:48Z",
+        "lastEditedBy" : "6fc88871-fca6-485c-a47e-5e17709c7b68",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7e51f35580db72fda11153d76caf232b83e617cd",
+    "line" : 105,
+    "diffHunk" : "@@ -1,1 +1002,1006 @@\n    if (fieldName.isEmpty) {\n      fieldName :: Nil\n    } else {\n      CatalystSqlParser.parseMultipartIdentifier(fieldName)"
   }
 ]

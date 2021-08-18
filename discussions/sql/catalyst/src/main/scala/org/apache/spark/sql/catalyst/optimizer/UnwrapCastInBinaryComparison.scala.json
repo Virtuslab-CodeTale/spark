@@ -141,5 +141,214 @@
     "commit" : "ea0ba385ec38b231a37f871cecf1ca9ffb852c3d",
     "line" : 61,
     "diffHunk" : "@@ -1,1 +137,141 @@    // As the analyzer makes sure that the list of In is already of the same data type, then the\n    // rule can simply check the first literal in `in.list` can implicitly cast to `toType` or not,\n    // and note that:\n    // 1. this rule doesn't convert in when `in.list` is empty or `in.list` contains only null\n    // values."
+  },
+  {
+    "id" : "a9260364-6210-4d23-b2be-18b81c64c1af",
+    "prId" : 29792,
+    "prUrl" : "https://github.com/apache/spark/pull/29792#pullrequestreview-498732403",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "48eeff62-1320-4de1-bb44-ae0bb19dd841",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "why the upper bound is not `PositiveInfinity`?",
+        "createdAt" : "2020-09-29T08:31:19Z",
+        "updatedAt" : "2020-10-12T20:16:06Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "aa2ccaa3-bf29-476c-b00b-51c5e0a61f60",
+        "parentId" : "48eeff62-1320-4de1-bb44-ae0bb19dd841",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "This is because `PositiveInfinity` is considered to be < `NaN` in Spark. If we treat it as the upper bound, rules handling the upper bounds will not be valid. For instance the following expr:\r\n```sql\r\ncast(e as double) > double('+inf')\r\n```\r\nwould be converted to\r\n```sql\r\ne === double('+inf')\r\n```\r\nwhich won't be correct if `e` evaluates to `double('NaN')`.",
+        "createdAt" : "2020-09-29T17:44:41Z",
+        "updatedAt" : "2020-10-12T20:16:06Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "76b9f73862380dda40b332b56464278bfb0b88d3",
+    "line" : 270,
+    "diffHunk" : "@@ -1,1 +267,271 @@    case IntegerType => Some((Int.MinValue, Int.MaxValue))\n    case LongType => Some((Long.MinValue, Long.MaxValue))\n    case FloatType => Some((Float.NegativeInfinity, Float.NaN))\n    case DoubleType => Some((Double.NegativeInfinity, Double.NaN))\n    case _ => None"
+  },
+  {
+    "id" : "e4861fb4-b637-4390-b2af-9dc93af06c48",
+    "prId" : 29792,
+    "prUrl" : "https://github.com/apache/spark/pull/29792#pullrequestreview-502755440",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b2115506-3855-49f2-9aa3-0ebc30cc2444",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "why it's safe to skip range check for decimal type?",
+        "createdAt" : "2020-09-29T08:37:35Z",
+        "updatedAt" : "2020-10-12T20:16:06Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3fc85a7b-6b07-40f5-a4f5-22137676324c",
+        "parentId" : "b2115506-3855-49f2-9aa3-0ebc30cc2444",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "It is safe since knowing min/max for a type just gives us more opportunity for optimizations. I skipped decimal type here because (it seems) there is no min/max defined in the `DecimalType`, unlike other numeric types.",
+        "createdAt" : "2020-09-29T17:47:24Z",
+        "updatedAt" : "2020-10-12T20:16:06Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "db0a2605-6044-49cc-a062-bcc822e69325",
+        "parentId" : "b2115506-3855-49f2-9aa3-0ebc30cc2444",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "makes sense.",
+        "createdAt" : "2020-10-06T09:33:32Z",
+        "updatedAt" : "2020-10-12T20:16:06Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "76b9f73862380dda40b332b56464278bfb0b88d3",
+    "line" : 171,
+    "diffHunk" : "@@ -1,1 +203,207 @@\n    // When we reach to this point, it means either there is no min/max for the `fromType` (e.g.,\n    // decimal type), or that the literal `value` is within range `(min, max)`. For these, we\n    // optimize by moving the cast to the literal side.\n"
+  },
+  {
+    "id" : "d8cd1727-453d-42d1-8ad3-5f92f47df8f5",
+    "prId" : 29792,
+    "prUrl" : "https://github.com/apache/spark/pull/29792#pullrequestreview-498717462",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ee2f792c-2b2c-4c3f-bad2-be5a92a58cca",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "The case I'm worried about is `cast(float_col as double) cmp double_lit`. It's not straightforward to me that a `double -> float -> double` roundtrip can tell rounding up or down. is it because `float -> double` can only be rounding up?",
+        "createdAt" : "2020-09-29T08:50:15Z",
+        "updatedAt" : "2020-10-12T20:16:06Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "077b3cb8-b001-4621-92df-05699876c319",
+        "parentId" : "ee2f792c-2b2c-4c3f-bad2-be5a92a58cca",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "So double to float can result to either rounding up or down. For instance, by casting 3.14 in double to float, even though the value is still 3.14, the binary representation is rounded up:\r\n\r\n3.14 in double:\r\n```\r\n0 10000000000 1001 0001 1110 1011 1000 0101 0001 1110 1011 1000 0101 0001 1111\r\n```\r\n\r\n3.14 in float\r\n```\r\n0 10000000 1001 0001 1110 1011 1000 011\r\n```\r\nHere the sign bit and exponent bits (11 and 8 bits respectively for double and float) are the same for both float and double. However, in the fraction part, the last is rounded up to 1.\r\n\r\nAfter casting back to double, there won't be any rounding up or down - the remaining digits are simply padded with 0:\r\n```\r\n0 10000000000 1001 0001 1110 1011 1000 0110 0000000000000000000000000000\r\n```\r\n",
+        "createdAt" : "2020-09-29T16:37:41Z",
+        "updatedAt" : "2020-10-12T20:16:06Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ed6b2bff-c335-493d-aaf5-35284df012b0",
+        "parentId" : "ee2f792c-2b2c-4c3f-bad2-be5a92a58cca",
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "Is it defined as part of IEEE Standard for Floating-Point Arithmetic (IEEE 754)?",
+        "createdAt" : "2020-09-29T16:40:07Z",
+        "updatedAt" : "2020-10-12T20:16:06Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1bd01b6c-464e-4ad0-a7cc-3dee00753f1e",
+        "parentId" : "ee2f792c-2b2c-4c3f-bad2-be5a92a58cca",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Yes I think both the binary format as well as rounding rules are specified in IEEE 754. There are a few rounding rules and I think the default one is \"rounding to half even\".",
+        "createdAt" : "2020-09-29T17:25:51Z",
+        "updatedAt" : "2020-10-12T20:16:06Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "76b9f73862380dda40b332b56464278bfb0b88d3",
+    "line" : 180,
+    "diffHunk" : "@@ -1,1 +212,216 @@      return exp\n    }\n    val valueRoundTrip = Cast(Literal(newValue, fromType), toType).eval()\n    val lit = Literal(newValue, fromType)\n    val cmp = ordering.compare(value, valueRoundTrip)"
+  },
+  {
+    "id" : "a49fe387-472d-4585-a4d3-f4ed74809647",
+    "prId" : 29792,
+    "prUrl" : "https://github.com/apache/spark/pull/29792#pullrequestreview-503150938",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3d11374e-280c-4a9f-bedd-3e3bb72dd165",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "can you give a real example here?",
+        "createdAt" : "2020-10-06T09:34:30Z",
+        "updatedAt" : "2020-10-12T20:16:06Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7159b4a4-8135-45cd-8cb8-29437206f54d",
+        "parentId" : "3d11374e-280c-4a9f-bedd-3e3bb72dd165",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I see, it's for decimal only. It's better to make the comment more explicit.",
+        "createdAt" : "2020-10-06T12:49:05Z",
+        "updatedAt" : "2020-10-12T20:16:06Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a5bfe5aa-8828-4046-a708-5d7a8f1bd1c0",
+        "parentId" : "3d11374e-280c-4a9f-bedd-3e3bb72dd165",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "yup will do - there is also a test case covering this.",
+        "createdAt" : "2020-10-06T16:30:04Z",
+        "updatedAt" : "2020-10-12T20:16:06Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "76b9f73862380dda40b332b56464278bfb0b88d3",
+    "line" : 177,
+    "diffHunk" : "@@ -1,1 +209,213 @@    if (newValue == null) {\n      // This means the cast failed, for instance, due to the value is not representable in the\n      // narrower type. In this case we simply return the original expression.\n      return exp\n    }"
+  },
+  {
+    "id" : "b103ead0-88f0-48be-a743-18a4ebded9bb",
+    "prId" : 29792,
+    "prUrl" : "https://github.com/apache/spark/pull/29792#pullrequestreview-505844184",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9392b738-d2ab-4387-82e1-d57510f02f93",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Looks it does not have any test for this code path, so could you add some tests for it. (NOTE: I think `byte`, `int`, and `long` are not tested in `UnwrapCastInBinaryComparisonSuite`, too)",
+        "createdAt" : "2020-10-09T12:43:28Z",
+        "updatedAt" : "2020-10-12T20:16:06Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b71c5245-a5ec-4256-a4db-eb9ba3c4fc01",
+        "parentId" : "9392b738-d2ab-4387-82e1-d57510f02f93",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Will add a test case (although I think it will be pretty trivial). I only added tests for `short` in the previous PR because the handling for other integral types is exactly the same.",
+        "createdAt" : "2020-10-09T16:56:41Z",
+        "updatedAt" : "2020-10-12T20:16:06Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "76b9f73862380dda40b332b56464278bfb0b88d3",
+    "line" : 271,
+    "diffHunk" : "@@ -1,1 +268,272 @@    case LongType => Some((Long.MinValue, Long.MaxValue))\n    case FloatType => Some((Float.NegativeInfinity, Float.NaN))\n    case DoubleType => Some((Double.NegativeInfinity, Double.NaN))\n    case _ => None\n  }"
   }
 ]

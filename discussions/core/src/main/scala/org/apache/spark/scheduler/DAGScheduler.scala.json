@@ -636,5 +636,115 @@
     "commit" : "5ce29340c8aa4a6aadfc8d00cb5053a9be9aa839",
     "line" : 4,
     "diffHunk" : "@@ -1,1 +250,254 @@  taskScheduler.setDAGScheduler(this)\n\n  private val pushBasedShuffleEnabled = Utils.isPushBasedShuffleEnabled(sc.getConf)\n\n  /**"
+  },
+  {
+    "id" : "af0c7b6c-3443-409c-be9a-17b5d0e2cd72",
+    "prId" : 29869,
+    "prUrl" : "https://github.com/apache/spark/pull/29869#pullrequestreview-499679928",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c3a8c7ce-9e88-4bf9-bf27-9ecd46bee619",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "\"Heavy\" means that accumulated values are too big? If so, we cannot just check the size here and pre-merge it if the size goes over a threshold? IMHO it is not a good idea for developers to control the accumulator behavior explicitly via the name prefix.",
+        "createdAt" : "2020-09-28T11:32:01Z",
+        "updatedAt" : "2020-09-28T11:32:01Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7ad5f1b6-f63a-47dc-b5df-915aca74157b",
+        "parentId" : "c3a8c7ce-9e88-4bf9-bf27-9ecd46bee619",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "Yes. \"Heavy\" means the size is too big, such as the accumulator value contains thousands of file paths. I know this looks not a good solution. Do you mean to use a size threshold to filter out the big accumulator values? The problem that way is we split the same accumulators (same name with different sizes). Actually, Spark uses METRICS_PREFIX to distinguish the internal metrics from all accumulators `val METRICS_PREFIX = \"internal.metrics.\"`. We can separate them to `val (externalAccumUpdates, internalAccumUpdates)` and update/merge the `externalAccumUpdates` before they entering into event loop. But, you know, we still cannot forbid developers to use the \"internal.metrics.\" prefix. We only could add some comments in code and document it.",
+        "createdAt" : "2020-09-30T02:11:33Z",
+        "updatedAt" : "2020-09-30T02:12:58Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c54a1e26-7c67-4b59-98cb-a11167c5787c",
+        "parentId" : "c3a8c7ce-9e88-4bf9-bf27-9ecd46bee619",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "internal configs and user facing are completely different.  Yes if someone reads the code they could create internal ones but that is use at your own risk and we don't guarantee any api. This is user facing api essentially.  I agree with @maropu I'm not really fond of the prefix approach.   Is this only for CollectionAccumulator or SetAccumulator? Although it looks like the SetAccumulator is specific to delta.",
+        "createdAt" : "2020-09-30T17:56:34Z",
+        "updatedAt" : "2020-09-30T17:56:35Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d9ecb25257827a85db6b536c5dc7fc270ef24ec2",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +277,281 @@    // It may cause heavy full GC problem if some heavy external accumulators keep in memory.\n    // We update these heavy accumulators before they entering into Spark listener event loop.\n    val (heavyAccumUpdates, otherAccumUpdates) = accumUpdates.partition { acc =>\n      acc.name.exists(_.startsWith(ExternalHeavyAccumulator.HEAVY_PREFIX))\n    }"
+  },
+  {
+    "id" : "1f2f930c-1610-4a05-ab12-781f8d1868fa",
+    "prId" : 29869,
+    "prUrl" : "https://github.com/apache/spark/pull/29869#pullrequestreview-499042171",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e348ea6d-5909-4b32-97cd-ae408a559ce0",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "This code part looks almost the same with `updateAccumulators`, so could we share it between them?",
+        "createdAt" : "2020-09-28T11:38:49Z",
+        "updatedAt" : "2020-09-28T11:38:49Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3d3f93f7-1f94-45fb-96ed-78254f67292d",
+        "parentId" : "e348ea6d-5909-4b32-97cd-ae408a559ce0",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "Yes. We can extract the common part as a new private method.",
+        "createdAt" : "2020-09-30T02:20:23Z",
+        "updatedAt" : "2020-09-30T02:20:24Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d9ecb25257827a85db6b536c5dc7fc270ef24ec2",
+    "line" : 10,
+    "diffHunk" : "@@ -1,1 +281,285 @@    }\n    heavyAccumUpdates.foreach { updates =>\n      val id = updates.id\n      try {\n        // Find the corresponding accumulator on the driver and update it"
+  },
+  {
+    "id" : "09c8f5e7-7ec4-4e13-8795-909d7d8fd29a",
+    "prId" : 29788,
+    "prUrl" : "https://github.com/apache/spark/pull/29788#pullrequestreview-493095001",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0bb3c3df-54d2-4659-8474-bdd17b83b0d6",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "See comment below for `ExecutorDecommission` ... Should this be changed to a:\r\n\r\n```\r\ncase decom @ ExecutorDecommission => decom.workerHost // or decom.host\r\n```\r\n\r\nYou don't need to add an extra '_' then.",
+        "createdAt" : "2020-09-18T17:11:36Z",
+        "updatedAt" : "2020-09-18T17:38:05Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "51e93da7-506f-448d-8f75-81fea1bebfe5",
+        "parentId" : "0bb3c3df-54d2-4659-8474-bdd17b83b0d6",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Yeah, this actually a good point! This's actually a rule of  Databricks' scala style guide. But I just follow the style of above `ExecutorProcessLost` here. I think it's acceptable when there're not many arugumenetes are being expaned.",
+        "createdAt" : "2020-09-22T02:37:22Z",
+        "updatedAt" : "2020-09-22T02:37:22Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9bebdd4f2846f12f8ab13279c8cece151e8edfd0",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +2369,2373 @@      val workerHost = reason match {\n        case ExecutorProcessLost(_, workerHost, _) => workerHost\n        case ExecutorDecommission(_, host) => host\n        case _ => None\n      }"
   }
 ]

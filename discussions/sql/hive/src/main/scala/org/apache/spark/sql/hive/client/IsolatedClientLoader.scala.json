@@ -196,5 +196,93 @@
     "commit" : "cccb021189418f4be31b057931f40ef69fcccc4c",
     "line" : 20,
     "diffHunk" : "@@ -1,1 +127,131 @@      // this introduced from lower version of Hive could conflict with jars in Hadoop 3.2+, so\n      // exclude here in favor of the ones in Hadoop 3.2+\n      Seq(\"org.apache.hadoop:hadoop-auth\")\n    } else {\n      Seq.empty"
+  },
+  {
+    "id" : "b54835e7-11d3-4e31-a184-3ac3a624dd5e",
+    "prId" : 29843,
+    "prUrl" : "https://github.com/apache/spark/pull/29843#pullrequestreview-514216719",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a5d32d0d-b0f6-47e0-bade-e382b57f9cc4",
+        "parentId" : null,
+        "authorId" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "body" : "Why is `hadoop-auth` the only one excluded here? Won't Hive pull in a variety of the non-shaded Hadoop JARs?",
+        "createdAt" : "2020-10-21T21:10:32Z",
+        "updatedAt" : "2020-10-21T23:44:36Z",
+        "lastEditedBy" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cde4c98a-6868-4102-a70a-14a7b14aeb25",
+        "parentId" : "a5d32d0d-b0f6-47e0-bade-e382b57f9cc4",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "I only excluded this one because it caused issues, but yes we could exclude more.\r\n\r\nA bit more context, I think currently the way it works is a bit messed up: it pulls hadoop dependencies from both Hive and the explicit `hadoop-client` dependency, while the latter uses the Hadoop version in Spark (which is 3.x in default, as opposed to 2.x in Hive). As result, one can end up with two versions of various Hadoop jars in the class path and conflicts can happen unexpectedly. This only happens when we are not sharing Hadoop classes though (which is rare): in the other path Spark always loads its own Hadoop classes first, then Hive's.\r\n\r\nThis was amplified when we replace hadoop-client with hadoop-client-api, since latter does not include other jars such as hadoop-common: it just put all classes in a single jar. ",
+        "createdAt" : "2020-10-21T21:16:41Z",
+        "updatedAt" : "2020-10-21T23:44:36Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "62bb0b69-721f-4b56-b90f-d8aae9fe472b",
+        "parentId" : "a5d32d0d-b0f6-47e0-bade-e382b57f9cc4",
+        "authorId" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "body" : "I thought that Ivy would do dependency conflict resolution to resolve such issues? Do you actually get two versions of the same module (e.g. `hadoop-common` 2.7 and 3.2) or mixed Hadoop modules (like `hadoop-common` 2.7 but `hadoop-auth` 3.2)? I was under the impression that the former should be resolved automatically.\r\n\r\nIn any case -- this seems like a good opportunity to clean it up. If we exclude everything _except_ `hadoop-client-api` and `hadoop-client-runtime`, that should cover excluding all of Hive's JARs, right?",
+        "createdAt" : "2020-10-21T21:22:58Z",
+        "updatedAt" : "2020-10-21T23:44:36Z",
+        "lastEditedBy" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5c2f6108-ad69-4481-a86f-9cc639d784ac",
+        "parentId" : "a5d32d0d-b0f6-47e0-bade-e382b57f9cc4",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "No not same artifacts with different versions, but different artifacts with different versions (e.g., `hadoop-common` 2.7 but `hadoop-auth` 3.2).\r\n\r\nYes we could do a cleanup and remove all other dependencies here, although somewhat related I'm wondering whether we do need to support not-sharing classes at all. It is currently used only in tests and in a rare case where it can't find [the specified hadoop version](https://github.com/apache/spark/blob/master/sql/hive/src/main/scala/org/apache/spark/sql/hive/client/IsolatedClientLoader.scala#L78) (I don't fully understand why it switch to not using shared classes in the latter). ",
+        "createdAt" : "2020-10-21T21:31:17Z",
+        "updatedAt" : "2020-10-21T23:44:36Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "369b6f2c-5cad-4d84-aa67-48f84ebf4521",
+        "parentId" : "a5d32d0d-b0f6-47e0-bade-e382b57f9cc4",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "It's also related to the definition of \"not sharing Hadoop classes\": does it mean Hadoop classes from Hive dependency take precedence over those from Spark itself? if that's true then we probably shouldn't exclude those.",
+        "createdAt" : "2020-10-21T21:36:01Z",
+        "updatedAt" : "2020-10-21T23:44:36Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6e10d1f8-383a-42fd-9603-6f657639ba75",
+        "parentId" : "a5d32d0d-b0f6-47e0-bade-e382b57f9cc4",
+        "authorId" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "body" : "True... I've recently been debugging some test issues in our environment that are caused by this behavior, and am also confused by its existence.\r\n\r\nGiven that we explicitly specify a Hadoop version to `downloadVersion` (which can be different from the one the rest of Spark is using), it seems that should take precedence over the ones Hive pulls in.",
+        "createdAt" : "2020-10-21T21:40:33Z",
+        "updatedAt" : "2020-10-21T23:44:36Z",
+        "lastEditedBy" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d4a54a52-8091-41c3-990e-7f36a0f2bb2c",
+        "parentId" : "a5d32d0d-b0f6-47e0-bade-e382b57f9cc4",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Yes it's confusing. I'll probably leave this as it is and open another JIRA specifically for this issue, and see what the broader community think.",
+        "createdAt" : "2020-10-21T21:58:28Z",
+        "updatedAt" : "2020-10-21T23:44:36Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "0359047cd02ed7051ade3002c84ab5f3255a67cb",
+    "line" : 20,
+    "diffHunk" : "@@ -1,1 +133,137 @@      // this introduced from lower version of Hive could conflict with jars in Hadoop 3.2+, so\n      // exclude here in favor of the ones in Hadoop 3.2+\n      Seq(\"org.apache.hadoop:hadoop-auth\")\n    } else {\n      Seq.empty"
   }
 ]

@@ -1,0 +1,101 @@
+[
+  {
+    "id" : "a0fa92cd-cf05-45e3-b67a-2beef69ed7e0",
+    "prId" : 29855,
+    "prUrl" : "https://github.com/apache/spark/pull/29855#pullrequestreview-508304830",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "854c5b7a-79b9-42c5-b79a-052cbf1e6b31",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "I'm wondering why this error is retriable. My understanding is that the error returns when there's already another attempt wrote or being writing (not sure if this case also included) the same shuffle block. So does retry is to prevent the case where the writing attempt fails to write the block completely?",
+        "createdAt" : "2020-10-13T13:47:05Z",
+        "updatedAt" : "2020-10-13T15:54:30Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "27cc3ac4-50e8-48b8-aa93-226a3652c114",
+        "parentId" : "854c5b7a-79b9-42c5-b79a-052cbf1e6b31",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "It's not the same block, but another block belonging to the same shuffle partition.",
+        "createdAt" : "2020-10-13T15:31:43Z",
+        "updatedAt" : "2020-10-13T15:54:30Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3e0d1e9d-119b-4ea5-b3eb-9370ea5ea876",
+        "parentId" : "854c5b7a-79b9-42c5-b79a-052cbf1e6b31",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Ah..sorry. I do mean the same shuffle partition rather than the same block.\r\n\r\nWDYT?",
+        "createdAt" : "2020-10-13T15:49:29Z",
+        "updatedAt" : "2020-10-13T15:54:30Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "18ee9252-c6cc-4fc8-8fdd-a721e0796e5a",
+        "parentId" : "854c5b7a-79b9-42c5-b79a-052cbf1e6b31",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "It's retriable because this block hasn't been appended to the merged shuffle file and the merge operation hasn't been finalized yet.",
+        "createdAt" : "2020-10-13T16:14:55Z",
+        "updatedAt" : "2020-10-13T16:14:56Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "03ee4393-5c89-49e8-afa9-6598779ce197",
+        "parentId" : "854c5b7a-79b9-42c5-b79a-052cbf1e6b31",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "When we append a block to the merged shuffle file, we either append it completely or we end up effectively writing nothing to the file.\r\nIf the first attempt failed because of collision, then that block effectively hasn't been appended to the file yet, which makes it retriable.\r\nIn the 2nd PR to be sent out soon, it will include more details for this part.",
+        "createdAt" : "2020-10-13T16:20:41Z",
+        "updatedAt" : "2020-10-13T16:20:41Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0809e0c2-eecf-4509-b88b-a037ccdc9612",
+        "parentId" : "854c5b7a-79b9-42c5-b79a-052cbf1e6b31",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "> If the first attempt failed because of collision, then that block effectively hasn't been appended to the file yet, which makes it retriable.\r\n\r\nWhat makes the first attempt failed because of collision? With my understanding, it has two possibilities:\r\n\r\n1. the same partition has been already merged by another task attempt\r\n2. the same partition is merging by another task attempt\r\n\r\n\r\nFor case 1, do we still need to retry? If we do retry in this case, doesn't it return `BLOCK_APPEND_COLLISION_DETECTED_MSG_PREFIX` again? \r\n\r\nFor case2, I think it may make sense to retry in case of that attempt doesn't merge partition successfully at the end.",
+        "createdAt" : "2020-10-13T16:39:04Z",
+        "updatedAt" : "2020-10-13T16:39:04Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d8bc2515-f9e6-4812-bbab-69256ae04dda",
+        "parentId" : "854c5b7a-79b9-42c5-b79a-052cbf1e6b31",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "We actually distinguish between a block duplication and a block collision on the server side.\r\n\r\nBlock duplication is when the exact same shuffle partition block gets pushed by different executors, due to speculation or maybe task retry.\r\nThe server side is able to tell when block duplication happens, whether is one duplicate block sent after the first has been successfully merged or when both blocks are received at the same time.\r\nWith duplicate block, the server will actually respond success to the client, so the client won't retry sending it.\r\nIn the case of speculation, when 2 clients might be sending the same block at the same time, the server will respond success to 1 of the two and let the other write, and if that write fails the corresponding client will retry if it's retriable.\r\n\r\nOn the other hand, a block collision is not about the exact same shuffle partition block, but 2 different blocks belonging to the same shuffle partition being sent to the same shuffle service at the same time.\r\nSince the shuffle service need to append 1 block completely before appending the content of the next block belonging to the same shuffle partition, when these blocks arrive at one shuffle service at the same time, we would encounter a block collision.\r\nA block collision might not  immediately lead to the collision failure sent back to the client, since the server will buffer the blocks for a short period of time and make a few attempts before giving up.\r\nWhen the shuffle service gives up, the client will receive the collision failure.\r\nIf it receives the collision failure, it's an indication that this block hasn't been merged yet, and thus it's OK to retry.\r\nOf course, it's totally possible that by the time the retry happens, a speculative task has already pushed the block and successfully merged it.\r\nIf that's the case, the retry would be treated as a block duplication instead of a block collision, and the client will receive success response.\r\n\r\nI hope this servers as an overview of what's to come in the next PR.",
+        "createdAt" : "2020-10-14T00:34:20Z",
+        "updatedAt" : "2020-10-14T00:34:21Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d0f4fd7e-5bc7-462a-96b0-116f725b8324",
+        "parentId" : "854c5b7a-79b9-42c5-b79a-052cbf1e6b31",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "I see. Thanks for the detailed explanation.",
+        "createdAt" : "2020-10-14T12:45:13Z",
+        "updatedAt" : "2020-10-14T12:45:13Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2c95f18d2bdf9ac373b0d5319b686a1d66c1e72b",
+    "line" : 38,
+    "diffHunk" : "@@ -1,1 +36,40 @@    assertFalse(handler.shouldRetryError(new RuntimeException(new ConnectException())));\n    assertTrue(handler.shouldRetryError(new RuntimeException(new IllegalArgumentException(\n      ErrorHandler.BlockPushErrorHandler.BLOCK_APPEND_COLLISION_DETECTED_MSG_PREFIX))));\n    assertTrue(handler.shouldRetryError(new Throwable()));\n  }"
+  }
+]

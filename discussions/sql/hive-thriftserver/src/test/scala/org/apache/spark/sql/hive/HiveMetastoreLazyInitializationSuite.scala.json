@@ -1,0 +1,57 @@
+[
+  {
+    "id" : "3fa77bb2-696c-458a-a053-0b874bc18c43",
+    "prId" : 29783,
+    "prUrl" : "https://github.com/apache/spark/pull/29783#pullrequestreview-490826902",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4145e686-10e1-48a5-adf5-1eec14934b19",
+        "parentId" : null,
+        "authorId" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "body" : "cc @srowen I think this change is very Interesting, `HiveThriftServer2ListenerSuite ` will ABORTED without this change\r\n```\r\nHiveThriftServer2ListenerSuite:\r\n*** RUN ABORTED ***\r\n  java.lang.LinkageError: loader constraint violation: loader (instance of net/bytebuddy/dynamic/loading/MultipleParentClassLoader) previously initiated loading for a different type with name \"org/apache/hive/service/ServiceStateChangeListener\"\r\n```\r\n\r\nThe Context Class Loader is `NonClosableMutableURLClassLoader` in `HiveMetastoreLazyInitializationSuite` running process and propagate to `HiveThriftServer2ListenerSuite`  , then \r\n\r\nhttps://github.com/apache/spark/blob/92b75dc260eb43d906a425f9f9d8d63b78c48cee/sql/hive-thriftserver/src/test/scala/org/apache/spark/sql/hive/thriftserver/ui/HiveThriftServer2ListenerSuite.scala#L172-L175\r\n\r\nwill use `MultipleParentClassLoader(NonClosableMutableURLClassLoader and AppClassLoader)` to mock `HiveThriftServer2` instance in Scala 2.13, but mock `HiveThriftServer2` instance  use `AppClassLoader` only in Scala 2.12.\r\n\r\nThen I do some experiments:\r\n\r\n- Ignore `HiveMetastoreLazyInitializationSuite` all tests passed\r\n\r\n- Run `HiveThriftServer2ListenerSuite` only will passed\r\n\r\n- Copy test case `HiveMetastoreLazyInitializationSuite` to  `HiveThriftServer2ListenerSuite` then  run `HiveThriftServer2ListenerSuite` only, it aborted in both Scala 2.12 and Scala 2.13.\r\n\r\nI guess that `HiveMetastoreLazyInitializationSuite` and `HiveThriftServer2ListenerSuite` run in same thread in Scala 2.13 but different thread in Scala 2.12, but I don't know why.\r\n\r\n",
+        "createdAt" : "2020-09-17T09:06:46Z",
+        "updatedAt" : "2020-09-17T09:17:40Z",
+        "lastEditedBy" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5546a22f-f968-43f1-a3f0-92bdc3477d33",
+        "parentId" : "4145e686-10e1-48a5-adf5-1eec14934b19",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Thank you for investigation, @LuciferYang . It's interesting.",
+        "createdAt" : "2020-09-17T15:01:09Z",
+        "updatedAt" : "2020-09-17T15:01:10Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4ba43e8d-944c-41c3-964f-a62be7069c56",
+        "parentId" : "4145e686-10e1-48a5-adf5-1eec14934b19",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Interesting. I think it's fine, as this change just improves isolation in any event.",
+        "createdAt" : "2020-09-17T15:18:41Z",
+        "updatedAt" : "2020-09-17T15:18:42Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5ceae956-4176-4349-a8aa-16fb2510be65",
+        "parentId" : "4145e686-10e1-48a5-adf5-1eec14934b19",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Ya. I agree with @srowen . The patch itself looks good.",
+        "createdAt" : "2020-09-17T17:24:30Z",
+        "updatedAt" : "2020-09-17T17:24:31Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "0d208781b7a3132a89dca75242d89008cb4dc66a",
+    "line" : 4,
+    "diffHunk" : "@@ -1,1 +32,36 @@      .getOrCreate()\n    val originalLevel = org.apache.log4j.Logger.getRootLogger().getLevel\n    val originalClassLoader = Thread.currentThread().getContextClassLoader\n    try {\n      // Avoid outputting a lot of expected warning logs"
+  }
+]

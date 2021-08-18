@@ -757,5 +757,93 @@
     "commit" : "27ebe4858cb46e998a6dc3ecd8f7bd110d05bfe4",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +1900,1904 @@      logWarning(\"null or empty path specified as parameter to addJar\")\n    } else {\n      val key = if (path.contains(\"\\\\\") && Utils.isWindows) {\n        // For local paths with backslashes on Windows, URI throws an exception\n        addLocalJarFile(new File(path))"
+  },
+  {
+    "id" : "b3f2afaf-0d6f-401e-8ebf-8fdb918b7659",
+    "prId" : 29796,
+    "prUrl" : "https://github.com/apache/spark/pull/29796#pullrequestreview-491134080",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "dde8575e-1288-4450-9e90-3cb11d4b899a",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "@williamhyun, looks `fs.getFileStatus(hadoopPath).isDirectory` isn't the exact synonym of `fs.isDirectory`, e.g.)\r\n\r\n```java\r\n  public boolean isDirectory(Path f) throws IOException {\r\n    try {\r\n      return getFileStatus(f).isDirectory();\r\n    } catch (FileNotFoundException e) {\r\n      return false;               // f does not exist\r\n    }\r\n  }\r\n```\r\n\r\nI think you can create utility methods under `Utils.scala` to reuse.",
+        "createdAt" : "2020-09-18T03:04:59Z",
+        "updatedAt" : "2020-09-18T05:27:44Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2873ba11-d060-443c-ab69-6152d257c4d8",
+        "parentId" : "dde8575e-1288-4450-9e90-3cb11d4b899a",
+        "authorId" : "95160cff-696a-48c9-a7e7-7d1a98cbe371",
+        "body" : "I missed that. Sorry. In that case, the utility methods will be identical with the deprecated Hadoop 3.2 `isFile/isDirectory` themselves. I'll close my PR. Thank you for your feedback.",
+        "createdAt" : "2020-09-18T03:40:30Z",
+        "updatedAt" : "2020-09-18T05:27:44Z",
+        "lastEditedBy" : "95160cff-696a-48c9-a7e7-7d1a98cbe371",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7064d066-8920-4b37-9ff4-1dcdf07e67c6",
+        "parentId" : "dde8575e-1288-4450-9e90-3cb11d4b899a",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "@williamhyun, I think they were deprecated to avoid calling redundant `getFileStatus` at [HADOOP-13321](https://issues.apache.org/jira/browse/HADOOP-13321):\r\n\r\n> These methods have a habit of fostering inefficient call patterns in applications, resulting in multiple redundant getFileStatus calls.\r\n\r\n You can have one util that takes both `FileStatus` or `path` for example.\r\n\r\nIf you'd like to take a more conservative approach, you can keep only some valid calls (with `fs.exists()` as an example).",
+        "createdAt" : "2020-09-18T03:54:16Z",
+        "updatedAt" : "2020-09-18T05:27:44Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "71a046515efd306f36e4894069abe234271b99d2",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +1882,1886 @@            throw new FileNotFoundException(s\"Jar ${path} not found\")\n          }\n          if (fs.getFileStatus(hadoopPath).isDirectory) {\n            throw new IllegalArgumentException(\n              s\"Directory ${path} is not allowed for addJar\")"
+  },
+  {
+    "id" : "c0ea54fb-c0bc-4885-9899-71c40495f02d",
+    "prId" : 29796,
+    "prUrl" : "https://github.com/apache/spark/pull/29796#pullrequestreview-491134329",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "77546cdb-709a-470b-bc1a-239b2fa5feee",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "For example, `fs.getFileStatus(hadoopPath).isDirectory` here looks valid.",
+        "createdAt" : "2020-09-18T03:55:05Z",
+        "updatedAt" : "2020-09-18T05:27:44Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "71a046515efd306f36e4894069abe234271b99d2",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +1882,1886 @@            throw new FileNotFoundException(s\"Jar ${path} not found\")\n          }\n          if (fs.getFileStatus(hadoopPath).isDirectory) {\n            throw new IllegalArgumentException(\n              s\"Directory ${path} is not allowed for addJar\")"
+  },
+  {
+    "id" : "34c96c60-43cc-469a-9604-b79b784f9b62",
+    "prId" : 29796,
+    "prUrl" : "https://github.com/apache/spark/pull/29796#pullrequestreview-491158645",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d5118f09-653c-4283-987f-769078fabd9f",
+        "parentId" : null,
+        "authorId" : "95160cff-696a-48c9-a7e7-7d1a98cbe371",
+        "body" : "This is safe because of `if (!fs.exists(hadoopPath)) {` at line 1881.",
+        "createdAt" : "2020-09-18T05:23:12Z",
+        "updatedAt" : "2020-09-18T05:27:44Z",
+        "lastEditedBy" : "95160cff-696a-48c9-a7e7-7d1a98cbe371",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "71a046515efd306f36e4894069abe234271b99d2",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +1882,1886 @@            throw new FileNotFoundException(s\"Jar ${path} not found\")\n          }\n          if (fs.getFileStatus(hadoopPath).isDirectory) {\n            throw new IllegalArgumentException(\n              s\"Directory ${path} is not allowed for addJar\")"
   }
 ]

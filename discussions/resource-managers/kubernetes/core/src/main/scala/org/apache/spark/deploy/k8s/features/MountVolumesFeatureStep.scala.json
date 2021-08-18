@@ -31,5 +31,82 @@
     "commit" : "b350f2500e222244b41351fe6d68437f896bb1e1",
     "line" : 13,
     "diffHunk" : "@@ -1,1 +86,90 @@              .withNewMetadata()\n                .withName(claimName)\n                .addToLabels(SPARK_APP_ID_LABEL, conf.sparkConf.getAppId)\n                .endMetadata()\n              .withNewSpec()"
+  },
+  {
+    "id" : "43a6b16a-a2aa-48d5-a96a-171cdff097e7",
+    "prId" : 29873,
+    "prUrl" : "https://github.com/apache/spark/pull/29873#pullrequestreview-496920789",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1e7ec063-fd54-48e3-89f9-ea837df43fe1",
+        "parentId" : null,
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "Late to review. minor, should we match `KubernetesDriverConf` and add anther default case?",
+        "createdAt" : "2020-09-26T00:19:31Z",
+        "updatedAt" : "2020-09-26T00:20:46Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "90c552ce4da20f49f6bdc536c5557c3fbf2e98ea",
+    "line" : 28,
+    "diffHunk" : "@@ -1,1 +71,75 @@                  s\"${conf.resourceNamePrefix}-exec-${c.executorId}$PVC_POSTFIX-$i\")\n                .replaceAll(ENV_EXECUTOR_ID, c.executorId)\n            case _ =>\n              claimNameTemplate\n                .replaceAll(PVC_ON_DEMAND, s\"${conf.resourceNamePrefix}-driver$PVC_POSTFIX-$i\")"
+  },
+  {
+    "id" : "3da48b51-e760-4080-8bc9-424802fe7744",
+    "prId" : 29861,
+    "prUrl" : "https://github.com/apache/spark/pull/29861#pullrequestreview-495218987",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c2ea5806-dd73-4189-8cc8-bd25c4ab76ca",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Please see the code in the master branch.\r\n- https://github.com/apache/spark/blob/master/resource-managers/kubernetes/core/src/main/scala/org/apache/spark/deploy/k8s/features/MountVolumesFeatureStep.scala#L117",
+        "createdAt" : "2020-09-24T04:55:48Z",
+        "updatedAt" : "2020-09-24T04:55:57Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6ef5c2b325b1a4b94b8d5815d1d7e35cd029deb7",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +115,119 @@\n  override def getAdditionalKubernetesResources(): Seq[HasMetadata] = {\n    additionalResources.toSeq\n  }\n}"
+  },
+  {
+    "id" : "643397a0-807a-420f-9da5-5831abf49e08",
+    "prId" : 29846,
+    "prUrl" : "https://github.com/apache/spark/pull/29846#pullrequestreview-495030557",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d6f64a7c-a483-4dfe-9725-5cc6959f6871",
+        "parentId" : null,
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Would it make sense to have the OnDemand, postfix, and access mode configurable?",
+        "createdAt" : "2020-09-23T17:54:06Z",
+        "updatedAt" : "2020-09-23T18:05:58Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "51a19820-1c82-48b5-af8f-df90b40711e2",
+        "parentId" : "d6f64a7c-a483-4dfe-9725-5cc6959f6871",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Ya, it's possible, but I didn't do that in this PR because of the followings.\r\n- `PVC_ON_DEMAND`: It's a dummy placeholder because the existing code expects some pre-defined names. We had better recommend a fixed one instead of making a configurable one in this case.\r\n- `PVC_POSTFIX`: It can be configurable but doesn't give much benefit to users because this is a part of transient ids and the prefix already guarantees no conflicts.\r\n- `PVC_ACCESS_MODE`: Ya. I thought like you at the beginning, but I changed to this form to reduce the problem surface. Although `PVC_ACCESS_MODE  config` makes sense a lot, I leave this PR to focus on a fixed one because this PR aims to generate a new PVC for each executor. In other words, this PR is not suggesting creating a `ReadWriteMany` PVC and sharing across in multiple executors. \r\n\r\nFor `ReadWriteMany` PVC, we don't need to use this PR. The existing Spark PVC feature can mount a single `ReadWriteMany` PVC into all executors without any problem and there is no burden to maintain `ReadWriteMany` PVC, because it's always a single one. In addition, we also support NFS (AWS EFS) mounting, additionally.",
+        "createdAt" : "2020-09-23T20:39:39Z",
+        "updatedAt" : "2020-09-23T20:43:44Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "97d80fc753cafdd7e02d2c2cefb20cb9e1ed86e6",
+    "line" : 78,
+    "diffHunk" : "@@ -1,1 +123,127 @@  val PVC = \"PersistentVolumeClaim\"\n  val PVC_POSTFIX = \"-pvc\"\n  val PVC_ACCESS_MODE = \"ReadWriteOnce\"\n}"
   }
 ]

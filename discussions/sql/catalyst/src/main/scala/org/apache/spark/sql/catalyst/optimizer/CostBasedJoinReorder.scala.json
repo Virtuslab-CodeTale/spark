@@ -42,5 +42,170 @@
     "commit" : "cdf7f08bc7bdda6dd5abe542b3961f2bc4ac4057",
     "line" : 27,
     "diffHunk" : "@@ -1,1 +367,371 @@      if (other.planCost.card == 0 || other.planCost.size == 0) {\n        false\n      } else {\n        val relativeRows = BigDecimal(this.planCost.card) / BigDecimal(other.planCost.card)\n        val relativeSize = BigDecimal(this.planCost.size) / BigDecimal(other.planCost.size)"
+  },
+  {
+    "id" : "ea239836-186e-4469-9d1b-e70fba1b0e7e",
+    "prId" : 29871,
+    "prUrl" : "https://github.com/apache/spark/pull/29871#pullrequestreview-497455883",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "cfae9212-63e3-49d1-afef-bfec53a81ac8",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "cc: @wzhfy",
+        "createdAt" : "2020-09-28T12:22:27Z",
+        "updatedAt" : "2021-04-02T07:48:24Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d2a6128e977949444432f7da6935385a54b5301f",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +206,210 @@    val nextLevel = new JoinPlanMap\n    val lev = existingLevels.length - 1\n    var k = lev\n    // Build plans for the next level from plans at level k (one side of the join) and level\n    // lev - k (the other side of the join)."
+  },
+  {
+    "id" : "2a79586d-45dd-4366-bad3-38e67eeeff6b",
+    "prId" : 29871,
+    "prUrl" : "https://github.com/apache/spark/pull/29871#pullrequestreview-498384703",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2c190a08-40e7-4dab-b7ae-8c8c9af16daa",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Could you describe more about why we need to change this search ~order~ strategy for making this rule idempotent? If how to update next-level join plans is a root cause, we cannot simply modify the update logic below when different plans having the same cost found?\r\n\r\nhttps://github.com/apache/spark/blob/d15f504a5e8bd8acfb6dc1ee138f7d92ff211396/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/optimizer/CostBasedJoinReorder.scala#L227-L233",
+        "createdAt" : "2020-09-28T13:48:54Z",
+        "updatedAt" : "2021-04-02T07:48:24Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4fbd2b7a-ad8d-4e6b-bfe3-0c3c2dbea56f",
+        "parentId" : "2c190a08-40e7-4dab-b7ae-8c8c9af16daa",
+        "authorId" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "body" : "This was also my first idea, but I couldn't figure it out.\r\n\r\nI'll try to give two examples, where all pairwise joins have the same cost and we can join only plans with consecutive letters (AB, but bot AC)\r\nKeep in mind, that we try build left-deep trees:\r\nhttps://github.com/apache/spark/blob/4619acc3ce72a6df9ac849d045ecdbed56a562be/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/optimizer/CostBasedJoinReorder.scala#L301\r\n\r\nLet the inital join be ((AB)C) - firstly join A and B and then join with C.\r\nLets look at the candidates generated at each iteration: \r\n\r\nFirstly if we kept the first candidate (current code)\r\n\r\n1. iteration (the initial state):\r\n(A)  (B)  (C)   \r\n\r\n2. iteration (nested loop over the single elements):\r\n(AB)  (BC)   \r\nDisgarded (BA) and (CB), because they were late\r\n\r\n3. iteration (outer loop is single element, inner is two element):\r\n((BC)A)\r\nDisgarded ((AB)C) because it was late\r\n\r\nSecondly if we kept the last one (possible change, that I considered)\r\n1. iteration (the initial state):\r\n(A)  (B)  (C)   \r\n\r\n2. iteration (nested loop over the single elements):\r\n(BA)  (CB)   \r\nDisgarded (AB) and (BC), because they were overwritten\r\n\r\n3. iteration (outer loop is single element, inner is two element):\r\n((BA)C)\r\nDisgarded ((CB)A), because it was overwritten\r\n\r\nNeither of these gave the original result. But lets try iterating from the largest (while keeping the first candidate). This is my proposition.\r\n\r\n1. iteration (the initial state):\r\n(A)  (B)  (C)   \r\nThe initial state\r\n\r\n2. iteration (nested loop over the single elements):\r\n(AB)  (BC)   \r\nDisgarded (BA) and (CB), because they were late\r\n\r\n3. iteration (outer loop is two element, inner is single element):\r\n((AB)C)\r\nDisgarded ((BC)A) because it was late\r\n\r\nNow, if we would add another plan D, then in the 4. iteration it would be appended to the ((AB)C) and we would still have correct result.\r\n\r\nNote that if the input would be ((AB)(CD)), then the result would also be (((AB)C)D), but we must be stable only on second time this is applied and because we output left-deep trees, then we must be stable on left-deep trees, to be idempotent. \r\n\r\nAlso by left-deep we mean \"as left-deep\" as possible. \r\n\r\nAnd finally, yes, I know that this dummy example is no rigorous proof, but we have 2 things going for us:\r\n1. Out of all the test cases we have, none broke this rule\r\n2. The idempotentsi test is used only in UTs, so there is no chance of breaking the user side by marking this as  idempotent. ",
+        "createdAt" : "2020-09-28T16:56:41Z",
+        "updatedAt" : "2021-04-02T07:48:24Z",
+        "lastEditedBy" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "50df842d-ea80-4724-9b85-b271680402d1",
+        "parentId" : "2c190a08-40e7-4dab-b7ae-8c8c9af16daa",
+        "authorId" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "body" : "I pondered about this a bit more. I think this is a bit more general explanaiton:\r\n\r\nAfter the first round of optimisation the plans are ordered: ABCD....\r\nLets ignore the brackets to keep it general.\r\nOn the second run we just have to redraw the brackets without changing the order.\r\n\r\nWe know that the result is as left-deep as possible. \r\n\r\nSo, if we would be iterating from the smaller ones, then we could have (K) and (LM), that we want to join, but because it has to be left-deep, we must order it as ((LM)K).\r\n\r\nBut, if we start from the bigger ones, then we hit (KL) and (M) first and joining these will not reorder the letters.\r\n\r\nFor stability I think, that there are at least 4 factors, that must match with each others:\r\nHow do we join: left-deep, right-deep....\r\nThe iteration order in one \"level\": left-to-right, right-to-left.\r\nThe order of picking levels: bigger first, smaller first.\r\nWhich one we keep, when joins have equal cost: first, last...\r\n\r\nThere might be more. Changing the order of picking levels gets us to stability in one change.\r\nThere are most definitely more ways to achieve stability, but it seems, that it would require more than one change.\r\n",
+        "createdAt" : "2020-09-28T17:53:22Z",
+        "updatedAt" : "2021-04-02T07:48:24Z",
+        "lastEditedBy" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e0cb7e18-ce3f-47c5-bf69-b8c424138990",
+        "parentId" : "2c190a08-40e7-4dab-b7ae-8c8c9af16daa",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Thanks for your detailed explanation. IMO a fix should be simple and intuitive in terms of maintainability. Another idea that I came up with after I read the description above was to simply sort input candidate plans by some values (e.g., `semanticHash`) at the beginning of `search`. It seems there are multiple options to solve this (like the four factors you described above). Any reason to choose the current approach out from them? You chose the simplest one?\r\n",
+        "createdAt" : "2020-09-29T01:23:24Z",
+        "updatedAt" : "2021-04-02T07:48:24Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dc9aca4a-cedc-4e30-9a7e-ef90cb861751",
+        "parentId" : "2c190a08-40e7-4dab-b7ae-8c8c9af16daa",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Btw, could you update the PR description based on the explanation above? That explanation looks useful for making others understood smoothly, I think.",
+        "createdAt" : "2020-09-29T01:24:51Z",
+        "updatedAt" : "2021-04-02T07:48:24Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1a967148-a890-4e34-8942-06e0cc4fae07",
+        "parentId" : "2c190a08-40e7-4dab-b7ae-8c8c9af16daa",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "One more comment; could you add some tests based on the explanation scenario above?",
+        "createdAt" : "2020-09-29T01:28:53Z",
+        "updatedAt" : "2021-04-02T07:48:24Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "61ae9bf5-4b54-4796-83b3-e4b89b7b12d2",
+        "parentId" : "2c190a08-40e7-4dab-b7ae-8c8c9af16daa",
+        "authorId" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "body" : "To my surprise the `semanticHash` changes between executions, so sorting by it makes the results of the `PlanStabilitySuite` not stable. \r\nIn the second commit of this PR I tried the sorting, but could not get it to work: https://github.com/apache/spark/pull/29871/commits/d58966ce5434d50044e8d610978f075cbcad92b1\r\n\r\nTBH It wasn't my first idea, but it is the first one, I got to work - the other ones seemed to require too much code change and I did not go further with those.",
+        "createdAt" : "2020-09-29T03:11:32Z",
+        "updatedAt" : "2021-04-02T07:48:24Z",
+        "lastEditedBy" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0517dd66-b9c5-4350-aea6-b885b3baa972",
+        "parentId" : "2c190a08-40e7-4dab-b7ae-8c8c9af16daa",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "> To my surprise the semanticHash changes between executions, so sorting by it makes the results of the PlanStabilitySuite not stable.\r\n\r\nAh, I see... This rule rewrites candidate plans after reordering plans, so IIUC `semanticHash` values might change in the second run...\r\n\r\n> TBH It wasn't my first idea, but it is the first one, I got to work - the other ones seemed to require too much code change and I did not go further with those.\r\n\r\nokay, let's wait for the comments of other reviewers.",
+        "createdAt" : "2020-09-29T08:39:10Z",
+        "updatedAt" : "2021-04-02T07:48:24Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7fcad5c7-612d-4e89-92ab-1686e324ad6f",
+        "parentId" : "2c190a08-40e7-4dab-b7ae-8c8c9af16daa",
+        "authorId" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "body" : "> Ah, I see... This rule rewrites candidate plans after reordering plans, so IIUC `semanticHash` values might change in the second run...\r\n> \r\n\r\nYeah, that was one issue, that complicated the approach.\r\n\r\nBut, what made it even worse is that the value for `semanticHash` will change every time you restart the JVM. I'm not sure if its intended or not and I could not find the source of randomness. \r\n",
+        "createdAt" : "2020-09-29T09:36:50Z",
+        "updatedAt" : "2021-04-02T07:48:24Z",
+        "lastEditedBy" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a7759afa-321d-4ab7-b26a-d9eb16ae5684",
+        "parentId" : "2c190a08-40e7-4dab-b7ae-8c8c9af16daa",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "> But, what made it even worse is that the value for semanticHash will change every time you restart the JVM. I'm not sure if its intended or not and I could not find the source of randomness.\r\n\r\nYea, that's a design and why do we need to keep the same `semanticHash` values between different JVMs?",
+        "createdAt" : "2020-09-29T11:26:59Z",
+        "updatedAt" : "2021-04-02T07:48:24Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fd938ee4-b5c8-4fd5-bd37-70b1a0268ef4",
+        "parentId" : "2c190a08-40e7-4dab-b7ae-8c8c9af16daa",
+        "authorId" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "body" : "> Yea, that's a design and why do we need to keep the same `semanticHash` values between different JVMs?\r\n\r\nIt does not allow us sort by it and then compare results in the `PlanStabilitySuite`. ",
+        "createdAt" : "2020-09-29T11:38:13Z",
+        "updatedAt" : "2021-04-02T07:48:24Z",
+        "lastEditedBy" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "355278f7-3454-424b-9ba1-4f6fa830f0d0",
+        "parentId" : "2c190a08-40e7-4dab-b7ae-8c8c9af16daa",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Ah, I see. I only cared about the idempotence check in `RuleExecutor`.",
+        "createdAt" : "2020-09-29T11:49:43Z",
+        "updatedAt" : "2021-04-02T07:48:24Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d2a6128e977949444432f7da6935385a54b5301f",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +212,216 @@    // a join from A and B, both A J B and B J A are handled.\n    // Start searching from highest level to make sure that optimally ordered input doesn't get\n    // reordered into another plan with the same cost.\n    while (k >= lev - k) {\n      val oneSideCandidates = existingLevels(k).values.toSeq"
   }
 ]

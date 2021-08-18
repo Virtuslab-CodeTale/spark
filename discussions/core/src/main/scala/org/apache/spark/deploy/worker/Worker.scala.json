@@ -20,5 +20,115 @@
     "commit" : "5643ec267a339877c1004aae9e1ed8ae1f8f6cca",
     "line" : 32,
     "diffHunk" : "@@ -1,1 +456,460 @@          forwardMessageScheduler.scheduleWithFixedDelay(\n            () => Utils.tryLogNonFatalError { self.send(WorkDirCleanup) },\n            CLEANUP_INTERVAL_MILLIS, CLEANUP_INTERVAL_MILLIS, TimeUnit.MILLISECONDS)\n        }\n"
+  },
+  {
+    "id" : "403c6cab-a73a-4046-95b6-35e4f8284f4f",
+    "prId" : 29817,
+    "prUrl" : "https://github.com/apache/spark/pull/29817#pullrequestreview-499480390",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "cfe3669e-b286-46db-b848-a52b1ebcba8e",
+        "parentId" : null,
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "I think this might mean we return from handling the signal right away rather than waiting for decommissionSelf to be finished. Is this an intentional change?\r\n\r\nAlso this will no longer report a decommissioning failure by signal return value, so may block pod deletion or other cleanup task longer than needed.",
+        "createdAt" : "2020-09-23T23:03:32Z",
+        "updatedAt" : "2020-10-22T13:56:45Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "96a1e9a4-8301-4790-a5e5-85fccee2dd8c",
+        "parentId" : "cfe3669e-b286-46db-b848-a52b1ebcba8e",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "This's Worker, I guess you cares more about the executor? In Worker, `decommissionSelf` always returns true. and In exeutor, there's a change to return false to fail the decommissionSelf but seems rarely happen. If you would insist on returning the value, I think we can use askSync instead.",
+        "createdAt" : "2020-09-24T02:41:39Z",
+        "updatedAt" : "2020-10-22T13:56:45Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6d9167f8-32af-4137-91d8-4f50821b73d8",
+        "parentId" : "cfe3669e-b286-46db-b848-a52b1ebcba8e",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Can you look into what the difference of this behavior might cause at the system level and then tell me if that’s a desired change? I’m ok with us making changes here, I just want us to be intentional and know if we need to test the change and it seems like this change was incidental.",
+        "createdAt" : "2020-09-24T16:06:51Z",
+        "updatedAt" : "2020-10-22T13:56:45Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e1793447-475b-4dd8-ac4b-8cb442d1e9a8",
+        "parentId" : "cfe3669e-b286-46db-b848-a52b1ebcba8e",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "The return value of the signal handling decides whether we should forward the signal to the other handlers. If `true`, no other handlers will handle the `PWR` signal except ourselves. If `false`, we will handle it (for decommission) and other handlers will handle it too.  Do you expect other handlers to continue handling the `SIGPWR` when the system isn't really experiencing a power failure?\r\n",
+        "createdAt" : "2020-09-28T08:25:54Z",
+        "updatedAt" : "2020-10-22T13:56:45Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f58e495c-7c8c-4e40-a6c1-b3d3082a005a",
+        "parentId" : "cfe3669e-b286-46db-b848-a52b1ebcba8e",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "I do, I think if the signal is unhandled then the process will be killed immediately. If we think of decommissioning/graceful shut down I believe that behavior is desirable, since if we can't shut down gracefully the least we can do is exit quickly.",
+        "createdAt" : "2020-09-29T01:23:09Z",
+        "updatedAt" : "2020-10-22T13:56:45Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0925e286-39e2-439e-8247-8161295c4dd5",
+        "parentId" : "cfe3669e-b286-46db-b848-a52b1ebcba8e",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Updated, but please note that I only updated for the executor's case since Worker's case always returns `true` before.",
+        "createdAt" : "2020-09-30T14:17:31Z",
+        "updatedAt" : "2020-10-22T13:56:45Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3c1e033089e392066425139d7ccb52cd501dcc31",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +72,76 @@    SignalUtils.register(\"PWR\", \"Failed to register SIGPWR handler - \" +\n      \"disabling worker decommission feature.\") {\n       self.send(WorkerSigPWRReceived)\n       true\n    }"
+  },
+  {
+    "id" : "def2d478-f498-46a8-be63-418a842207c4",
+    "prId" : 29817,
+    "prUrl" : "https://github.com/apache/spark/pull/29817#pullrequestreview-506176394",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "89236fe7-e65e-4728-ac3b-cfb748d19560",
+        "parentId" : null,
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "To make this code testable I'd move it down to inside of decommissionSelf and give decommissionSelf a param for if the decom originated locally.",
+        "createdAt" : "2020-10-06T21:40:18Z",
+        "updatedAt" : "2020-10-22T13:56:45Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c706098f-4f3d-412a-9342-16033af2b22d",
+        "parentId" : "89236fe7-e65e-4728-ac3b-cfb748d19560",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "I added the param previously but removed it later in order to keep `decommissionSelf` unchanged according to the comment: https://github.com/apache/spark/pull/29722#discussion_r487855223",
+        "createdAt" : "2020-10-11T12:50:31Z",
+        "updatedAt" : "2020-10-22T13:56:45Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3c1e033089e392066425139d7ccb52cd501dcc31",
+    "line" : 34,
+    "diffHunk" : "@@ -1,1 +680,684 @@      // Tell the Master that we are starting decommissioning\n      // so it stops trying to launch executor/driver on us\n      sendToMaster(WorkerDecommissioning(workerId, self))\n  }\n"
   }
 ]

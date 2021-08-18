@@ -1,0 +1,101 @@
+[
+  {
+    "id" : "a16d2f98-2181-4ebc-87fe-f323e4981ddb",
+    "prId" : 29834,
+    "prUrl" : "https://github.com/apache/spark/pull/29834#pullrequestreview-498539228",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5cea2c10-8a5d-4c21-9eca-6f74b2b1c9b5",
+        "parentId" : null,
+        "authorId" : "2821208d-43c5-4475-94ad-36cbf84c14d8",
+        "body" : "Won't this break upstream client applications that depend on this behavior?",
+        "createdAt" : "2020-09-23T15:55:39Z",
+        "updatedAt" : "2020-09-23T15:55:39Z",
+        "lastEditedBy" : "2821208d-43c5-4475-94ad-36cbf84c14d8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "aaf83fb5-c78c-46a7-b833-c86d5128c971",
+        "parentId" : "5cea2c10-8a5d-4c21-9eca-6f74b2b1c9b5",
+        "authorId" : "e5beb795-ac0e-4bd6-ad66-708215b8ae58",
+        "body" : "https://docs.oracle.com/javase/7/docs/api/java/sql/DatabaseMetaData.html#getSchemas(java.lang.String,%20java.lang.String)\r\n`schemaPattern - a schema name; must match the schema name as it is stored in the database; null means schema name should not be used to narrow down the search.`\r\nThis doc doesn't mention empty string, but if it's treated as a pattern, it should default to empty string not matching anything.\r\nschemaName == null is already handled to match everything in patternToRegex:\r\n```\r\n  public static String patternToRegex(String pattern) {\r\n    if (pattern == null) {\r\n      return \".*\";\r\n    } else {\r\n```\r\n\r\nSo the current behaviour seems to be consistent with JDBC documentation?",
+        "createdAt" : "2020-09-24T09:04:46Z",
+        "updatedAt" : "2020-09-24T09:04:47Z",
+        "lastEditedBy" : "e5beb795-ac0e-4bd6-ad66-708215b8ae58",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "57010772-4d45-4ece-aed3-21614d5fef4d",
+        "parentId" : "5cea2c10-8a5d-4c21-9eca-6f74b2b1c9b5",
+        "authorId" : "e5beb795-ac0e-4bd6-ad66-708215b8ae58",
+        "body" : "https://docs.oracle.com/javase/7/docs/api/java/sql/DatabaseMetaData.html#getTables(java.lang.String,%20java.lang.String,%20java.lang.String,%20java.lang.String[])\r\n`schemaPattern - a schema name pattern; must match the schema name as it is stored in the database; \"\" retrieves those without a schema; null means that the schema name should not be used to narrow the search`\r\nThe behaviour for getTables treats \"\" as no schema (e.g. local temp views), not all schemas, so it seems consistent that getSchemas wouldn't treat \"\" as \"all schemas\".",
+        "createdAt" : "2020-09-24T09:07:58Z",
+        "updatedAt" : "2020-09-24T09:07:58Z",
+        "lastEditedBy" : "e5beb795-ac0e-4bd6-ad66-708215b8ae58",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9b46c26e-b551-43eb-a84e-a271a94693c8",
+        "parentId" : "5cea2c10-8a5d-4c21-9eca-6f74b2b1c9b5",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "Thanks @juliuszsompolski \r\n\r\nThe java doc makes sense to me.\r\n\r\nFYI, the current behavior in hive treats \"\" as wildcard,\r\n\r\n```java\r\n  /**\r\n   * Convert wildchars and escape sequence of schema pattern from JDBC format to datanucleous/regex\r\n   * The schema pattern treats empty string also as wildchar\r\n   */\r\n\r\n```\r\nhttps://github.com/apache/hive/blob/14e3f19d027858a6f36ea6d41a3e8e45625f91bf/service/src/java/org/apache/hive/service/cli/operation/MetadataOperation.java#L75\r\n\r\nWe followed the hive behavior so far after we inlined the hive codes and before we made our own meta operations.\r\n\r\nBut now, \"\" is treated as wildcard for all schemas except ”global_temp“.\r\n\r\nI guess we should either make it not a wildcard at all as JDBC API doc says or make it as same as `null` just like hive \r\n\r\n",
+        "createdAt" : "2020-09-24T09:29:22Z",
+        "updatedAt" : "2020-09-24T09:29:49Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fc847ebf-95bd-4c80-838d-c549436ef2b5",
+        "parentId" : "5cea2c10-8a5d-4c21-9eca-6f74b2b1c9b5",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "> we should either make it not a wildcard at all as JDBC API doc says'\r\n\r\nIs it really possible? We call the hive API `listDatabases` to do it, and we can't change the hive metastore behavior.",
+        "createdAt" : "2020-09-25T13:58:26Z",
+        "updatedAt" : "2020-09-25T13:58:26Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "13238420-7e2d-4f24-9735-31454af991a0",
+        "parentId" : "5cea2c10-8a5d-4c21-9eca-6f74b2b1c9b5",
+        "authorId" : "e5beb795-ac0e-4bd6-ad66-708215b8ae58",
+        "body" : "@cloud-fan \r\nthis behaviour is changed by convertSchemaPattern in https://github.com/apache/hive/blob/14e3f19d027858a6f36ea6d41a3e8e45625f91bf/service/src/java/org/apache/hive/service/cli/operation/MetadataOperation.java#L75\r\n```\r\n    if ((pattern == null) || pattern.isEmpty()) {\r\n      return convertPattern(\"%\", true);\r\n    } else {\r\n      return convertPattern(pattern, true);\r\n    }\r\n```\r\nit explicitly turns \"\" into a \"%\" pattern.\r\nThen we use that to call listDatabases:\r\n```\r\n      val schemaPattern = convertSchemaPattern(schemaName)\r\n      sqlContext.sessionState.catalog.listDatabases(schemaPattern).foreach { dbName =>\r\n        rowSet.addRow(Array[AnyRef](dbName, DEFAULT_HIVE_CATALOG))\r\n      }\r\n```\r\nbut then for globalTempViews, we are not using the converted schemaPattern, but schemaName, which will not treat \"\" as wildcard.\r\n```\r\n      val globalTempViewDb = sqlContext.sessionState.catalog.globalTempViewManager.database\r\n      val databasePattern = Pattern.compile(CLIServiceUtils.patternToRegex(schemaName))\r\n      if (databasePattern.matcher(globalTempViewDb).matches()) {\r\n```\r\n\r\ndescribed by @yaooqinn like that, it does seem to be inconsistent behaviour and just a omission bug: we should treat the pattern for global temp views the same way... JDBC standard would say that it should not be a wildcard, but Hive seems to be treating it as wildcard.\r\nTreating it as empty would be consistent with JDBC standard. Treating it as a wildcard would be a smaller behaviour change, and consistent with Hive.\r\n@bogdanghit @wangyum @AngersZhuuuu what do you think?\r\n\r\n",
+        "createdAt" : "2020-09-25T15:22:23Z",
+        "updatedAt" : "2020-09-25T15:22:23Z",
+        "lastEditedBy" : "e5beb795-ac0e-4bd6-ad66-708215b8ae58",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "74072351-a6d5-4af7-81a8-ec61a67f9bc9",
+        "parentId" : "5cea2c10-8a5d-4c21-9eca-6f74b2b1c9b5",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Given that changing from Hive behavior to JDBC standard is a very breaking change ('' is not wildcard anymore), I'd prefer to fix this small behavior for global temp view here.",
+        "createdAt" : "2020-09-29T14:14:37Z",
+        "updatedAt" : "2020-09-29T14:14:37Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6d51b0ba-9514-444d-913e-09b89f60fa9b",
+        "parentId" : "5cea2c10-8a5d-4c21-9eca-6f74b2b1c9b5",
+        "authorId" : "2821208d-43c5-4475-94ad-36cbf84c14d8",
+        "body" : "sounds good. thanks a lot for the context added here @juliuszsompolski.",
+        "createdAt" : "2020-09-29T14:34:37Z",
+        "updatedAt" : "2020-09-29T14:34:37Z",
+        "lastEditedBy" : "2821208d-43c5-4475-94ad-36cbf84c14d8",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e79c1a57db504bb1804b616db37231088e68c1ba",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +78,82 @@      val globalTempViewDb = sqlContext.sessionState.catalog.globalTempViewManager.database\n      val databasePattern = Pattern.compile(CLIServiceUtils.patternToRegex(schemaName))\n      if (schemaName == null || schemaName.isEmpty ||\n          databasePattern.matcher(globalTempViewDb).matches()) {\n        rowSet.addRow(Array[AnyRef](globalTempViewDb, DEFAULT_HIVE_CATALOG))"
+  }
+]

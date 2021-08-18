@@ -1,0 +1,123 @@
+[
+  {
+    "id" : "9eb0ec84-dfff-41f9-a357-e29e3c7c95b0",
+    "prId" : 29788,
+    "prUrl" : "https://github.com/apache/spark/pull/29788#pullrequestreview-491673481",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0bfb08be-5faf-4619-b5ff-e4429a0fe9d6",
+        "parentId" : null,
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "I get why this is a sealed trait, namely we're pattern matching against it. But this seems to remove flexibility for anyone working on scheduler backends",
+        "createdAt" : "2020-09-17T16:05:13Z",
+        "updatedAt" : "2020-09-17T16:08:16Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1f51d2a9-1e14-45ee-b93a-d1a9d0f4ed21",
+        "parentId" : "0bfb08be-5faf-4619-b5ff-e4429a0fe9d6",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "@holdenk, can you please provide an example of how having this as a sealed trait would limit the flexibility ? \r\n\r\nIt is marked as a private[spark], so the resource manager specific scheduler backends, should be able to extend it ... no ?",
+        "createdAt" : "2020-09-18T17:07:14Z",
+        "updatedAt" : "2020-09-18T17:38:05Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4ddeb740-ccfb-4766-b564-0283ee1a2522",
+        "parentId" : "0bfb08be-5faf-4619-b5ff-e4429a0fe9d6",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Duh. Sorry for my n00bness. I can totally see why this shouldn't be a sealed trait: For example it is forcing the TestExecutorDecommissionInfo to be in this file. \r\n\r\n@Ngone51 is there a strong reason for making this be a sealed trait ? Is that required by the RPC framework for example ? If not, I don't think its worth it.",
+        "createdAt" : "2020-09-18T17:58:58Z",
+        "updatedAt" : "2020-09-18T17:58:58Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9bebdd4f2846f12f8ab13279c8cece151e8edfd0",
+    "line" : 20,
+    "diffHunk" : "@@ -1,1 +18,22 @@package org.apache.spark.scheduler\n\nprivate[spark] sealed trait ExecutorDecommissionReason {\n  val reason: String = \"decommissioned\"\n  override def toString: String = reason"
+  },
+  {
+    "id" : "acbc3e2b-458e-4ec4-a6fa-ff8026c98fde",
+    "prId" : 29788,
+    "prUrl" : "https://github.com/apache/spark/pull/29788#pullrequestreview-490758397",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b4d186f8-49f9-4e8f-a0dd-737c84f43acc",
+        "parentId" : null,
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "I think maybe we could have a better level here, there isn't really anything K8s specific about this kind of message. Rather all external cluster manager decommissions could be the same perhaps?",
+        "createdAt" : "2020-09-17T16:06:35Z",
+        "updatedAt" : "2020-09-17T16:08:16Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9bebdd4f2846f12f8ab13279c8cece151e8edfd0",
+    "line" : 40,
+    "diffHunk" : "@@ -1,1 +38,42 @@ * For the Kubernetes workloads\n */\ncase class K8SDecommission() extends ExecutorTriggeredDecommission\n\n/**"
+  },
+  {
+    "id" : "55ba8746-d33b-4b7a-93a3-ae1a46357f65",
+    "prId" : 29788,
+    "prUrl" : "https://github.com/apache/spark/pull/29788#pullrequestreview-493095863",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4632e03b-bdd2-4898-8309-7b356725bd0e",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "I don't think the `reason` field is really needed anywhere, besides it being used for `toString` ? Should we just require overriding `toString` by marking `toString` abstract ? I don't think that child classes need to override both `toString` and `reason` : I would prefer we just override methods instead of fields.",
+        "createdAt" : "2020-09-18T17:23:28Z",
+        "updatedAt" : "2020-09-18T17:38:05Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8cf4f7f8-f4f8-40f4-b041-397814718e9e",
+        "parentId" : "4632e03b-bdd2-4898-8309-7b356725bd0e",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "We also indirectly use the reason for `logExecutorLoss`. And yeah we can just override toString indeed. ",
+        "createdAt" : "2020-09-22T02:41:28Z",
+        "updatedAt" : "2020-09-22T02:41:29Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9bebdd4f2846f12f8ab13279c8cece151e8edfd0",
+    "line" : 21,
+    "diffHunk" : "@@ -1,1 +19,23 @@\nprivate[spark] sealed trait ExecutorDecommissionReason {\n  val reason: String = \"decommissioned\"\n  override def toString: String = reason\n}"
+  },
+  {
+    "id" : "94869d00-7285-47c9-b350-bc735ca0cef4",
+    "prId" : 29788,
+    "prUrl" : "https://github.com/apache/spark/pull/29788#pullrequestreview-491637014",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "df619e51-d590-4045-b443-491ec61615f7",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Can you move this test only class somewhere in the test only package ? \r\n\r\nSee TestResourceIDs as an example.",
+        "createdAt" : "2020-09-18T17:32:01Z",
+        "updatedAt" : "2020-09-18T17:38:05Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9bebdd4f2846f12f8ab13279c8cece151e8edfd0",
+    "line" : 57,
+    "diffHunk" : "@@ -1,1 +55,59 @@}\n\n/**\n * For test only.\n */"
+  }
+]
