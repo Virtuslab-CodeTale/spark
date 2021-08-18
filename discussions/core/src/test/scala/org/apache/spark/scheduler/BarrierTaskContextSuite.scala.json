@@ -42,5 +42,126 @@
     "commit" : "70245934226748d5ecd34f77fe0372c148f5f2b5",
     "line" : 22,
     "diffHunk" : "@@ -1,1 +276,280 @@\n  test(\"SPARK-31485: barrier stage should fail if only partial tasks are launched\") {\n    val conf = new SparkConf().set(LOCALITY_WAIT_PROCESS.key, \"10s\")\n    initLocalClusterSparkContext(2, conf)\n    val rdd0 = sc.parallelize(Seq(0, 1, 2, 3), 2)"
+  },
+  {
+    "id" : "000152a5-c670-4ebd-a215-40bbf8b6f516",
+    "prId" : 28257,
+    "prUrl" : "https://github.com/apache/spark/pull/28257#pullrequestreview-397340351",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4a89b43d-7f94-4f60-86f7-f91444a33ac7",
+        "parentId" : null,
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "this seems wrong to me, locality preference is causing failure?  I thought we should be looking at all available slots and only erroring if you didn't have enough.  Here you have 2 workers with 1 cores each so you should be able to fit 2 tasks on there eventually.",
+        "createdAt" : "2020-04-20T14:22:49Z",
+        "updatedAt" : "2020-04-23T16:40:31Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5534429a-75aa-4ff9-9e8c-22237313873e",
+        "parentId" : "4a89b43d-7f94-4f60-86f7-f91444a33ac7",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "> this seems wrong to me, locality preference is causing failure?\r\n\r\nYeah, I have to say so. We do have enough slots in this case but it doesn't guarantee that all tasks in a task sets can be scheduled in a single round resource offer because of delay scheduling. While partial scheduling is ok for normal task set, it's unacceptable for barrier task set.\r\n ",
+        "createdAt" : "2020-04-20T14:33:17Z",
+        "updatedAt" : "2020-04-23T16:40:31Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9c08b902-1129-4404-ab29-42b19db1f57c",
+        "parentId" : "4a89b43d-7f94-4f60-86f7-f91444a33ac7",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "ok looking through some of the logic some more, I guess if total slots is less then it skips it higher up. This still seems very odd that you fail based on locality being set.  Wouldn't you just want to ignore locality in this case?   Dynamic allocation isn't on, if you have number slots = number of tasks you need to just schedule it.\r\n\r\nDo we at least recommend people turning off locality when using barrier?  I recommend shutting off current to most people anyway on yarn because it can have other bad issues.  Do we have a jira for this issue, this seems like it could be very confusing to users.  The message says something about blacklisted, so if I'm going to try to debug to figure out why my stuff isn't scheduled, I think this would be very hard to figure out.",
+        "createdAt" : "2020-04-20T14:36:49Z",
+        "updatedAt" : "2020-04-23T16:40:31Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ddff619c-1d6d-4cf2-8aca-6d506109fb06",
+        "parentId" : "4a89b43d-7f94-4f60-86f7-f91444a33ac7",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "Note my last comment was posted before I saw your response.  I get that you don't have enough slots here, but you are failing the task set, in the case of locality if you just wait you would likely get it.  Or like my last comment says we could recognize it, or in the very least add locality to the message for our failure.",
+        "createdAt" : "2020-04-20T14:52:16Z",
+        "updatedAt" : "2020-04-23T16:40:31Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "551ce690-2e4c-4683-8c1e-8ba2f8378974",
+        "parentId" : "4a89b43d-7f94-4f60-86f7-f91444a33ac7",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "The `require(addressesWithDescs.size == taskSet.numTasks)` there is more like a safe check for the barrier task set and prevents any possible reasons from partial tasks launching. Obviously, delay scheduling is one of reasons we can tell. I agree to improve error message against delay scheduling if it's also the only reason.",
+        "createdAt" : "2020-04-20T15:21:50Z",
+        "updatedAt" : "2020-04-23T16:40:31Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7c559fd5-640f-44d8-9ad7-76bcb38b9ab9",
+        "parentId" : "4a89b43d-7f94-4f60-86f7-f91444a33ac7",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Also cc @jiangxb1987 ",
+        "createdAt" : "2020-04-20T15:22:04Z",
+        "updatedAt" : "2020-04-23T16:40:31Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "397beebb-204b-4333-b14c-cf4e7f4aa043",
+        "parentId" : "4a89b43d-7f94-4f60-86f7-f91444a33ac7",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "we can certainly do it separate from this since that appears to be existing behavior. I was surprised by it because I was thinking of other cases like blacklisting, which makes more sense to me",
+        "createdAt" : "2020-04-20T18:13:00Z",
+        "updatedAt" : "2020-04-23T16:40:31Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "92c2c851-ca24-4ddf-bbda-cb5497040a55",
+        "parentId" : "4a89b43d-7f94-4f60-86f7-f91444a33ac7",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "`makes more sense`? Or, no? I think blacklist offers have already been filtered out at that point?",
+        "createdAt" : "2020-04-21T01:46:10Z",
+        "updatedAt" : "2020-04-23T16:40:31Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d35dc524-4b87-4afc-a84b-d8c29a84bb33",
+        "parentId" : "4a89b43d-7f94-4f60-86f7-f91444a33ac7",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "@Ngone51 can you create a JIRA ticket? I think it's worth discussion to see if we should reject to schedule barrier tasks due to locality.",
+        "createdAt" : "2020-04-21T10:47:08Z",
+        "updatedAt" : "2020-04-23T16:40:31Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "68c1efba-99b3-4ad9-853b-b4b9d1cb04e2",
+        "parentId" : "4a89b43d-7f94-4f60-86f7-f91444a33ac7",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Added https://issues.apache.org/jira/browse/SPARK-31509",
+        "createdAt" : "2020-04-21T13:40:30Z",
+        "updatedAt" : "2020-04-23T16:40:31Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ac9015d1df4ee37504b602111267422461e4262d",
+    "line" : 23,
+    "diffHunk" : "@@ -1,1 +282,286 @@    val rdd0 = sc.parallelize(Seq(0, 1, 2, 3), 2)\n    val dep = new OneToOneDependency[Int](rdd0)\n    // set up a barrier stage with 2 tasks and both tasks prefer executor 0 (only 1 core) for\n    // scheduling. So, one of tasks won't be scheduled in one round of resource offer.\n    val rdd = new MyRDD(sc, 2, List(dep), Seq(Seq(\"executor_h_0\"), Seq(\"executor_h_0\")))"
   }
 ]

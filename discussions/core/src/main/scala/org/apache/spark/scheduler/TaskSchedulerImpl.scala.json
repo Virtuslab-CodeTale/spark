@@ -383,5 +383,126 @@
     "commit" : "d6f1e73ae49d9641a8efcb1f5e9016bd378a70c6",
     "line" : 23,
     "diffHunk" : "@@ -1,1 +653,657 @@              // unschedulable tasks else we will abort immediately.\n              executorIdToRunningTaskIds.find(x => !isExecutorBusy(x._1)) match {\n                case Some ((executorId, _)) =>\n                  if (!unschedulableTaskSetToExpiryTime.contains(taskSet)) {\n                    blacklistTrackerOpt.foreach(blt => blt.killBlacklistedIdleExecutor(executorId))"
+  },
+  {
+    "id" : "75a9869c-b3cb-4664-92a9-8abb158807b5",
+    "prId" : 28257,
+    "prUrl" : "https://github.com/apache/spark/pull/28257#pullrequestreview-398716988",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3abc0a1b-c346-4e63-82e6-18cccf4cfb00",
+        "parentId" : null,
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "Any particular reason to change this ?",
+        "createdAt" : "2020-04-22T03:24:19Z",
+        "updatedAt" : "2020-04-23T16:40:31Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "41ebc4a0-bf2e-4571-9bf1-ced6765ea6e0",
+        "parentId" : "3abc0a1b-c346-4e63-82e6-18cccf4cfb00",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "we don't need to pass the raid in anymore since its in the task set which we need now",
+        "createdAt" : "2020-04-22T14:14:45Z",
+        "updatedAt" : "2020-04-23T16:40:31Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "aee79a45-17bb-4b39-b808-18bb4d2b8be2",
+        "parentId" : "3abc0a1b-c346-4e63-82e6-18cccf4cfb00",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "True, but I was trying to make sense of whether it was relevant to the fix or not.\r\nLooks like an unrelated cleanup",
+        "createdAt" : "2020-04-23T02:24:36Z",
+        "updatedAt" : "2020-04-23T16:40:31Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3bca1a62-f132-46b3-a686-4311ba4b0295",
+        "parentId" : "3abc0a1b-c346-4e63-82e6-18cccf4cfb00",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "We need `taskSet: TaskSetManager` now because we'll use it to abort the task set below.",
+        "createdAt" : "2020-04-23T02:27:01Z",
+        "updatedAt" : "2020-04-23T16:40:31Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e949871e-21b4-4279-b0d4-e28aa6638729",
+        "parentId" : "3abc0a1b-c346-4e63-82e6-18cccf4cfb00",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "Ah ! Yes, I knew I missed something :-)\r\nThanks",
+        "createdAt" : "2020-04-23T02:29:07Z",
+        "updatedAt" : "2020-04-23T16:40:31Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ac9015d1df4ee37504b602111267422461e4262d",
+    "line" : 41,
+    "diffHunk" : "@@ -1,1 +475,479 @@    val resourceProfile = sc.resourceProfileManager.resourceProfileFromId(\n      taskSet.taskSet.resourceProfileId)\n    val offersForResourceProfile = resourceProfileIds.zipWithIndex.filter { case (id, _) =>\n      (id == resourceProfile.id)\n    }"
+  },
+  {
+    "id" : "3dae5e9b-2583-4d09-a48a-0d568c80991f",
+    "prId" : 28257,
+    "prUrl" : "https://github.com/apache/spark/pull/28257#pullrequestreview-399477062",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1af74711-810c-479c-bbd4-87fa88075cf5",
+        "parentId" : null,
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "The exception change is fine here ? +CC @tgravescs ",
+        "createdAt" : "2020-04-23T02:27:12Z",
+        "updatedAt" : "2020-04-23T16:40:31Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "29e52ce0-0e2d-40a0-a745-19bffc90a0b2",
+        "parentId" : "1af74711-810c-479c-bbd4-87fa88075cf5",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Throw exception should be fine. But having another think, I'm afraid that it might lead to the following developers fall into the same trap in the future. They may not be aware of `taskSet.abort` but only do exception throw.\r\n",
+        "createdAt" : "2020-04-23T16:16:42Z",
+        "updatedAt" : "2020-04-23T16:40:31Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "43f7bab2-4b03-4f61-8886-295d6bf8d7f2",
+        "parentId" : "1af74711-810c-479c-bbd4-87fa88075cf5",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Let me add comments to `TaskSchedulerImpl` as precaution. ",
+        "createdAt" : "2020-04-23T16:21:14Z",
+        "updatedAt" : "2020-04-23T16:40:31Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "443cdb1d-0009-4642-ae57-3db7bac31c02",
+        "parentId" : "1af74711-810c-479c-bbd4-87fa88075cf5",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "yea that should be fine, as it will just be caught and then logged.",
+        "createdAt" : "2020-04-23T21:07:30Z",
+        "updatedAt" : "2020-04-23T21:07:31Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ac9015d1df4ee37504b602111267422461e4262d",
+    "line" : 103,
+    "diffHunk" : "@@ -1,1 +760,764 @@                  \"taskIdToTaskSetManager.contains(tid) <=> taskIdToExecutorId.contains(tid)\"\n                taskSet.abort(errorMsg)\n                throw new SparkException(errorMsg)\n              })\n              if (executorIdToRunningTaskIds.contains(execId)) {"
   }
 ]

@@ -108,5 +108,137 @@
     "commit" : "59e99f6d7aad7c464c68fbb6e568f9347f6774ac",
     "line" : 6,
     "diffHunk" : "@@ -1,1 +200,204 @@    val finalOutputName = ReliableCheckpointRDD.checkpointFileName(ctx.partitionId())\n    val finalOutputPath = new Path(outputDir, finalOutputName)\n    val tempOutputPath = new Path(outputDir, s\".$finalOutputName-attempt-${ctx.taskAttemptId()}\")\n\n    val bufferSize = env.conf.get(BUFFER_SIZE)"
+  },
+  {
+    "id" : "53079c8a-5706-46d1-9bf1-f620143eb870",
+    "prId" : 28255,
+    "prUrl" : "https://github.com/apache/spark/pull/28255#pullrequestreview-395961691",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2f48cb6d-cb8f-46de-b9cc-7d2c333c132e",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Just a question. This is `Info` because the job is not failed?",
+        "createdAt" : "2020-04-18T22:56:53Z",
+        "updatedAt" : "2020-04-19T05:16:37Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "332ba07a-bc0b-4055-b9bd-11a96ebb78e5",
+        "parentId" : "2f48cb6d-cb8f-46de-b9cc-7d2c333c132e",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "I think either logWarning or logInfo should be fine. After adding stage attempt, even we fail to delete previous temporary output path, we won't see file already existing exception.",
+        "createdAt" : "2020-04-18T23:57:15Z",
+        "updatedAt" : "2020-04-19T05:16:37Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f402180974408bf3a22e80081eeed57793ad4830",
+    "line" : 22,
+    "diffHunk" : "@@ -1,1 +224,228 @@      val deleted = fs.delete(tempOutputPath, false)\n      if (!deleted) {\n        logInfo(s\"Failed to delete tempOutputPath $tempOutputPath.\")\n      }\n    }, finallyBlock = {"
+  },
+  {
+    "id" : "4e76ab09-140a-4545-9068-29044ed686b8",
+    "prId" : 28255,
+    "prUrl" : "https://github.com/apache/spark/pull/28255#pullrequestreview-397833855",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5d4da601-85a6-4329-9dce-2dd1f46fe367",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "`stageAttemptNumber` isn't unique among stages and `attemptNumber` isn't unique among tasks within the same stage. So it seems that this could still lead to the file name conflict. e.g. task 0.0 from stage 0.0 could conflict with task 1.0 from stage 1.0  (different stage) and task 1.0 from stage 1.0 could conflict with task 2.0 from stage 1.0 (same stage).\r\n\r\nI think the unique file format should be `...-stageId-stageAttemptId-taskId-taskAttemptId-...`.",
+        "createdAt" : "2020-04-20T02:48:48Z",
+        "updatedAt" : "2020-04-20T02:48:53Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4b2e28c9-651c-48db-97b0-bae3983d166f",
+        "parentId" : "5d4da601-85a6-4329-9dce-2dd1f46fe367",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "A RDD can across stages?\r\n",
+        "createdAt" : "2020-04-20T02:52:26Z",
+        "updatedAt" : "2020-04-20T02:52:26Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d1315088-8055-4e8f-97ba-f872cba84c01",
+        "parentId" : "5d4da601-85a6-4329-9dce-2dd1f46fe367",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "No, but all attempts Id starts from 0.",
+        "createdAt" : "2020-04-20T02:55:51Z",
+        "updatedAt" : "2020-04-20T02:55:51Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "239d7f1f-5466-4637-8503-a1877dedaebd",
+        "parentId" : "5d4da601-85a6-4329-9dce-2dd1f46fe367",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Oh, I see we suffix the checkpoint path with rdd id...",
+        "createdAt" : "2020-04-20T02:58:29Z",
+        "updatedAt" : "2020-04-20T02:58:29Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "55f57c4b-fcfc-43d5-bcc3-330ec2273d20",
+        "parentId" : "5d4da601-85a6-4329-9dce-2dd1f46fe367",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "If we just want a unique file name, can we use the task id? It's unique within the Spark application.",
+        "createdAt" : "2020-04-22T02:18:53Z",
+        "updatedAt" : "2020-04-22T02:18:53Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6ad36b1c-6af0-4279-99d2-cdd9edac6978",
+        "parentId" : "5d4da601-85a6-4329-9dce-2dd1f46fe367",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Do you mean `taskAttemptId`?",
+        "createdAt" : "2020-04-22T02:46:27Z",
+        "updatedAt" : "2020-04-22T02:46:28Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a779a180-340f-4a39-b7e4-ebaa41d526ea",
+        "parentId" : "5d4da601-85a6-4329-9dce-2dd1f46fe367",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "Yes, `taskAttemptId`, we also use it in the shuffle map file for making the file name unique. https://github.com/apache/spark/pull/24892#issuecomment-526215837",
+        "createdAt" : "2020-04-22T03:12:09Z",
+        "updatedAt" : "2020-04-22T03:12:10Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "67f46c2c-0179-49e6-b9ae-88a2d22f8986",
+        "parentId" : "5d4da601-85a6-4329-9dce-2dd1f46fe367",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "OK. Let me create a follow-up for it. Thanks.",
+        "createdAt" : "2020-04-22T04:24:15Z",
+        "updatedAt" : "2020-04-22T04:24:15Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f402180974408bf3a22e80081eeed57793ad4830",
+    "line" : 7,
+    "diffHunk" : "@@ -1,1 +201,205 @@    val finalOutputPath = new Path(outputDir, finalOutputName)\n    val tempOutputPath = new Path(outputDir,\n      s\".$finalOutputName-attempt-${ctx.stageAttemptNumber()}-${ctx.attemptNumber()}\")\n\n    val bufferSize = env.conf.get(BUFFER_SIZE)"
   }
 ]

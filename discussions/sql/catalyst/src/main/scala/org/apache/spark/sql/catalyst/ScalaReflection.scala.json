@@ -229,5 +229,181 @@
     "commit" : "75fc96b6988316e5d1a27ae9ec8343a18b91ea6f",
     "line" : 4,
     "diffHunk" : "@@ -1,1 +127,131 @@      case t if isSubtype(t, definitions.ByteTpe) => classOf[Array[Byte]]\n      case t if isSubtype(t, definitions.BooleanTpe) => classOf[Array[Boolean]]\n      case t if isSubtype(t, localTypeOf[Array[Byte]]) => classOf[Array[Array[Byte]]]\n      case t if isSubtype(t, localTypeOf[CalendarInterval]) => classOf[Array[CalendarInterval]]\n      case t if isSubtype(t, localTypeOf[Decimal]) => classOf[Array[Decimal]]"
+  },
+  {
+    "id" : "95e59edd-896b-4380-bdf8-d30da5303b8d",
+    "prId" : 28197,
+    "prUrl" : "https://github.com/apache/spark/pull/28197#pullrequestreview-395199239",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "145df345-1571-4167-9035-5b7a82226b59",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "just for curiosity: why interval inside array/map/struct works before this PR?",
+        "createdAt" : "2020-04-16T14:31:54Z",
+        "updatedAt" : "2020-04-17T15:14:31Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "64ba3c56-c633-4b53-b46b-cc91a355c00e",
+        "parentId" : "145df345-1571-4167-9035-5b7a82226b59",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "They don't work\r\n```scala\r\nscala> Seq(Map(new org.apache.spark.unsafe.types.CalendarInterval(1,2,3) -> new org.apache.spark.unsafe.types.CalendarInterval(1,2,3))).toDF\r\njava.lang.UnsupportedOperationException: Schema for type org.apache.spark.unsafe.types.CalendarInterval is not supported\r\n  at org.apache.spark.sql.catalyst.ScalaReflection$.$anonfun$schemaFor$1(ScalaReflection.scala:735)\r\n  at scala.reflect.internal.tpe.TypeConstraints$UndoLog.undo(TypeConstraints.scala:69)\r\n  at org.apache.spark.sql.catalyst.ScalaReflection.cleanUpReflectionObjects(ScalaReflection.scala:877)\r\n  at org.apache.spark.sql.catalyst.ScalaReflection.cleanUpReflectionObjects$(ScalaReflection.scala:876)\r\n  at org.apache.spark.sql.catalyst.ScalaReflection$.cleanUpReflectionObjects(ScalaReflection.scala:47)\r\n  at org.apache.spark.sql.catalyst.ScalaReflection$.schemaFor(ScalaReflection.scala:663)\r\n  at org.apache.spark.sql.catalyst.ScalaReflection$.$anonfun$schemaFor$1(ScalaReflection.scala:689)\r\n  at scala.reflect.internal.tpe.TypeConstraints$UndoLog.undo(TypeConstraints.scala:69)\r\n  at org.apache.spark.sql.catalyst.ScalaReflection.cleanUpReflectionObjects(ScalaReflection.scala:877)\r\n  at org.apache.spark.sql.catalyst.ScalaReflection.cleanUpReflectionObjects$(ScalaReflection.scala:876)\r\n  at org.apache.spark.sql.catalyst.ScalaReflection$.cleanUpReflectionObjects(ScalaReflection.scala:47)\r\n  at org.apache.spark.sql.catalyst.ScalaReflection$.schemaFor(ScalaReflection.scala:663)\r\n  at org.apache.spark.sql.catalyst.ScalaReflection$.deserializerForType(ScalaReflection.scala:164)\r\n  at org.apache.spark.sql.catalyst.encoders.ExpressionEncoder$.apply(ExpressionEncoder.scala:55)\r\n  at org.apache.spark.sql.SQLImplicits.newMapEncoder(SQLImplicits.scala:175)\r\n  ... 49 elided\r\n\r\n\r\nscala> Seq(Seq(new org.apache.spark.unsafe.types.CalendarInterval(1,2,3))).toDF\r\njava.lang.UnsupportedOperationException: Schema for type org.apache.spark.unsafe.types.CalendarInterval is not supported\r\n  at org.apache.spark.sql.catalyst.ScalaReflection$.$anonfun$schemaFor$1(ScalaReflection.scala:735)\r\n  at scala.reflect.internal.tpe.TypeConstraints$UndoLog.undo(TypeConstraints.scala:69)\r\n  at org.apache.spark.sql.catalyst.ScalaReflection.cleanUpReflectionObjects(ScalaReflection.scala:877)\r\n  at org.apache.spark.sql.catalyst.ScalaReflection.cleanUpReflectionObjects$(ScalaReflection.scala:876)\r\n  at org.apache.spark.sql.catalyst.ScalaReflection$.cleanUpReflectionObjects(ScalaReflection.scala:47)\r\n  at org.apache.spark.sql.catalyst.ScalaReflection$.schemaFor(ScalaReflection.scala:663)\r\n  at org.apache.spark.sql.catalyst.ScalaReflection$.toCatalystArray$1(ScalaReflection.scala:430)\r\n  at org.apache.spark.sql.catalyst.ScalaReflection$.$anonfun$serializerFor$1(ScalaReflection.scala:448)\r\n  at scala.reflect.internal.tpe.TypeConstraints$UndoLog.undo(TypeConstraints.scala:69)\r\n  at org.apache.spark.sql.catalyst.ScalaReflection.cleanUpReflectionObjects(ScalaReflection.scala:877)\r\n  at org.apache.spark.sql.catalyst.ScalaReflection.cleanUpReflectionObjects$(ScalaReflection.scala:876)\r\n  at org.apache.spark.sql.catalyst.ScalaReflection$.cleanUpReflectionObjects(ScalaReflection.scala:47)\r\n  at org.apache.spark.sql.catalyst.ScalaReflection$.serializerFor(ScalaReflection.scala:410)\r\n  at org.apache.spark.sql.catalyst.ScalaReflection$.$anonfun$serializerForType$1(ScalaReflection.scala:399)\r\n  at scala.reflect.internal.tpe.TypeConstraints$UndoLog.undo(TypeConstraints.scala:69)\r\n  at org.apache.spark.sql.catalyst.ScalaReflection.cleanUpReflectionObjects(ScalaReflection.scala:877)\r\n  at org.apache.spark.sql.catalyst.ScalaReflection.cleanUpReflectionObjects$(ScalaReflection.scala:876)\r\n  at org.apache.spark.sql.catalyst.ScalaReflection$.cleanUpReflectionObjects(ScalaReflection.scala:47)\r\n  at org.apache.spark.sql.catalyst.ScalaReflection$.serializerForType(ScalaReflection.scala:391)\r\n  at org.apache.spark.sql.catalyst.encoders.ExpressionEncoder$.apply(ExpressionEncoder.scala:54)\r\n  at org.apache.spark.sql.SQLImplicits.newSequenceEncoder(SQLImplicits.scala:171)\r\n  ... 49 elided\r\n\r\nscala> Seq(Array(new org.apache.spark.unsafe.types.CalendarInterval(1,2,3))).toDF\r\n<console>:28: error: value toDF is not a member of Seq[Array[org.apache.spark.unsafe.types.CalendarInterval]]\r\n       Seq(Array(new org.apache.spark.unsafe.types.CalendarInterval(1,2,3))).toDF\r\n```",
+        "createdAt" : "2020-04-17T03:55:37Z",
+        "updatedAt" : "2020-04-17T15:14:31Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "83fdbece-106d-460d-bcad-ce31c2d8891a",
+        "parentId" : "145df345-1571-4167-9035-5b7a82226b59",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Sorry, I mean, struct:\r\n> CalenderInterval is available to be converted to/from internal Spark SQL representation when it is a member of a Scala's product type e.g tuples/ case class etc but not as a primitive type",
+        "createdAt" : "2020-04-17T06:04:32Z",
+        "updatedAt" : "2020-04-17T15:14:31Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "db7137ec-9a18-489d-b537-de29b25ddf9a",
+        "parentId" : "145df345-1571-4167-9035-5b7a82226b59",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "with PR https://github.com/apache/spark/pull/28198/files  and the existing logic in `serializerFor`\r\n1. https://github.com/yaooqinn/spark/blob/6cd0bef7fe872b5d9472a2140db188fb9f1eede8/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/ScalaReflection.scala#L436\r\n2. https://github.com/yaooqinn/spark/blob/6cd0bef7fe872b5d9472a2140db188fb9f1eede8/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/ScalaReflection.scala#L554",
+        "createdAt" : "2020-04-17T06:47:01Z",
+        "updatedAt" : "2020-04-17T15:14:31Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c4d4ef2cca80b6c8fa85a54723a52c004c303aec",
+    "line" : 12,
+    "diffHunk" : "@@ -1,1 +237,241 @@        createDeserializerForString(path, returnNullable = false)\n\n      case t if isSubtype(t, localTypeOf[CalendarInterval]) => path\n      case t if isSubtype(t, localTypeOf[java.math.BigDecimal]) =>\n        createDeserializerForJavaBigDecimal(path, returnNullable = false)"
+  },
+  {
+    "id" : "c6c8f664-295c-4a3a-9d3d-3c18178c3d1e",
+    "prId" : 28197,
+    "prUrl" : "https://github.com/apache/spark/pull/28197#pullrequestreview-395479601",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e05f5818-26dd-4b80-b522-be14d6e55269",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Is it really needed? `Decimal` is not handled here.",
+        "createdAt" : "2020-04-17T13:53:32Z",
+        "updatedAt" : "2020-04-17T15:14:31Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "747a6b1f-9aa3-4050-89d2-e0acc5bd125a",
+        "parentId" : "e05f5818-26dd-4b80-b522-be14d6e55269",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "Decimal is not supported as primitive or array element，I will make it work in another PR",
+        "createdAt" : "2020-04-17T14:00:21Z",
+        "updatedAt" : "2020-04-17T15:14:31Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c4d4ef2cca80b6c8fa85a54723a52c004c303aec",
+    "line" : 4,
+    "diffHunk" : "@@ -1,1 +127,131 @@      case t if isSubtype(t, definitions.ByteTpe) => classOf[Array[Byte]]\n      case t if isSubtype(t, definitions.BooleanTpe) => classOf[Array[Boolean]]\n      case t if isSubtype(t, localTypeOf[CalendarInterval]) => classOf[Array[CalendarInterval]]\n      case other =>\n        // There is probably a better way to do this, but I couldn't find it..."
+  },
+  {
+    "id" : "827127e3-8f8f-4e95-9de8-a35aaf6bd2c1",
+    "prId" : 28184,
+    "prUrl" : "https://github.com/apache/spark/pull/28184#pullrequestreview-391821585",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "fcf55b70-723d-403d-ad38-20b82f440ceb",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "I'm not familiar with this method though, this check depends on users' Java runtime version? cc: @rednaxelafx @kiszk ",
+        "createdAt" : "2020-04-11T00:26:34Z",
+        "updatedAt" : "2020-04-12T08:20:21Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1650429a-e33a-4ae6-9fdf-228923ad39fd",
+        "parentId" : "fcf55b70-723d-403d-ad38-20b82f440ceb",
+        "authorId" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "body" : "The `SourceVersion` class knows how to detect the spec version of the current running Java runtime, and can perform checks like identifier validation accordingly.\r\nc.f. http://hg.openjdk.java.net/jdk8u/jdk8u/langtools/file/01036da3155c/src/share/classes/javax/lang/model/SourceVersion.java#l183",
+        "createdAt" : "2020-04-11T00:46:07Z",
+        "updatedAt" : "2020-04-12T08:20:21Z",
+        "lastEditedBy" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4e611988-9074-41ac-9fff-e71447a0150d",
+        "parentId" : "fcf55b70-723d-403d-ad38-20b82f440ceb",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Ah, I see. Thanks for the info, Kris. btw, the reserved keywords depend on Janino though, is it okay for the check to depend on running Java runtime?",
+        "createdAt" : "2020-04-11T00:54:32Z",
+        "updatedAt" : "2020-04-12T08:20:21Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7af35721-60ae-4131-ba33-0c86ac613d61",
+        "parentId" : "fcf55b70-723d-403d-ad38-20b82f440ceb",
+        "authorId" : "3a227965-84e0-47cf-9974-11293764f028",
+        "body" : "In the original implementation, `javaKeywords` contains `default` so how about checking keywords for Java 8 ?",
+        "createdAt" : "2020-04-11T06:37:35Z",
+        "updatedAt" : "2020-04-12T08:20:21Z",
+        "lastEditedBy" : "3a227965-84e0-47cf-9974-11293764f028",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c86879c4-c99c-4534-87b5-81d444189d79",
+        "parentId" : "fcf55b70-723d-403d-ad38-20b82f440ceb",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "How about this, @cloud-fan ? I found he defined the initial set for the keywords in https://github.com/apache/spark/pull/13485",
+        "createdAt" : "2020-04-11T23:48:30Z",
+        "updatedAt" : "2020-04-12T08:20:21Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "acba227e-0cdb-4c28-b639-f6185f80c027",
+        "parentId" : "fcf55b70-723d-403d-ad38-20b82f440ceb",
+        "authorId" : "99e31844-a5b3-48a2-af71-412edb607a13",
+        "body" : "While the reserved keywords depend on Janino though, `SourceVersion.isKeyword(fieldName)` would have the super set of keywords that Janino cannot accept. I think that this change is reasonable. We can avoid maintain `javaKeywords`.",
+        "createdAt" : "2020-04-12T04:32:08Z",
+        "updatedAt" : "2020-04-12T08:20:21Z",
+        "lastEditedBy" : "99e31844-a5b3-48a2-af71-412edb607a13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c947e602-6798-44ae-bf12-bdd84bf66c08",
+        "parentId" : "fcf55b70-723d-403d-ad38-20b82f440ceb",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "> SourceVersion.isKeyword(fieldName) would have the super set of keywords that Janino cannot accept\r\n\r\nLooks nice, thanks for the check, @kiszk ",
+        "createdAt" : "2020-04-12T04:53:18Z",
+        "updatedAt" : "2020-04-12T08:20:21Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a42b169ecfa64dbe009f14069f941d4e0964d40e",
+    "line" : 16,
+    "diffHunk" : "@@ -1,1 +542,546 @@        val params = getConstructorParameters(t)\n        val fields = params.map { case (fieldName, fieldType) =>\n          if (SourceVersion.isKeyword(fieldName) ||\n              !SourceVersion.isIdentifier(encodeFieldNameToIdentifier(fieldName))) {\n            throw new UnsupportedOperationException(s\"`$fieldName` is not a valid identifier of \" +"
   }
 ]
