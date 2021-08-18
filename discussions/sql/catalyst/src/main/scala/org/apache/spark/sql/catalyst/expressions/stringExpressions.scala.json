@@ -251,5 +251,82 @@
     "commit" : "4b161a4ef4f3be2f1a239c0c19f8aa62b5a03706",
     "line" : 27,
     "diffHunk" : "@@ -1,1 +246,250 @@  since = \"2.0.0\")\n// scalastyle:on line.size.limit\ncase class Elt(\n    children: Seq[Expression],\n    failOnError: Boolean = SQLConf.get.ansiEnabled) extends Expression {"
+  },
+  {
+    "id" : "3a31e0dc-eef0-41d7-9e07-03a0e357b217",
+    "prId" : 29577,
+    "prUrl" : "https://github.com/apache/spark/pull/29577#pullrequestreview-481382988",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "999133b7-e261-4925-8626-c13637b1d8a5",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Is this change related to this PR? btw, could we add tests to check if a `since` field is defined in all the expressions? I think it is important to define this field when adding a new expr. ",
+        "createdAt" : "2020-08-30T12:58:42Z",
+        "updatedAt" : "2020-08-30T12:58:43Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "af42c905-063f-4863-817d-463d74917f32",
+        "parentId" : "999133b7-e261-4925-8626-c13637b1d8a5",
+        "authorId" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "body" : "In master there are currently 67 expressions without the since tag:\r\n```\r\n  test(\"Since has a valid value\") {\r\n    val badExpressions = spark.sessionState.functionRegistry.listFunction()\r\n      .map(spark.sessionState.catalog.lookupFunctionInfo)\r\n      .filter(funcInfo => !funcInfo.getSince.matches(\"[0-9]+\\\\.[0-9]+\\\\.[0-9]+\"))\r\n      .map(_.getClassName)\r\n      .distinct\r\n      .sorted\r\n\r\n    if (badExpressions.nonEmpty) {\r\n      fail(s\"${badExpressions.length} expressions with invalid 'since':\\n\"\r\n        + badExpressions.mkString(\"\\n\"))\r\n    }\r\n  }\r\n```\r\n\r\n```\r\n[info] - Since has a valid value *** FAILED *** (16 milliseconds)\r\n[info]   67 expressions with invalid 'since':\r\n[info]   org.apache.spark.sql.catalyst.expressions.Abs\r\n[info]   org.apache.spark.sql.catalyst.expressions.Add\r\n[info]   org.apache.spark.sql.catalyst.expressions.And\r\n[info]   org.apache.spark.sql.catalyst.expressions.ArrayContains\r\n[info]   org.apache.spark.sql.catalyst.expressions.AssertTrue\r\n[info]   org.apache.spark.sql.catalyst.expressions.BitwiseAnd\r\n[info]   org.apache.spark.sql.catalyst.expressions.BitwiseNot\r\n[info]   org.apache.spark.sql.catalyst.expressions.BitwiseOr\r\n[info]   org.apache.spark.sql.catalyst.expressions.BitwiseXor\r\n[info]   org.apache.spark.sql.catalyst.expressions.CallMethodViaReflection\r\n[info]   org.apache.spark.sql.catalyst.expressions.CaseWhen\r\n[info]   org.apache.spark.sql.catalyst.expressions.Cast\r\n[info]   org.apache.spark.sql.catalyst.expressions.Concat\r\n[info]   org.apache.spark.sql.catalyst.expressions.Crc32\r\n[info]   org.apache.spark.sql.catalyst.expressions.CreateArray\r\n[info]   org.apache.spark.sql.catalyst.expressions.CreateMap\r\n[info]   org.apache.spark.sql.catalyst.expressions.CreateNamedStruct\r\n[info]   org.apache.spark.sql.catalyst.expressions.CurrentDatabase\r\n[info]   org.apache.spark.sql.catalyst.expressions.Divide\r\n[info]   org.apache.spark.sql.catalyst.expressions.EqualNullSafe\r\n[info]   org.apache.spark.sql.catalyst.expressions.EqualTo\r\n[info]   org.apache.spark.sql.catalyst.expressions.Explode\r\n[info]   org.apache.spark.sql.catalyst.expressions.GetJsonObject\r\n[info]   org.apache.spark.sql.catalyst.expressions.GreaterThan\r\n[info]   org.apache.spark.sql.catalyst.expressions.GreaterThanOrEqual\r\n[info]   org.apache.spark.sql.catalyst.expressions.Greatest\r\n[info]   org.apache.spark.sql.catalyst.expressions.If\r\n[info]   org.apache.spark.sql.catalyst.expressions.In\r\n[info]   org.apache.spark.sql.catalyst.expressions.Inline\r\n[info]   org.apache.spark.sql.catalyst.expressions.InputFileBlockLength\r\n[info]   org.apache.spark.sql.catalyst.expressions.InputFileBlockStart\r\n[info]   org.apache.spark.sql.catalyst.expressions.InputFileName\r\n[info]   org.apache.spark.sql.catalyst.expressions.JsonTuple\r\n[info]   org.apache.spark.sql.catalyst.expressions.Least\r\n[info]   org.apache.spark.sql.catalyst.expressions.LessThan\r\n[info]   org.apache.spark.sql.catalyst.expressions.LessThanOrEqual\r\n[info]   org.apache.spark.sql.catalyst.expressions.MapKeys\r\n[info]   org.apache.spark.sql.catalyst.expressions.MapValues\r\n[info]   org.apache.spark.sql.catalyst.expressions.Md5\r\n[info]   org.apache.spark.sql.catalyst.expressions.MonotonicallyIncreasingID\r\n[info]   org.apache.spark.sql.catalyst.expressions.Multiply\r\n[info]   org.apache.spark.sql.catalyst.expressions.Murmur3Hash\r\n[info]   org.apache.spark.sql.catalyst.expressions.Not\r\n[info]   org.apache.spark.sql.catalyst.expressions.Or\r\n[info]   org.apache.spark.sql.catalyst.expressions.Overlay\r\n[info]   org.apache.spark.sql.catalyst.expressions.Pmod\r\n[info]   org.apache.spark.sql.catalyst.expressions.PosExplode\r\n[info]   org.apache.spark.sql.catalyst.expressions.Remainder\r\n[info]   org.apache.spark.sql.catalyst.expressions.Sha1\r\n[info]   org.apache.spark.sql.catalyst.expressions.Sha2\r\n[info]   org.apache.spark.sql.catalyst.expressions.Size\r\n[info]   org.apache.spark.sql.catalyst.expressions.SortArray\r\n[info]   org.apache.spark.sql.catalyst.expressions.SparkPartitionID\r\n[info]   org.apache.spark.sql.catalyst.expressions.Stack\r\n[info]   org.apache.spark.sql.catalyst.expressions.Subtract\r\n[info]   org.apache.spark.sql.catalyst.expressions.TimeWindow\r\n[info]   org.apache.spark.sql.catalyst.expressions.UnaryMinus\r\n[info]   org.apache.spark.sql.catalyst.expressions.UnaryPositive\r\n[info]   org.apache.spark.sql.catalyst.expressions.Uuid\r\n[info]   org.apache.spark.sql.catalyst.expressions.xml.XPathBoolean\r\n[info]   org.apache.spark.sql.catalyst.expressions.xml.XPathDouble\r\n[info]   org.apache.spark.sql.catalyst.expressions.xml.XPathFloat\r\n[info]   org.apache.spark.sql.catalyst.expressions.xml.XPathInt\r\n[info]   org.apache.spark.sql.catalyst.expressions.xml.XPathList\r\n[info]   org.apache.spark.sql.catalyst.expressions.xml.XPathLong\r\n[info]   org.apache.spark.sql.catalyst.expressions.xml.XPathShort\r\n[info]   org.apache.spark.sql.catalyst.expressions.xml.XPathString (ExpressionInfoSuite.scala:204)\r\n```",
+        "createdAt" : "2020-08-30T17:22:01Z",
+        "updatedAt" : "2020-08-30T17:22:01Z",
+        "lastEditedBy" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8d7c5019-7cf5-478b-9f6c-f26da8e8ba7c",
+        "parentId" : "999133b7-e261-4925-8626-c13637b1d8a5",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Thanks for the check, @tanelk. Ah, I see. I think its better to add a `since` tag for the expressions above and tests in a separate PR.",
+        "createdAt" : "2020-08-31T00:43:42Z",
+        "updatedAt" : "2020-08-31T00:43:42Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b4ef280b-9c60-4bca-b039-49a461450cad",
+        "parentId" : "999133b7-e261-4925-8626-c13637b1d8a5",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "thanks a bunch for the check~",
+        "createdAt" : "2020-08-31T02:06:22Z",
+        "updatedAt" : "2020-08-31T02:06:22Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "03e4c5d0-6780-4647-adf3-fac5b9bde583",
+        "parentId" : "999133b7-e261-4925-8626-c13637b1d8a5",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "@tanelk You're working on that? Could you file a jira for it?",
+        "createdAt" : "2020-08-31T07:01:24Z",
+        "updatedAt" : "2020-08-31T07:01:24Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9073692a-c1e6-4c7a-a4c6-bec6d507ae8c",
+        "parentId" : "999133b7-e261-4925-8626-c13637b1d8a5",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Filed: https://issues.apache.org/jira/browse/SPARK-32780",
+        "createdAt" : "2020-09-02T23:35:52Z",
+        "updatedAt" : "2020-09-02T23:35:52Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8ca2af7a37211dbd2e1c60eb5b0969174912f66d",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +543,547 @@       Structured SQL\n  \"\"\",\n  since = \"3.0.0\")\n// scalastyle:on line.size.limit\ncase class Overlay(input: Expression, replace: Expression, pos: Expression, len: Expression)"
   }
 ]

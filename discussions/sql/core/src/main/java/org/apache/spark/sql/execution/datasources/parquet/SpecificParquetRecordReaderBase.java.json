@@ -1,0 +1,134 @@
+[
+  {
+    "id" : "b02cc0a7-11ff-4572-81ce-587058439537",
+    "prId" : 29542,
+    "prUrl" : "https://github.com/apache/spark/pull/29542#pullrequestreview-589942274",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1e704f31-0b16-4343-82e5-28d36c388a43",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "The change seems okay but can we do a microbenchmark to confirm there's no performance impact here? I am still confused why I faced and concluded that using new Parquet API caused performance regression when I tired it by myself a while ago ... (sorry I forgot all about it).",
+        "createdAt" : "2021-02-03T00:22:54Z",
+        "updatedAt" : "2021-02-03T00:22:54Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3b22ff1e-bf59-40b2-9c04-75559ec4880e",
+        "parentId" : "1e704f31-0b16-4343-82e5-28d36c388a43",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Sure, I can do that. I did run `FilterPushdownBenchmark` (see comments above) before and didn't see regression. I'll do that with the new Parquet version.",
+        "createdAt" : "2021-02-03T00:26:29Z",
+        "updatedAt" : "2021-02-03T00:26:29Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "90b5cf73-9ea9-49fa-972d-3087cf55640c",
+        "parentId" : "1e704f31-0b16-4343-82e5-28d36c388a43",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Do we need a benchmark here or is that probably convincing? this would be a good simplifying change but yeah the only real question is whether there are any side effects.",
+        "createdAt" : "2021-02-08T14:43:55Z",
+        "updatedAt" : "2021-02-08T14:43:55Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "25484a91-a9a9-4337-9761-41b041907eb2",
+        "parentId" : "1e704f31-0b16-4343-82e5-28d36c388a43",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "@HyukjinKwon @srowen I've run the `FilterPushdownBenchmark` again with this PR and I don't see much difference before and after. I've put the result [here](https://gist.github.com/sunchao/75cc9e966108bce4353818ce1b59d200) in case you are curious.",
+        "createdAt" : "2021-02-10T23:48:04Z",
+        "updatedAt" : "2021-02-10T23:48:04Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1877dd70-7c32-4694-93d2-726675a5ad4f",
+        "parentId" : "1e704f31-0b16-4343-82e5-28d36c388a43",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "I'm just eyeballing the diff, and most cases are about the same, but there seem to be a number of cases where this brings a 10-20% improvement, like the InSet -> InFilter tests. Seems worthwhile to commit if tests pass, and they seem to.",
+        "createdAt" : "2021-02-11T14:50:31Z",
+        "updatedAt" : "2021-02-11T14:50:31Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3e7a804f-d3bf-4a76-ac33-fd2e6a8a8434",
+        "parentId" : "1e704f31-0b16-4343-82e5-28d36c388a43",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "It is possible that I wrote the codes wrongly at that time .. The results look good. I guess it's fine to go ahead too.",
+        "createdAt" : "2021-02-13T04:27:50Z",
+        "updatedAt" : "2021-02-13T04:27:51Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "00dbac4dbf59e89d6d4d2afb51187dd5821b6ec6",
+    "line" : 153,
+    "diffHunk" : "@@ -1,1 +163,167 @@\n    ParquetMetadata footer;\n    try (ParquetFileReader reader = ParquetFileReader\n        .open(HadoopInputFile.fromPath(file, config), options)) {\n      footer = reader.getFooter();"
+  },
+  {
+    "id" : "7c3e045a-abd1-4508-9e52-2dfd0e3709cc",
+    "prId" : 29542,
+    "prUrl" : "https://github.com/apache/spark/pull/29542#pullrequestreview-597745984",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "442f4119-9ebf-4741-89f0-a0ec05317017",
+        "parentId" : null,
+        "authorId" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "body" : "Maybe we should call `this.reader.setRequestedSchema(this.requestedSchema);` at there. @sunchao @HyukjinKwon @maropu @srowen @dongjoon-hyun ",
+        "createdAt" : "2021-02-24T09:22:41Z",
+        "updatedAt" : "2021-02-24T09:33:47Z",
+        "lastEditedBy" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "acff2f56-e696-4d97-8be8-8bcc19b09138",
+        "parentId" : "442f4119-9ebf-4741-89f0-a0ec05317017",
+        "authorId" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "body" : "It seems that the new API initializes `ParquetFileReader ` using `fileSchema` not `requestedSchema`, this may be the cause of performance degradation",
+        "createdAt" : "2021-02-24T09:25:15Z",
+        "updatedAt" : "2021-02-24T09:28:38Z",
+        "lastEditedBy" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "102acc7c-60f3-4b3c-8ecc-dddc80346508",
+        "parentId" : "442f4119-9ebf-4741-89f0-a0ec05317017",
+        "authorId" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "body" : "New API:\r\n![image](https://user-images.githubusercontent.com/1475305/108979649-d5a61b80-76c5-11eb-88d6-b0acce5c4bec.png)\r\n\r\nOld API:\r\n![image](https://user-images.githubusercontent.com/1475305/108980147-56651780-76c6-11eb-8f30-836603272c39.png)\r\n\r\n\r\n**`paths' is used to determine which columns we read from the file**\r\n",
+        "createdAt" : "2021-02-24T09:31:26Z",
+        "updatedAt" : "2021-02-24T09:48:30Z",
+        "lastEditedBy" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5de8f8aa-1eb2-41de-94f8-4ed2f10d27db",
+        "parentId" : "442f4119-9ebf-4741-89f0-a0ec05317017",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Nice find @LuciferYang ! I think you're right. The `requestedSchema` was used to initialize `reader` but not in the new code path. This could also explain why we didn't see perf regression in `FilterPushdownBenchmark` since it doesn't have  any column projection. I'll try the fix with TPCDSQueryBenchmark and report result here later.",
+        "createdAt" : "2021-02-24T17:35:20Z",
+        "updatedAt" : "2021-02-24T17:35:20Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "00dbac4dbf59e89d6d4d2afb51187dd5821b6ec6",
+    "line" : 118,
+    "diffHunk" : "@@ -1,1 +103,107 @@        taskAttemptContext.getConfiguration(), toSetMultiMap(fileMetadata), fileSchema));\n    this.requestedSchema = readContext.getRequestedSchema();\n    String sparkRequestedSchemaString =\n        configuration.get(ParquetReadSupport$.MODULE$.SPARK_ROW_REQUESTED_SCHEMA());\n    this.sparkSchema = StructType$.MODULE$.fromString(sparkRequestedSchemaString);"
+  }
+]

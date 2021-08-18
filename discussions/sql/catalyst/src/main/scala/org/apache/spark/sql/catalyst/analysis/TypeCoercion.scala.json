@@ -229,5 +229,38 @@
     "commit" : "0857791bc310f54dd8ed1f4bcf5a5b274ffa33c6",
     "line" : 85,
     "diffHunk" : "@@ -1,1 +405,409 @@      val casted = plan.output.zip(targetTypes).map {\n        case (e, dt) if e.dataType != dt =>\n          Alias(Cast(e, dt, Some(SQLConf.get.sessionLocalTimeZone)), e.name)()\n        case (e, _) => e\n      }"
+  },
+  {
+    "id" : "fb2e0a9b-d183-479b-8409-06ebb79d0fc5",
+    "prId" : 29485,
+    "prUrl" : "https://github.com/apache/spark/pull/29485#pullrequestreview-481891667",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "dda1783d-cfed-400c-bb6e-6edd292a5d7e",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "what are we doing here?",
+        "createdAt" : "2020-09-03T12:46:03Z",
+        "updatedAt" : "2020-09-03T12:46:04Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2c0eb1f7-4414-4893-90b3-dc5059677603",
+        "parentId" : "dda1783d-cfed-400c-bb6e-6edd292a5d7e",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "This generates a rewrite map used for `Analyzer.rewritePlan`. The `rewritePlan` assumes a plan structure is the same before/after plan rewriting, so this `WidenSetOperationTypes` rule does two-phase transformation now as follows;\r\n```\r\n### Input Plan (Query described in the PR description) ###\r\nProject [v#1]\r\n+- SubqueryAlias t\r\n   +- Union\r\n      :+- Project [v#1]\r\n      :   +- SubqueryAlias t3\r\n      :      ...\r\n      +- Project [v#2]\r\n         +- Project [CheckOverflow((promote_precision(cast(v#1 as decimal(11,0))) + promote_precision(cast(v#1 as decimal(11,0)))), DecimalType(11,0), true) AS v#2]\r\n            +- SubqueryAlias t3\r\n               ...\r\n\r\n### Phase-1 (Adds Project, but not update ExprId) ###\r\nProject [v#1]\r\n+- SubqueryAlias t\r\n   +- Union\r\n      :- Project [cast(v#1 as decimal(11,0)) AS v#1] <--- !!!Adds Project to widen a type!!!\r\n      :  +- Project [v#1]\r\n      :     +- SubqueryAlias t3\r\n      :        ...\r\n      +- Project [v#2]\r\n         +- Project [CheckOverflow((promote_precision(cast(v#1 as decimal(11,0))) + promote_precision(cast(v#1 as decimal(11,0)))), DecimalType(11,0), true) AS v#2]\r\n            ...\r\n\r\n### Phase-2 ###\r\n// Analyzer.rewritePlan updates ExprIds based on a rewrite map:\r\n// `Project [cast(v#1 as decimal(11,0)) AS v#1]` => Project [cast(v#1 as decimal(11,0)) AS v#3]\r\nProject [v#3] <--- !!!Updates ExprId!!!\r\n+- SubqueryAlias t\r\n   +- Union\r\n      :- Project [cast(v#1 as decimal(11,0)) AS v#3] <--- !!!Updates ExprId!!!\r\n      :  +- Project [v#1]\r\n      :     +- SubqueryAlias t3\r\n      :        ...\r\n      +- Project [v#2]\r\n         +- Project [CheckOverflow((promote_precision(cast(v#1 as decimal(11,0))) + promote_precision(cast(v#1 as decimal(11,0)))), DecimalType(11,0), true) AS v#2]\r\n            ...\r\n```",
+        "createdAt" : "2020-09-03T14:23:20Z",
+        "updatedAt" : "2020-09-03T14:23:21Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6372515769c1d3c299b865d4ec4b8378bdc5e84c",
+    "line" : 101,
+    "diffHunk" : "@@ -1,1 +418,422 @@          e -> e\n      }.unzip\n      Project(casted._1, plan) -> Project(casted._2, plan)\n    }\n  }"
   }
 ]

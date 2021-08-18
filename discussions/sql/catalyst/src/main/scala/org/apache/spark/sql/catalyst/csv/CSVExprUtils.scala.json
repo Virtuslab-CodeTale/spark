@@ -1,0 +1,68 @@
+[
+  {
+    "id" : "258cf981-ddb0-476b-ad11-d2b71932e673",
+    "prId" : 29516,
+    "prUrl" : "https://github.com/apache/spark/pull/29516#pullrequestreview-472973398",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "fa761161-6ae2-4bb1-974b-26919b8e9965",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "I think it's correct to _not_ trim the string that's checked to see if it starts with a comment, which is a slightly separate issue. `\\u0000` can't be used as a comment char, but other non-printable chars _could_.",
+        "createdAt" : "2020-08-23T02:02:14Z",
+        "updatedAt" : "2020-08-24T14:45:57Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b685f1c0228594965d9daca8e9796d88ecb5680f",
+    "line" : 21,
+    "diffHunk" : "@@ -1,1 +40,44 @@      val commentPrefix = options.comment.toString\n      iter.dropWhile { line =>\n        line.trim.isEmpty || line.startsWith(commentPrefix)\n      }\n    } else {"
+  },
+  {
+    "id" : "34e87074-8651-469f-a820-ea1aed6fbeeb",
+    "prId" : 29516,
+    "prUrl" : "https://github.com/apache/spark/pull/29516#pullrequestreview-474127210",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "732890a2-c5db-4fdd-a7ae-a00ba0e8dccc",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "@srowen, I think we should fix here too:\r\n\r\n```diff\r\n--- a/sql/core/src/main/scala/org/apache/spark/sql/execution/datasources/csv/CSVUtils.scala\r\n+++ b/sql/core/src/main/scala/org/apache/spark/sql/execution/datasources/csv/CSVUtils.scala\r\n@@ -34,12 +34,12 @@ object CSVUtils {\r\n     // might have to be removed in the near future if possible.\r\n     import lines.sqlContext.implicits._\r\n     val aliased = lines.toDF(\"value\")\r\n-    val nonEmptyLines = aliased.filter(length(trim($\"value\")) > 0)\r\n-    if (options.isCommentSet) {\r\n-      nonEmptyLines.filter(!$\"value\".startsWith(options.comment.toString)).as[String]\r\n+    val df = if (options.isCommentSet) {\r\n+      aliased.filter(!$\"value\".startsWith(options.comment.toString))\r\n     } else {\r\n-      nonEmptyLines.as[String]\r\n+      aliased\r\n     }\r\n+    df.filter(length(trim($\"value\")) > 0).as[String]\r\n   }\r\n\r\n   /**\r\n```",
+        "createdAt" : "2020-08-25T02:38:55Z",
+        "updatedAt" : "2020-08-25T02:38:56Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2dab9958-2ea9-4651-a104-38c7b970453d",
+        "parentId" : "732890a2-c5db-4fdd-a7ae-a00ba0e8dccc",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "I think the existing logic matches the logic of https://github.com/apache/spark/pull/29516/files#diff-7faa93f00223527237747227998e30f1R27 ? maybe I'm missing your point. The logic has always been to drop lines that are empty after trimming no matter what, regardless of comment char. Right or wrong that's separate.",
+        "createdAt" : "2020-08-25T04:22:05Z",
+        "updatedAt" : "2020-08-25T04:22:05Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "659dbfb0-4eab-40bc-ae8a-7266288d2be9",
+        "parentId" : "732890a2-c5db-4fdd-a7ae-a00ba0e8dccc",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Oh, NVM. I misread.",
+        "createdAt" : "2020-08-25T04:31:36Z",
+        "updatedAt" : "2020-08-25T04:31:36Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b685f1c0228594965d9daca8e9796d88ecb5680f",
+    "line" : 21,
+    "diffHunk" : "@@ -1,1 +40,44 @@      val commentPrefix = options.comment.toString\n      iter.dropWhile { line =>\n        line.trim.isEmpty || line.startsWith(commentPrefix)\n      }\n    } else {"
+  }
+]

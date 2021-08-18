@@ -724,5 +724,115 @@
     "commit" : "34e3d38fd0fb9158acdfae119ad796e33aa928ec",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +467,471 @@      case If(cond, l @ Literal(null, _), TrueLiteral) if !cond.nullable => Or(Not(cond), l)\n      case If(cond, FalseLiteral, l @ Literal(null, _)) if !cond.nullable => And(Not(cond), l)\n      case If(cond, TrueLiteral, l @ Literal(null, _)) if !cond.nullable => Or(cond, l)\n\n      case e @ CaseWhen(branches, elseValue) if branches.exists(x => falseOrNullLiteral(x._1)) =>"
+  },
+  {
+    "id" : "6a66f2ba-b626-4850-b497-fe7aa17e6ed5",
+    "prId" : 29567,
+    "prUrl" : "https://github.com/apache/spark/pull/29567#pullrequestreview-478366447",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "871bafe3-1da0-486f-bac8-02da64f1fb9f",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "`cond.deterministic` seems to be required, doesn't it?",
+        "createdAt" : "2020-08-30T22:06:09Z",
+        "updatedAt" : "2020-08-31T20:45:46Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f2e10653-071c-4d1c-9251-20c16c10cdcb",
+        "parentId" : "871bafe3-1da0-486f-bac8-02da64f1fb9f",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "For a Spark `Expression`, deterministic means that for fixed input it should always return the same result (e.g., a deterministic function), while `nullable` means whether it will be evaluated to null. In this case we need the latter.",
+        "createdAt" : "2020-08-31T00:05:19Z",
+        "updatedAt" : "2020-08-31T20:45:46Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2aa359c6-8820-430a-82d0-355f7e400c6c",
+        "parentId" : "871bafe3-1da0-486f-bac8-02da64f1fb9f",
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "@sunchao I think the concern @dongjoon-hyun has is it's possible that `cond` is non-deterministic or has side-effect (all the expressions that have side effects in Spark, we consider them as non-deterministic). If we naively simplify them, we might change the final result. \r\n\r\nFor example, `If(cond, TrueLiteral, TrueLiteral)` can be always simplified to `TrueLiteral`; however, this will skip evaluating `cond` which might have side-effect such as counting the number of times we call `cond`. \r\n\r\nIn the first case, the `cond` in `And(cond, l)` will be alway evaluated, and in the second case, `Or(Not(cond), l)`, since `l` will never be `true`, `Not(cond)` will always be evaluated.\r\n\r\nAs a result, maybe we don't need such strong requirement that `cond` has to be deterministic. ",
+        "createdAt" : "2020-08-31T02:57:14Z",
+        "updatedAt" : "2020-08-31T20:45:46Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "08db12a8-675f-4ca3-9059-24a96cb0d974",
+        "parentId" : "871bafe3-1da0-486f-bac8-02da64f1fb9f",
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "FYI,\r\n```\r\n      case If(cond, trueValue, falseValue)\r\n        if cond.deterministic && trueValue.semanticEquals(falseValue) => trueValue\r\n```\r\nThis rule is an example why `cond` has to be deterministic in other case that Dongjoon raised the concern. ",
+        "createdAt" : "2020-08-31T03:18:23Z",
+        "updatedAt" : "2020-08-31T20:45:46Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9ac02891-b208-40af-8a1a-4e41e7656e7c",
+        "parentId" : "871bafe3-1da0-486f-bac8-02da64f1fb9f",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "In the added patterns, `cond` isn't skipped or changed with evaluation order, I think `cond.deterministic` shouldn't be required.",
+        "createdAt" : "2020-08-31T03:26:31Z",
+        "updatedAt" : "2020-08-31T20:45:46Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "92d4c86e-861b-4fcc-a60d-13d366f3ff0d",
+        "parentId" : "871bafe3-1da0-486f-bac8-02da64f1fb9f",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "I see. Thanks @dbtsai @dongjoon-hyun and @viirya , yeah I think in this case we don't require `cond` to be deterministic. ",
+        "createdAt" : "2020-08-31T07:03:22Z",
+        "updatedAt" : "2020-08-31T20:45:46Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "71bd033bfa58365ceabd108a791fd0748a27e1e0",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +465,469 @@        if cond.deterministic && trueValue.semanticEquals(falseValue) => trueValue\n      case If(cond, l @ Literal(null, _), FalseLiteral) if !cond.nullable => And(cond, l)\n      case If(cond, l @ Literal(null, _), TrueLiteral) if !cond.nullable => Or(Not(cond), l)\n\n      case e @ CaseWhen(branches, elseValue) if branches.exists(x => falseOrNullLiteral(x._1)) =>"
+  },
+  {
+    "id" : "2cf9316d-76e3-49b9-99fd-ebc52870f13a",
+    "prId" : 29567,
+    "prUrl" : "https://github.com/apache/spark/pull/29567#pullrequestreview-479366139",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "89050138-6a03-4a07-936b-be9f1b90facf",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "what about the other way around? e.g. `case If(cond, FalseLiteral, l @ Literal(null, _))`",
+        "createdAt" : "2020-09-01T02:53:47Z",
+        "updatedAt" : "2020-09-01T02:53:47Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5ebe5027-37dd-4253-974d-166a844b2d1e",
+        "parentId" : "89050138-6a03-4a07-936b-be9f1b90facf",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "ah it's covered in the followup https://github.com/apache/spark/pull/29603",
+        "createdAt" : "2020-09-01T02:54:37Z",
+        "updatedAt" : "2020-09-01T02:54:37Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "71bd033bfa58365ceabd108a791fd0748a27e1e0",
+    "line" : 4,
+    "diffHunk" : "@@ -1,1 +464,468 @@      case If(cond, trueValue, falseValue)\n        if cond.deterministic && trueValue.semanticEquals(falseValue) => trueValue\n      case If(cond, l @ Literal(null, _), FalseLiteral) if !cond.nullable => And(cond, l)\n      case If(cond, l @ Literal(null, _), TrueLiteral) if !cond.nullable => Or(Not(cond), l)\n"
   }
 ]

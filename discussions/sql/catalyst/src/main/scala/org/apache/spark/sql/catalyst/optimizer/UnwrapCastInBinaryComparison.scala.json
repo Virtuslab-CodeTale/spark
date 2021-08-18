@@ -350,5 +350,522 @@
     "commit" : "76b9f73862380dda40b332b56464278bfb0b88d3",
     "line" : 271,
     "diffHunk" : "@@ -1,1 +268,272 @@    case LongType => Some((Long.MinValue, Long.MaxValue))\n    case FloatType => Some((Float.NegativeInfinity, Float.NaN))\n    case DoubleType => Some((Double.NegativeInfinity, Double.NaN))\n    case _ => None\n  }"
+  },
+  {
+    "id" : "c3fe9e03-f943-40cc-a364-94ae0ee27f8d",
+    "prId" : 29565,
+    "prUrl" : "https://github.com/apache/spark/pull/29565#pullrequestreview-479272314",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a609d6a0-4f9a-446c-95e9-e36cb43c226d",
+        "parentId" : null,
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "```\r\nif `exp < max of exp type < value`, the cases are of following:\r\n```",
+        "createdAt" : "2020-08-31T23:46:24Z",
+        "updatedAt" : "2020-09-11T20:44:56Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "74ac779a-8415-4f0f-be6a-0d30cb77ab61",
+        "parentId" : "a609d6a0-4f9a-446c-95e9-e36cb43c226d",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "I think `exp < max of exp type` is slightly confusing here, and`max` and `min` are already defined earlier. How about I switch to:\r\n\r\n```\r\n *  - `cast(fromExp, toType) > value` ==> if(isnull(fromExp), null, false)\r\n *  - `cast(fromExp, toType) >= value` ==> if(isnull(fromExp), null, false)\r\n...\r\n```\r\n\r\nto make it more clear?",
+        "createdAt" : "2020-09-01T00:03:08Z",
+        "updatedAt" : "2020-09-11T20:44:56Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "980b766a-0a2f-4ff6-aa50-9d5e135dfb45",
+        "parentId" : "a609d6a0-4f9a-446c-95e9-e36cb43c226d",
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "Yeah, it's clear. Should we make it `if(isnotnull(fromExp), false, null)` instead?",
+        "createdAt" : "2020-09-01T00:25:23Z",
+        "updatedAt" : "2020-09-11T20:44:56Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a0230823-e952-48a8-930a-9dcc3971ea95",
+        "parentId" : "a609d6a0-4f9a-446c-95e9-e36cb43c226d",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "I don't see much difference between the two and I think the expression itself should be easy to understand. With that said I don't hold strong opinion on this and either way is OK to me :)",
+        "createdAt" : "2020-09-01T01:23:43Z",
+        "updatedAt" : "2020-09-11T20:44:56Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5f32ee5fda08f4271959589c7f6312195898af08",
+    "line" : 53,
+    "diffHunk" : "@@ -1,1 +51,55 @@ * cases and try to replace each with simpler constructs.\n *\n * if `value > max`, the cases are of following:\n *  - `cast(fromExp, toType) > value` ==> if(isnull(fromExp), null, false)\n *  - `cast(fromExp, toType) >= value` ==> if(isnull(fromExp), null, false)"
+  },
+  {
+    "id" : "dcf1c47d-2310-4caf-aa65-ad044dcfac7b",
+    "prId" : 29565,
+    "prUrl" : "https://github.com/apache/spark/pull/29565#pullrequestreview-484704496",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6a362468-42a4-4db2-b219-956b3f0513a2",
+        "parentId" : null,
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "Does it worth to specifically handle `value == max` and `value == min`? Rules will add cost into planning phase, and we probably not going to run into those two cases often in real world queries. Should we handle them as if it's within the range?",
+        "createdAt" : "2020-09-01T00:23:19Z",
+        "updatedAt" : "2020-09-11T20:44:56Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b5a6114d-db39-4516-b982-39efa3e6da65",
+        "parentId" : "6a362468-42a4-4db2-b219-956b3f0513a2",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "It is hard to answer this question without knowing things like how normally user write queries, how much time this rule uses comparing to other rules, and how much time these specific 2 cases use. IMO the optimization on these two cases can offer significant speed up, and the extra cost is just the pattern matching:\r\n\r\n```\r\nelse if (maxCmp == 0) {\r\n      exp match {\r\n        case GreaterThan(_, _) =>\r\n          fromExp.falseIfNotNull\r\n        case LessThanOrEqual(_, _) =>\r\n          fromExp.trueIfNotNull\r\n        case LessThan(_, _) =>\r\n          Not(EqualTo(fromExp, Literal(max, fromType)))\r\n        case GreaterThanOrEqual(_, _) | EqualTo(_, _) | EqualNullSafe(_, _) =>\r\n          EqualTo(fromExp, Literal(max, fromType))\r\n        case _ => exp\r\n      }\r\n```\r\n\r\nwhich I think should be pretty fast? comparing to the rule itself which may require walking the whole plan tree.",
+        "createdAt" : "2020-09-01T00:59:37Z",
+        "updatedAt" : "2020-09-11T20:44:56Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a1137982-f96b-4de1-b000-4af4d6684219",
+        "parentId" : "6a362468-42a4-4db2-b219-956b3f0513a2",
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "If we don't have `maxCmp == 0` and `minCmp ==0`, it will be optimized to the following. Those can still be pushed down.\r\n```\r\n      val lit = Cast(Literal(value), fromType)\r\n      exp match {\r\n        case GreaterThan(_, _) => GreaterThan(fromExp, lit)\r\n        case GreaterThanOrEqual(_, _) => GreaterThanOrEqual(fromExp, lit)\r\n        case EqualTo(_, _) => EqualTo(fromExp, lit)\r\n        case EqualNullSafe(_, _) => EqualNullSafe(fromExp, lit)\r\n        case LessThan(_, _) => LessThan(fromExp, lit)\r\n        case LessThanOrEqual(_, _) => LessThanOrEqual(fromExp, lit)\r\n        case _ => exp\r\n      }\r\n```\r\n\r\nMaybe we can have separate rules that optimize from `GreaterThan(fromExp, lit)` to `fromExp.falseIfNotNull` when lit is the max of lit.dataType. So more plans can take advantage of it.",
+        "createdAt" : "2020-09-01T04:56:43Z",
+        "updatedAt" : "2020-09-11T20:44:56Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5ac49093-cbb8-4154-87f0-8f0c0e84c797",
+        "parentId" : "6a362468-42a4-4db2-b219-956b3f0513a2",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Those filters are not as effective though. We may add separate rules but that may be more expensive I think (we'll need again to check both sides of the comparison, what types the literal is, the min/max, what kind of expression `fromExp` is, and potential edge cases when both sides have different types etc). \r\n\r\nIMO the advantage of doing it here is that we've already done most of the checks and I don't see much extra cost.",
+        "createdAt" : "2020-09-01T06:59:22Z",
+        "updatedAt" : "2020-09-11T20:44:56Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ff83573e-2a89-4d3d-94b6-22aa9c12d0b8",
+        "parentId" : "6a362468-42a4-4db2-b219-956b3f0513a2",
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "I was thinking for `value == max`, we can have a separate rule such as\r\n\r\n```\r\n *  - `fromExp > value` where fromExp.type == value.dataType && getRange(fromExp)._2 == value` ==> if(isnull(fromExp), null, false)\r\n...\r\n...\r\n```\r\nwhich should be valid for other types. Thus, we don't need to handle `maxCmp == 0`, and it opens up other opportunities to optimize rules that don't have `cast`. WDYT?",
+        "createdAt" : "2020-09-09T05:23:25Z",
+        "updatedAt" : "2020-09-11T20:44:56Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0e705c56-fe77-40fa-9f27-af20dec1da75",
+        "parentId" : "6a362468-42a4-4db2-b219-956b3f0513a2",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Yes +1 on exploring that. I think we should keep the `maxCmp == 0` case for now though before that is ready, since this is more optimized with not much extra cost (without the `maxCmp == 0` we still have to do pattern matching in the else case).",
+        "createdAt" : "2020-09-09T06:41:48Z",
+        "updatedAt" : "2020-09-11T20:44:56Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "48d21e41-f1fe-4cae-ad06-fadc14d04a4c",
+        "parentId" : "6a362468-42a4-4db2-b219-956b3f0513a2",
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "Let's consider it in the followup PR.",
+        "createdAt" : "2020-09-09T06:45:14Z",
+        "updatedAt" : "2020-09-11T20:44:56Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5f32ee5fda08f4271959589c7f6312195898af08",
+    "line" : 71,
+    "diffHunk" : "@@ -1,1 +69,73 @@ *  - `cast(fromExp, toType) < value` ==> fromExp =!= max\n *\n * Similarly for the cases when `value == min` and `value < min`.\n *\n * Further, the above `if(isnull(fromExp), null, false)` is represented using conjunction"
+  },
+  {
+    "id" : "8280687a-daa4-49c3-bc7c-6d7c10d527d9",
+    "prId" : 29565,
+    "prUrl" : "https://github.com/apache/spark/pull/29565#pullrequestreview-479406200",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "65a835ee-a5d0-4b21-aeff-4d1d914e605a",
+        "parentId" : null,
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "remove this empty line.",
+        "createdAt" : "2020-09-01T05:17:16Z",
+        "updatedAt" : "2020-09-11T20:44:56Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5f32ee5fda08f4271959589c7f6312195898af08",
+    "line" : 100,
+    "diffHunk" : "@@ -1,1 +98,102 @@        case _ => e\n      }\n\n      swap(unwrapCast(swap(exp)))\n"
+  },
+  {
+    "id" : "64ac76d3-2436-4bd6-9c5d-910d2eadc48f",
+    "prId" : 29565,
+    "prUrl" : "https://github.com/apache/spark/pull/29565#pullrequestreview-484776918",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f1b432ba-9165-43ea-962b-27a9cff96a33",
+        "parentId" : null,
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "We typically don't mix `if else` and patten matching. Maybe we can do nested patten matching or\r\n```scala\r\n(minCmp.signum, maxCmp.signum, exp) match {\r\n  case (_, 1,  EqualTo(_, _) | GreaterThan(_, _) | GreaterThanOrEqual(_, _) => ...\r\n  ...\r\n  case (_, 1, EqualNullSafe(_, _) if exp.deterministic => FalseLiteral\r\n  case (-1, _, GreaterThan(_, _) | GreaterThanOrEqual(_, _)) => fromExp.trueIfNotNull\r\n  ...\r\n  ...\r\n}\r\n```",
+        "createdAt" : "2020-09-09T05:51:09Z",
+        "updatedAt" : "2020-09-11T20:44:56Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "672f8961-52ad-443a-956e-0569919880e1",
+        "parentId" : "f1b432ba-9165-43ea-962b-27a9cff96a33",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Yeah I considered this but thought `if else` is easier to understand. I can switch to pattern matching if this is more idiomatic in Spark.",
+        "createdAt" : "2020-09-09T06:33:05Z",
+        "updatedAt" : "2020-09-11T20:44:56Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e6d6d63f-ffdd-4f98-93d1-4fd7ea0b8298",
+        "parentId" : "f1b432ba-9165-43ea-962b-27a9cff96a33",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "updated - let me know if you think this is better",
+        "createdAt" : "2020-09-09T08:28:52Z",
+        "updatedAt" : "2020-09-11T20:44:56Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5f32ee5fda08f4271959589c7f6312195898af08",
+    "line" : 134,
+    "diffHunk" : "@@ -1,1 +132,136 @@    val maxCmp = ordering.compare(value, maxInToType)\n\n    if (maxCmp > 0) {\n      exp match {\n        case EqualTo(_, _) | GreaterThan(_, _) | GreaterThanOrEqual(_, _) =>"
+  },
+  {
+    "id" : "d4e1f1f1-fe98-48b4-9ff5-94208343a07b",
+    "prId" : 29565,
+    "prUrl" : "https://github.com/apache/spark/pull/29565#pullrequestreview-487411760",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5e1353fb-5e32-4e01-b2cd-305f2186d1d7",
+        "parentId" : null,
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "@cloud-fan for safety, we will skip optimization if exp is non deterministic. WDYT?",
+        "createdAt" : "2020-09-09T05:52:39Z",
+        "updatedAt" : "2020-09-11T20:44:56Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "38169bd8-7935-4e95-b4ce-2cd723544925",
+        "parentId" : "5e1353fb-5e32-4e01-b2cd-305f2186d1d7",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "SGTM",
+        "createdAt" : "2020-09-14T04:44:39Z",
+        "updatedAt" : "2020-09-14T04:44:39Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5f32ee5fda08f4271959589c7f6312195898af08",
+    "line" : 142,
+    "diffHunk" : "@@ -1,1 +140,144 @@        // make sure the expression is evaluated if it is non-deterministic\n        case EqualNullSafe(_, _) if exp.deterministic =>\n          FalseLiteral\n        case _ => exp\n      }"
+  },
+  {
+    "id" : "1b831519-f55c-4402-bbcc-7c0c550b2b41",
+    "prId" : 29565,
+    "prUrl" : "https://github.com/apache/spark/pull/29565#pullrequestreview-486154357",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f02e93ca-b183-4cd1-9a2e-b98671787a20",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "You may want to safe guard here; `case _: throw new UnsupportedOperationException`.",
+        "createdAt" : "2020-09-09T18:00:13Z",
+        "updatedAt" : "2020-09-11T20:44:56Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a782d36b-c896-49ab-89c6-915b80a480aa",
+        "parentId" : "f02e93ca-b183-4cd1-9a2e-b98671787a20",
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "We probably need to handle this exception in the caller to prevent the job being killed.",
+        "createdAt" : "2020-09-09T19:47:45Z",
+        "updatedAt" : "2020-09-11T20:44:56Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "93cf0efe-1745-43b8-9466-edd95c9cd8f1",
+        "parentId" : "f02e93ca-b183-4cd1-9a2e-b98671787a20",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Will do. Ideally this should never happen though unless someone adds another subclass under `IntegralType` (and in that case the implementor should fulfill their responsibility by checking every place that does pattern matching on the parent type). It's unfortunate that we can't seal the class and rely on Scala's exhaustive pattern match compile-time check :(\r\n\r\nRegarding catching the exception, I don't think it is necessary since it should be an error in query compilation before job starts. I see similar pattern in [ColumnType](https://github.com/apache/spark/blob/master/sql/core/src/main/scala/org/apache/spark/sql/execution/columnar/ColumnType.scala#L767).",
+        "createdAt" : "2020-09-10T17:25:24Z",
+        "updatedAt" : "2020-09-11T20:44:56Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5f32ee5fda08f4271959589c7f6312195898af08",
+    "line" : 217,
+    "diffHunk" : "@@ -1,1 +215,219 @@    case ShortType => (Short.MinValue, Short.MaxValue)\n    case IntegerType => (Int.MinValue, Int.MaxValue)\n    case LongType => (Long.MinValue, Long.MaxValue)\n    case other => throw new IllegalArgumentException(s\"Unsupported type: ${other.catalogString}\")\n  }"
+  },
+  {
+    "id" : "f1b2bb7d-a2ee-4eaf-b0b2-1b1a4d6d4686",
+    "prId" : 29565,
+    "prUrl" : "https://github.com/apache/spark/pull/29565#pullrequestreview-486349926",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "cae0350e-7cbc-40a6-9f09-81bfd2ad2a50",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "For `cast(long_col as int) = int_literal`, we don't support it?",
+        "createdAt" : "2020-09-10T03:41:21Z",
+        "updatedAt" : "2020-09-11T20:44:56Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3fa35429-fe95-403c-a5c0-432359e56340",
+        "parentId" : "cae0350e-7cbc-40a6-9f09-81bfd2ad2a50",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "ah I see, we can't support it, as `cast(long_col as int)` may overflow and we can't move cast to the other side. Can we add a comment here?",
+        "createdAt" : "2020-09-10T03:42:13Z",
+        "updatedAt" : "2020-09-11T20:44:56Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4d02a030-f9ee-4f73-a649-3fad84b90c81",
+        "parentId" : "cae0350e-7cbc-40a6-9f09-81bfd2ad2a50",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Yes we don't support this case right now. Will add comment.",
+        "createdAt" : "2020-09-10T17:47:28Z",
+        "updatedAt" : "2020-09-11T20:44:56Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a53554fe-8e4c-4a86-8922-e1a54fb8e8bf",
+        "parentId" : "cae0350e-7cbc-40a6-9f09-81bfd2ad2a50",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Added a comment on the top",
+        "createdAt" : "2020-09-10T22:18:24Z",
+        "updatedAt" : "2020-09-11T20:44:56Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5f32ee5fda08f4271959589c7f6312195898af08",
+    "line" : 210,
+    "diffHunk" : "@@ -1,1 +208,212 @@      fromExp.dataType.isInstanceOf[IntegralType] &&\n      toType.isInstanceOf[IntegralType] &&\n      Cast.canUpCast(fromExp.dataType, toType)\n  }\n"
+  },
+  {
+    "id" : "c5855b95-69be-4a6c-b760-fa0db34c8dee",
+    "prId" : 29565,
+    "prUrl" : "https://github.com/apache/spark/pull/29565#pullrequestreview-486951421",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b175390c-52ce-440b-814e-a2a92dde6d21",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "can we just convert everything to long and compare?",
+        "createdAt" : "2020-09-10T04:58:17Z",
+        "updatedAt" : "2020-09-11T20:44:56Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "19f51777-4087-4a89-9568-b87898d81d69",
+        "parentId" : "b175390c-52ce-440b-814e-a2a92dde6d21",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "In CBO, we convert everything to `BigDecimal` and compare, which simplifies the code a lot.",
+        "createdAt" : "2020-09-10T06:02:00Z",
+        "updatedAt" : "2020-09-11T20:44:56Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "653d4fa3-a270-4200-8934-db8118b37bb9",
+        "parentId" : "b175390c-52ce-440b-814e-a2a92dde6d21",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I don't think perf matters that much here.",
+        "createdAt" : "2020-09-10T06:02:26Z",
+        "updatedAt" : "2020-09-11T20:44:56Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a03b7daf-5f91-4ecd-8554-f61c09d365b6",
+        "parentId" : "b175390c-52ce-440b-814e-a2a92dde6d21",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Hmm you mean we can just keep as it is right? I think semantically they are the same?",
+        "createdAt" : "2020-09-10T22:21:20Z",
+        "updatedAt" : "2020-09-11T20:44:56Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "efb3c772-f446-44ec-bf69-73d57a2b3902",
+        "parentId" : "b175390c-52ce-440b-814e-a2a92dde6d21",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "semantically they are the same, but the code is easier to read if we do `if (value > max) ...` instead of `(minCmp.signum, maxCmp.signum, exp) match ...` ",
+        "createdAt" : "2020-09-11T07:29:22Z",
+        "updatedAt" : "2020-09-11T20:44:56Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fe7fd88c-73c9-4b7c-b5e4-fa0b65864536",
+        "parentId" : "b175390c-52ce-440b-814e-a2a92dde6d21",
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "This was my bad :) I suggested to use pattern matching instead of mixing `if else` and pattern matching.",
+        "createdAt" : "2020-09-11T08:29:04Z",
+        "updatedAt" : "2020-09-11T20:44:56Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "656e7fba-3e8e-4380-96ed-36e08bf9054a",
+        "parentId" : "b175390c-52ce-440b-814e-a2a92dde6d21",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "thanks - let me switch to `if else` for better readability here.",
+        "createdAt" : "2020-09-11T16:27:22Z",
+        "updatedAt" : "2020-09-11T20:44:56Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5f32ee5fda08f4271959589c7f6312195898af08",
+    "line" : 130,
+    "diffHunk" : "@@ -1,1 +128,132 @@      (Cast(Literal(min), toType).eval(), Cast(Literal(max), toType).eval())\n    }\n    val ordering = toType.ordering.asInstanceOf[Ordering[Any]]\n    val minCmp = ordering.compare(value, minInToType)\n    val maxCmp = ordering.compare(value, maxInToType)"
+  },
+  {
+    "id" : "bbeaad95-d4e8-4615-9a33-eeb20cf2eafd",
+    "prId" : 29565,
+    "prUrl" : "https://github.com/apache/spark/pull/29565#pullrequestreview-486952105",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3fe46f3b-7cbd-42f0-a97b-d4c676d4c52c",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "This additional check looks good and robust. BTW, do we have a test coverage for this?",
+        "createdAt" : "2020-09-11T13:32:22Z",
+        "updatedAt" : "2020-09-11T20:44:56Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8362d7d0-e8d8-4fc6-b4b4-5419452a84e0",
+        "parentId" : "3fe46f3b-7cbd-42f0-a97b-d4c676d4c52c",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "I tried to come up with a test for this but it seems the query compiler always wrap a cast to make sure type from both sides are the same.",
+        "createdAt" : "2020-09-11T16:28:17Z",
+        "updatedAt" : "2020-09-11T20:44:56Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5f32ee5fda08f4271959589c7f6312195898af08",
+    "line" : 207,
+    "diffHunk" : "@@ -1,1 +205,209 @@  private def canImplicitlyCast(fromExp: Expression, toType: DataType,\n      literalType: DataType): Boolean = {\n    toType.sameType(literalType) &&\n      fromExp.dataType.isInstanceOf[IntegralType] &&\n      toType.isInstanceOf[IntegralType] &&"
+  },
+  {
+    "id" : "0ef6daa2-d2c5-46f7-a5fc-7b882182f14b",
+    "prId" : 29565,
+    "prUrl" : "https://github.com/apache/spark/pull/29565#pullrequestreview-488004402",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9595f31c-d3c7-4109-9155-0bb5924302c9",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "indentation nit:\r\n```\r\ndef func(\r\n    para1: T,\r\n    para2: T,\r\n    para3: T): R = ...\r\n```",
+        "createdAt" : "2020-09-14T04:36:25Z",
+        "updatedAt" : "2020-09-14T04:36:25Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c075deb0-5df4-4b70-a611-052959672bc0",
+        "parentId" : "9595f31c-d3c7-4109-9155-0bb5924302c9",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "BTW I'll also check `!from.foldable`, otherwise it's simpler to not run this rule.",
+        "createdAt" : "2020-09-14T04:37:32Z",
+        "updatedAt" : "2020-09-14T04:37:32Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "850b804d-9e20-4624-8d70-5d8f2b145ff5",
+        "parentId" : "9595f31c-d3c7-4109-9155-0bb5924302c9",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Ya. +1 for `foldable` checking.",
+        "createdAt" : "2020-09-14T04:39:48Z",
+        "updatedAt" : "2020-09-14T04:39:48Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6f603425-0d4c-48da-ba53-818d4a8c2f9a",
+        "parentId" : "9595f31c-d3c7-4109-9155-0bb5924302c9",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Thanks. I'll check `foldable` in the follow-up PR to handle more types. And also fix the indentation.",
+        "createdAt" : "2020-09-14T17:44:13Z",
+        "updatedAt" : "2020-09-14T17:44:14Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5f32ee5fda08f4271959589c7f6312195898af08",
+    "line" : 205,
+    "diffHunk" : "@@ -1,1 +203,207 @@   * integral type.\n   */\n  private def canImplicitlyCast(fromExp: Expression, toType: DataType,\n      literalType: DataType): Boolean = {\n    toType.sameType(literalType) &&"
   }
 ]

@@ -42,5 +42,82 @@
     "commit" : "7668405ebd902cea698b76c373d0c06b1e759426",
     "line" : 18,
     "diffHunk" : "@@ -1,1 +688,692 @@    withJdbcStatement(viewName1, viewName2) { statement =>\n      val legacyIntervalEnabled = SQLConf.get.legacyIntervalEnabled\n      statement.execute(s\"SET ${SQLConf.LEGACY_INTERVAL_ENABLED.key}=true\")\n      statement.executeQuery(ddl1)\n      statement.executeQuery(ddl2)"
+  },
+  {
+    "id" : "087e55ca-631c-4c2d-90e5-91d337dbfa28",
+    "prId" : 29539,
+    "prUrl" : "https://github.com/apache/spark/pull/29539#pullrequestreview-476548385",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "832218ca-aaea-4a36-848f-f5b4cc86d0a9",
+        "parentId" : null,
+        "authorId" : "e5beb795-ac0e-4bd6-ad66-708215b8ae58",
+        "body" : "What will be returned by rs.getMetadata.getColumnType for the interval column?\r\nI believe that will be a string, because of how we just make it a string in the output schema in https://github.com/apache/spark/blob/master/sql/hive-thriftserver/src/main/scala/org/apache/spark/sql/hive/thriftserver/SparkExecuteStatementOperation.scala#L362\r\n\r\nThere was a discussion last year in https://github.com/apache/spark/pull/25694#discussion_r321972811, that because the interval is just returned as string in the query output schema, and not compliant to standard SQL interval types, it should not be listed by SparkGetTypeInfoOperation, and be treated just as strings.\r\n\r\nIf we want to make it be returned as a java.sql.Types.OTHER, to make this complete, it should be returned as such in result set metadata as well, and listed in SparkGetTypeInfoOperation.\r\nOr we could map it to string.",
+        "createdAt" : "2020-08-27T07:31:39Z",
+        "updatedAt" : "2020-08-27T07:38:49Z",
+        "lastEditedBy" : "e5beb795-ac0e-4bd6-ad66-708215b8ae58",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "130af5c3-1c16-4a7c-8cd4-d5de83544248",
+        "parentId" : "832218ca-aaea-4a36-848f-f5b4cc86d0a9",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "the ResultSetMetadata describes the return types of the result set, the GetColumnOperation retrieves the metadata of the original table or view. IMHO,  they do not have to be the same.",
+        "createdAt" : "2020-08-27T07:56:05Z",
+        "updatedAt" : "2020-08-27T07:56:05Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3b10d295-2719-47b4-b4e4-88898600b8ae",
+        "parentId" : "832218ca-aaea-4a36-848f-f5b4cc86d0a9",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "I will make a followup to add it to SparkGetTypeInfoOperation",
+        "createdAt" : "2020-08-27T07:58:30Z",
+        "updatedAt" : "2020-08-27T07:58:30Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a4a02154-5f69-4810-9d01-e4ebb66918ad",
+        "parentId" : "832218ca-aaea-4a36-848f-f5b4cc86d0a9",
+        "authorId" : "e5beb795-ac0e-4bd6-ad66-708215b8ae58",
+        "body" : "It would be the most consistent if the table columns metadata, and metadata of the result of `select * from table` had consistent types. I don't really have a preference whether it should be string or interval. Last year the discussion leaned towards string, because of the intervals not really being standard compliant, but indeed there might be value in having it marked as interval in the schema, so the application might try to parse it as such... Though, e.g. between Spark 2.4 and Spark 3.0 the format of the returned interval changed, see https://issues.apache.org/jira/browse/SPARK-32132, which might have broken how anyone would have parsed it, so Spark is not really giving any guarantees as to the stability of the format of this type...\r\n\r\nUltimately, I think this is very rarely used, as intervals didn't even work at all until https://github.com/apache/spark/pull/25277 and it was not raised earlier...",
+        "createdAt" : "2020-08-27T08:21:49Z",
+        "updatedAt" : "2020-08-27T08:21:50Z",
+        "lastEditedBy" : "e5beb795-ac0e-4bd6-ad66-708215b8ae58",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "316fd654-7ba0-490f-9ea9-c4b1001f59a3",
+        "parentId" : "832218ca-aaea-4a36-848f-f5b4cc86d0a9",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "The ResultSetMetadata is used by the client-side user to do the right work on the result set what they get，when the interval values become strings, they need to follow the rules of String operations in their future activities.\r\n\r\nThe GetColumnOperation tells the client-side users about how the data is stored and formed at the server-side, then if the JDBC-users know column A is an interval type, then they should notice that they can not perform string functions, comparators, etc on column A.",
+        "createdAt" : "2020-08-27T08:51:26Z",
+        "updatedAt" : "2020-08-27T08:56:19Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8770ebfc-c7d7-4040-b2f8-71cce6767360",
+        "parentId" : "832218ca-aaea-4a36-848f-f5b4cc86d0a9",
+        "authorId" : "e5beb795-ac0e-4bd6-ad66-708215b8ae58",
+        "body" : "In ResultSetMetadata would the client-side user not learn that they should follow string rules by using getColumnClassName, which should return String, while it would be still valuable to them to know that that column represents an interval?",
+        "createdAt" : "2020-08-27T09:34:18Z",
+        "updatedAt" : "2020-08-27T09:34:18Z",
+        "lastEditedBy" : "e5beb795-ac0e-4bd6-ad66-708215b8ae58",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d3888d45ef8c5cedd5a15944be7100b5fcdb9dd8",
+    "line" : 12,
+    "diffHunk" : "@@ -1,1 +695,699 @@      statement.executeQuery(ddl1)\n      statement.executeQuery(ddl2)\n      val rs = statement.executeQuery(s\"SELECT v1.i as a, v2.i as b FROM global_temp.$viewName1\" +\n        s\" v1 join $viewName2 v2 on date_part('DAY', v1.i) = date_part('DAY', v2.i)\")\n      while (rs.next()) {"
   }
 ]

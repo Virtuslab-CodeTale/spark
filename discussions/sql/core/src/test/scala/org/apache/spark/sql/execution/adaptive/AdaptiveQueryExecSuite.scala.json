@@ -570,5 +570,60 @@
     "commit" : "82f6cc656ebc1f77ef736f07bd3e0dd71eea07fe",
     "line" : 19,
     "diffHunk" : "@@ -1,1 +1231,1235 @@      SQLConf.ADAPTIVE_EXECUTION_ENABLED.key -> \"true\",\n      // exclude ConvertToLocalRelation rule make it easier for Test.\n      SQLConf.OPTIMIZER_EXCLUDED_RULES.key -> ConvertToLocalRelation.ruleName) {\n      withTempView(\"m\", \"s\", \"pm\", \"ps\") {\n        Seq((null: Integer, 1.0), (2: Integer, 3.0), (4: Integer, 5.0))"
+  },
+  {
+    "id" : "7f0f8c15-2b6a-46b0-bb2d-b41a1acae095",
+    "prId" : 29484,
+    "prUrl" : "https://github.com/apache/spark/pull/29484#pullrequestreview-472244699",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3a951291-fd27-4697-9969-743bae218a5d",
+        "parentId" : null,
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@cloud-fan - just fyi. the change in this unit test is needed as `assert(find(plan)(_.isInstanceOf[BroadcastHashJoinExec]).isDefined)` no long true, because this is an inner join and the build side is empty. So with the change in this PR, the join operator is optimized into an empty relation operator (failure stack trace of unit test without change is [here](https://github.com/apache/spark/pull/29484/checks?check_run_id=1011186945)).\r\n\r\nChanged from inner join to left outer join, to help unit test pass. And I don't think changing from inner join to left outer join here can comprise any functionality of original unit test. Let me know if it's not the case. thanks.",
+        "createdAt" : "2020-08-21T06:52:51Z",
+        "updatedAt" : "2020-08-23T06:17:42Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "496eda790c95b1c9895967b7181d582fa87da0ff",
+    "line" : 19,
+    "diffHunk" : "@@ -1,1 +244,248 @@        checkAnswer(testDf, Seq())\n        val plan = testDf.queryExecution.executedPlan\n        assert(find(plan)(_.isInstanceOf[BroadcastHashJoinExec]).isDefined)\n        val coalescedReaders = collect(plan) {\n          case r: CustomShuffleReaderExec => r"
+  },
+  {
+    "id" : "b8cd5d5b-b0a4-47cb-8971-db9082278fc4",
+    "prId" : 29484,
+    "prUrl" : "https://github.com/apache/spark/pull/29484#pullrequestreview-472860768",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "06fc5eb6-dc41-4a77-aaa2-a45e8279d557",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "SortMergeJoin? I think this targets BHJ and SHJ?",
+        "createdAt" : "2020-08-21T21:45:45Z",
+        "updatedAt" : "2020-08-23T06:17:42Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9b1181f3-cf59-495c-9d3d-61980da13307",
+        "parentId" : "06fc5eb6-dc41-4a77-aaa2-a45e8279d557",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@viirya - similar to other test cases in this file - the input data stats is super large, and by default it uses SMJ. Per my comment above, SMJ/BHJ/SHJ will all turn into empty `LocalRelation` (where `SMJ/SHJ` first turned into `BHJ`).",
+        "createdAt" : "2020-08-21T23:08:26Z",
+        "updatedAt" : "2020-08-23T06:17:42Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "496eda790c95b1c9895967b7181d582fa87da0ff",
+    "line" : 38,
+    "diffHunk" : "@@ -1,1 +1198,1202 @@      ).foreach(query => {\n        val (plan, adaptivePlan) = runAdaptiveAndVerifyResult(query)\n        val smj = findTopLevelSortMergeJoin(plan)\n        assert(smj.size == 1)\n        val join = findTopLevelBaseJoin(adaptivePlan)"
   }
 ]
