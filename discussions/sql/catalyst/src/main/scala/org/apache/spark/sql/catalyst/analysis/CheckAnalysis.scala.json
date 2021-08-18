@@ -196,5 +196,38 @@
     "commit" : "6a75c920df97a13ac547056eb7eb286b3accf973",
     "line" : 139,
     "diffHunk" : "@@ -1,1 +1068,1072 @@            .getOrElse(col.field)\n          val newDataType = a.dataType.get\n          newDataType match {\n            case _: StructType =>\n              alter.failAnalysis(s\"Cannot update ${table.name} field $fieldName type: \" +"
+  },
+  {
+    "id" : "f4c4abf3-bd64-4d06-ac6c-12aa891ad24e",
+    "prId" : 32978,
+    "prUrl" : "https://github.com/apache/spark/pull/32978#pullrequestreview-687930878",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "389107c7-493d-4f14-afeb-8428df7a3870",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Hm, so we should fix all these kind of blacklisting .. while this fix is good, I wonder if we can sweep and fix in batch.",
+        "createdAt" : "2021-06-20T02:32:44Z",
+        "updatedAt" : "2021-06-20T02:32:44Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1c33f76c-1fba-4590-bc67-6b3066590ee8",
+        "parentId" : "389107c7-493d-4f14-afeb-8428df7a3870",
+        "authorId" : "3a227965-84e0-47cf-9974-11293764f028",
+        "body" : "Actually, I have found another places where `DayTimeINtervalType` and `YearMonthIntervalType` are not considered.\r\nIn terms of blacklisting, I found this part only (if I didn't miss something).\r\nThe rest of places we need to consider is as follows.\r\n\r\n* https://github.com/apache/spark/blob/4f51e0045e2754035e304979182c0f583c65f174/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/expressions/codegen/GenerateUnsafeProjection.scala#L42\r\n* https://github.com/apache/spark/blob/4f51e0045e2754035e304979182c0f583c65f174/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/expressions/Cast.scala#L155\r\n* https://github.com/apache/spark/blob/4f51e0045e2754035e304979182c0f583c65f174/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/expressions/Cast.scala#L191\r\n* https://github.com/apache/spark/blob/4f51e0045e2754035e304979182c0f583c65f174/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/util/ArrayBasedMapBuilder.scala#L37\r\n* https://github.com/apache/spark/blob/4f51e0045e2754035e304979182c0f583c65f174/sql/hive/src/test/scala/org/apache/spark/sql/hive/orc/OrcHadoopFsRelationSuite.scala#L40\r\n* https://github.com/apache/spark/blob/master/sql/hive/src/test/scala/org/apache/spark/sql/sources/ParquetHadoopFsRelationSuite.scala#L41\r\n* https://github.com/apache/spark/blob/4f51e0045e2754035e304979182c0f583c65f174/sql/hive/src/test/scala/org/apache/spark/sql/sources/JsonHadoopFsRelationSuite.scala#L35\r\n* https://github.com/apache/spark/blob/4f51e0045e2754035e304979182c0f583c65f174/sql/hive/src/test/scala/org/apache/spark/sql/sources/SimpleTextHadoopFsRelationSuite.scala#L36\r\n\r\nI think, we need to fix them with beyond just blacklisting and they need to be more carefully considered while this part can be simply fixed.",
+        "createdAt" : "2021-06-20T18:33:37Z",
+        "updatedAt" : "2021-06-20T18:33:38Z",
+        "lastEditedBy" : "3a227965-84e0-47cf-9974-11293764f028",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "35389a8805a1ca0571b8e57feb6b33907b99458d",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +535,539 @@                      s\"update a UserDefinedType[${u.sql}] by updating its fields\")\n                  case _: CalendarIntervalType | _: YearMonthIntervalType |\n                       _: DayTimeIntervalType =>\n                    alter.failAnalysis(s\"Cannot update ${table.name} field $fieldName to \" +\n                      s\"interval type\")"
   }
 ]

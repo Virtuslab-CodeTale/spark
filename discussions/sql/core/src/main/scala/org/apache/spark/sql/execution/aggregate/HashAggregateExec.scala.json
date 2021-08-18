@@ -1,0 +1,101 @@
+[
+  {
+    "id" : "6290dee0-3461-499d-bfad-3e1e5ba878a3",
+    "prId" : 32885,
+    "prUrl" : "https://github.com/apache/spark/pull/32885#pullrequestreview-686216472",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d890c7f8-1bde-4f90-8beb-9cda4c105637",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "This is a hidden bug. `SubqueryExpression` will be sent to the executor side and build `Projection`, and be put in `EquivalentExpressions`, which needs to call `canonicalized`.\r\n\r\nThis means, Spark may serialize and send `HashAggregateExec` to the executor side, where `sqlContext` should be null.\r\n\r\nIt's hidden for a long time because `ScalarSubquery` didn't implement `canonicalized`, so the bug is not triggered. However, it also means `semanticHash` is wrong.\r\n\r\nI think it only affects common subquery elimination, and shouldn't be a serious bug.\r\n",
+        "createdAt" : "2021-06-14T14:51:12Z",
+        "updatedAt" : "2021-06-14T14:51:12Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "923c86ab-30e2-415b-921d-c5fc289f467e",
+        "parentId" : "d890c7f8-1bde-4f90-8beb-9cda4c105637",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "In the long term, I think we should only send an \"expression evaluator\" to the executor side. The semantic check should only be done in the driver side.",
+        "createdAt" : "2021-06-14T14:52:19Z",
+        "updatedAt" : "2021-06-14T14:52:19Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d8748046-96c3-4c04-bc76-49b12e543c65",
+        "parentId" : "d890c7f8-1bde-4f90-8beb-9cda4c105637",
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "Sorry for the late comment @cloud-fan, but I think I've run into this issue before:\r\nhttps://github.com/apache/spark/pull/28885/files#diff-9b62cef6bfdeb6c802bb120c7a724a974d5067a69585285bebb64c48603f8d6fR105-R108. The point is that there might be other nodes where canonicalization on executor side can cause issues. `SortExec.enableRadixSort` is the other one I found.",
+        "createdAt" : "2021-06-15T09:58:54Z",
+        "updatedAt" : "2021-06-15T10:01:07Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "40c29219-3939-4651-a83e-c61700045753",
+        "parentId" : "d890c7f8-1bde-4f90-8beb-9cda4c105637",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "`InSubqueryExec` already implements `canonicalized` before this PR, so we need to fix these bugs anyway.\r\n\r\nI have an idea to fix this problem in all physical plans:\r\n1. remove `SparkPlan.sqlContext`, so that we can catch all the callers of it\r\n2. add `@transient final val session = SparkSession.getActiveSession.orNull`, to replace the previous `sqlContext`\r\n3. override `conf` in `SparkPlan`: `if (session != null) session.sessionState.conf else SQLConf.get`\r\n\r\n@peter-toth what do you think? AFAIK the only reason to access `SparkPlan.sqlContext` at executor side is to read a conf, and we can do that with `SQLConf.get` at executor side.",
+        "createdAt" : "2021-06-15T10:43:06Z",
+        "updatedAt" : "2021-06-15T10:43:06Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "053068ab-70ba-47a9-933a-a3a10bb3b48c",
+        "parentId" : "d890c7f8-1bde-4f90-8beb-9cda4c105637",
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "Sounds good to me.",
+        "createdAt" : "2021-06-15T10:59:03Z",
+        "updatedAt" : "2021-06-15T10:59:04Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9500ee3a-a6e6-4d4a-b506-0d0db9089d39",
+        "parentId" : "d890c7f8-1bde-4f90-8beb-9cda4c105637",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I'm quite busy this week and may not have time to implement this idea recently. @peter-toth feel free to pick up this idea and open a PR if you have time, or I'll do it next or next next week. Thanks in advance!",
+        "createdAt" : "2021-06-15T17:52:52Z",
+        "updatedAt" : "2021-06-15T17:52:52Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c88dfb88-ca24-4162-a735-7cd15ecd61c1",
+        "parentId" : "d890c7f8-1bde-4f90-8beb-9cda4c105637",
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "Ok, thanks. I will try to open a PR this week.",
+        "createdAt" : "2021-06-15T18:00:50Z",
+        "updatedAt" : "2021-06-15T18:00:50Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a1b19925-e302-4e6b-8ad3-d58d314b5860",
+        "parentId" : "d890c7f8-1bde-4f90-8beb-9cda4c105637",
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "Opened https://github.com/apache/spark/pull/32947.",
+        "createdAt" : "2021-06-17T11:59:49Z",
+        "updatedAt" : "2021-06-17T11:59:49Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5095fffcd0cd76548eadef802cdb81261029ff12",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +74,78 @@  // map and/or the sort-based aggregation once it has processed a given number of input rows.\n  private val testFallbackStartsAt: Option[(Int, Int)] = {\n    Option(sqlContext).map { sc =>\n      sc.getConf(\"spark.sql.TungstenAggregate.testFallbackStartsAt\", null)\n    }.orNull match {"
+  }
+]

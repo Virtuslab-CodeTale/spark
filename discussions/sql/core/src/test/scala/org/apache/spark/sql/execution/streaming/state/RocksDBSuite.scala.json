@@ -1,0 +1,222 @@
+[
+  {
+    "id" : "abf33b71-cdba-4f1e-ab83-1dda807ede4a",
+    "prId" : 32933,
+    "prUrl" : "https://github.com/apache/spark/pull/32933#pullrequestreview-696205636",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0f5a3317-731c-4f52-9fa3-edd33a8a3165",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "This is interesting - we don't remove any keys but expect some SST files to be invalid. Would compaction chime in and compact several SSTs into bigger one?",
+        "createdAt" : "2021-06-28T10:02:39Z",
+        "updatedAt" : "2021-06-28T12:04:27Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "56bf5813-6bfc-4ba5-908d-cf4b50b3cf77",
+        "parentId" : "0f5a3317-731c-4f52-9fa3-edd33a8a3165",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "Right. We'll do the RocksDB checkpoint for each commit operation, each checkpoint is a full snapshot and includes all data. In this UT we have 50 versions but only retain 10 versions, so the SST files for deleted versions(1 to 40) will be deleted.",
+        "createdAt" : "2021-06-30T14:03:08Z",
+        "updatedAt" : "2021-06-30T14:03:08Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ea949836c26be0124e37df0eb641be806628d94d",
+    "line" : 37,
+    "diffHunk" : "@@ -1,1 +127,131 @@      db.cleanup()\n      assert(versionsPresent === (41L to 50L))\n      assert(listFiles(sstDir).length < numSstFiles)\n\n      // Verify data in retained vesions."
+  },
+  {
+    "id" : "4ab999ee-3a61-4629-8337-877ce9819026",
+    "prId" : 32933,
+    "prUrl" : "https://github.com/apache/spark/pull/32933#pullrequestreview-696206469",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c5c06da5-74ee-472e-a860-3ef53eabac18",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "nit: double empty lines",
+        "createdAt" : "2021-06-28T10:07:30Z",
+        "updatedAt" : "2021-06-28T12:04:27Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9bc7047d-c6c1-47e5-bff9-28d66706eff5",
+        "parentId" : "c5c06da5-74ee-472e-a860-3ef53eabac18",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "Thanks, done in the next commit.",
+        "createdAt" : "2021-06-30T14:03:44Z",
+        "updatedAt" : "2021-06-30T14:03:45Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ea949836c26be0124e37df0eb641be806628d94d",
+    "line" : 220,
+    "diffHunk" : "@@ -1,1 +498,502 @@  def listFiles(file: String): Seq[File] = listFiles(new File(file))\n}\n\nobject RocksDBSuite {\n  @volatile var singleton: RocksDB = _"
+  },
+  {
+    "id" : "5f75cc1d-d98f-46de-bb5d-badcb51a6a87",
+    "prId" : 32933,
+    "prUrl" : "https://github.com/apache/spark/pull/32933#pullrequestreview-697848643",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b345c23d-610c-4d2a-b880-371b2e0e20c1",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "This test seems not related to clean up change here? Looks like more related to RocksDB instance PR.",
+        "createdAt" : "2021-07-01T20:14:19Z",
+        "updatedAt" : "2021-07-01T20:14:19Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f18c918b-6941-4fe4-a668-67b6cc16c59e",
+        "parentId" : "b345c23d-610c-4d2a-b880-371b2e0e20c1",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "Ah yea, this is the test for rollback.\r\nActually the original plan is expose `rollback` and `cleanup` in this PR. It should be a mistake for the last PR, I introduced the `rollback` without tests.",
+        "createdAt" : "2021-07-02T05:57:43Z",
+        "updatedAt" : "2021-07-02T05:57:43Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c0479589-84a3-4dd4-a0cb-0460ccfe7c34",
+        "parentId" : "b345c23d-610c-4d2a-b880-371b2e0e20c1",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "okay",
+        "createdAt" : "2021-07-02T06:02:13Z",
+        "updatedAt" : "2021-07-02T06:02:13Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ea949836c26be0124e37df0eb641be806628d94d",
+    "line" : 86,
+    "diffHunk" : "@@ -1,1 +274,278 @@  }\n\n  test(\"disallow concurrent updates to the same RocksDB instance\") {\n    quietly {\n      withDB("
+  },
+  {
+    "id" : "09106d6b-5b17-4545-85d7-b643e02bd850",
+    "prId" : 32933,
+    "prUrl" : "https://github.com/apache/spark/pull/32933#pullrequestreview-697911568",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "13953faf-df00-4041-85cc-d2a3973adfeb",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Hm, what this test is used for? Each `RocksDB` in each thread uses the same remote root dir, won't they conflict?",
+        "createdAt" : "2021-07-01T20:21:30Z",
+        "updatedAt" : "2021-07-01T20:21:30Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4fc990af-dcdf-42f5-b4b3-13415aa5f949",
+        "parentId" : "13953faf-df00-4041-85cc-d2a3973adfeb",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "This is to simulate the multi-thread scenario of updating and cleaning old versions. It will not conflict since we call commit for each update thread and the version get updated for each commits.",
+        "createdAt" : "2021-07-02T06:09:49Z",
+        "updatedAt" : "2021-07-02T06:09:49Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dede41a6-9471-4042-9f2f-3fe91c98b0aa",
+        "parentId" : "13953faf-df00-4041-85cc-d2a3973adfeb",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Hmm, will it happens? I think `RocksDB` is not thread-safe, and each state task only has one `RocksDB` instance. They should update and clean old versions individually as they are for different state store. ",
+        "createdAt" : "2021-07-02T06:15:43Z",
+        "updatedAt" : "2021-07-02T06:15:43Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f3886748-b93f-4ff4-9d49-92637bed892a",
+        "parentId" : "13953faf-df00-4041-85cc-d2a3973adfeb",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "This looks to be more likely simulating the case multiple streaming queries with same checkpoint run concurrently. \r\n\r\nSST files shouldn't conflict as we make the file name be unique, and for metadata files we use `overwriteIfPossible = true`, so won't throw error if the file already exists.",
+        "createdAt" : "2021-07-02T06:54:07Z",
+        "updatedAt" : "2021-07-02T06:54:08Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "49f4051e-daf9-4bc5-9a39-da2927f820e3",
+        "parentId" : "13953faf-df00-4041-85cc-d2a3973adfeb",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "Yea, I think the purpose of this test is to make sure no error thrown and the result is correct in the end.\r\nAfter taking a further look, there's a small issue is that `exception` never used. I'll confirm it separately.",
+        "createdAt" : "2021-07-02T07:40:19Z",
+        "updatedAt" : "2021-07-02T07:40:19Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "754a64ef-ca4c-47bc-8557-46621f2e14bb",
+        "parentId" : "13953faf-df00-4041-85cc-d2a3973adfeb",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "@xuanyuanking and me discussed this test offline. Seems there is something wrong with `exception` usage. It doesn't look completely correct. @xuanyuanking will address it by fixing it or deleting the test later in a follow-up.",
+        "createdAt" : "2021-07-02T07:42:13Z",
+        "updatedAt" : "2021-07-02T07:42:13Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ea949836c26be0124e37df0eb641be806628d94d",
+    "line" : 161,
+    "diffHunk" : "@@ -1,1 +349,353 @@            try {\n              for (version <- 0 to numUpdatesInEachThread) {\n                withDB(\n                  remoteDir,\n                  version = version) { db =>"
+  },
+  {
+    "id" : "b94db314-53ef-4d78-9c1c-8743e1052c19",
+    "prId" : 32928,
+    "prUrl" : "https://github.com/apache/spark/pull/32928#pullrequestreview-693747977",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6fb99c7b-7936-4409-8be7-64584aff36f2",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Here the `conf` param is always provided - is there usage on using default value?",
+        "createdAt" : "2021-06-28T08:03:35Z",
+        "updatedAt" : "2021-06-28T08:17:12Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d6897826-d109-4264-8527-196e8547e667",
+        "parentId" : "6fb99c7b-7936-4409-8be7-64584aff36f2",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "No usage for the default value, delete the default value in the next commit.",
+        "createdAt" : "2021-06-28T09:31:00Z",
+        "updatedAt" : "2021-06-28T09:31:00Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "21e1728cddab0fcd39886d914190a899aaac6d59",
+    "line" : 83,
+    "diffHunk" : "@@ -1,1 +240,244 @@      remoteDir: String,\n      version: Int = 0,\n      conf: RocksDBConf = RocksDBConf().copy(compactOnCommit = false, minVersionsToRetain = 100),\n      hadoopConf: Configuration = new Configuration())(\n      func: RocksDB => T): T = {"
+  }
+]

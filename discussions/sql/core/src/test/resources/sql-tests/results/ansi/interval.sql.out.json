@@ -163,5 +163,82 @@
     "commit" : "f4d9e0527b2e7aa9aaa5521f5a057126114c4009",
     "line" : 79,
     "diffHunk" : "@@ -1,1 +1179,1183 @@-- !query output\norg.apache.spark.sql.AnalysisException\ncannot resolve 'CAST(CAST(NULL AS TIMESTAMP) + INTERVAL '02' HOUR AS VOID)' due to data type mismatch: cannot cast timestamp to void; line 4 pos 2\n\n"
+  },
+  {
+    "id" : "d5ab4e8b-f4df-4322-b7f2-c4badd8712ef",
+    "prId" : 32949,
+    "prUrl" : "https://github.com/apache/spark/pull/32949#pullrequestreview-703206093",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d4a25040-88f6-4dc5-9927-b6b54ebdfb99",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "hmm, so we always print 9 digits for second even if our precision is only microsecond?",
+        "createdAt" : "2021-07-09T16:07:54Z",
+        "updatedAt" : "2021-07-09T16:07:54Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "43536391-8009-40f7-a0c1-0ca9e73dd9fd",
+        "parentId" : "d4a25040-88f6-4dc5-9927-b6b54ebdfb99",
+        "authorId" : "3a227965-84e0-47cf-9974-11293764f028",
+        "body" : "If a query runs through `SparkSQLDriver`, `HIVE_STYLE` is applied. It's not a scope of this change.",
+        "createdAt" : "2021-07-09T16:15:46Z",
+        "updatedAt" : "2021-07-09T16:15:47Z",
+        "lastEditedBy" : "3a227965-84e0-47cf-9974-11293764f028",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "48f080fc5b3bb2a2d704a0cc6bddb8d6be56f328",
+    "line" : 37,
+    "diffHunk" : "@@ -1,1 +38,42 @@struct<(INTERVAL '14 00:00:00.000003' DAY TO SECOND * 1.5):interval day to second>\n-- !query output\n21 00:00:00.000005000\n\n"
+  },
+  {
+    "id" : "631bf27f-a02a-40a7-9288-dcb75edecd94",
+    "prId" : 32949,
+    "prUrl" : "https://github.com/apache/spark/pull/32949#pullrequestreview-703261837",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "dca2f8b2-bd6b-4971-b6cc-5272797cb832",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "In CSV, we ignore the interval fields and always print the full format of interval strings? I thought CSV will print `1` for `interval 1 day`.",
+        "createdAt" : "2021-07-09T16:12:13Z",
+        "updatedAt" : "2021-07-09T16:12:13Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2e8199c3-28ff-4634-9528-52f8be6546f3",
+        "parentId" : "dca2f8b2-bd6b-4971-b6cc-5272797cb832",
+        "authorId" : "3a227965-84e0-47cf-9974-11293764f028",
+        "body" : "The behavior of `to_csv` for ANSI intervals were changed in #33210.",
+        "createdAt" : "2021-07-09T16:29:05Z",
+        "updatedAt" : "2021-07-09T16:37:47Z",
+        "lastEditedBy" : "3a227965-84e0-47cf-9974-11293764f028",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7d603ce8-c4e6-46e8-8f79-5f8d72fc21c2",
+        "parentId" : "dca2f8b2-bd6b-4971-b6cc-5272797cb832",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "ah I got it now. `{\"a\":1,\"b\":1 00:00:00.000000000}` is the HIVE_STYLE interval string format, which does not respect the interval fields.",
+        "createdAt" : "2021-07-09T17:32:27Z",
+        "updatedAt" : "2021-07-09T17:32:27Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "48f080fc5b3bb2a2d704a0cc6bddb8d6be56f328",
+    "line" : 371,
+    "diffHunk" : "@@ -1,1 +1413,1417 @@struct<from_csv(1, 1 day):struct<a:int,b:interval>,from_csv(1, 1):struct<a:int,b:interval day>,to_csv(from_csv(1, 1 day)):string,to_csv(from_csv(1, 1)):string,to_csv(named_struct(a, INTERVAL '32' HOUR, b, INTERVAL '70' MINUTE)):string,from_csv(to_csv(named_struct(a, INTERVAL '32' HOUR, b, INTERVAL '70' MINUTE))):struct<a:interval hour,b:interval minute>>\n-- !query output\n{\"a\":1,\"b\":1 days}\t{\"a\":1,\"b\":1 00:00:00.000000000}\t1,1 days\t1,INTERVAL '1' DAY\tINTERVAL '32' HOUR,INTERVAL '70' MINUTE\t{\"a\":1 08:00:00.000000000,\"b\":0 01:10:00.000000000}\n\n"
   }
 ]

@@ -1,0 +1,112 @@
+[
+  {
+    "id" : "c98da7aa-760e-46b7-b2a7-6ba76dc069ac",
+    "prId" : 32904,
+    "prUrl" : "https://github.com/apache/spark/pull/32904#pullrequestreview-683889074",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "65ff014c-ab2e-49b5-bf0f-d4a9633728f3",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Why don't you add `ae.isDistinct` to `isDuplicateAgnostic`?",
+        "createdAt" : "2021-06-15T11:10:36Z",
+        "updatedAt" : "2021-06-15T11:10:36Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2cd1672c-6858-44e7-ba15-6714810d488d",
+        "parentId" : "65ff014c-ab2e-49b5-bf0f-d4a9633728f3",
+        "authorId" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "body" : "`EliminateDistinct.isDuplicateAgnostic` looks at `AggregateFunction`,  `isDistinct` is a property of a `AggregateExpression`.\r\n",
+        "createdAt" : "2021-06-15T11:15:20Z",
+        "updatedAt" : "2021-06-15T11:15:20Z",
+        "lastEditedBy" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "92265bf3-35e8-4cd4-8c46-95dd99a07a50",
+        "parentId" : "65ff014c-ab2e-49b5-bf0f-d4a9633728f3",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "you could just pass `AggregateExpression` and access to `AggregateFunction` ..",
+        "createdAt" : "2021-06-15T11:16:10Z",
+        "updatedAt" : "2021-06-15T11:16:33Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4296743a-9948-4b11-a677-d5bfeb24a652",
+        "parentId" : "65ff014c-ab2e-49b5-bf0f-d4a9633728f3",
+        "authorId" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "body" : "That would break `EliminateDistinct`.\r\n\r\n`EliminateDistinct.isDuplicateAgnostic` checks if it could remove distinct from the `AggregateExpression`.\r\nCurrently it is \"if the `af` is `max`, `min`.. , then remove `isDistinct`. Your proposition would change it to \"if `ae` has `isDistinct`, then remove `isDistinct`\".\r\n",
+        "createdAt" : "2021-06-15T11:20:47Z",
+        "updatedAt" : "2021-06-15T11:21:13Z",
+        "lastEditedBy" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6a234906-762e-4680-ac5d-dbcd888bbd68",
+        "parentId" : "65ff014c-ab2e-49b5-bf0f-d4a9633728f3",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "But that's what we're already doing:\r\n\r\n```scala\r\nobject EliminateDistinct extends Rule[LogicalPlan] {\r\n    ...\r\n    case ae: AggregateExpression if ae.isDistinct && isDuplicateAgnostic(ae.aggregateFunction) =>\r\n      ae.copy(isDistinct = false)\r\n    ...\r\n```\r\n\r\n",
+        "createdAt" : "2021-06-15T11:26:34Z",
+        "updatedAt" : "2021-06-15T11:26:34Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "048eaa06-a30e-42cc-9f55-0c581b3fe1c0",
+        "parentId" : "65ff014c-ab2e-49b5-bf0f-d4a9633728f3",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "If aggregate expr is distinct, it would make sense to consider it DuplicateAgnostic .. ?",
+        "createdAt" : "2021-06-15T11:28:21Z",
+        "updatedAt" : "2021-06-15T11:28:21Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "aa1226e2-cf60-41d7-aa4c-b2ffac8043c9",
+        "parentId" : "65ff014c-ab2e-49b5-bf0f-d4a9633728f3",
+        "authorId" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "body" : "In`EliminateDistinct` the rule is `ae.isDistinct && isDuplicateAgnostic(ae.aggregateFunction)`\r\nIn `RemoveRedundantAggregates` the rule is `!ae.isDistinct && !isDuplicateAgnostic(ae.aggregateFunction) `, that can be rewritten as `!(ae.isDistinct || isDuplicateAgnostic(ae.aggregateFunction))`.\r\n\r\nThese are not the same rule (`&&` vs `||`). ",
+        "createdAt" : "2021-06-15T11:34:10Z",
+        "updatedAt" : "2021-06-15T11:34:46Z",
+        "lastEditedBy" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "efb6d33e-2f81-4f49-b9eb-fd5ade3b3828",
+        "parentId" : "65ff014c-ab2e-49b5-bf0f-d4a9633728f3",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Ah, okay I got what you mean",
+        "createdAt" : "2021-06-15T11:35:26Z",
+        "updatedAt" : "2021-06-15T11:35:26Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "35c27f8e-4b8d-4552-881d-30d2155a4813",
+        "parentId" : "65ff014c-ab2e-49b5-bf0f-d4a9633728f3",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "okay make sense 👍 ",
+        "createdAt" : "2021-06-15T11:35:33Z",
+        "updatedAt" : "2021-06-15T11:35:34Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3f0cdae64db7a3a5dafd628f890e936cf743d16d",
+    "line" : 15,
+    "diffHunk" : "@@ -1,1 +70,74 @@\n  private def isDuplicateSensitive(ae: AggregateExpression): Boolean = {\n    !ae.isDistinct && !EliminateDistinct.isDuplicateAgnostic(ae.aggregateFunction)\n  }\n}"
+  }
+]
