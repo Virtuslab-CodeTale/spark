@@ -394,5 +394,137 @@
     "commit" : "ce34b5ee88ac066270a9c6ac6c50cd546ba38929",
     "line" : 14,
     "diffHunk" : "@@ -1,1 +558,562 @@      catalog: SessionCatalog, child: LogicalPlan): (Seq[Seq[String]], Seq[String]) = {\n    def collectTempViews(child: LogicalPlan): Seq[Seq[String]] = {\n      child.flatMap {\n        case UnresolvedRelation(nameParts, _, _) if catalog.isTempView(nameParts) =>\n          Seq(nameParts)"
+  },
+  {
+    "id" : "5ff4585c-1ce4-48be-9dd0-cf57cbe79f5b",
+    "prId" : 31273,
+    "prUrl" : "https://github.com/apache/spark/pull/31273#pullrequestreview-596052013",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4ed942d9-23b3-41e0-84cf-5630ffcda1de",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "It's possible that `rawTempView` is not `TemporaryViewRelation`, shall we add\r\n```\r\n...\r\ncase Some(p) => p.sameResult(aliasedPlan)\r\n```",
+        "createdAt" : "2021-02-23T07:30:38Z",
+        "updatedAt" : "2021-02-24T04:37:19Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "82d58baa98235f912141b2b40cdcd3bf0bdbe744",
+    "line" : 82,
+    "diffHunk" : "@@ -1,1 +200,204 @@      rawTempView: Option[LogicalPlan],\n      aliasedPlan: LogicalPlan): Boolean = rawTempView match {\n    case Some(TemporaryViewRelation(_, Some(p))) => p.sameResult(aliasedPlan)\n    case Some(p) => p.sameResult(aliasedPlan)\n    case _ => false"
+  },
+  {
+    "id" : "a4753293-ec10-47fe-99da-62b27ae17a10",
+    "prId" : 31273,
+    "prUrl" : "https://github.com/apache/spark/pull/31273#pullrequestreview-598872266",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f4ccc512-4e37-4ac3-b604-db73d5f6f8f3",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "since `child` is already resolved, we don't need to call `sparkSession.sessionState.executePlan(child)` and re-analyze it now.",
+        "createdAt" : "2021-02-24T03:31:57Z",
+        "updatedAt" : "2021-02-24T04:37:19Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cf3373f5-2b15-4060-9c22-edb4b8c8afa3",
+        "parentId" : "f4ccc512-4e37-4ac3-b604-db73d5f6f8f3",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "`CacheTableAsSelectExec.query` may not be analyzed? (other places seem fine)",
+        "createdAt" : "2021-02-24T04:33:03Z",
+        "updatedAt" : "2021-02-24T04:37:19Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "67c71a35-fd34-46b3-bc6d-c7a329b8e66a",
+        "parentId" : "f4ccc512-4e37-4ac3-b604-db73d5f6f8f3",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "Just analyze it in `CacheTableAsSelectExec` and remove analyzing here?",
+        "createdAt" : "2021-02-24T04:56:47Z",
+        "updatedAt" : "2021-02-24T04:56:48Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "52d2d34f-5e7f-45ca-87b7-9386c9ed6115",
+        "parentId" : "f4ccc512-4e37-4ac3-b604-db73d5f6f8f3",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Ok let's fix it in followup then. We probably should also fix `CacheTableAsSelect` and resolve the `query` in the analyzer.",
+        "createdAt" : "2021-02-24T05:11:20Z",
+        "updatedAt" : "2021-02-24T05:11:20Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5dea01fe-15e1-42f7-adf2-50d2492f1515",
+        "parentId" : "f4ccc512-4e37-4ac3-b604-db73d5f6f8f3",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "~~@cloud-fan if we remove `sparkSession.sessionState.executePlan(child)` and use `child` directly, do you think there would be an issue similar to `CacheTable` since `child` will be an optimized plan, not an analyzed plan?~~",
+        "createdAt" : "2021-02-25T18:25:28Z",
+        "updatedAt" : "2021-03-08T16:05:42Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "82d58baa98235f912141b2b40cdcd3bf0bdbe744",
+    "line" : 22,
+    "diffHunk" : "@@ -1,1 +112,116 @@    // When creating a permanent view, not allowed to reference temporary objects.\n    // This should be called after `qe.assertAnalyzed()` (i.e., `child` can be resolved)\n    verifyTemporaryObjectsNotExists(catalog, isTemporary, name, analyzedPlan)\n\n    if (viewType == LocalTempView) {"
+  },
+  {
+    "id" : "32d40d9a-0357-4b4a-8ff5-f1ea7c3b1343",
+    "prId" : 31273,
+    "prUrl" : "https://github.com/apache/spark/pull/31273#pullrequestreview-606860783",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "acc1586a-f887-422f-8087-d459d8ab3c52",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Here is a mistake: in the `if` branch, we call `prepareTemporaryView(viewIdent, ...`, and here we should also use `viewIdent` instead of `name`. Global temp view has 2-part name and the `name` may not be qualified (e.g. `df.createGlobalTempView`).\r\n\r\n@imback82 can you help to fix it with a test?",
+        "createdAt" : "2021-03-08T15:09:26Z",
+        "updatedAt" : "2021-03-08T15:09:27Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7f585a0e-3b68-4f57-8356-c1a5ecee9a37",
+        "parentId" : "acc1586a-f887-422f-8087-d459d8ab3c52",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "good catch. will fix.",
+        "createdAt" : "2021-03-08T15:34:31Z",
+        "updatedAt" : "2021-03-08T15:34:36Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e4f428b0-165b-40e7-a6ee-101953cc2252",
+        "parentId" : "acc1586a-f887-422f-8087-d459d8ab3c52",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "Created https://github.com/apache/spark/pull/31783. Thanks!",
+        "createdAt" : "2021-03-09T01:40:41Z",
+        "updatedAt" : "2021-03-09T01:40:42Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "82d58baa98235f912141b2b40cdcd3bf0bdbe744",
+    "line" : 66,
+    "diffHunk" : "@@ -1,1 +155,159 @@      } else {\n        TemporaryViewRelation(\n          prepareTemporaryViewFromDataFrame(name, aliasedPlan),\n          Some(aliasedPlan))\n      }"
   }
 ]

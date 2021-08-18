@@ -1,0 +1,145 @@
+[
+  {
+    "id" : "c24b540a-f87b-43fe-961a-0c8621607a3f",
+    "prId" : 31229,
+    "prUrl" : "https://github.com/apache/spark/pull/31229#pullrequestreview-570983372",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7dd0894e-a194-40c7-bcbe-b1e43ea32d94",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "does this bug only exist in fully partitioned tables?",
+        "createdAt" : "2021-01-19T07:53:39Z",
+        "updatedAt" : "2021-01-19T07:53:39Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a7c26b49-a262-47d8-a8f2-d912f4e98a58",
+        "parentId" : "7dd0894e-a194-40c7-bcbe-b1e43ea32d94",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "No, it exists for any v2 tables but since our v2 table catalog is in-memory catalog, and it doesn't support `LOCATION` in `ALTER TABLE .. ADD PARTITION` (in fact it doesn't take it into account), the only way to change table is to add a partition to fully partitioned table. ",
+        "createdAt" : "2021-01-19T08:02:04Z",
+        "updatedAt" : "2021-01-19T08:02:04Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3df29aa2431e3c79d230302b8b0eebab1781a3f4",
+    "line" : 7,
+    "diffHunk" : "@@ -1,1 +57,61 @@  test(\"SPARK-34149: refresh cache in partition adding\") {\n    withNamespaceAndTable(\"ns\", \"tbl\") { t =>\n      sql(s\"CREATE TABLE $t (part int) $defaultUsing PARTITIONED BY (part)\")\n      sql(s\"ALTER TABLE $t ADD PARTITION (part=0)\")\n      assert(!spark.catalog.isCached(t))"
+  },
+  {
+    "id" : "3822479b-4618-473e-8245-18a204ce076b",
+    "prId" : 31216,
+    "prUrl" : "https://github.com/apache/spark/pull/31216#pullrequestreview-570919256",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5c63ac83-a99d-452c-9bce-ceae6469df29",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "is it allowed in v1 tables?",
+        "createdAt" : "2021-01-18T06:40:01Z",
+        "updatedAt" : "2021-01-18T06:40:02Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c2535315-5102-4442-87a5-b41332ec0d6c",
+        "parentId" : "5c63ac83-a99d-452c-9bce-ceae6469df29",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "+1 for @cloud-fan 's question. Yes, this is not allowed in DSv1.\r\n```sql\r\nspark-sql> create table t(a STRING, b STRING) using orc partitioned by (a,b);\r\nError in query: Cannot use all columns for partition columns\r\n```",
+        "createdAt" : "2021-01-18T06:46:08Z",
+        "updatedAt" : "2021-01-18T06:46:18Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f2b60a60-31ae-462e-bc97-557795343ef1",
+        "parentId" : "5c63ac83-a99d-452c-9bce-ceae6469df29",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "I think, v2 table catalog impl should decide wether allowed it or not. ",
+        "createdAt" : "2021-01-18T06:47:31Z",
+        "updatedAt" : "2021-01-18T06:51:34Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f8011da5-29ce-4b81-981f-830bc7a908e0",
+        "parentId" : "5c63ac83-a99d-452c-9bce-ceae6469df29",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "sounds reasonable in general, as we tend to move limitations to the catalog implementation. @rdblue @stczwd what do you think?",
+        "createdAt" : "2021-01-18T06:58:40Z",
+        "updatedAt" : "2021-01-18T06:58:40Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "80b26bfe-67ae-43b1-bedc-f836d0fee926",
+        "parentId" : "5c63ac83-a99d-452c-9bce-ceae6469df29",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Currently, we do not disallow it so I'm fine to fix the testing v2 catalog implementation. But we should figure out if we should allow fully partitioned table or not later.",
+        "createdAt" : "2021-01-18T07:00:20Z",
+        "updatedAt" : "2021-01-18T07:00:20Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "68feb3f2-a07b-4305-a1c4-6e93a6d7d737",
+        "parentId" : "5c63ac83-a99d-452c-9bce-ceae6469df29",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "I think it's weird to support a table that doesn't have any data column. But looks like we're currently exposing it via the interface and letting users to decide, right? I am okay with this change - it's a test-only for the current status in the end.",
+        "createdAt" : "2021-01-18T07:13:01Z",
+        "updatedAt" : "2021-01-18T07:13:01Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c5eb9da8-f79c-45f6-8492-b803158d4977",
+        "parentId" : "5c63ac83-a99d-452c-9bce-ceae6469df29",
+        "authorId" : "0f4ef4e8-09be-436f-b743-bf8fbc343490",
+        "body" : "> Currently, we do not disallow it so I'm fine to fix the testing v2 catalog implementation. But we should figure out if we should allow fully partitioned table or not later.\r\n\r\nI can not find any user cases with full partitioned tables, maybe we should disallow it?",
+        "createdAt" : "2021-01-18T16:00:40Z",
+        "updatedAt" : "2021-01-18T16:00:48Z",
+        "lastEditedBy" : "0f4ef4e8-09be-436f-b743-bf8fbc343490",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0ad7f273-5d6b-409c-a4ec-15b4844e2cd3",
+        "parentId" : "5c63ac83-a99d-452c-9bce-ceae6469df29",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "I could imagine the case when fully partitioned table could speed up table creation. Let's image we have heavy data partitioned by some meta-data columns like date, id and etc. We need a table to analyse only meta-data, and don't want to spend time on parsing/schema inferring/reading data columns. So, we could quickly create a table fully partitioned only by meta-data columns, and don't waste time on data columns.",
+        "createdAt" : "2021-01-18T16:38:40Z",
+        "updatedAt" : "2021-01-18T16:38:40Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cdf42eba-d58f-4b6d-bee4-c049c42f897f",
+        "parentId" : "5c63ac83-a99d-452c-9bce-ceae6469df29",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Since disallowing it would be a breaking change and we should discuss it separately. I'm merging this PR first to fix the testing implementation.",
+        "createdAt" : "2021-01-19T05:39:36Z",
+        "updatedAt" : "2021-01-19T05:39:36Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2502fb41f9cb334640ad976ebb72c9f790214f4f",
+    "line" : 16,
+    "diffHunk" : "@@ -1,1 +48,52 @@  test(\"SPARK-34143: add a partition to fully partitioned table\") {\n    withNamespaceAndTable(\"ns\", \"tbl\") { t =>\n      sql(s\"CREATE TABLE $t (p0 INT, p1 STRING) $defaultUsing PARTITIONED BY (p0, p1)\")\n      sql(s\"ALTER TABLE $t ADD PARTITION (p0 = 0, p1 = 'abc')\")\n      checkPartitions(t, Map(\"p0\" -> \"0\", \"p1\" -> \"abc\"))"
+  }
+]

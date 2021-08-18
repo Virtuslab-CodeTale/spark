@@ -1,0 +1,68 @@
+[
+  {
+    "id" : "59a1a7ae-402e-4a56-9b40-8413f763b039",
+    "prId" : 31238,
+    "prUrl" : "https://github.com/apache/spark/pull/31238#pullrequestreview-597429941",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "33e790c0-f417-468d-9d6a-6b63d17ae0e1",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Hmm, do we need a complex exception hierarchy like this? There are exceptions too specific, e.g. SparkContextInitializationError, SparkContextConfigurationError. I think even in Scala codebase we don't throw specific exception for configuration error.\r\n\r\nIf we follow this direction, I'm afraid we will have more and more exception classes.",
+        "createdAt" : "2021-01-22T01:52:41Z",
+        "updatedAt" : "2021-02-15T23:04:51Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "85eb8176-276c-4b04-acf8-f40ed0ebe70b",
+        "parentId" : "33e790c0-f417-468d-9d6a-6b63d17ae0e1",
+        "authorId" : "eb588fd2-21dd-4dea-a8f9-bcf2e48148eb",
+        "body" : "Yes I can see your point about the complex hierarchy and I've committed a revision that merges both of the Spark Context's exceptions. With that said I think that the relative complexity and possibilities of errors thrown when initializing a spark context does merit an exception class of its own",
+        "createdAt" : "2021-02-15T23:11:31Z",
+        "updatedAt" : "2021-02-15T23:11:31Z",
+        "lastEditedBy" : "eb588fd2-21dd-4dea-a8f9-bcf2e48148eb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "85cceb5c-9df6-48e3-9390-118a0f0fc46d",
+        "parentId" : "33e790c0-f417-468d-9d6a-6b63d17ae0e1",
+        "authorId" : "eb588fd2-21dd-4dea-a8f9-bcf2e48148eb",
+        "body" : "For example, you can see the immediate benefit in clarity by wrapping java gateway errors with this exception type [here](https://github.com/apache/spark/pull/31238/files#diff-1d250699e56249e8bc181a6c531817f4aed14120fe1daf04ced83dc947dddc0aR336) ",
+        "createdAt" : "2021-02-15T23:14:53Z",
+        "updatedAt" : "2021-02-15T23:16:37Z",
+        "lastEditedBy" : "eb588fd2-21dd-4dea-a8f9-bcf2e48148eb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "46812b1a-6c4f-4b19-aa33-52a6115d5a52",
+        "parentId" : "33e790c0-f417-468d-9d6a-6b63d17ae0e1",
+        "authorId" : "981b170c-729a-429c-b115-0350ea50b32b",
+        "body" : "Just my two cents ‒ while adding more specific exception classes can be useful, especially in contexts where we might expect user to recover, there is little point in building hierarchy for types of conditions which are effectively a programming mistake.\r\n\r\nFor example `NonDriverReferenceError` refers to condition, from which there is no meaningful way out. Such cases should rather provide human readable description of the problem, so user can easily identify and fix the issue (@HyukjinKwon  and others already did a lot of work in that direction). Similarly `JavaGatewayErrors` are typically fatal and there is little that user can do there, without tinkering with internals.",
+        "createdAt" : "2021-02-16T11:28:05Z",
+        "updatedAt" : "2021-02-16T11:28:05Z",
+        "lastEditedBy" : "981b170c-729a-429c-b115-0350ea50b32b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e251008e-46c2-452d-934c-774aae397960",
+        "parentId" : "33e790c0-f417-468d-9d6a-6b63d17ae0e1",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Yeah .. I echo to @viirya and @zero323. We can start with simple ones with a good description.",
+        "createdAt" : "2021-02-24T12:36:10Z",
+        "updatedAt" : "2021-02-24T12:36:10Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b697b5800bd51c5ada4d2e2c6682c76f45a38940",
+    "line" : 30,
+    "diffHunk" : "@@ -1,1 +28,32 @@\n\nclass SparkContextInitializationError(RuntimeError):\n    \"\"\"\n        Error in the process of initializing a spark context."
+  }
+]
