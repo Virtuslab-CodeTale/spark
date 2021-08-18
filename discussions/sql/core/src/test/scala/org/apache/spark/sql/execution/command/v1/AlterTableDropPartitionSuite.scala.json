@@ -86,5 +86,60 @@
     "commit" : "021c4ac89b4bfde874bdbaf814e3d7791cb88bc9",
     "line" : 25,
     "diffHunk" : "@@ -1,1 +55,59 @@      sql(\"ALTER TABLE t DROP PARTITION (part=0)\")\n      assert(spark.catalog.isCached(\"t\"))\n      checkAnswer(sql(\"SELECT * FROM t\"), Seq(Row(1, 1)))\n    }\n  }"
+  },
+  {
+    "id" : "6a5c7477-c432-4c69-bf51-b989f3b84565",
+    "prId" : 30979,
+    "prUrl" : "https://github.com/apache/spark/pull/30979#pullrequestreview-560206157",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "75842900-e632-4d49-9093-d2c1bb67051a",
+        "parentId" : null,
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "can we check that the cache still exist after the command? this will validate that the cache is actually refreshed rather than removed.",
+        "createdAt" : "2020-12-30T19:03:22Z",
+        "updatedAt" : "2020-12-30T20:43:26Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b125a661-a696-4fe1-98b2-15d693d8ab9e",
+        "parentId" : "75842900-e632-4d49-9093-d2c1bb67051a",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "I still use `df.isEmpty` instead of checking the content of the dataframe because `sparkSession.catalog.refreshTable` is not enough, it seems. It doesn't refresh the file indexes for the table.\r\n\r\nSo, test fails:\r\n```\r\n  test(\"SPARK-33941: refresh cache after partition dropping\") {\r\n    withNamespaceAndTable(\"ns\", \"tbl\") { t =>\r\n      sql(s\"CREATE TABLE $t (id int, part int) $defaultUsing PARTITIONED BY (part)\")\r\n      sql(s\"INSERT INTO $t PARTITION (part=0) SELECT 0\")\r\n      sql(s\"INSERT INTO $t PARTITION (part=1) SELECT 1\")\r\n      val df = spark.table(t)\r\n      df.cache()\r\n      df.collect()\r\n      sql(s\"ALTER TABLE $t DROP PARTITION (part=0)\")\r\n      df.collect()\r\n    }\r\n  }\r\n```\r\nwith the exception:\r\n```\r\njava.io.FileNotFoundException: File file:/Users/maximgekk/proj/drop-partition-invalidate-cache/spark-warehouse/org.apache.spark.sql.execution.command.v1.AlterTableDropPartitionSuite/ns.db/tbl/part=0/part-00000-4536ff40-a1ac-41f4-9ff5-7fbc7d67c7b9.c000.snappy.parquet does not exist\r\nIt is possible the underlying files have been updated. You can explicitly invalidate the cache in Spark by running 'REFRESH TABLE tableName' command in SQL or by recreating the Dataset/DataFrame involved.\r\n\tat org.apache.spark.sql.execution.datasources.FileScanRDD$$anon$1.org$apache$spark$sql$execution$datasources$FileScanRDD$$anon$$readCurrentFile(FileScanRDD.scala:124)\r\n\tat org.apache.spark.sql.execution.datasources.FileScanRDD$$anon$1.nextIterator(FileScanRDD.scala:169)\r\n```\r\n\r\nAnd `REFRESH TABLE` after `ALTER TABLE .. DROP PARTITION` doesn't help since it doesn't refresh the file index too :-(",
+        "createdAt" : "2020-12-30T20:57:35Z",
+        "updatedAt" : "2020-12-30T20:57:36Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5d403e23-60bb-4ad7-bcb9-b4919bc42e4c",
+        "parentId" : "75842900-e632-4d49-9093-d2c1bb67051a",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "hmm, even simpler test without caching fails:\r\n```scala\r\n  test(\"SPARK-33941: refresh cache after partition dropping\") {\r\n    withNamespaceAndTable(\"ns\", \"tbl\") { t =>\r\n      sql(s\"CREATE TABLE $t (id int, part int) $defaultUsing PARTITIONED BY (part)\")\r\n      sql(s\"INSERT INTO $t PARTITION (part=0) SELECT 0\")\r\n      sql(s\"INSERT INTO $t PARTITION (part=1) SELECT 1\")\r\n      val df = spark.table(t)\r\n      // df.cache()\r\n      df.collect()\r\n      sql(s\"ALTER TABLE $t DROP PARTITION (part=0)\")\r\n      sql(s\"ALTER TABLE $t RECOVER PARTITIONS\")\r\n      sql(s\"MSCK REPAIR TABLE $t\")\r\n      df.collect()\r\n    }\r\n  }\r\n```\r\nwith:\r\n```java\r\nInput path does not exist: file:/private/var/folders/p3/dfs6mf655d7fnjrsjvldh0tc0000gn/T/warehouse-a3f5be00-8e30-43be-a14d-a17983f2cd2d/ns.db/tbl/part=0\r\norg.apache.hadoop.mapred.InvalidInputException: Input path does not exist: file:/private/var/folders/p3/dfs6mf655d7fnjrsjvldh0tc0000gn/T/warehouse-a3f5be00-8e30-43be-a14d-a17983f2cd2d/ns.db/tbl/part=0\r\n\tat org.apache.hadoop.mapred.FileInputFormat.singleThreadedListStatus(FileInputFormat.java:297)\r\n\tat org.apache.hadoop.mapred.FileInputFormat.listStatus(FileInputFormat.java:239)\r\n```\r\non v1 In-Memory and Hive external catalogs. The issue looks much more serious than I could expect. cc @cloud-fan @HyukjinKwon ",
+        "createdAt" : "2020-12-30T21:09:55Z",
+        "updatedAt" : "2020-12-30T21:09:55Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4465a638-4277-4018-8a71-8e04c43251ba",
+        "parentId" : "75842900-e632-4d49-9093-d2c1bb67051a",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Hmm interesting... I thought this should have been addressed via #30699 but maybe it's a different one. I'll check this when I have time too.",
+        "createdAt" : "2020-12-30T21:29:04Z",
+        "updatedAt" : "2020-12-30T21:29:04Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d951371958f1cedda624406705f12223986849aa",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +53,57 @@      sql(s\"ALTER TABLE $t DROP PARTITION (part=0)\")\n      assert(spark.sharedState.cacheManager.lookupCachedData(df).isDefined)\n      assert(df.isEmpty)\n    }\n  }"
   }
 ]

@@ -218,5 +218,170 @@
     "commit" : "9fe9769809b177a9967b195ecf78a3717e1cfd8f",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +307,311 @@      val metadata = new MetadataBuilder()\n      // SPARK-33888\n      // - include scale in metadata for only DECIMAL & NUMERIC as well as ARRAY (for Postgres)\n      // - include TIME type metadata\n      // - always build the metadata"
+  },
+  {
+    "id" : "8de16b4c-4b09-4cd2-b356-b9642d7c65a9",
+    "prId" : 30902,
+    "prUrl" : "https://github.com/apache/spark/pull/30902#pullrequestreview-572985451",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e971ccfc-1107-4e94-8c42-3bdd6b3b5fab",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "@sarutak do you mean what returns here is seconds (with certain precision) from a starting timestamp, while the timestamp is different between databases? I'm a bit surprised if the JDBC protocol was design this way, but if this is true, then this PR doesn't make sense...",
+        "createdAt" : "2021-01-21T04:53:33Z",
+        "updatedAt" : "2021-01-21T04:53:33Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9ebd5830-6d06-4c64-b20b-020a9f82d170",
+        "parentId" : "e971ccfc-1107-4e94-8c42-3bdd6b3b5fab",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "What returns here is `java.sql.Time`, and its doc says\r\n```\r\nThe date components should be set to the \"zero epoch\"\r\nvalue of January 1, 1970 and should not be accessed.\r\n```\r\nMaybe some databases don't follow the requirement, but it doesn't matter, as we call `rawTime.toLocalTime` which only access the hour:minute:second components.",
+        "createdAt" : "2021-01-21T04:58:18Z",
+        "updatedAt" : "2021-01-21T04:58:18Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "97b16a01-c1d0-4d20-b627-1847e1824ca5",
+        "parentId" : "e971ccfc-1107-4e94-8c42-3bdd6b3b5fab",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "That said, I think reading SQL TIME type as integer has a well-define semantic in Spark (after this PR): the integer represents the milliseconds of the time from 00:00:00.",
+        "createdAt" : "2021-01-21T05:00:40Z",
+        "updatedAt" : "2021-01-21T05:00:40Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fdb220fb-0a9b-4124-86bd-c1a216bf81c0",
+        "parentId" : "e971ccfc-1107-4e94-8c42-3bdd6b3b5fab",
+        "authorId" : "3a227965-84e0-47cf-9974-11293764f028",
+        "body" : "O.K, so the test seems wrong.\r\nActually, I'll fix it in another PR.",
+        "createdAt" : "2021-01-21T05:02:54Z",
+        "updatedAt" : "2021-01-21T05:02:54Z",
+        "lastEditedBy" : "3a227965-84e0-47cf-9974-11293764f028",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "63fad20278c90b55fc311f276008ead5883dba1d",
+    "line" : 54,
+    "diffHunk" : "@@ -1,1 +429,433 @@    case IntegerType if metadata.contains(\"logical_time_type\") =>\n      (rs: ResultSet, row: InternalRow, pos: Int) => {\n        val rawTime = rs.getTime(pos + 1)\n        if (rawTime != null) {\n          val rawTimeInNano = rawTime.toLocalTime().toNanoOfDay()"
+  },
+  {
+    "id" : "65eb5fc2-a876-4fc2-92dd-1fedd7a8c480",
+    "prId" : 30902,
+    "prUrl" : "https://github.com/apache/spark/pull/30902#pullrequestreview-583090995",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "96ad31c3-9fec-49a5-96b6-146c9a713a0c",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "After a second thought, why do we pick millisecond precision? Why not microsecond? Is there a standard for it?",
+        "createdAt" : "2021-02-03T07:13:46Z",
+        "updatedAt" : "2021-02-03T07:13:46Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "438fa754-50bb-4b99-8406-902c14efbdeb",
+        "parentId" : "96ad31c3-9fec-49a5-96b6-146c9a713a0c",
+        "authorId" : "4a21ee68-297a-45ce-ad3f-eebc5801c797",
+        "body" : "Since we are converting to/from java.sql.Time, and according to the javadoc https://docs.oracle.com/javase/8/docs/api/java/sql/Time.html , it supports till milliseconds for constructor.",
+        "createdAt" : "2021-02-03T07:20:05Z",
+        "updatedAt" : "2021-02-03T07:20:05Z",
+        "lastEditedBy" : "4a21ee68-297a-45ce-ad3f-eebc5801c797",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fc917494-1990-497b-98f2-035ce7c5427d",
+        "parentId" : "96ad31c3-9fec-49a5-96b6-146c9a713a0c",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "It may confuse Spark users, as Spark timestamp is microsecond precision.\r\n\r\nAfter more thought, it's probably better to return timestamp when reading JDBC time, with a clear rule: we convert the time to timestamp by using \"zero epoch\" as the date part. It's also more useful as users can call `hour` function or similar ones to get some field values. What do you think?",
+        "createdAt" : "2021-02-03T07:33:55Z",
+        "updatedAt" : "2021-02-03T07:33:55Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cc82b2eb-b60f-4f20-9c17-b28fa5122cfd",
+        "parentId" : "96ad31c3-9fec-49a5-96b6-146c9a713a0c",
+        "authorId" : "4a21ee68-297a-45ce-ad3f-eebc5801c797",
+        "body" : "Hmm, I agree with you on the user experience part (`hour` function and all). I think it is hard (near impossible) to introduce new DataType (Time - HH:MM:SS.sss display) and another function to convert an int without date portion to Timestamp (most conversion is parse string) as it gonna take through multiple level of approvals and testings.\r\n\r\nAnother reason why I went with Int was that with TimestampType, it breaks compatibility with Avro logical & Spark type converter (https://github.com/apache/spark/blob/master/external/avro/src/main/scala/org/apache/spark/sql/avro/SchemaConverters.scala).\r\n\r\nI'm not sure if a `time_to_timestamp()` helper function would be a better compromise or revert back the 2 MRs?",
+        "createdAt" : "2021-02-03T08:01:27Z",
+        "updatedAt" : "2021-02-03T08:01:28Z",
+        "lastEditedBy" : "4a21ee68-297a-45ce-ad3f-eebc5801c797",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c45d2c62-9bb2-4aeb-ba8c-4a6f8684fa9d",
+        "parentId" : "96ad31c3-9fec-49a5-96b6-146c9a713a0c",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "It looks better if the avro schema converter can convert timestamp to time. After reading time column from JDBC, it becomes `IntegerType` and there is no context to indicate that this int comes from JDBC time and means milliseconds. What if the avro logic type is time-micros? With timestamp type, at least we know the precision is microsecond.",
+        "createdAt" : "2021-02-03T10:25:24Z",
+        "updatedAt" : "2021-02-03T10:25:24Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1822df23-8f1a-4dae-99fc-45c4b70588f9",
+        "parentId" : "96ad31c3-9fec-49a5-96b6-146c9a713a0c",
+        "authorId" : "4a21ee68-297a-45ce-ad3f-eebc5801c797",
+        "body" : "Your suggestion makes sense. We can also stuff the info into the metadata field of the struct field. Let me find sometimes this weekend or over the new year to try out your suggestion? Will ping you back if I couldn't find time or manage to get a solution so we can revert the MRs. Thanks a lots for helping me out!\r\n\r\nShould I create a new JIRA ticket and cut a new MR or do you prefer to consolidate in here?",
+        "createdAt" : "2021-02-03T10:41:18Z",
+        "updatedAt" : "2021-02-03T10:41:18Z",
+        "lastEditedBy" : "4a21ee68-297a-45ce-ad3f-eebc5801c797",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5dfc1ca4-d891-4928-9686-2186dbd3f6cc",
+        "parentId" : "96ad31c3-9fec-49a5-96b6-146c9a713a0c",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Let's create a new JIRA to track it. The PR is merged to master only so we have plenty of time to fix it before the 3.2 release :)",
+        "createdAt" : "2021-02-03T16:14:04Z",
+        "updatedAt" : "2021-02-03T16:14:04Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a3e53d3c-fde3-4f31-88d4-127380ec8482",
+        "parentId" : "96ad31c3-9fec-49a5-96b6-146c9a713a0c",
+        "authorId" : "4a21ee68-297a-45ce-ad3f-eebc5801c797",
+        "body" : "@cloud-fan btw, I did a quick check and it seems like if we use TimestampType, the time will always be converted to the JVM system timezone. So for the JDBCSuite test, given `12:34:56` time value, when you do the `.select(hour(\"time\"))` it will always point to my local timezone hour instead of `12`. So I don't know if we should proceed in this case.",
+        "createdAt" : "2021-02-04T06:49:03Z",
+        "updatedAt" : "2021-02-04T06:49:03Z",
+        "lastEditedBy" : "4a21ee68-297a-45ce-ad3f-eebc5801c797",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c21709a6-5d55-463e-8dd6-5c93f2928469",
+        "parentId" : "96ad31c3-9fec-49a5-96b6-146c9a713a0c",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "We can do whatever we want. We can use JDBC API `getTime` to get the time value, and construct the timestamp value in a reasonable way. It's under our control.",
+        "createdAt" : "2021-02-04T07:13:52Z",
+        "updatedAt" : "2021-02-04T07:13:53Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "63fad20278c90b55fc311f276008ead5883dba1d",
+    "line" : 50,
+    "diffHunk" : "@@ -1,1 +425,429 @@    // SPARK-33888 - sql TIME type represents as physical int in millis\n    // Represents a time of day, with no reference to a particular calendar,\n    // time zone or date, with a precision of one millisecond.\n    // It stores the number of milliseconds after midnight, 00:00:00.000.\n    case IntegerType if metadata.contains(\"logical_time_type\") =>"
   }
 ]

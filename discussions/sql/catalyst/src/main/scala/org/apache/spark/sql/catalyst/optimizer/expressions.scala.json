@@ -218,5 +218,137 @@
     "commit" : "699c1f4241354f623b996643b0b44c15e623dd7b",
     "line" : 87,
     "diffHunk" : "@@ -1,1 +415,419 @@          } else {\n            // (a || b) || a || (a || c) => a || b || c\n            buildBalancedPredicate(distinct.toSeq, Or)\n          }\n        }"
+  },
+  {
+    "id" : "9653f33c-1e3e-4e8e-bb16-2f1483a5e35e",
+    "prId" : 30975,
+    "prUrl" : "https://github.com/apache/spark/pull/30975#pullrequestreview-563260214",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "32d33969-5952-422b-9579-f9f184bf713f",
+        "parentId" : null,
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "It may cause `StackOverflowError`.\r\n```\r\nscala> spark.sql(\"drop table SPARK_33938\")\r\nres6: org.apache.spark.sql.DataFrame = []\r\n\r\nscala> spark.sql(\"create table SPARK_33938(id string) using parquet\")\r\nres7: org.apache.spark.sql.DataFrame = []\r\n\r\nscala> val values = Range(1, 10000)\r\nvalues: scala.collection.immutable.Range = Range 1 until 10000\r\n\r\nscala> spark.sql(s\"select * from SPARK_33938 where id like all (${values.map(s => s\"'$s'\").mkString(\", \")})\").show\r\njava.lang.StackOverflowError\r\n  at java.lang.ThreadLocal.set(ThreadLocal.java:201)\r\n  at org.apache.spark.sql.catalyst.trees.CurrentOrigin$.set(TreeNode.scala:62)\r\n  at org.apache.spark.sql.catalyst.trees.CurrentOrigin$.withOrigin(TreeNode.scala:72)\r\n  at org.apache.spark.sql.catalyst.trees.TreeNode.transformDown(TreeNode.scala:317)\r\n  at org.apache.spark.sql.catalyst.trees.TreeNode.$anonfun$transformDown$3(TreeNode.scala:322)\r\n  at org.apache.spark.sql.catalyst.trees.TreeNode.$anonfun$mapChildren$1(TreeNode.scala:407)\r\n  at org.apache.spark.sql.catalyst.trees.TreeNode.mapProductIterator(TreeNode.scala:243)\r\n  at org.apache.spark.sql.catalyst.trees.TreeNode.mapChildren(TreeNode.scala:405)\r\n  at org.apache.spark.sql.catalyst.trees.TreeNode.mapChildren(TreeNode.scala:358)\r\n  at org.apache.spark.sql.catalyst.trees.TreeNode.transformDown(TreeNode.scala:322)\r\n  at org.apache.spark.sql.catalyst.trees.TreeNode.$anonfun$transformDown$3(TreeNode.scala:322)\r\n  at org.apache.spark.sql.catalyst.trees.TreeNode.$anonfun$mapChildren$1(TreeNode.scala:407)\r\n  at org.apache.spark.sql.catalyst.trees.TreeNode.mapProductIterator(TreeNode.scala:243)\r\n  at org.apache.spark.sql.catalyst.trees.TreeNode.mapChildren(TreeNode.scala:405)\r\n  at org.apache.spark.sql.catalyst.trees.TreeNode.mapChildren(TreeNode.scala:358)\r\n```",
+        "createdAt" : "2021-01-07T04:52:31Z",
+        "updatedAt" : "2021-01-07T04:52:32Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "322a9f78-6e10-4970-ae4b-5d8c56593716",
+        "parentId" : "32d33969-5952-422b-9579-f9f184bf713f",
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "@wangyum I will fix this issue.",
+        "createdAt" : "2021-01-07T05:29:20Z",
+        "updatedAt" : "2021-01-07T05:29:21Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "db6c9581-e92c-45e4-aec3-77c891b037e3",
+        "parentId" : "32d33969-5952-422b-9579-f9f184bf713f",
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "For example, patterns a, b, c, d, e, and f. Suppose a, b, c, and d are patterns that can be optimized with `startsWith`. According to the current logic, it is `startsWith(a)&startsWith(b)&startsWith(c)&startsWith(d)&LikeAll(e,f).` Their hierarchy is not shown here.\r\nWe can use the threshold to determine the number of patterns that can be optimized, for example, only two patterns can be optimized. Then it is `startsWith(a)&startsWith(b)&LikeAll(c,d,e,f)`",
+        "createdAt" : "2021-01-07T07:26:01Z",
+        "updatedAt" : "2021-01-07T07:27:06Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6acf1c1b200f78f2c509e3a9cde312556f7b4ab9",
+    "line" : 61,
+    "diffHunk" : "@@ -1,1 +676,680 @@    } else {\n      multi match {\n        case l: LikeAll => And(replacements.reduceLeft(And), l.copy(patterns = remainPatterns))\n        case l: NotLikeAll =>\n          And(replacements.map(Not(_)).reduceLeft(And), l.copy(patterns = remainPatterns))"
+  },
+  {
+    "id" : "d59d5dc7-9305-460d-b99a-1402ae6e75e7",
+    "prId" : 30955,
+    "prUrl" : "https://github.com/apache/spark/pull/30955#pullrequestreview-559399262",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "11bae76c-4fdb-43fc-9389-fcd12135a9c3",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "let's include `ExtractValue` as well, which is common with nested fields.",
+        "createdAt" : "2020-12-29T06:51:38Z",
+        "updatedAt" : "2020-12-29T09:00:40Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "029fb53bc4484432973bf8f5eda9204dbd01ae89",
+    "line" : 15,
+    "diffHunk" : "@@ -1,1 +560,564 @@    case _: ArraySetLike => true\n    case _: ExtractValue => true\n    case _ => false\n  }\n"
+  },
+  {
+    "id" : "05d77a82-e4f4-40d1-a1ef-bd79554e2975",
+    "prId" : 30955,
+    "prUrl" : "https://github.com/apache/spark/pull/30955#pullrequestreview-559399695",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f295dfea-4ba9-49e9-8168-9b695fc28c71",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "let's add comments as well.",
+        "createdAt" : "2020-12-29T06:53:17Z",
+        "updatedAt" : "2020-12-29T09:00:40Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "029fb53bc4484432973bf8f5eda9204dbd01ae89",
+    "line" : 19,
+    "diffHunk" : "@@ -1,1 +564,568 @@\n  // Not all BinaryExpression can be pushed into (if / case) branches.\n  private def supportedBinaryExpression(e: BinaryExpression): Boolean = e match {\n    case _: BinaryComparison | _: StringPredicate | _: StringRegexExpression => true\n    case _: BinaryArithmetic => true"
+  },
+  {
+    "id" : "ea6b9c45-fbec-4f3b-8b87-07eee211f4b4",
+    "prId" : 30955,
+    "prUrl" : "https://github.com/apache/spark/pull/30955#pullrequestreview-618856255",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "fe7ab9a3-420d-4c3e-9a00-87e6fba1a1dc",
+        "parentId" : null,
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "What the property should the expression have to be here? For example, can I add `DateAddYMInterval`, `TimestampAddYMInterval` and `TimeAdd`?",
+        "createdAt" : "2021-03-23T15:28:43Z",
+        "updatedAt" : "2021-03-23T15:28:50Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4e539b28-4653-44f8-9340-30bc2ec5e970",
+        "parentId" : "fe7ab9a3-420d-4c3e-9a00-87e6fba1a1dc",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I think so",
+        "createdAt" : "2021-03-23T16:25:12Z",
+        "updatedAt" : "2021-03-23T16:25:12Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "26dfdd06-c74e-4188-a496-2aa5273d4021",
+        "parentId" : "fe7ab9a3-420d-4c3e-9a00-87e6fba1a1dc",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "ok. I opened the JIRA for that: SPARK-34841",
+        "createdAt" : "2021-03-23T17:08:19Z",
+        "updatedAt" : "2021-03-23T17:08:19Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "029fb53bc4484432973bf8f5eda9204dbd01ae89",
+    "line" : 23,
+    "diffHunk" : "@@ -1,1 +568,572 @@    case _: BinaryArithmetic => true\n    case _: BinaryMathExpression => true\n    case _: AddMonths | _: DateAdd | _: DateAddInterval | _: DateDiff | _: DateSub => true\n    case _: FindInSet | _: RoundBase => true\n    case _ => false"
   }
 ]

@@ -1,0 +1,123 @@
+[
+  {
+    "id" : "40d852d4-1c96-455d-b77d-3689ae0b399b",
+    "prId" : 30965,
+    "prUrl" : "https://github.com/apache/spark/pull/30965#pullrequestreview-625938151",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0798696f-a918-4eb0-9111-bfedcc521289",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I think q19 exposes a problem. Previously this `BroadcastHashJoin` is run before the `SortMergeJoin`, which reduces the input data of shuffle, because this  `BroadcastHashJoin` has a filter on the right side and likely makes this join very selective.\r\n\r\n@tanelk , if the idea from @wzhfy doesn't look good to you, can you try with some other ideas and see if we can fix this issue?",
+        "createdAt" : "2021-03-31T06:38:05Z",
+        "updatedAt" : "2021-03-31T06:38:38Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d0fba889-684d-41b5-a4b6-98955e449a2d",
+        "parentId" : "0798696f-a918-4eb0-9111-bfedcc521289",
+        "authorId" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "body" : "I'll experiment with it a bit, but it might take a while.",
+        "createdAt" : "2021-03-31T06:48:06Z",
+        "updatedAt" : "2021-03-31T06:48:06Z",
+        "lastEditedBy" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "781dd7b9-d606-4d0e-a41f-7fdc77e6f7b6",
+        "parentId" : "0798696f-a918-4eb0-9111-bfedcc521289",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Thanks for looking into it!",
+        "createdAt" : "2021-03-31T06:53:08Z",
+        "updatedAt" : "2021-03-31T06:53:08Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b789c606-bcd4-4193-bd8e-f18479bc893f",
+        "parentId" : "0798696f-a918-4eb0-9111-bfedcc521289",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "This actually caused a significant regression at q19 in TPC-DS benchmark (performed internally). Can we just revert it for now, and do it with actual performance numbers? I think that's safer and easier for everybody here. Seems like at least the plan change here was overlooked and the performance of this had to be clarified.\r\n",
+        "createdAt" : "2021-03-31T07:55:28Z",
+        "updatedAt" : "2021-03-31T07:56:14Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fd57ba2d-52b0-48a3-8d26-beba28e0610b",
+        "parentId" : "0798696f-a918-4eb0-9111-bfedcc521289",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "branch-2.4 has the same regression? This PR was back-ported into branch-2.4, too. cc: @viirya ",
+        "createdAt" : "2021-03-31T08:00:22Z",
+        "updatedAt" : "2021-03-31T08:00:22Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "56b20d30-82d9-43c9-b340-5c322e2bdb53",
+        "parentId" : "0798696f-a918-4eb0-9111-bfedcc521289",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "+1 for @HyukjinKwon's suggestion. Especially for branch-2.4, I think it is better to avoid unexpected performance change.",
+        "createdAt" : "2021-03-31T17:21:47Z",
+        "updatedAt" : "2021-03-31T17:24:02Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4f57423f-658a-4b7e-bb23-06d69d1539d8",
+        "parentId" : "0798696f-a918-4eb0-9111-bfedcc521289",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "I discussed with @cloud-fan offline. Shall we merge #32014 into master, branch-3.1 and branch-3.0 to fix the regression, and revert this one from branch-2.4? Spark 2.4 release is very soon and might be best to stay safe, and technically this was more like an improvement.",
+        "createdAt" : "2021-04-01T06:03:43Z",
+        "updatedAt" : "2021-04-01T06:03:43Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3d43ab4e-b3f8-4302-891c-b6bc2a00183d",
+        "parentId" : "0798696f-a918-4eb0-9111-bfedcc521289",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Agree with it. I prefer to make stable for branch-2.4.",
+        "createdAt" : "2021-04-01T06:11:45Z",
+        "updatedAt" : "2021-04-01T06:11:45Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "48db6788-77e3-4a86-b522-0fb38bbaad57",
+        "parentId" : "0798696f-a918-4eb0-9111-bfedcc521289",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "yea let's revert it from 2.4 to be safe",
+        "createdAt" : "2021-04-01T06:12:50Z",
+        "updatedAt" : "2021-04-01T06:12:50Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a3b5893d-f107-4dc6-8e49-94c621a117c4",
+        "parentId" : "0798696f-a918-4eb0-9111-bfedcc521289",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Revert at https://github.com/apache/spark/pull/32020",
+        "createdAt" : "2021-04-01T06:33:09Z",
+        "updatedAt" : "2021-04-01T06:42:54Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4b05711c6df96fbc967bf7c86c7e78e836cf2a33",
+    "line" : 21,
+    "diffHunk" : "@@ -1,1 +7,11 @@            HashAggregate [i_brand,i_brand_id,i_manufact_id,i_manufact,ss_ext_sales_price] [sum,sum]\n              Project [ss_ext_sales_price,i_brand_id,i_brand,i_manufact_id,i_manufact]\n                BroadcastHashJoin [ss_item_sk,i_item_sk]\n                  Project [ss_item_sk,ss_ext_sales_price]\n                    SortMergeJoin [ss_customer_sk,c_customer_sk,ca_zip,s_zip]"
+  }
+]

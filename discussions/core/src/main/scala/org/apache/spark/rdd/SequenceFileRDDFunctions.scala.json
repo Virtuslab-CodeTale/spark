@@ -1,0 +1,68 @@
+[
+  {
+    "id" : "5a14e848-fe2b-48b0-9885-28b3c20fbae5",
+    "prId" : 30924,
+    "prUrl" : "https://github.com/apache/spark/pull/30924#pullrequestreview-559139802",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e97390f8-8daa-4cd2-9253-d42200063a29",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Out of curiosity why does this require a new type def?",
+        "createdAt" : "2020-12-27T16:53:45Z",
+        "updatedAt" : "2020-12-28T05:25:23Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b2834267-5933-401f-ae24-223ecbe185a0",
+        "parentId" : "e97390f8-8daa-4cd2-9253-d42200063a29",
+        "authorId" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "body" : "Maybe it's unnecessary. I found this is a way won't cause the MIMA tests check fail,  I'll try another way :)\r\n\r\n",
+        "createdAt" : "2020-12-28T03:46:18Z",
+        "updatedAt" : "2020-12-28T05:25:23Z",
+        "lastEditedBy" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b12acaed-961a-4b79-999f-01f1f4613e97",
+        "parentId" : "e97390f8-8daa-4cd2-9253-d42200063a29",
+        "authorId" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "body" : "I tried three ways to fix issue:\r\n\r\nThe 1st way:\r\n\r\n```\r\nclass SequenceFileRDDFunctions[K: ClassTag, V: ClassTag](\r\n    self: RDD[(K, V)],\r\n    _keyWritableClass: Class[_ <: Writable],\r\n    _valueWritableClass: Class[_ <: Writable])\r\n    (implicit kToWritable: K => Writable, vToWritable: V => Writable)\r\n```\r\n\r\nThe 2nd way:\r\n\r\n```\r\nclass SequenceFileRDDFunctions[K, V](\r\n    self: RDD[(K, V)],\r\n    _keyWritableClass: Class[_ <: Writable],\r\n    _valueWritableClass: Class[_ <: Writable])\r\n    (implicit ev$1: K => Writable, ev$2: V => Writable, ev$3: ClassTag[K], ev$4: ClassTag[V])\r\n```\r\n\r\nThe 2 above way will let `MIMIA tests` check failed , and the  3rd way is refer to Scala user [QA](https://users.scala-lang.org/t/scala-2-13-0-deprecates-but-how-do-i-get-rid-of-this-in-a-class-definition/4679),  def a new type `IsWritable` and use `K: IsWritable` instead of  `K <% Writable` and this way not break the `MIMIA tests`.\r\n\r\nBut I'm very sorry, I haven't figured out why the 3rd way didn't break the `MIMA test` check\r\n\r\n\r\n\r\n",
+        "createdAt" : "2020-12-28T05:52:32Z",
+        "updatedAt" : "2020-12-28T06:03:45Z",
+        "lastEditedBy" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "66ae9c3a-446c-4733-8809-e57e32eec0b7",
+        "parentId" : "e97390f8-8daa-4cd2-9253-d42200063a29",
+        "authorId" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "body" : "And I think we could combine the type declaration with the `SequenceFileRDDFunctions ` definition,  but it seems that Spark tells us `avoid using structural types.`\r\n\r\n",
+        "createdAt" : "2020-12-28T06:17:40Z",
+        "updatedAt" : "2020-12-28T11:30:28Z",
+        "lastEditedBy" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "60f540f2-ef23-40af-8bee-c48fca8e13ab",
+        "parentId" : "e97390f8-8daa-4cd2-9253-d42200063a29",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "I see, yeah we can't add implicits without changing the signature. Hm, I can't think of other ways to write it. I think this change is OK. I'd leave a note in the comments of IsWritable about why it exists, with a link to the suggestion from scala Q&A.",
+        "createdAt" : "2020-12-28T13:13:57Z",
+        "updatedAt" : "2020-12-28T13:13:57Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8e626f8ff8807dc85f2d4c4a6a888f8abd264dfb",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +33,37 @@ * convert our keys and values to Writable.\n */\nclass SequenceFileRDDFunctions[K: IsWritable: ClassTag, V: IsWritable: ClassTag](\n    self: RDD[(K, V)],\n    _keyWritableClass: Class[_ <: Writable],"
+  }
+]

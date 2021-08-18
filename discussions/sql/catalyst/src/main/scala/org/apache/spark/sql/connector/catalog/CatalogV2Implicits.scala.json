@@ -1,0 +1,68 @@
+[
+  {
+    "id" : "301c9cae-36e3-49e1-bc8b-f9b652b36c9c",
+    "prId" : 30947,
+    "prUrl" : "https://github.com/apache/spark/pull/30947#pullrequestreview-559501349",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8c2eace3-102a-49bc-a0c9-fccf8830e283",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "to be more precise: `Namespaces in V1 catalog cannot be empty`?",
+        "createdAt" : "2020-12-29T06:47:11Z",
+        "updatedAt" : "2020-12-29T06:47:11Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3c420b58-0363-4abc-8d28-4e591668a8a0",
+        "parentId" : "8c2eace3-102a-49bc-a0c9-fccf8830e283",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "Actually, `parts` includes a table name. When we say that `parts` cannot be empty, we require at least a table name.\r\n\r\nProbably, `Namespaces in V1 catalog can have only a single name part` could confuse users too.\r\n\r\nWe should say something like a table identifier must contain either a table name or database + a table name.\r\n\r\nSpecifically in the check, we should say **\"Table identification must have at least a table name\"**",
+        "createdAt" : "2020-12-29T07:09:05Z",
+        "updatedAt" : "2020-12-29T07:09:05Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0f761c31-9fc9-46ef-8b94-9ccfe45bf70e",
+        "parentId" : "8c2eace3-102a-49bc-a0c9-fccf8830e283",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "BTW, how does `SHOW TABLES IN $catalog` get related to table identifier?",
+        "createdAt" : "2020-12-29T07:47:15Z",
+        "updatedAt" : "2020-12-29T07:47:16Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d097869e-e46f-4554-b856-b338a5c92dcc",
+        "parentId" : "8c2eace3-102a-49bc-a0c9-fccf8830e283",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "You mean `SHOW TABLES IN spark_catalog` since we are focusing on v1 only, right.\r\n\r\n1. We cut off `spark_catalog` from namespaces in `SessionCatalogAndNamespace`, so, `ns == Seq.empty` here: https://github.com/apache/spark/blob/0617dfce7beb34662ab30a607721e9b46e65c21e/sql/core/src/main/scala/org/apache/spark/sql/catalyst/analysis/ResolveSessionCatalog.scala#L365\r\n2. Then `ns.length != 1` is `true` and we try to raise the exception at https://github.com/apache/spark/blob/0617dfce7beb34662ab30a607721e9b46e65c21e/sql/core/src/main/scala/org/apache/spark/sql/catalyst/analysis/ResolveSessionCatalog.scala#L367\r\n3. `ns.quoted` triggers implicit wrapping `Seq.empty` by `MultipartIdentifierHelper`, and hit to the second check `if (parts.isEmpty)` at https://github.com/apache/spark/blob/156704ba0dfcae39a80b8f0ce778b73913db03b2/sql/catalyst/src/main/scala/org/apache/spark/sql/connector/catalog/CatalogV2Implicits.scala#L120-L122\r\n\r\n",
+        "createdAt" : "2020-12-29T08:37:29Z",
+        "updatedAt" : "2020-12-29T08:38:47Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "763aac40-232b-4480-9b0d-ead04b0ec203",
+        "parentId" : "8c2eace3-102a-49bc-a0c9-fccf8830e283",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "I think this https://github.com/apache/spark/pull/30963 is better solution.",
+        "createdAt" : "2020-12-29T12:00:11Z",
+        "updatedAt" : "2020-12-29T12:00:33Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "fee5e944a85dd192a1fd4437272d302578bfdce3",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +119,123 @@  implicit class MultipartIdentifierHelper(parts: Seq[String]) {\n    if (parts.isEmpty) {\n      throw new AnalysisException(\"Namespaces in V1 catalog can have only a single name part.\")\n    }\n"
+  }
+]
