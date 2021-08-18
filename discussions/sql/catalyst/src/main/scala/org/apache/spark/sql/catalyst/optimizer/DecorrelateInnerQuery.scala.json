@@ -1,0 +1,57 @@
+[
+  {
+    "id" : "e25b838b-c8b3-47fa-be9a-ef6918ccbb2e",
+    "prId" : 33070,
+    "prUrl" : "https://github.com/apache/spark/pull/33070#pullrequestreview-704745765",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d573b8aa-1fd2-46f8-8425-df46176a04f1",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "what if we don't call `.newInstance()`?",
+        "createdAt" : "2021-07-08T17:53:44Z",
+        "updatedAt" : "2021-07-08T17:53:44Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cb9362ec-c17d-4e3c-aabc-2fb6d4f7c88a",
+        "parentId" : "d573b8aa-1fd2-46f8-8425-df46176a04f1",
+        "authorId" : "b3ba992a-312c-46eb-b3c3-8d861d15ac40",
+        "body" : "Because we are reusing the `a`'s exprId when constructing the alias, we would have the same `exprId` referencing two different expressions if not using `.newInstance()`. Another option is to use a new exprId for the Alias, but it requires updating parent nodes.\r\n```\r\nAlias(If(IsNull(alwaysTrueRef), default, ref), a.name)(a.exprId)\r\n```\r\n\r\n",
+        "createdAt" : "2021-07-09T00:28:06Z",
+        "updatedAt" : "2021-07-09T00:28:06Z",
+        "lastEditedBy" : "b3ba992a-312c-46eb-b3c3-8d861d15ac40",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3aa925b8-9c4f-48de-a8c9-c06992572e1b",
+        "parentId" : "d573b8aa-1fd2-46f8-8425-df46176a04f1",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Got it.\r\n\r\nI think the assumption here is `a` must be an alias. If `a` is an attribute, then `a.newInstance()` will create a new attribute that refers to nothing and breaks the query. Can we add an assert?\r\n```\r\nassert(a.isInstanceOf[Alias])\r\nval newAlias = a.newInstance()\r\n...\r\n```",
+        "createdAt" : "2021-07-09T08:02:35Z",
+        "updatedAt" : "2021-07-09T08:02:35Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8a8418db-6c0c-41ac-ae80-a555eaa3fc51",
+        "parentId" : "d573b8aa-1fd2-46f8-8425-df46176a04f1",
+        "authorId" : "b3ba992a-312c-46eb-b3c3-8d861d15ac40",
+        "body" : "Yes this holds because if `a` is an attribute, evaluating it with zero tuples will yield null:\r\nhttps://github.com/apache/spark/blob/c46342e3d057bcc949b4caf016514ff05e0a1ebd/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/optimizer/subquery.scala#L407\r\nAnother possibility is OuterReference. Let me verify if outer works in this case. <- OuterReferences should already be replaced using the outer reference map. So the only possibility is Alias.",
+        "createdAt" : "2021-07-13T05:00:45Z",
+        "updatedAt" : "2021-07-13T06:32:19Z",
+        "lastEditedBy" : "b3ba992a-312c-46eb-b3c3-8d861d15ac40",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6404affe712161655d4740990222de7656a5fa83",
+    "line" : 223,
+    "diffHunk" : "@@ -1,1 +521,525 @@                    assert(a.isInstanceOf[Alias], s\"Cannot have non-aliased expression $a in \" +\n                      s\"aggregate that evaluates to non-null value with zero tuples.\")\n                    val newAttr = a.newInstance()\n                    val ref = newAttr.toAttribute.withNullability(true)\n                    expressions += newAttr"
+  }
+]

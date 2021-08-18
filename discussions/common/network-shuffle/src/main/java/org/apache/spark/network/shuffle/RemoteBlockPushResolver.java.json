@@ -64,5 +64,357 @@
     "commit" : "52b709356b367a8616acffec9f7f3a0eec834fce",
     "line" : 185,
     "diffHunk" : "@@ -1,1 +701,705 @@      return SUCCESS_RESPONSE.duplicate();\n    }\n\n    /**\n     * Write a ByteBuffer to the merged shuffle file. Here we keep track of the length of the"
+  },
+  {
+    "id" : "0754a361-1d6e-482a-8ac9-67da307e34f2",
+    "prId" : 33078,
+    "prUrl" : "https://github.com/apache/spark/pull/33078#pullrequestreview-693368404",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a86f7283-1013-498e-861b-a9e8cec1da5b",
+        "parentId" : null,
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "High level comment about changes in this class:\r\n\r\n* Query `AppShuffleInfo` only once for each public method using `validateAndGetAppShuffleInfo` (except for application removed - I have commented on that seperately) - everything else should be depending only on that returned instance.\r\n  * None of the private methods should query `validateAndGetAppShuffleInfo`.\r\n\r\n*  Move `getFile`, `getMergedShuffleDataFile`, `getMergedShuffleIndexFile`, `getMergedShuffleMetaFile`, `generateFileName` into `AppShuffleInfo` - and use the appShuffleInfo from (a) to fetch these values.\r\n\r\n* Add `appId` as a `final` field of `AppShuffleInfo` - and do not pass `appId` into any of the methods - simply pass appShuffleInfo.\r\n\r\n* Also, see if `appId` can be removed from `AppShufflePartitionInfo` - given it will be in the containing `AppShuffleInfo` always.\r\n",
+        "createdAt" : "2021-06-25T07:24:40Z",
+        "updatedAt" : "2021-06-25T08:04:31Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "69bbaff4-152f-4c97-9c21-f96754ad8802",
+        "parentId" : "a86f7283-1013-498e-861b-a9e8cec1da5b",
+        "authorId" : "e942fa3e-a5b9-4a9f-b9a5-a1afd3c29b2c",
+        "body" : "Update: \r\n1. None of the private method will query validateAndGetAppShuffleInfo.\r\n2. Move all the methods into AppShuffleInfo.\r\n3. Added appId field into AppShuffleInfo\r\n4. Not being able to remove appId as it is used in logger in lots of places within AppShufflePartitionInfo.",
+        "createdAt" : "2021-06-27T00:46:30Z",
+        "updatedAt" : "2021-06-27T00:46:30Z",
+        "lastEditedBy" : "e942fa3e-a5b9-4a9f-b9a5-a1afd3c29b2c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "53109918cbdbdba2fe79f38a991c171efec7e85f",
+    "line" : 34,
+    "diffHunk" : "@@ -1,1 +70,74 @@ * @since 3.1.0\n */\npublic class RemoteBlockPushResolver implements MergedShuffleFileManager {\n\n  private static final Logger logger = LoggerFactory.getLogger(RemoteBlockPushResolver.class);"
+  },
+  {
+    "id" : "5c8dcbfc-1760-47a9-9c37-73c66c3478a1",
+    "prId" : 33078,
+    "prUrl" : "https://github.com/apache/spark/pull/33078#pullrequestreview-692512882",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d734ed88-c1bf-4fc6-b7cb-f28924dad178",
+        "parentId" : null,
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "Make this a `ConcurrentHashMap<Integer, AppShuffleInfo>` (key == attemptId) - in theory, `compute` can invoke the closure multiple times - whenever there is an overlap in computation (in practice it should simply be zero or one attempt id getting replaced).",
+        "createdAt" : "2021-06-25T07:47:44Z",
+        "updatedAt" : "2021-06-25T08:04:32Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "53109918cbdbdba2fe79f38a991c171efec7e85f",
+    "line" : 462,
+    "diffHunk" : "@@ -1,1 +486,490 @@          // be overridden by ExecutorRegister message from newer application attempt,\n          // and former attempts' shuffle partitions information will also be cleaned up.\n          AtomicReference<AppShuffleInfo> originalAppShuffleInfo = new AtomicReference<>();\n          appsShuffleInfo.compute(appId, (id, appShuffleInfo) -> {\n            if (appShuffleInfo == null || attemptId > appShuffleInfo.attemptId) {"
+  },
+  {
+    "id" : "2b8f5e1d-51ec-4cba-b0fc-21cc9d2d6d46",
+    "prId" : 33078,
+    "prUrl" : "https://github.com/apache/spark/pull/33078#pullrequestreview-692512882",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ea99d3e2-7659-4239-a835-8a6ddde962c8",
+        "parentId" : null,
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "Replace the use of `partitionsIter` below with iterator over `partitionsToFinalize` (`for (AppShufflePartitionInfo partition: partitionsToFinalize)` )",
+        "createdAt" : "2021-06-25T07:55:26Z",
+        "updatedAt" : "2021-06-25T08:04:32Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "53109918cbdbdba2fe79f38a991c171efec7e85f",
+    "line" : 376,
+    "diffHunk" : "@@ -1,1 +415,419 @@    MergeStatuses mergeStatuses;\n    if (shufflePartitions == null || shufflePartitions.isEmpty()) {\n      mergeStatuses =\n        new MergeStatuses(msg.shuffleId, new RoaringBitmap[0], new int[0], new long[0]);\n    } else {"
+  },
+  {
+    "id" : "1137aa73-9b53-4a94-8849-cdeaa1769a1e",
+    "prId" : 33078,
+    "prUrl" : "https://github.com/apache/spark/pull/33078#pullrequestreview-698628522",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "233882f6-8ac0-4ebb-94f6-3fb399457249",
+        "parentId" : null,
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "nit: Do we want to combine the validation in a thread safe way ?\r\n\r\n```\r\n    Map<Integer, AppShufflePartitionInfo> shufflePartitions =\r\n            partitions.compute(shuffleId, (id, map) -> {\r\n              if (null == map) {\r\n                // If this partition is already finalized then the partitions map will not contain\r\n                // the appShuffleId but the data file would exist. In that case the block is considered late.\r\n                if (dataFile.exists()) {\r\n                  return null;\r\n                }\r\n                return Maps.newConcurrentMap();\r\n              } else {\r\n                return map;\r\n              }\r\n            });\r\n\r\n    if (null == shufflePartitions) {\r\n      return null;\r\n    }\r\n```\r\n\r\nIn my opinion, I dont think this is buying us much ... but wanted to suggest anyway, since it is a stricter check.",
+        "createdAt" : "2021-06-28T02:19:56Z",
+        "updatedAt" : "2021-06-28T02:39:49Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "12fb2331-b107-4500-93f4-827634acaa32",
+        "parentId" : "233882f6-8ac0-4ebb-94f6-3fb399457249",
+        "authorId" : "e942fa3e-a5b9-4a9f-b9a5-a1afd3c29b2c",
+        "body" : "Updated.",
+        "createdAt" : "2021-07-04T00:51:48Z",
+        "updatedAt" : "2021-07-04T00:51:48Z",
+        "lastEditedBy" : "e942fa3e-a5b9-4a9f-b9a5-a1afd3c29b2c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "53109918cbdbdba2fe79f38a991c171efec7e85f",
+    "line" : 121,
+    "diffHunk" : "@@ -1,1 +155,159 @@    if (shufflePartitions == null) {\n      return null;\n    }\n\n    return shufflePartitions.computeIfAbsent(reduceId, key -> {"
+  },
+  {
+    "id" : "6fc82159-c5bb-4945-bf29-90fa5a0b6bf2",
+    "prId" : 33078,
+    "prUrl" : "https://github.com/apache/spark/pull/33078#pullrequestreview-694628960",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "29485440-5bd0-46e1-a0fc-e64495d24aad",
+        "parentId" : null,
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "Please change the comment above it. It is stale",
+        "createdAt" : "2021-06-29T06:54:09Z",
+        "updatedAt" : "2021-06-29T06:58:51Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "53109918cbdbdba2fe79f38a991c171efec7e85f",
+    "line" : 805,
+    "diffHunk" : "@@ -1,1 +1050,1054 @@          // from ExecutorShuffleInfo. To find out the merge directory location, we first find the\n          // parent dir of the block-manager directory and then append merge directory name to it.\n          Paths.get(localDir).getParent().resolve(mergeDirectory).toFile().getPath())\n        .toArray(String[]::new);\n      this.subDirsPerLocalDir = subDirsPerLocalDir;"
+  },
+  {
+    "id" : "33f0def2-76bd-4da9-971a-980907066a5c",
+    "prId" : 33078,
+    "prUrl" : "https://github.com/apache/spark/pull/33078#pullrequestreview-698822001",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "09202ffb-9bc7-403f-9aae-cb0f78f1bd92",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Is it possible to add a test for the case of `attemptId > appShuffleInfo.attemptId`?",
+        "createdAt" : "2021-07-05T05:30:55Z",
+        "updatedAt" : "2021-07-05T05:33:09Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2fe4cc84-9e62-482f-809e-6ac05375ffce",
+        "parentId" : "09202ffb-9bc7-403f-9aae-cb0f78f1bd92",
+        "authorId" : "e942fa3e-a5b9-4a9f-b9a5-a1afd3c29b2c",
+        "body" : "There is unit test added for this one in RemoveBlockPushResolverSuite.testUpdateLocalDirsTwiceWithTwoAttempts. The name is confusing. I just updated the name with testExecutorRegistrationFromTwoAppAttempts",
+        "createdAt" : "2021-07-05T06:06:29Z",
+        "updatedAt" : "2021-07-05T06:06:29Z",
+        "lastEditedBy" : "e942fa3e-a5b9-4a9f-b9a5-a1afd3c29b2c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "53109918cbdbdba2fe79f38a991c171efec7e85f",
+    "line" : 464,
+    "diffHunk" : "@@ -1,1 +488,492 @@          AtomicReference<AppShuffleInfo> originalAppShuffleInfo = new AtomicReference<>();\n          appsShuffleInfo.compute(appId, (id, appShuffleInfo) -> {\n            if (appShuffleInfo == null || attemptId > appShuffleInfo.attemptId) {\n              originalAppShuffleInfo.set(appShuffleInfo);\n              appShuffleInfo ="
+  },
+  {
+    "id" : "86f6655a-bce0-4433-8b6c-4686e7acf90e",
+    "prId" : 33078,
+    "prUrl" : "https://github.com/apache/spark/pull/33078#pullrequestreview-708467982",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6c029d49-390e-4582-acab-c8985bba9b72",
+        "parentId" : null,
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "check `dataChannel.isOpen` before closing : same in `MergeShuffleFile.close`.",
+        "createdAt" : "2021-07-16T14:44:12Z",
+        "updatedAt" : "2021-07-16T14:44:12Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "53109918cbdbdba2fe79f38a991c171efec7e85f",
+    "line" : 743,
+    "diffHunk" : "@@ -1,1 +982,986 @@\n    void closeAllFiles() {\n      try {\n        if (dataChannel.isOpen()) {\n          dataChannel.close();"
+  },
+  {
+    "id" : "336ea062-b692-4017-a3fe-da8aa2730ce2",
+    "prId" : 33078,
+    "prUrl" : "https://github.com/apache/spark/pull/33078#pullrequestreview-709322392",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3f614eb0-5c4a-41c5-88e2-822079612757",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "nit: pull it into a static field?",
+        "createdAt" : "2021-07-19T03:46:24Z",
+        "updatedAt" : "2021-07-19T03:46:24Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ef8b30c3-f28f-42d0-8749-bdee14fd7c32",
+        "parentId" : "3f614eb0-5c4a-41c5-88e2-822079612757",
+        "authorId" : "e942fa3e-a5b9-4a9f-b9a5-a1afd3c29b2c",
+        "body" : "@Ngone51 Can you be more specific? Which one to a static field? Thanks.",
+        "createdAt" : "2021-07-19T06:44:52Z",
+        "updatedAt" : "2021-07-19T06:44:52Z",
+        "lastEditedBy" : "e942fa3e-a5b9-4a9f-b9a5-a1afd3c29b2c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f8492d51-5ec1-496d-be79-86715d03641b",
+        "parentId" : "3f614eb0-5c4a-41c5-88e2-822079612757",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "oh..sorry, I misread it. Looks good!",
+        "createdAt" : "2021-07-19T09:06:07Z",
+        "updatedAt" : "2021-07-19T09:06:07Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "53109918cbdbdba2fe79f38a991c171efec7e85f",
+    "line" : 114,
+    "diffHunk" : "@@ -1,1 +148,152 @@            return null;\n          }\n          return new ConcurrentHashMap<>();\n        } else {\n          return map;"
+  },
+  {
+    "id" : "42657ed4-d79c-4af0-a2b5-541dde1085f8",
+    "prId" : 33034,
+    "prUrl" : "https://github.com/apache/spark/pull/33034#pullrequestreview-716377069",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "37e90012-6464-4c81-a57f-9a3fdef64500",
+        "parentId" : null,
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "I am not sure of the removal of the file existence checks.\r\n+CC @zhouyejoe, @otterc ",
+        "createdAt" : "2021-07-25T07:27:18Z",
+        "updatedAt" : "2021-07-25T08:47:25Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "87e48891-edb9-470e-bb63-46bac460e05b",
+        "parentId" : "37e90012-6464-4c81-a57f-9a3fdef64500",
+        "authorId" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "body" : "Since we are not removing the `shuffleMergeId` key from the map even for the cases of determinate stages. It should be fine, but once we remove it then probably we might need the file existence check. Anyways I brought back the data file existence check.",
+        "createdAt" : "2021-07-27T03:29:40Z",
+        "updatedAt" : "2021-07-27T03:29:40Z",
+        "lastEditedBy" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "956135d4-697d-4e96-a8a2-572e63be5c0a",
+        "parentId" : "37e90012-6464-4c81-a57f-9a3fdef64500",
+        "authorId" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "body" : "Made some more changes to the `getOrCreateAppShufflePartitionInfo` since we are now cleaning up the determinate stage shuffle Ids and only keeping the two most recent `shuffleMergeId` entries in the `Map` for indeterminate stages.",
+        "createdAt" : "2021-07-27T21:03:50Z",
+        "updatedAt" : "2021-07-27T21:03:50Z",
+        "lastEditedBy" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4a43d1d0ccab25a5b790feaa9c74591abaeaca40",
+    "line" : 139,
+    "diffHunk" : "@@ -1,1 +222,226 @@              reduceId), e);\n      }\n    });\n  }\n"
+  },
+  {
+    "id" : "e2d5f6e3-d5fd-4807-b440-0c77b8141c79",
+    "prId" : 33034,
+    "prUrl" : "https://github.com/apache/spark/pull/33034#pullrequestreview-715547025",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "cec30e36-3e0d-4bc4-97a5-06db629a5f25",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "The comment is outdated.",
+        "createdAt" : "2021-07-27T05:42:04Z",
+        "updatedAt" : "2021-07-27T05:42:04Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ad807e47-81f5-439e-a9b8-19eba268528a",
+        "parentId" : "cec30e36-3e0d-4bc4-97a5-06db629a5f25",
+        "authorId" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "body" : "Can you please explain why is this outdated?",
+        "createdAt" : "2021-07-27T06:15:43Z",
+        "updatedAt" : "2021-07-27T06:15:43Z",
+        "lastEditedBy" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f58006ec-e6be-4831-8742-c666aedf3e29",
+        "parentId" : "cec30e36-3e0d-4bc4-97a5-06db629a5f25",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Do we still use the `ConcurrentHashMap`?",
+        "createdAt" : "2021-07-27T06:33:57Z",
+        "updatedAt" : "2021-07-27T06:33:57Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "11f9734c-2ca5-4b69-a149-ce7d9d74b654",
+        "parentId" : "cec30e36-3e0d-4bc4-97a5-06db629a5f25",
+        "authorId" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "body" : "Yes, we are still using `ConcurrentHashMap` for the `shuffleMergePartitionsByMergeId` right which cannot take null keys or values which is why this marker unmodifiable Map is required. This is not really about the `ConcurrentHashMap` marker rather the `ConcurrentHashMap` used for `shuffleMergePartitionsByMergeId`",
+        "createdAt" : "2021-07-27T06:50:44Z",
+        "updatedAt" : "2021-07-27T06:50:44Z",
+        "lastEditedBy" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4a43d1d0ccab25a5b790feaa9c74591abaeaca40",
+    "line" : 15,
+    "diffHunk" : "@@ -1,1 +83,87 @@  private static final int DETERMINATE_SHUFFLE_MERGE_ID = 0;\n\n  // ConcurrentHashMap doesn't allow null for keys or values which is why this is required.\n  // Marker to identify finalized indeterminate shuffle partitions in the case of indeterminate\n  // stage retries."
+  },
+  {
+    "id" : "6cc638d9-e9ef-43d0-a438-b48a733db97b",
+    "prId" : 33034,
+    "prUrl" : "https://github.com/apache/spark/pull/33034#pullrequestreview-716586934",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d303c100-65e9-4e98-a0f7-82983d30851d",
+        "parentId" : null,
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "The new formulation of this method is much more cleaner than before, thanks for fixing this !",
+        "createdAt" : "2021-07-28T05:29:19Z",
+        "updatedAt" : "2021-07-28T06:02:28Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4a43d1d0ccab25a5b790feaa9c74591abaeaca40",
+    "line" : 35,
+    "diffHunk" : "@@ -1,1 +143,147 @@   * present and the corresponding merged shuffle does not exist, initializes the metadata.\n   */\n  private AppShufflePartitionInfo getOrCreateAppShufflePartitionInfo(\n      AppShuffleInfo appShuffleInfo,\n      int shuffleId,"
   }
 ]
