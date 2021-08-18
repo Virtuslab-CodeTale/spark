@@ -1,0 +1,90 @@
+[
+  {
+    "id" : "ead47444-2602-455b-8e4d-e1297a5baef0",
+    "prId" : 31613,
+    "prUrl" : "https://github.com/apache/spark/pull/31613#pullrequestreview-597083177",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "28cbf656-c98d-4958-b7e7-ec537953c780",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Adding the attr ID doesn't seem to help much. Users still don't know how to fix the query (is it un-fixable?).",
+        "createdAt" : "2021-02-23T19:27:36Z",
+        "updatedAt" : "2021-02-23T19:27:37Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0754b828-aee1-4923-bb76-bc9fa0bfc251",
+        "parentId" : "28cbf656-c98d-4958-b7e7-ec537953c780",
+        "authorId" : "577bf34d-3430-4150-a920-e49f0db66262",
+        "body" : "For json path expression case, one expression is from filter and the other is from projection.\r\n```\r\n      String query = \"SELECT id, address, get_json_string(phone, '$.key[1].m[2].b') as key \" +\r\n                    \"FROM mycatalog.test.person \" +\r\n                    \"WHERE get_json_string(phone, '$.key[1].m[2].b') >= '100' order by id limit 2\";\r\n```\r\nget_json_string produces the json path expression.\r\n\r\nSee innerResolve() of sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/analysis/Analyzer.scala:\r\n```\r\n2021-02-21 04:04:00,467 (Time-limited test) [DEBUG - org.apache.spark.internal.Logging.logDebug(Logging.scala:61)] inner Resolving 'phone->'key'->1->'m'->2->>'b' to phone->'key'->1->'m'->2->>'b'#25\r\n```\r\nI am willing to get input from people who are familiar with the analyzer.",
+        "createdAt" : "2021-02-23T19:51:29Z",
+        "updatedAt" : "2021-02-23T19:51:30Z",
+        "lastEditedBy" : "577bf34d-3430-4150-a920-e49f0db66262",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "66212d7b-83b1-4627-82d2-ad2a09c4ee66",
+        "parentId" : "28cbf656-c98d-4958-b7e7-ec537953c780",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "I have the same feeling with @cloud-fan. I think the other databases show a message message with the same granularity in the case, e.g.,\r\n```\r\npostgres=# create table t1 (id int);\r\nCREATE TABLE\r\npostgres=# create table t2 (id int);\r\nCREATE TABLE\r\npostgres=# select * from t1, t2 where id = id;\r\nERROR:  column reference \"id\" is ambiguous\r\nLINE 1: select * from t1, t2 where id = id;\r\n```",
+        "createdAt" : "2021-02-23T23:44:33Z",
+        "updatedAt" : "2021-02-23T23:44:33Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bcfc6fc5-cef2-49db-bf87-16cc953004c9",
+        "parentId" : "28cbf656-c98d-4958-b7e7-ec537953c780",
+        "authorId" : "577bf34d-3430-4150-a920-e49f0db66262",
+        "body" : "The above example from postgres doesn't apply to the json path case because there is only one table.\r\n",
+        "createdAt" : "2021-02-24T00:00:17Z",
+        "updatedAt" : "2021-02-24T00:00:17Z",
+        "lastEditedBy" : "577bf34d-3430-4150-a920-e49f0db66262",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dfe6f6b3-1dfa-450d-95e0-7943a1456baf",
+        "parentId" : "28cbf656-c98d-4958-b7e7-ec537953c780",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Does https://github.com/apache/spark/pull/31613/files#r581342459 answer @cloud-fan's question?\r\n\r\nSo with the attr ID added, how it helps the case you show? I think it is the point we care about.\r\n\r\nBTW, what is `get_json_string`? Do you mean `get_json_object`?\r\n\r\n",
+        "createdAt" : "2021-02-24T01:13:56Z",
+        "updatedAt" : "2021-02-24T01:13:56Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9264a7aa-8b4f-48c2-8edb-aa0d8bc27fe0",
+        "parentId" : "28cbf656-c98d-4958-b7e7-ec537953c780",
+        "authorId" : "577bf34d-3430-4150-a920-e49f0db66262",
+        "body" : "Considering snippet of physical plan:\r\n```\r\n      +- BatchScan[id#6, address#7, phone->'key'->1->'m'->2->>'b'#10, phone->'key'->1->'m'->2->'b'#12] Cassandra Scan: test.person\r\n```\r\nmultiple json path expressions would be accompanied by ExprId.id. It would be easier to match the reference (with exprId.id) given in the AnalysisException with the expression.\r\n\r\nw.r.t. get_json_string, it is a function which is interpreted by Spark extension, translating arguments to json path expression.",
+        "createdAt" : "2021-02-24T02:15:51Z",
+        "updatedAt" : "2021-02-24T02:16:43Z",
+        "lastEditedBy" : "577bf34d-3430-4150-a920-e49f0db66262",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fa2e247a-22d0-4fc1-926c-068089ea7310",
+        "parentId" : "28cbf656-c98d-4958-b7e7-ec537953c780",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "It doesn't help because end-users can't specify attr id when referring to the column. If a table/relation has duplicated column names, I think the only way out is to get the column by position, e.g. `df.select(Column(df.logicalPlan.output(2)))`, and attr id doesn't matter.",
+        "createdAt" : "2021-02-24T05:20:34Z",
+        "updatedAt" : "2021-02-24T05:20:34Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e51a428ef0ee77c91f8cd07d02fcf08a03a29f69",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +3226,3230 @@-- !query output\norg.apache.spark.sql.AnalysisException\nReference 'f1' is ambiguous, could be: j.f1#x, j.f1#x.; line 2 pos 63\n\n"
+  }
+]

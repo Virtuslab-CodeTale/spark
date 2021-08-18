@@ -119,5 +119,71 @@
     "commit" : "cab5290a89526a32f826f1d2fffff9132d6e2a8d",
     "line" : 11,
     "diffHunk" : "@@ -1,1 +147,151 @@\n  /*\n   * This method aim to optimize the skewed join with the following steps:\n   * 1. Check whether the shuffle partition is skewed based on the median size\n   *    and the skewed partition threshold in origin shuffled join (smj and shj)."
+  },
+  {
+    "id" : "9fc719d7-99fd-4ac4-85cd-490b9b1bab1f",
+    "prId" : 31653,
+    "prUrl" : "https://github.com/apache/spark/pull/31653#pullrequestreview-625954479",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "fc0aeb06-f5a5-43c6-b3a8-83388b45294f",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Currently this rule is very limited: it only applies to SMJ with 2 shuffle query stages as the direct children.\r\n\r\nI don't think it's a big difference if we move this rule to `queryStagePreparationRules`. We still need to match SMJ with 2 shuffle query stages as the direct children, with an additional check that the query stages must be materialized, which is guaranteed for query stage optimization rules.",
+        "createdAt" : "2021-03-29T17:03:13Z",
+        "updatedAt" : "2021-03-29T17:14:45Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f55c882e-b7e1-49f8-bd5b-c86df7d6c5bd",
+        "parentId" : "fc0aeb06-f5a5-43c6-b3a8-83388b45294f",
+        "authorId" : "9acf210d-4935-4e03-8384-d944eb558b45",
+        "body" : "1. with this PR, if you have \r\n```\r\nSMJ1\r\n |-...\r\n |-SMJ2\r\n    |-...\r\n    |-...\r\n```\r\nin a single stage, `OprimizeSkewedJoin` has to pay attention to it because it may decide to mitigate skew in SMJ2 and insert a shuffle above it, breaking up the stage\r\n2. My comment in the code was referring to something different.  When `OprimizeSkewedJoin` runs as part of `queryStagePreparationRules`, it may run over a plan like this for example\r\n```\r\nSMJ0\r\n|-Exch\r\n |-SMJ1\r\n    |-...\r\n    |-...\r\n|-Exch \r\n |-SMJ2\r\n    |-...\r\n    |-...\r\n```\r\nwhere all inputs to SMJ1/SMJ2 are materialized.  And it has to make a decision about each SMJ separately.  Previously (when `OprimizeSkewedJoin` was part of `queryStageOptimizerRules`, any given run of `OprimizeSkewedJoin` would either see SMJ1 or SMJ2 but not both)\r\n",
+        "createdAt" : "2021-03-30T17:47:20Z",
+        "updatedAt" : "2021-03-30T17:47:20Z",
+        "lastEditedBy" : "9acf210d-4935-4e03-8384-d944eb558b45",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "68ce837d-a0d2-4e8e-9cde-de041b77b602",
+        "parentId" : "fc0aeb06-f5a5-43c6-b3a8-83388b45294f",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Maybe we don't have to be optimal in the first version. We can optimize all the leaf SMJs, and revert all of them if extra shuffles are introduced. The optimal solution is to find out which SMJ caused the extra shuffle and only revert it. We can do it later.",
+        "createdAt" : "2021-03-31T05:58:39Z",
+        "updatedAt" : "2021-03-31T05:58:39Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3c0b70ce-d0fb-45a6-8cf0-0e1acd7782d4",
+        "parentId" : "fc0aeb06-f5a5-43c6-b3a8-83388b45294f",
+        "authorId" : "9acf210d-4935-4e03-8384-d944eb558b45",
+        "body" : "Not sure I follow.  This point of this PR is to allow `OptimizeSkewedJoin` to add extra shuffles...",
+        "createdAt" : "2021-03-31T20:06:19Z",
+        "updatedAt" : "2021-03-31T20:06:19Z",
+        "lastEditedBy" : "9acf210d-4935-4e03-8384-d944eb558b45",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "42e67624-cb97-4fe9-8c39-e0015eef4cfc",
+        "parentId" : "fc0aeb06-f5a5-43c6-b3a8-83388b45294f",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I was talking about the default case. If we enable the config and allow extra shuffles, then it's pretty straightforward and we just optimize all the leaf SMJs.",
+        "createdAt" : "2021-04-01T07:02:26Z",
+        "updatedAt" : "2021-04-01T07:02:26Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7cfda59a1e9a8e0f86e2e6424c21639c1b5b14e3",
+    "line" : 112,
+    "diffHunk" : "@@ -1,1 +310,314 @@  /**\n   * Now this runs as part of queryStagePreparationRules() which means it runs over the whole plan\n   * which may have any number of ExchangeExec nodes, i.e. multiple \"query stages\"\n   *\n   * This runs optimizeSkewJoin() on each \"query stage\" separately so that"
   }
 ]

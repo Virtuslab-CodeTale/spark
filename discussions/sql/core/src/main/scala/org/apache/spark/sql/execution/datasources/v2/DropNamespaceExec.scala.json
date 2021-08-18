@@ -1,0 +1,90 @@
+[
+  {
+    "id" : "a63e2f49-f052-44d1-b307-4293547b41d8",
+    "prId" : 31619,
+    "prUrl" : "https://github.com/apache/spark/pull/31619#pullrequestreview-603641018",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "54c146c5-00e2-4b5f-899e-ded192dd5eb0",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "`NoSuchNamespaceException` is generated during execute and should be placed in `QueryExecutionErrors`.",
+        "createdAt" : "2021-02-25T10:12:53Z",
+        "updatedAt" : "2021-03-18T17:50:37Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "370ebe5d-2474-48cc-ac99-4a6c89cfed6e",
+        "parentId" : "54c146c5-00e2-4b5f-899e-ded192dd5eb0",
+        "authorId" : "ada71464-b8c9-4d7b-9020-d49c27251fdb",
+        "body" : "As I mentioned in the separate comment, I grouped these into `QueryCompilationErrors` as they are a type of `AnalysisException`. Can you clarify?",
+        "createdAt" : "2021-03-02T17:37:08Z",
+        "updatedAt" : "2021-03-18T17:50:37Z",
+        "lastEditedBy" : "ada71464-b8c9-4d7b-9020-d49c27251fdb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8802b87e-b044-457e-b416-d9d5ad6ab5ac",
+        "parentId" : "54c146c5-00e2-4b5f-899e-ded192dd5eb0",
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "You could look the description of root ticket.",
+        "createdAt" : "2021-03-03T02:07:07Z",
+        "updatedAt" : "2021-03-18T17:50:37Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fa73752a-c364-427e-a1e9-8b86213e5635",
+        "parentId" : "54c146c5-00e2-4b5f-899e-ded192dd5eb0",
+        "authorId" : "ada71464-b8c9-4d7b-9020-d49c27251fdb",
+        "body" : "If I read the [root ticket](https://issues.apache.org/jira/browse/SPARK-33539) correctly, all `AnalysisException`s should end up in `QueryCompilationErrors`:\r\n\r\n```\r\nA general rule of thumb for grouping exceptions:\r\n\r\nAnalysisException => QueryCompilationErrors\r\nSparkException, RuntimeException(UnsupportedOperationException, IllegalStateException...) => QueryExecutionErrors\r\nParseException => QueryParsingErrors\r\n```\r\n\r\nDo you believe this rule of thumb does not apply here?",
+        "createdAt" : "2021-03-03T02:10:14Z",
+        "updatedAt" : "2021-03-18T17:50:37Z",
+        "lastEditedBy" : "ada71464-b8c9-4d7b-9020-d49c27251fdb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7364bf5a-6cd7-46cf-98f4-99c753f4d6d0",
+        "parentId" : "54c146c5-00e2-4b5f-899e-ded192dd5eb0",
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "Yeah. But `NoSuchNamespaceException` occurs in execution stage. Although it extends `AnalysisException`.\r\ncc @cloud-fan How about your suggestion?",
+        "createdAt" : "2021-03-03T02:48:42Z",
+        "updatedAt" : "2021-03-18T17:50:37Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9be66b5f-81c4-4c02-937e-830ddb751f9d",
+        "parentId" : "54c146c5-00e2-4b5f-899e-ded192dd5eb0",
+        "authorId" : "b3ba992a-312c-46eb-b3c3-8d861d15ac40",
+        "body" : "Typically for exceptions that occur in the execution stage, i.e `SparkPlan.execute`, we want to treat these exceptions as query execution errors. But for commands, since they are executed eagerly, users can immediately see the errors after submitting the commands. It makes more sense to group them as query compilation errors. What do you think @beliefer ",
+        "createdAt" : "2021-03-03T22:56:54Z",
+        "updatedAt" : "2021-03-18T17:50:37Z",
+        "lastEditedBy" : "b3ba992a-312c-46eb-b3c3-8d861d15ac40",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d704a949-a56a-4788-bd32-939796189c08",
+        "parentId" : "54c146c5-00e2-4b5f-899e-ded192dd5eb0",
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "I got it. Thanks!",
+        "createdAt" : "2021-03-04T02:15:43Z",
+        "updatedAt" : "2021-03-18T17:50:37Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d7a0f06a563af83c0166cef736541cdfd6105324",
+    "line" : 30,
+    "diffHunk" : "@@ -1,1 +51,55 @@      }\n    } else if (!ifExists) {\n      throw QueryCompilationErrors.noSuchNamespaceError(ns)\n    }\n"
+  }
+]

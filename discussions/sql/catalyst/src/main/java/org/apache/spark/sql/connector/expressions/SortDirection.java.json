@@ -1,0 +1,123 @@
+[
+  {
+    "id" : "13b73795-fd13-4e5b-84ee-e7e7939b1d61",
+    "prId" : 31580,
+    "prUrl" : "https://github.com/apache/spark/pull/31580#pullrequestreview-592705802",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7b29c274-29b2-488a-a39e-6b8c0d486b1b",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "~~This is confusing me as someone could specify the null ordering explicitly but in reality we don't leverage the default null ordering in any way. (Otherwise we should have the relevant code to leverage that.)~~",
+        "createdAt" : "2021-02-17T23:00:28Z",
+        "updatedAt" : "2021-03-10T23:58:38Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1c94666f-beb8-41b0-b705-f70f0ec8e9da",
+        "parentId" : "7b29c274-29b2-488a-a39e-6b8c0d486b1b",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Never mind. The doc is correct.",
+        "createdAt" : "2021-02-17T23:06:39Z",
+        "updatedAt" : "2021-03-10T23:58:38Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9bff6851b6e905985560fd06460059de6c96b05b",
+    "line" : 10,
+    "diffHunk" : "@@ -1,1 +26,30 @@ * A sort direction used in sorting expressions.\n * <p>\n * Each direction has a default null ordering that is implied if no null ordering is specified\n * explicitly.\n *"
+  },
+  {
+    "id" : "70d485a1-8b8a-4d7f-89bc-9b161b7d8dd3",
+    "prId" : 31580,
+    "prUrl" : "https://github.com/apache/spark/pull/31580#pullrequestreview-602751915",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e08c7d89-9e2a-40b5-aaaa-b754704306d1",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "This makes sense, because the catalyst `SortDirection` also has a default null ordering.\r\n\r\nShall we further follow catalyst and add an overload of `Expressions.sort` which doesn't take `NullOrdering` and infer null ordering from `SortDirection`?",
+        "createdAt" : "2021-02-19T13:50:47Z",
+        "updatedAt" : "2021-03-10T23:58:38Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0cf4c4d9-79e7-4b19-a8df-980a403b92bf",
+        "parentId" : "e08c7d89-9e2a-40b5-aaaa-b754704306d1",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Just 2 cents, I'd feel more natural to change the null ordering \"optional\" in SortOrder. It'd be more intuitive on the behavior we want, \"if null ordering is not presented, default null ordering of SortDirection is taken\", given the fact we now add default null ordering to SortDirection. Callers of SortOrder has to resolve the null ordering but then we no longer delegate the implementations to do that instead.\r\n\r\nEach implementation can still simply call the method to get the default null ordering and provide it so no strong voice. Just would like to think out loud what'd be the clearer.",
+        "createdAt" : "2021-02-20T03:09:08Z",
+        "updatedAt" : "2021-03-10T23:58:38Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fae6f608-4e1c-4ae7-bbe7-caaa490b4d2e",
+        "parentId" : "e08c7d89-9e2a-40b5-aaaa-b754704306d1",
+        "authorId" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "body" : "If we decide to introduce this, I think it makes sense to leverage it in `Expressions$sort` as @cloud-fan said. That's a good use case.\r\n\r\n@HeartSaVioR, could you give an example, please? I am not sure I fully got it. Do you mean to make `nullOrdering` in `SortOrder` optional instead of exposing a default null ordering in `SortDirection`? If so, I usually prefer to use the simplest types in the API. Using `Optional` will make the API harder to use, in my view. In addition, we probably want to handle `SortDirection` in the same way as it is also optional. Not a strong opinion, though.",
+        "createdAt" : "2021-03-02T04:33:56Z",
+        "updatedAt" : "2021-03-10T23:58:38Z",
+        "lastEditedBy" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "54907d2f-d195-4552-be2f-5c743ccc32ea",
+        "parentId" : "e08c7d89-9e2a-40b5-aaaa-b754704306d1",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "So the current implementation of SortOrder is following:\r\n\r\n```\r\n/**\r\n * Represents a sort order in the public expression API.\r\n *\r\n * @since 3.2.0\r\n */\r\n@Experimental\r\npublic interface SortOrder extends Expression {\r\n  /**\r\n   * Returns the sort expression.\r\n   */\r\n  Expression expression();\r\n\r\n  /**\r\n   * Returns the sort direction.\r\n   */\r\n  SortDirection direction();\r\n\r\n  /**\r\n   * Returns the null ordering.\r\n   */\r\n  NullOrdering nullOrdering();\r\n}\r\n```\r\n\r\nwhich we force to implement `nullOrdering()` which destroys the purpose of having default null ordering in SortDirection.\r\n\r\nGiven SortDirection will have default null ordering, we can provide \"default implementation\" of `nullOrdering()` which would be simply `return direction().defaultNullOrdering();` and add some explanation to javadoc to override this method if they don't want to follow the default null ordering of SortDirection.\r\n\r\n(I actually thought about Optional or null-like, and I found by myself not prefer it. Given we're able to leverage default method in interface, I don't see the reason not to use it.)",
+        "createdAt" : "2021-03-02T05:15:47Z",
+        "updatedAt" : "2021-03-10T23:58:38Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f6f88e0a-d551-4c90-bc0c-b2472ff1865f",
+        "parentId" : "e08c7d89-9e2a-40b5-aaaa-b754704306d1",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "As I said as \"2 cents\", no strong opinion on this (implementors just need to add the line by themselves, which doesn't seem to be critical) and I'll leave the decision to you.",
+        "createdAt" : "2021-03-02T05:24:19Z",
+        "updatedAt" : "2021-03-10T23:58:38Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "81de7399-5778-45a8-bd55-7750837cafe0",
+        "parentId" : "e08c7d89-9e2a-40b5-aaaa-b754704306d1",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "@HeartSaVioR `SortOrder` is not an API we ask users to implement. The users should call `Expressions.sort` to create an instance of `SortOrder`.\r\n\r\nThat's why I suggested adding an overload of `Expressions.sort`, as that makes null ordering optional to the users.",
+        "createdAt" : "2021-03-02T15:26:16Z",
+        "updatedAt" : "2021-03-10T23:58:38Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fa003714-b440-4035-9dbb-66807aa9d177",
+        "parentId" : "e08c7d89-9e2a-40b5-aaaa-b754704306d1",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Ah OK. I was misunderstood about the usage on SortOrder. If the users (I assume this includes data source implementation) are discouraged to implement this, no problem at all and please disregard my comments.\r\n\r\nI understand the catalyst module is considered as private API, but given connector package is now playing as public API (at least some of APIs are public API data source implementations should leverage), it'd be nice if we could explicitly separate the public vs private APIs.",
+        "createdAt" : "2021-03-03T10:41:55Z",
+        "updatedAt" : "2021-03-10T23:58:38Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9bff6851b6e905985560fd06460059de6c96b05b",
+    "line" : 29,
+    "diffHunk" : "@@ -1,1 +44,48 @@   * Returns the default null ordering to use if no null ordering is specified explicitly.\n   */\n  public NullOrdering defaultNullOrdering() {\n    return defaultNullOrdering;\n  }"
+  }
+]

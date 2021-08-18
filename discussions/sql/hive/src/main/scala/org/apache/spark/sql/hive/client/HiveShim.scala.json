@@ -97,5 +97,148 @@
     "commit" : "88697a43ba63963a1951f8d99a697fab4ca5692f",
     "line" : 28,
     "diffHunk" : "@@ -1,1 +1327,1331 @@  // To mitigate here we use `Hive.getWithFastCheck` instead which skips loading the permanent\n  // functions and therefore avoids calling `get_all_functions`.\n  override def getHive(hiveConf: HiveConf): Hive = Hive.getWithFastCheck(hiveConf, false)\n}\n"
+  },
+  {
+    "id" : "99c33a6e-3a6e-49ce-ab14-bfa136f70d19",
+    "prId" : 31646,
+    "prUrl" : "https://github.com/apache/spark/pull/31646#pullrequestreview-598610124",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0d67a3bb-e2ce-45f1-8cc9-9b050d6448ec",
+        "parentId" : null,
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "More than 10,000 values will cause the Hive Metastore stack overflow.",
+        "createdAt" : "2021-02-25T13:14:00Z",
+        "updatedAt" : "2021-03-11T09:21:56Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "84a364e4-f3a6-4411-9432-d3713673b4d2",
+        "parentId" : "0d67a3bb-e2ce-45f1-8cc9-9b050d6448ec",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "How about stoping push it If it's values size exceeds the threshold ? In this case it can not be covert like `>= and <=`.",
+        "createdAt" : "2021-02-25T14:17:40Z",
+        "updatedAt" : "2021-03-11T09:21:56Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "17aea47f717827f42a12fccc7e5901403f69b323",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +750,754 @@\n    def convertNotInToAnd(name: String, values: Seq[String]): String = {\n      values.map(value => s\"$name != $value\").mkString(\"(\", \" and \", \")\")\n    }\n"
+  },
+  {
+    "id" : "2f0750ce-3704-4409-bfae-1b3a2f5e5af0",
+    "prId" : 31646,
+    "prUrl" : "https://github.com/apache/spark/pull/31646#pullrequestreview-608251491",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "45f2a0b6-a94b-49c8-8a35-81b63d36cdbe",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "`Not(a IN (null, 2))`: if a = 1, the final result is null.\r\n`a != 2`: if a = 1, the final result is true\r\n\r\nI think this rewrite is incorrect. We need to make sure the values of IN are all not null.\r\n\r\n",
+        "createdAt" : "2021-03-09T14:57:32Z",
+        "updatedAt" : "2021-03-11T09:21:56Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "acaefbe2-b68e-416d-977a-ea2f732fe272",
+        "parentId" : "45f2a0b6-a94b-49c8-8a35-81b63d36cdbe",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "My bad, missed this. For `Not(InSet)` case, null value can not be skip safely, it should convert to `and(xx != null)`.",
+        "createdAt" : "2021-03-10T01:19:08Z",
+        "updatedAt" : "2021-03-11T12:36:23Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "17aea47f717827f42a12fccc7e5901403f69b323",
+    "line" : 30,
+    "diffHunk" : "@@ -1,1 +783,787 @@        Some(convertInToOr(name, values))\n\n      case Not(In(ExtractAttribute(SupportedAttribute(name)), ExtractableLiterals(values)))\n        if useAdvanced =>\n        Some(convertNotInToAnd(name, values))"
+  },
+  {
+    "id" : "69da6e49-7516-4dc0-8fd1-55d6a48cf501",
+    "prId" : 31632,
+    "prUrl" : "https://github.com/apache/spark/pull/31632#pullrequestreview-597138868",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "270cd48f-26ba-4f57-be5d-8d7285db44d4",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Will this change the result of `InSet` which contains null?",
+        "createdAt" : "2021-02-24T07:07:40Z",
+        "updatedAt" : "2021-02-24T07:17:21Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "adaee6e6-adc2-48b7-ab1c-e4d3848dddb9",
+        "parentId" : "270cd48f-26ba-4f57-be5d-8d7285db44d4",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "same question here. The null sematic of IN is pretty tricky.",
+        "createdAt" : "2021-02-24T07:12:27Z",
+        "updatedAt" : "2021-02-24T07:17:21Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8d525c4e-0f5f-4b77-b318-75ac8cb5ea5d",
+        "parentId" : "270cd48f-26ba-4f57-be5d-8d7285db44d4",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "It's safe, since `In` has already do this.\r\nhttps://github.com/apache/spark/blob/714ff73d4aec317fddf32720d5a7a1c283921983/sql/hive/src/main/scala/org/apache/spark/sql/hive/client/HiveShim.scala#L666-L684",
+        "createdAt" : "2021-02-24T07:14:48Z",
+        "updatedAt" : "2021-02-24T07:17:21Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "38f798c13414de9b0270caebfaf9c8781698246a",
+    "line" : 7,
+    "diffHunk" : "@@ -1,1 +772,776 @@        // Skip null here is safe, more details could see at ExtractableLiterals.\n        val sortedValues = values.filter(_ != null).toSeq\n          .sorted(TypeUtils.getInterpretedOrdering(dataType))\n        convert(And(GreaterThanOrEqual(child, Literal(sortedValues.head, dataType)),\n          LessThanOrEqual(child, Literal(sortedValues.last, dataType))))"
+  },
+  {
+    "id" : "621aaac2-6871-4f12-808c-1ece9e7fbea0",
+    "prId" : 31632,
+    "prUrl" : "https://github.com/apache/spark/pull/31632#pullrequestreview-597139133",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0209550a-3e97-4d2d-a29c-be8b93e82ab8",
+        "parentId" : null,
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "Shall we add a similar comment for why this is safe, similar to `IN` - https://github.com/apache/spark/pull/21832 ?",
+        "createdAt" : "2021-02-24T07:14:31Z",
+        "updatedAt" : "2021-02-24T07:17:21Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a138f041-cbdf-4622-a45a-7982e5f617b4",
+        "parentId" : "0209550a-3e97-4d2d-a29c-be8b93e82ab8",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "looks better",
+        "createdAt" : "2021-02-24T07:15:17Z",
+        "updatedAt" : "2021-02-24T07:17:21Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "38f798c13414de9b0270caebfaf9c8781698246a",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +771,775 @@        val dataType = child.dataType\n        // Skip null here is safe, more details could see at ExtractableLiterals.\n        val sortedValues = values.filter(_ != null).toSeq\n          .sorted(TypeUtils.getInterpretedOrdering(dataType))\n        convert(And(GreaterThanOrEqual(child, Literal(sortedValues.head, dataType)),"
   }
 ]

@@ -1,0 +1,112 @@
+[
+  {
+    "id" : "10c55a24-a0b0-4612-9573-d6b3853a6836",
+    "prId" : 31588,
+    "prUrl" : "https://github.com/apache/spark/pull/31588#pullrequestreview-615356120",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "04d7cfa8-ee65-405e-a8ee-5f631c31fbfe",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Hm, I'm still not sure about this. Why make the caller do it and potentially get it wrong? just 'remember' internally whether it is sorted. That would optimize all calls to slice.",
+        "createdAt" : "2021-02-20T13:33:29Z",
+        "updatedAt" : "2021-03-19T05:48:49Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a0710065-125f-4fe8-9950-97d6d75a0712",
+        "parentId" : "04d7cfa8-ee65-405e-a8ee-5f631c31fbfe",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "> just 'remember' internally whether it is sorted.\r\n\r\nI am not sure, but if we want to make it 'remember' internally whether it is sorted, I guess we need to add a new class `VectorSlicer(val indices: Array[Int]) { def slice(vec: Vector): Vector }`\r\n\r\nCurrently, `slice` is just a method of `SparseVector`, we may not make each `SparseVector` remember this sortedness?",
+        "createdAt" : "2021-02-25T03:31:58Z",
+        "updatedAt" : "2021-03-19T05:48:49Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "631559dd-d8e3-4ebc-8128-518ac689d659",
+        "parentId" : "04d7cfa8-ee65-405e-a8ee-5f631c31fbfe",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "That would be the drawback, yeah, another boolean and a check every time one is created. The upside is all calls to slice are potentially optimized, and maybe, that sortedness can be used elsewhere? ",
+        "createdAt" : "2021-02-25T14:47:06Z",
+        "updatedAt" : "2021-03-19T05:48:49Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1c166480-9d0d-4a32-a10a-bd4ed1535f36",
+        "parentId" : "04d7cfa8-ee65-405e-a8ee-5f631c31fbfe",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "If we create an additional class (VectorSlicer) for this, I guess we can not use it elsewhere. Since this slicing indices can not be a member of vector.",
+        "createdAt" : "2021-03-01T08:26:55Z",
+        "updatedAt" : "2021-03-19T05:48:49Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "825957eb-bf7a-400c-8d6a-172beb3b9332",
+        "parentId" : "04d7cfa8-ee65-405e-a8ee-5f631c31fbfe",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Not quite sure what you're proposing; I just have a moderately strong preference for not putting this logic in N callers if possible. OK, factoring it out to a utility class is a little better. Is the runtime check for sortedness just too expensive and/or not reusable in other functions?",
+        "createdAt" : "2021-03-01T13:35:59Z",
+        "updatedAt" : "2021-03-19T05:48:49Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8fc65689-8842-4138-9e2c-ffd3f9b32255",
+        "parentId" : "04d7cfa8-ee65-405e-a8ee-5f631c31fbfe",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "> I just have a moderately strong preference for not putting this logic in N callers if possible.\r\n\r\nI am not sure how to impl it.\r\n\r\n> Is the runtime check for sortedness just too expensive and/or not reusable in other functions?\r\n\r\nChecking for sortedness maybe O(n), mayebe too expensive. The sortedness is only used in slicing for now.",
+        "createdAt" : "2021-03-02T10:23:07Z",
+        "updatedAt" : "2021-03-19T05:48:49Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "576c80f6-99ce-4a49-a090-c0181ae1a873",
+        "parentId" : "04d7cfa8-ee65-405e-a8ee-5f631c31fbfe",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "OK I trust your judgment. Let's refactor it if possible to make it simple for a caller and keep it private to Spark if possible.",
+        "createdAt" : "2021-03-02T12:13:59Z",
+        "updatedAt" : "2021-03-19T05:48:49Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fb21e284-5c3a-4839-b7cd-7a4a59fb5481",
+        "parentId" : "04d7cfa8-ee65-405e-a8ee-5f631c31fbfe",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "Yes. I think current impl maybe simple enough, and it is already private to spark now.",
+        "createdAt" : "2021-03-15T01:46:00Z",
+        "updatedAt" : "2021-03-19T05:48:49Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6910b972-9083-4b64-9908-9d2b890b2c44",
+        "parentId" : "04d7cfa8-ee65-405e-a8ee-5f631c31fbfe",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Go ahead and merge as you see fit.",
+        "createdAt" : "2021-03-18T13:02:07Z",
+        "updatedAt" : "2021-03-19T05:48:49Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d974d28b863c79d6efa3204f7b997ef16a978642",
+    "line" : 17,
+    "diffHunk" : "@@ -1,1 +118,122 @@    }\n\n    val sorted = selectedIndices.length > 1 && selectedIndices.sliding(2).forall(t => t(1) > t(0))\n    val slicer = udf { vec: Vector =>\n      vec match {"
+  }
+]

@@ -207,5 +207,137 @@
     "commit" : "5762ddc83e96b640ffdd4125c182646bf9fb03ff",
     "line" : 142,
     "diffHunk" : "@@ -1,1 +799,803 @@    checkAnswer(unionDf,\n      Row(Row(null, Row(null, \"ba\"))) ::\n      Row(Row(Row(\"aa\"), Row(\"bb\", null))) :: Nil)\n  }\n"
+  },
+  {
+    "id" : "e79ee4d8-2296-4bed-8179-174e34aa766c",
+    "prId" : 31595,
+    "prUrl" : "https://github.com/apache/spark/pull/31595#pullrequestreview-596623779",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a27bea6f-f036-45f9-9f0a-3d53c6f223ea",
+        "parentId" : null,
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "After checking the optimized logical plan of this query, I found the `collect` in `RemoveNoopUnion` relies on the fact that the query has one extra unnecessary `Project` on one child:\r\n\r\n```\r\nDistinct\r\n+- Union false, false\r\n   :- Project [key#3, (key#3 + 1) AS expr#143]\r\n   :  +- SerializeFromObject [knownnotnull(assertnotnull(input[0, org.apache.spark.sql.test.SQLTestData$TestData, true])).key AS key#3, staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType, fromString, knownnotnull(assertnotnull(input[0, org.apache.spark.sql.test.SQLTestData$TestData, true])).value, true, false) AS value#4]\r\n   :     +- ExternalRDD [obj#2]\r\n   +- Project [key#3 AS key#145, expr#144 AS expr#146]. <<-- this one\r\n      +- Project [key#3, (key#3 + 2) AS expr#144]\r\n         +- SerializeFromObject [knownnotnull(assertnotnull(input[0, org.apache.spark.sql.test.SQLTestData$TestData, true])).key AS key#3, staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType, fromString, knownnotnull(assertnotnull(input[0, org.apache.spark.sql.test.SQLTestData$TestData, true])).value, true, false) AS value#4]\r\n            +- ExternalRDD [obj#2]\r\n```\r\n\r\nSo the rules works because there's one unnecessary `Project` existed before the rule. And later on this `Project` is removed by `CollapseProject`. If this `Project` does not exist, the correctness of the `RemoveNoopUnion` rule cannot be guaranteed.\r\n\r\nI feel this is dangerous and may lead to wrong query plan later. But I am also fine that we guard this with a unit test here.\r\n\r\nbtw, because of the unnecessary `Project` in the middle, this query cannot be optimized by the rule:\r\n\r\n```\r\nselect distinct key, expr\r\nfrom\r\n(\r\n  select key, key as expr\r\n  from testData\r\n  union all\r\n  select key, key as expr\r\n  from testData\r\n)\r\n```",
+        "createdAt" : "2021-02-23T07:50:12Z",
+        "updatedAt" : "2021-02-25T04:01:53Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "38a2bd1c-9ffb-49d7-9873-388662cc1dc9",
+        "parentId" : "a27bea6f-f036-45f9-9f0a-3d53c6f223ea",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "You can verify it by excluding also `CollapseProject`. It doesn't affect the rule.",
+        "createdAt" : "2021-02-23T08:27:11Z",
+        "updatedAt" : "2021-02-25T04:01:53Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e84e2841-f13d-439c-a010-b0a6b85ac21c",
+        "parentId" : "a27bea6f-f036-45f9-9f0a-3d53c6f223ea",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@viirya - I am not saying without `CollapseProject` this rule is wrong. You put the rule before `CollapseProject`, so it is not affected by that anyway. I am saying the rule depends on the unnecessary `Project` implicitly, and rule can go wrong / sub-optimal. E.g., above query cannot be optimized by the rule.",
+        "createdAt" : "2021-02-23T08:33:51Z",
+        "updatedAt" : "2021-02-25T04:01:53Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f4d9ca7e-5d0f-4d0a-9862-834c88f8f992",
+        "parentId" : "a27bea6f-f036-45f9-9f0a-3d53c6f223ea",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Manually put `CollapseProject` ahead of this rule and the project is removed, but I don't see it is affected too and the query plan looks correct. Can you check it again?",
+        "createdAt" : "2021-02-23T08:50:02Z",
+        "updatedAt" : "2021-02-25T04:01:53Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0156902b-27e3-499d-808d-9c8da9f7319a",
+        "parentId" : "a27bea6f-f036-45f9-9f0a-3d53c6f223ea",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@viirya - I am not sure if we are in the same page now. This is a counter-example to produce wrong query plan if we have `CollapseProject` ahead of the rule - https://github.com/apache/spark/compare/80b03dd64e317...c21:remove-union .",
+        "createdAt" : "2021-02-23T09:26:05Z",
+        "updatedAt" : "2021-02-25T04:01:53Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6436a1d0-1bc3-4c1c-9957-2b64935477e9",
+        "parentId" : "a27bea6f-f036-45f9-9f0a-3d53c6f223ea",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "I posted the query plan with/without this rule for the query from the diff in the above link. I don't see the query plan is different. I'm not sure which query plan is wrong?\r\n\r\n```\r\nsql(\r\n  \"\"\"\r\n     |select key, key + 2 as expr\r\n     |from testData4\r\n     |\"\"\".stripMargin)\r\n```\r\n\r\n```\r\n== Physical Plan ==                                                                                                                                                                                                                    \r\n*(1) Project [key#2641, (key#2641 + 2) AS expr#2645]                                                               \r\n+- *(1) SerializeFromObject [knownnotnull(assertnotnull(input[0, org.apache.spark.sql.test.SQLTestData$TestData4, true])).key AS key#2641]                                                                                             \r\n   +- Scan[obj#2640]    \r\n```\r\n\r\n```\r\n== Physical Plan ==\r\n*(1) Project [key#2732, (key#2732 + 2) AS expr#2736]\r\n+- *(1) SerializeFromObject [knownnotnull(assertnotnull(input[0, org.apache.spark.sql.test.SQLTestData$TestData4, true])).key AS key#2732]\r\n   +- Scan[obj#2731]\r\n```",
+        "createdAt" : "2021-02-23T10:15:19Z",
+        "updatedAt" : "2021-02-25T04:01:53Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "263bc07b-6830-4d02-997b-9b89f03b6d30",
+        "parentId" : "a27bea6f-f036-45f9-9f0a-3d53c6f223ea",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@viirya - in https://github.com/apache/spark/compare/80b03dd64e317...c21:remove-union,  I am testing this query:\r\n\r\n```\r\nselect distinct key, expr\r\nfrom\r\n(\r\n  select key, key + 1 as expr\r\n  from testData\r\n  union all\r\n  select key, key + 2 as expr\r\n  from testData\r\n)\r\n```\r\n\r\nOptimized logical plan with the rule:\r\n\r\n```\r\n== Optimized Logical Plan ==\r\nAggregate [key#14, expr#18], [key#14, expr#18]\r\n+- Project [key#14, (key#14 + 1) AS expr#18]\r\n   +- SerializeFromObject [knownnotnull(assertnotnull(input[0, org.apache.spark.sql.test.SQLTestData$TestData4, true])).key AS key#14]\r\n      +- ExternalRDD [obj#13]\r\n```\r\n\r\nOptimized logical plan without the rule:\r\n\r\n```\r\n== Optimized Logical Plan ==\r\nAggregate [key#2, expr#6], [key#2, expr#6]\r\n+- Union false, false\r\n   :- Project [key#2, (key#2 + 1) AS expr#6]\r\n   :  +- SerializeFromObject [knownnotnull(assertnotnull(input[0, org.apache.spark.sql.test.SQLTestData$TestData4, true])).key AS key#2]\r\n   :     +- ExternalRDD [obj#1]\r\n   +- Project [key#2, (key#2 + 2) AS expr#9]\r\n      +- SerializeFromObject [knownnotnull(assertnotnull(input[0, org.apache.spark.sql.test.SQLTestData$TestData4, true])).key AS key#2]\r\n         +- ExternalRDD [obj#1]\r\n```",
+        "createdAt" : "2021-02-23T17:10:29Z",
+        "updatedAt" : "2021-02-25T04:01:53Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9278b01a-aff2-47bd-8464-95bb63803e2b",
+        "parentId" : "a27bea6f-f036-45f9-9f0a-3d53c6f223ea",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Oh, thanks. I think it is clear now. Let me fix it.",
+        "createdAt" : "2021-02-23T17:55:07Z",
+        "updatedAt" : "2021-02-25T04:01:53Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b5d704112549310e2592aad21bd8308386ff0cf8",
+    "line" : 231,
+    "diffHunk" : "@@ -1,1 +843,847 @@            |  select key, key + 2 as expr\n            |  from testData\n            |)\n            |\"\"\".stripMargin)\n        val expected = sql("
+  },
+  {
+    "id" : "408ffb2b-47f2-4bea-9c70-d0908ae635da",
+    "prId" : 31595,
+    "prUrl" : "https://github.com/apache/spark/pull/31595#pullrequestreview-596689436",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "685adc7b-a4bf-4a12-a720-89ee43570cc4",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "what happens to this test if we don't disable the new rule?",
+        "createdAt" : "2021-02-23T12:58:07Z",
+        "updatedAt" : "2021-02-25T04:01:53Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1cb59319-79b2-405f-b16b-73091874b99b",
+        "parentId" : "685adc7b-a4bf-4a12-a720-89ee43570cc4",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "The test checks a Union with certain children. But the new rule will remove unnecessary Union.\r\n\r\nSo the check\r\n\r\n```\r\n// After optimizer, four 'union.deduplicate' operations should be assert(unionDF.queryExecution.optimizedPlan.collect {\r\n  case u: Union if u.children.size == 5 => u\r\n}.size === 1)\r\n```\r\n\r\nwill fail.",
+        "createdAt" : "2021-02-23T18:54:54Z",
+        "updatedAt" : "2021-02-25T04:01:53Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b5d704112549310e2592aad21bd8308386ff0cf8",
+    "line" : 29,
+    "diffHunk" : "@@ -1,1 +389,393 @@  test(\"SPARK-34283: SQL-style union using Dataset, \" +\n    \"remove unnecessary deduplicate in multiple unions\") {\n    withSQLConf(SQLConf.OPTIMIZER_EXCLUDED_RULES.key -> RemoveNoopUnion.ruleName) {\n      val unionDF = testData.union(testData).distinct().union(testData).distinct()\n        .union(testData).distinct().union(testData).distinct()"
   }
 ]

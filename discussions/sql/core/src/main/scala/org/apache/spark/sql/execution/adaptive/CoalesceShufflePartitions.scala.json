@@ -31,5 +31,38 @@
     "commit" : "9e395ac0b271470ee0f362064ed65f7cbea193bb",
     "line" : 27,
     "diffHunk" : "@@ -1,1 +69,73 @@      // `ShuffleQueryStageExec#mapStats` returns None when the input RDD has 0 partitions,\n      // we should skip it when calculating the `partitionStartIndices`.\n      // If all input RDDs have 0 partition, we create empty partition for every shuffle reader.\n      val validMetrics = shuffleStages.flatMap(_.mapStats)\n"
+  },
+  {
+    "id" : "884fc4df-83da-46a0-b3e7-7ee854231018",
+    "prId" : 31653,
+    "prUrl" : "https://github.com/apache/spark/pull/31653#pullrequestreview-624549346",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9576a574-8fa4-4ec7-8e16-6c9e96faf595",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I agree with this comment, but then where shall we coalesce the partitions?",
+        "createdAt" : "2021-03-29T16:39:03Z",
+        "updatedAt" : "2021-03-29T17:14:45Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9c8a5cc6-8441-470f-bc3b-dbd1865d78fa",
+        "parentId" : "9576a574-8fa4-4ec7-8e16-6c9e96faf595",
+        "authorId" : "9acf210d-4935-4e03-8384-d944eb558b45",
+        "body" : "I don't understand this comment.  `CoalesceShufflePartitons` runs the same place as before.  The difference is that before it bailed out if `SparkPlan` it was processing already had `CustomShuffleReaderExec` nodes in it.  It cannot do so any more since `OptimizeSkewedJoin` now runs before coalesce and may insert `CustomShuffleReaderExec`.   \r\nSo I had to add `CoalesceShufflePartitions.newPartitionSpec` to make coalesce run after skew mitigation.",
+        "createdAt" : "2021-03-30T17:53:51Z",
+        "updatedAt" : "2021-03-30T17:53:51Z",
+        "lastEditedBy" : "9acf210d-4935-4e03-8384-d944eb558b45",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7cfda59a1e9a8e0f86e2e6424c21639c1b5b14e3",
+    "line" : 21,
+    "diffHunk" : "@@ -1,1 +40,44 @@    /* This is running before new QueryStageExec creation so either all leaves are\n     QueryStageExec nodes or all leaves are CustomShuffleReaderExec if OptimizeSkewJoin\n     mitigated something in the new stage. */\n    if (!plan.collectLeaves().forall(_.isInstanceOf[QueryStageExec])) {\n      // If not all leaf nodes are query stages, it's not safe to reduce the number of"
   }
 ]
