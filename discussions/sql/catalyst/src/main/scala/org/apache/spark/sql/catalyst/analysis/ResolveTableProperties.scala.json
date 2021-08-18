@@ -1,0 +1,178 @@
+[
+  {
+    "id" : "1ab294ad-9a1d-44e4-9f0e-b5df85fa75fd",
+    "prId" : 31494,
+    "prUrl" : "https://github.com/apache/spark/pull/31494#pullrequestreview-585823108",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6db4391a-f752-4135-b90a-30c320759d5f",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Can we turn it into `NoopCommand` if possible?",
+        "createdAt" : "2021-02-08T18:57:51Z",
+        "updatedAt" : "2021-02-11T04:01:39Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "09750d31-84f2-4798-a06e-9f2224fea9ab",
+        "parentId" : "6db4391a-f752-4135-b90a-30c320759d5f",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "nvm, it's possible that someone else adds the table property before this command gets actually executed. It's safer to always execute this command.",
+        "createdAt" : "2021-02-08T18:59:13Z",
+        "updatedAt" : "2021-02-11T04:01:39Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5438c551ac48f676988ddf6873c2533f77eb3c5f",
+    "line" : 33,
+    "diffHunk" : "@@ -1,1 +31,35 @@object ResolveTableProperties extends Rule[LogicalPlan] {\n  def apply(plan: LogicalPlan): LogicalPlan = plan.resolveOperatorsUp {\n    case a @ AlterTableUnsetProperties(r: ResolvedTable, props, ifExists) if !ifExists =>\n      val tblProperties = r.table.properties.asScala\n      props.foreach { p =>"
+  },
+  {
+    "id" : "b607ded9-3f12-4bb7-8c43-f94f4a8f782f",
+    "prId" : 31494,
+    "prUrl" : "https://github.com/apache/spark/pull/31494#pullrequestreview-585822126",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "59588dc7-31d3-45ab-a89b-e92e3673868c",
+        "parentId" : null,
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "Note that we cannot remove the logic in https://github.com/apache/spark/blob/e614f34c7a538b1f2c59616689eaea95af85fd54/sql/core/src/main/scala/org/apache/spark/sql/execution/command/ddl.scala#L307-L311 because `ALTER VIEW` still needs it.",
+        "createdAt" : "2021-02-08T18:58:03Z",
+        "updatedAt" : "2021-02-11T04:01:39Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5438c551ac48f676988ddf6873c2533f77eb3c5f",
+    "line" : 38,
+    "diffHunk" : "@@ -1,1 +36,40 @@        if (!tblProperties.contains(p) && p != TableCatalog.PROP_COMMENT) {\n          throw new AnalysisException(\n            s\"Attempted to unset non-existent property '$p' in table '${r.identifier.quoted}'\")\n        }\n      }"
+  },
+  {
+    "id" : "0814045d-e9b3-4f07-a2e7-d162c5aa3194",
+    "prId" : 31494,
+    "prUrl" : "https://github.com/apache/spark/pull/31494#pullrequestreview-597003757",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "cdd26bd5-ecf6-438b-846d-d9434144928e",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Just found a problem here: removing table property may be case insensitive (depends on the v2 table implementation), so the code here may break existing queries unexpectedly.\r\n\r\nI think the right approach is to change the v2 API and pass the `ifExists` flag to the v2 implementations. However, I feel like the current v2 behavior is OK (do not fail even if the property doesn't exist). So another idea is to change the v1 behavior instead, and ignore the `ifExists` flag and always do not fail.\r\n\r\n@imback82 @rdblue what do you think?",
+        "createdAt" : "2021-02-23T15:09:33Z",
+        "updatedAt" : "2021-02-23T15:09:34Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "37837406-fdbd-4ac2-8bf9-e3577455dd45",
+        "parentId" : "cdd26bd5-ecf6-438b-846d-d9434144928e",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "Good catch. I don't have a strong opinion here; both approaches sound reasonable to me, each with pros/cons.",
+        "createdAt" : "2021-02-23T18:32:44Z",
+        "updatedAt" : "2021-02-23T18:32:45Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "caef131b-497a-4b44-8029-8ccc1d933588",
+        "parentId" : "cdd26bd5-ecf6-438b-846d-d9434144928e",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Let me revert this commit first. We can start with the \"change v1 to match v2\" idea, as it's less breaking (some failed commands become noop).",
+        "createdAt" : "2021-02-23T18:35:34Z",
+        "updatedAt" : "2021-02-23T18:35:34Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "537d9d14-f0e5-487e-8795-0aca083b6834",
+        "parentId" : "cdd26bd5-ecf6-438b-846d-d9434144928e",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "If we want to go with a less breaking change, isn't updating V2 API a better option (you can check the change [here](https://github.com/apache/spark/pull/31494/commits/0065170f24a2ff00cfee920e8fd31b0574f55ac7#diff-ca6d2813b4735973d1fb343a7b19271074915ce44590445899a3e2ea88ae744eR78)) since we are just adding a new API?\r\n\r\nThe only concern I have with \"change v1 to match v2\" idea is that users expect the behavior would be different if there exists an `IF EXISTS` option.",
+        "createdAt" : "2021-02-23T19:06:44Z",
+        "updatedAt" : "2021-02-23T19:06:45Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b33a0a17-c340-4b51-a15c-709638a3989d",
+        "parentId" : "cdd26bd5-ecf6-438b-846d-d9434144928e",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Got it. Thank you, @cloud-fan .",
+        "createdAt" : "2021-02-23T19:15:43Z",
+        "updatedAt" : "2021-02-23T19:15:44Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ef8fe6fd-cb32-492c-94f5-4f4f313cd0d4",
+        "parentId" : "cdd26bd5-ecf6-438b-846d-d9434144928e",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Code-wise, yes, adding a new field to `RemoveProperty` is less breaking as it's binary compatible. However, we also changed the semantic of `RemoveProperty` and force all v2 implementations to update and respect the new `ifExists` flag, which is very breaking.\r\n\r\nI'd like to also point out that, the current v2 behavior is idempotent, you can run `UNSET TBLPROPERTIES` more than once and the result won't change. It's a good property and is consistent with `SET TBLPROPERTIES`.",
+        "createdAt" : "2021-02-23T19:18:17Z",
+        "updatedAt" : "2021-02-23T19:18:17Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c0c306ee-6941-4968-929b-8f66cc8123f9",
+        "parentId" : "cdd26bd5-ecf6-438b-846d-d9434144928e",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "OK, makes sense. Thanks.",
+        "createdAt" : "2021-02-23T19:23:48Z",
+        "updatedAt" : "2021-02-23T19:23:48Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "04a2ad8c-e486-42d0-8f18-1658ee59f38f",
+        "parentId" : "cdd26bd5-ecf6-438b-846d-d9434144928e",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "I think that the new `ifExists` property in `RemoveProperty` would be easily overlooked or ignored. In general, I prefer fixing these problems in Spark and not adding requirements to the sources that will choose whether or not to follow them.",
+        "createdAt" : "2021-02-23T21:59:16Z",
+        "updatedAt" : "2021-02-23T21:59:16Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a2dcb9d5-faf1-4026-a10d-aad5ef5c3321",
+        "parentId" : "cdd26bd5-ecf6-438b-846d-d9434144928e",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Can we directly uses `r.table.properties.containsKey` ? In that way the `Table` implementation side returns a case (in)sensitive map via `properties` for case sensitivity. If they want them to treat table properties in a case insensitive way, I think it makes sense to return a case insensitive map from `Table.properties`.",
+        "createdAt" : "2021-02-24T01:36:58Z",
+        "updatedAt" : "2021-02-24T01:36:58Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "35993055-e3dc-4dd4-818a-879a287a291f",
+        "parentId" : "cdd26bd5-ecf6-438b-846d-d9434144928e",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "@HyukjinKwon then it will be a new requirement for the v2 implementations and is a breaking change. It also means we push more work to the v2 implementation side and is not good.",
+        "createdAt" : "2021-02-24T02:17:01Z",
+        "updatedAt" : "2021-02-24T02:17:01Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5438c551ac48f676988ddf6873c2533f77eb3c5f",
+    "line" : 36,
+    "diffHunk" : "@@ -1,1 +34,38 @@      val tblProperties = r.table.properties.asScala\n      props.foreach { p =>\n        if (!tblProperties.contains(p) && p != TableCatalog.PROP_COMMENT) {\n          throw new AnalysisException(\n            s\"Attempted to unset non-existent property '$p' in table '${r.identifier.quoted}'\")"
+  }
+]

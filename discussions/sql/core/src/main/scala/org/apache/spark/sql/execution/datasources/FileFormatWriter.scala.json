@@ -64,5 +64,126 @@
     "commit" : "0f3df0f45dc12768c7b9843e84e28a50b279443e",
     "line" : 14,
     "diffHunk" : "@@ -1,1 +97,101 @@      plan: SparkPlan,\n      fileFormat: FileFormat,\n      protocols: (FileCommitProtocol, FileNamingProtocol),\n      outputSpec: OutputSpec,\n      hadoopConf: Configuration,"
+  },
+  {
+    "id" : "ab739ef3-8381-4466-bcc5-bd0440f4e6e0",
+    "prId" : 31522,
+    "prUrl" : "https://github.com/apache/spark/pull/31522#pullrequestreview-604085959",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c7117aaa-9e9f-4fc6-8cbd-ee0692ceb52b",
+        "parentId" : null,
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "Sorry but why do we need the show the duration of the function call of `commitJob` here.\r\nAs per the doc:\r\n```\r\n  /**\r\n   * Commits a job after the writes succeed. Must be called on the driver.\r\n   */\r\n  def commitJob(jobContext: JobContext, taskCommits: Seq[TaskCommitMessage]): Unit\r\n```\r\nThe commitJob API mostly is for moving the temporary output files to the target final path.",
+        "createdAt" : "2021-02-24T12:34:17Z",
+        "updatedAt" : "2021-03-04T13:14:32Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a370119c-f962-4837-b4d6-a5d9255ca0d2",
+        "parentId" : "c7117aaa-9e9f-4fc6-8cbd-ee0692ceb52b",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "Some times  after task all completed, we wait a long time then job finished, it's always cost on job commit and  metadata handling such as `externalCatalog.loadDynamicPartition()` etc.\r\n \r\nThese duration information is important when it's slow  when we want to compare job's performance. Since when hdfs is unstable, file operation will cost  more time. \r\n\r\nAlso I want to add metrics about metadata handling time after job committed.",
+        "createdAt" : "2021-02-24T15:21:27Z",
+        "updatedAt" : "2021-03-04T13:14:32Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e533e0ad-469e-4380-8b25-01b71e301b52",
+        "parentId" : "c7117aaa-9e9f-4fc6-8cbd-ee0692ceb52b",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "Normally, this should be fast. I don't think it is a good idea to put this in the SQL graph. For debug purpose, the log message should be enough.\r\nBesides, the name \"duration of committing the job\" can be confusing to end-users.\r\nI have to leave -1 for this one.",
+        "createdAt" : "2021-02-24T15:41:28Z",
+        "updatedAt" : "2021-03-04T13:14:32Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ed628982-14e7-4b3c-b18b-86c6c5f0437f",
+        "parentId" : "c7117aaa-9e9f-4fc6-8cbd-ee0692ceb52b",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "`externalCatalog.loadDynamicPartition()` is this really counted as the commit duration in this PR?",
+        "createdAt" : "2021-02-24T15:54:19Z",
+        "updatedAt" : "2021-03-04T13:14:32Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e743ed57-0e42-4997-b68f-79e17101683a",
+        "parentId" : "c7117aaa-9e9f-4fc6-8cbd-ee0692ceb52b",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> `externalCatalog.loadDynamicPartition()` is this really counted as the commit duration in this PR?\r\n\r\nNot yet,  we need to collect this duration after job committed. not counted in job commit duration.",
+        "createdAt" : "2021-02-25T02:15:22Z",
+        "updatedAt" : "2021-03-04T13:14:32Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8a3fe6ba-9194-4b86-910d-0f54e126b24d",
+        "parentId" : "c7117aaa-9e9f-4fc6-8cbd-ee0692ceb52b",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "Just now, my friend ask me why job finished then cost 80s to job committed.\r\n```\r\n21/02/25 15:42:12 INFO DAGScheduler: ResultStage 1 (run at AccessController.java:0) finished in 82.189 s\r\n21/02/25 15:42:12 INFO DAGScheduler: Job 1 finished: run at AccessController.java:0, took 84.330846 s\r\n21/02/25 15:43:38 INFO FileFormatWriter: Job null committed.\r\n21/02/25 15:43:38 WARN DFSClient: Slow ReadProcessor read fields took 41202ms (threshold=30000ms); ack: seqno: 140 status: SUCCESS downstreamAckTimeNanos: 33201980 4: \"\\000\", targets: [172.16.1.71:9866, 172.16.1.104:9866, 172.16.1.18:9866, 172.16.1.33:9866]\r\n```\r\n\r\nHis SQL task run 80s, job commit cost 80s and hive metadata load data cost 100s.",
+        "createdAt" : "2021-02-25T07:49:40Z",
+        "updatedAt" : "2021-03-04T13:14:32Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "55718a5b-9b6c-4f27-8ad2-8c10460cc755",
+        "parentId" : "c7117aaa-9e9f-4fc6-8cbd-ee0692ceb52b",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "if we show job commit duration in the UI, shall we also show hive load table duration?",
+        "createdAt" : "2021-02-25T13:13:40Z",
+        "updatedAt" : "2021-03-04T13:14:32Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d6932436-7a06-4a5a-b514-ce7f91d06acf",
+        "parentId" : "c7117aaa-9e9f-4fc6-8cbd-ee0692ceb52b",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> if we show job commit duration in the UI, shall we also show hive load table duration?\r\n\r\nI originally planned to show hive load table duration after this PR. Shall I also update about hive load table duration in this PR?",
+        "createdAt" : "2021-02-25T13:29:04Z",
+        "updatedAt" : "2021-03-04T13:14:32Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4169ffe6-2dd4-4801-afaa-1c0bee23ae74",
+        "parentId" : "c7117aaa-9e9f-4fc6-8cbd-ee0692ceb52b",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "https://github.com/apache/spark/pull/31679 this is a related PR before add hive load table duration in SQLMetrics, since `CreateTableAsSelect` also need show hive load data duration.\r\n\r\nI hope to add hive load data duration after this pr and https://github.com/apache/spark/pull/31679.",
+        "createdAt" : "2021-02-28T07:56:56Z",
+        "updatedAt" : "2021-03-04T13:14:32Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b419fe4d-fa60-4e8a-8264-a5c3cbe78a99",
+        "parentId" : "c7117aaa-9e9f-4fc6-8cbd-ee0692ceb52b",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "Gentle ping @cloud-fan What should I do next for this pr?",
+        "createdAt" : "2021-03-04T13:15:00Z",
+        "updatedAt" : "2021-03-04T13:15:00Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b5c9d6338c53c52724c0a21d61a093194745b98f",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +241,245 @@      logInfo(s\"Write Job ${description.uuid} committed. Elapsed time: $duration ms.\")\n\n      processStats(description.statsTrackers, ret.map(_.summary.stats), duration)\n      logInfo(s\"Finished processing stats for write job ${description.uuid}.\")\n"
   }
 ]

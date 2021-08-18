@@ -1,0 +1,57 @@
+[
+  {
+    "id" : "bd0d83ba-506f-495b-8ae2-ba0cd7a7b6fc",
+    "prId" : 31540,
+    "prUrl" : "https://github.com/apache/spark/pull/31540#pullrequestreview-593691437",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6b694d58-ccd5-4e9d-8294-bca3330dea96",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Does a `lazy val` work here? not sure what it generates under the hood or whether it would also fix the issue. It would be simpler than handling init lazily, but this is no big deal.",
+        "createdAt" : "2021-02-18T16:03:51Z",
+        "updatedAt" : "2021-02-18T16:03:51Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "81d28eff-a4dc-423f-94e2-fc5515eea9dd",
+        "parentId" : "6b694d58-ccd5-4e9d-8294-bca3330dea96",
+        "authorId" : "e7dcdd7d-a86f-415f-875c-a80eec9bc0f6",
+        "body" : "`lazy val` was the first thing I tried before embarking on this PR. It exacerbates the situation by adding another `final` field for checking set/not set as another source of NPE that I saw with my repro.\r\n\r\nWe can use the code from the [filed modifiers java tutorial](https://docs.oracle.com/javase/tutorial/reflect/member/fieldModifiers.html) to demonstrate the issue:\r\n\r\nBefore the PR one final field:\r\n```bash\r\n$ ./bin/spark-submit ~/gits/FieldModifierSpy/fieldmodifier.jar org.apache.spark.util.CollectionAccumulator final\r\nFields in Class 'org.apache.spark.util.CollectionAccumulator' containing modifiers:  final\r\n_list    [ synthetic=false enum_constant=false ]\r\n```\r\n\r\nIf we replace _list to be a `lazy val` we'll have \r\n```\r\nFields in Class 'org.apache.spark.util.CollectionAccumulator' containing modifiers:  \r\n_list    [ synthetic=false enum_constant=false ]\r\nbitmap$0 [ synthetic=false enum_constant=false ]\r\n```\r\n\r\nIn the PR branch there are no final fields:\r\n```\r\n$ ./bin/spark-submit ~/gits/FieldModifierSpy/fieldmodifier.jar org.apache.spark.util.CollectionAccumulator final\r\nFields in Class 'org.apache.spark.util.CollectionAccumulator' containing modifiers:  final\r\nNo matching fields\r\n```\r\n ",
+        "createdAt" : "2021-02-18T22:14:57Z",
+        "updatedAt" : "2021-02-18T22:14:57Z",
+        "lastEditedBy" : "e7dcdd7d-a86f-415f-875c-a80eec9bc0f6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c9918ab29d570eb098aba4104c22945e29944a01",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +450,454 @@ */\nclass CollectionAccumulator[T] extends AccumulatorV2[T, java.util.List[T]] {\n  private var _list: java.util.List[T] = _\n\n  private def getOrCreate = {"
+  },
+  {
+    "id" : "ab9c3c72-200a-4e63-86d4-81d02c1504d7",
+    "prId" : 31540,
+    "prUrl" : "https://github.com/apache/spark/pull/31540#pullrequestreview-594755963",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e8139fb7-a526-415b-878c-76a20e03cb6d",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Obviously we can't sync on _list anymore. This changes to sync on the object itself, which should be fine AFAIK - I don't think anything else depends on the lock of the accumulator itself and it's only manipulating its own state while holding the lock.",
+        "createdAt" : "2021-02-20T14:16:35Z",
+        "updatedAt" : "2021-02-20T14:16:35Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c9918ab29d570eb098aba4104c22945e29944a01",
+    "line" : 33,
+    "diffHunk" : "@@ -1,1 +466,470 @@  override def copy(): CollectionAccumulator[T] = {\n    val newAcc = new CollectionAccumulator[T]\n    this.synchronized {\n      newAcc.getOrCreate.addAll(getOrCreate)\n    }"
+  }
+]

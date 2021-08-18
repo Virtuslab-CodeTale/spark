@@ -1,0 +1,46 @@
+[
+  {
+    "id" : "c016a15c-6c0a-4789-8fbd-5e39a612d5a4",
+    "prId" : 31517,
+    "prUrl" : "https://github.com/apache/spark/pull/31517#pullrequestreview-623835943",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "331b2962-418a-40bd-92cc-3eeb71afeab3",
+        "parentId" : null,
+        "authorId" : "18668703-059d-40e5-835a-05279e3126d8",
+        "body" : "This distribution is uniformly distributed with only single key overlaps. This means that there are not hot and cold entries, e.g. random eviction has an optimal hit rate. In reality, some entries will be used much more often and follows a power law curve.\r\n\r\nThat is fairly generous distribution for a cache like guava, which uses coarse locking of multiple hash tables. That way the access distribution matches the hash distribution, so ideally spread across all of the locks. In reality, while the hash distribution will be uniform the access distribution is not so a lock holding hot entries will be used much more frequently.\r\n\r\nIn Caffeine's [benchmarks](https://github.com/ben-manes/caffeine/blob/master/caffeine/src/jmh/java/com/github/benmanes/caffeine/cache/GetPutBenchmark.java), it uses a scrambled Zipfian distribution (YCSB's generator). That would show an even larger speedup.\r\n\r\nMore just an fyi that your benchmarks are conservative and you may see a larger gain. Of course, if the caches are not a bottleneck you might not see any benefit except if the eviction policy improves the hit rates in your workloads.",
+        "createdAt" : "2021-03-29T20:08:49Z",
+        "updatedAt" : "2021-04-28T08:57:28Z",
+        "lastEditedBy" : "18668703-059d-40e5-835a-05279e3126d8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "276c2704-e4d5-4062-bb05-7f0d3cd0226f",
+        "parentId" : "331b2962-418a-40bd-92cc-3eeb71afeab3",
+        "authorId" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "body" : "Thank you for your advice. I think we should avoid introducing more dependencies, so I'll try to implement this data generator in spark code.",
+        "createdAt" : "2021-03-30T04:32:22Z",
+        "updatedAt" : "2021-04-28T08:57:28Z",
+        "lastEditedBy" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cc20725a-f7ed-433d-b0ec-53c5cf093e9e",
+        "parentId" : "331b2962-418a-40bd-92cc-3eeb71afeab3",
+        "authorId" : "18668703-059d-40e5-835a-05279e3126d8",
+        "body" : "I think your code is fine as is. Maybe just document the simplification? I mostly wanted to let you know since writing a good benchmark is hard, not that you should change it. Your code served its purpose, and you might not get much more out of improving it.",
+        "createdAt" : "2021-03-30T04:36:11Z",
+        "updatedAt" : "2021-04-28T08:57:28Z",
+        "lastEditedBy" : "18668703-059d-40e5-835a-05279e3126d8",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "81f863ff67d0236f050f4a24e9470c2b1bb7aaff",
+    "line" : 52,
+    "diffHunk" : "@@ -1,1 +50,54 @@      val dataset = (1 to parallelism)\n        .map(_ => Random.shuffle(List.range(0, size)))\n        .map(list => list.map(i => TestData(i)))\n      val executor = ThreadUtils.newDaemonFixedThreadPool(parallelism, \"Loading Cache Test Pool\")\n      val guavaCacheLoader = new CacheLoader[TestData, TestData]() {"
+  }
+]

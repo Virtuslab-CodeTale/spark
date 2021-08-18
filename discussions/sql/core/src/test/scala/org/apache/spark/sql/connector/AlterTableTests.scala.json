@@ -1,0 +1,79 @@
+[
+  {
+    "id" : "2f07ae0a-5a0a-4892-9b71-f4af6352514b",
+    "prId" : 31494,
+    "prUrl" : "https://github.com/apache/spark/pull/31494#pullrequestreview-585874998",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "899f3d9a-fe50-427a-bfbb-494fad33eed3",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "hmm, IIRC we don't even allow users to set the reserved property in CREATE TABLE.",
+        "createdAt" : "2021-02-08T19:01:05Z",
+        "updatedAt" : "2021-02-11T04:01:39Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "06e781f7-544b-482f-91b2-d5dc98634c2d",
+        "parentId" : "899f3d9a-fe50-427a-bfbb-494fad33eed3",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "The \"comment\" property seems to be treated differently that other reserved properties (not checked in the following):\r\nhttps://github.com/apache/spark/blob/3b26bc25362a245a610c3e222b971b4ae612bc3e/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/parser/AstBuilder.scala#L2836-L2850\r\n\r\nThe following works:\r\n```\r\nscala> sql(\"CREATE TABLE t (id int) TBLPROPERTIES('comment' = 'hello')\")\r\nscala> sql(\"DESCRIBE EXTENDED t\").show\r\n+--------------------+--------------------+-------+\r\n|            col_name|           data_type|comment|\r\n+--------------------+--------------------+-------+\r\n|                  id|                 int|   null|\r\n|                    |                    |       |\r\n|# Detailed Table ...|                    |       |\r\n|            Database|             default|       |\r\n|               Table|                   t|       |\r\n|               Owner|              terryk|       |\r\n|        Created Time|Mon Feb 08 11:08:...|       |\r\n|         Last Access|             UNKNOWN|       |\r\n|          Created By|         Spark 3.0.1|       |\r\n|                Type|             MANAGED|       |\r\n|            Provider|                hive|       |\r\n|             Comment|               hello|       |\r\n```\r\n\r\nNote the following to see how v1 command can unset the comment using this command:\r\nhttps://github.com/apache/spark/blob/3b26bc25362a245a610c3e222b971b4ae612bc3e/sql/core/src/main/scala/org/apache/spark/sql/execution/command/ddl.scala#L315-L316",
+        "createdAt" : "2021-02-08T19:19:19Z",
+        "updatedAt" : "2021-02-11T04:01:39Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a0593afe-174f-4529-96a6-059791962928",
+        "parentId" : "899f3d9a-fe50-427a-bfbb-494fad33eed3",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "ah, I see!",
+        "createdAt" : "2021-02-08T20:03:08Z",
+        "updatedAt" : "2021-02-11T04:01:39Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5438c551ac48f676988ddf6873c2533f77eb3c5f",
+    "line" : 22,
+    "diffHunk" : "@@ -1,1 +1160,1164 @@\n      // Reserved property \"comment\" should be allowed regardless.\n      sql(s\"ALTER TABLE $t UNSET TBLPROPERTIES ('comment')\")\n\n      // The following becomes a no-op because \"IF EXISTS\" is set."
+  },
+  {
+    "id" : "d3066dea-00e0-4bbe-89b7-70034487ce5d",
+    "prId" : 31494,
+    "prUrl" : "https://github.com/apache/spark/pull/31494#pullrequestreview-585900000",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f0f1d92d-7a72-4361-b787-5e722c67e07c",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "even if the table has no comment?",
+        "createdAt" : "2021-02-08T20:03:57Z",
+        "updatedAt" : "2021-02-11T04:01:39Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fb18284b-e3f8-4185-bbc3-2c85c43c71ea",
+        "parentId" : "f0f1d92d-7a72-4361-b787-5e722c67e07c",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "Yes, that's the current behavior of V1 command:\r\nhttps://github.com/apache/spark/blob/3b26bc25362a245a610c3e222b971b4ae612bc3e/sql/core/src/main/scala/org/apache/spark/sql/execution/command/ddl.scala#L307-L314\r\n\r\nSince table comment is optional, it will just be set to `None` if the table had no comment:\r\nhttps://github.com/apache/spark/blob/3b26bc25362a245a610c3e222b971b4ae612bc3e/sql/core/src/main/scala/org/apache/spark/sql/execution/command/ddl.scala#L316",
+        "createdAt" : "2021-02-08T20:36:11Z",
+        "updatedAt" : "2021-02-11T04:01:39Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5438c551ac48f676988ddf6873c2533f77eb3c5f",
+    "line" : 21,
+    "diffHunk" : "@@ -1,1 +1159,1163 @@      assert(exc.getMessage.contains(\"Attempted to unset non-existent property 'unknown'\"))\n\n      // Reserved property \"comment\" should be allowed regardless.\n      sql(s\"ALTER TABLE $t UNSET TBLPROPERTIES ('comment')\")\n"
+  }
+]

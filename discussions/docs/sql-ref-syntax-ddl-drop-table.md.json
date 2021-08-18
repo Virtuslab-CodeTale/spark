@@ -1,0 +1,68 @@
+[
+  {
+    "id" : "9e66d3b9-5a76-4136-88fd-99236fac88be",
+    "prId" : 31524,
+    "prUrl" : "https://github.com/apache/spark/pull/31524#pullrequestreview-594745370",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "fff4bea6-c129-4106-9948-7a8e711173b8",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Can you double-check the behavior of DROP TABLE? Are the dependents (dataframe temp views) still valid?",
+        "createdAt" : "2021-02-18T12:29:45Z",
+        "updatedAt" : "2021-02-18T12:29:46Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f519fbce-2b22-477b-b4d3-ad0b4bd64fe1",
+        "parentId" : "fff4bea6-c129-4106-9948-7a8e711173b8",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "```sql\r\nspark-sql> CREATE TABLE tbl (c0 INT);\r\nspark-sql> INSERT INTO tbl SELECT 0;\r\nspark-sql> CACHE TABLE tbl;\r\nspark-sql> CREATE TEMP VIEW v1 AS SELECT c0 + 1 FROM tbl;\r\nspark-sql> SELECT * FROM v1;\r\n1\r\nspark-sql> CACHE TABLE v1;\r\nspark-sql> SELECT * FROM v1;\r\n1\r\nspark-sql> DROP TABLE tbl;\r\nspark-sql> SELECT * FROM v1;\r\nError in query: Table or view not found: tbl; line 1 pos 19;\r\n'Project [*]\r\n+- 'SubqueryAlias v1\r\n   +- View (`v1`, ['(c0 + 1)])\r\n      +- 'Project [upcast('(c0 + 1), IntegerType) AS (c0 + 1)#156]\r\n         +- 'Project [unresolvedalias(('c0 + 1), None)]\r\n            +- 'UnresolvedRelation [tbl], [], false\r\n```",
+        "createdAt" : "2021-02-18T16:27:29Z",
+        "updatedAt" : "2021-02-18T16:27:29Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "89fa9297-1b03-4e16-95d6-98f2764b304c",
+        "parentId" : "fff4bea6-c129-4106-9948-7a8e711173b8",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "can you try with dataframe temp view?",
+        "createdAt" : "2021-02-19T08:51:40Z",
+        "updatedAt" : "2021-02-19T08:51:41Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "eef571a3-ac3b-430e-b0e5-ae78f1c99ca8",
+        "parentId" : "fff4bea6-c129-4106-9948-7a8e711173b8",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "```scala\r\nscala> sql(\"CREATE TABLE tbl (c0 INT)\")\r\nscala> sql(\"INSERT INTO tbl SELECT 0\")\r\nscala> val tbl = spark.table(\"tbl\")\r\nscala> tbl.cache()\r\nscala> tbl.show(false)\r\n+---+\r\n|c0 |\r\n+---+\r\n|0  |\r\n+---+\r\nscala> tbl.select(($\"c0\" + 1).as(\"c1\")).createOrReplaceTempView(\"tmp_view0\")\r\nscala> val v = spark.table(\"tmp_view0\")\r\nv: org.apache.spark.sql.DataFrame = [c1: int]\r\n\r\nscala> v.cache()\r\nres6: v.type = [c1: int]\r\n\r\nscala> v.show(false)\r\n+---+\r\n|c1 |\r\n+---+\r\n|1  |\r\n+---+\r\nscala> sql(\"DROP TABLE tbl\")\r\nres8: org.apache.spark.sql.DataFrame = []\r\n\r\nscala> v.show(false)\r\norg.apache.hadoop.mapred.InvalidInputException: Input path does not exist: file:/Users/maximgekk/proj/doc-cmd-caching/spark-warehouse/tbl\r\n```",
+        "createdAt" : "2021-02-20T11:48:37Z",
+        "updatedAt" : "2021-02-20T11:48:37Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c8a15e7a-782a-49a6-8e8b-a7fc209443f1",
+        "parentId" : "fff4bea6-c129-4106-9948-7a8e711173b8",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "```scala\r\nscala> Seq(0).toDF(\"c0\").write.mode(\"overwrite\").parquet(\"/Users/maximgekk/tmp/tbl\")\r\n\r\nscala> sql(\"CREATE TABLE tbl2 (c0 INT) USING parquet LOCATION '/Users/maximgekk/tmp/tbl'\")\r\nres11: org.apache.spark.sql.DataFrame = []\r\n\r\nscala> val tbl2 = spark.table(\"tbl2\")\r\ntbl2: org.apache.spark.sql.DataFrame = [c0: int]\r\n\r\nscala> tbl2.cache()\r\nres12: tbl2.type = [c0: int]\r\n\r\nscala> tbl2.show(false)\r\n+---+\r\n|c0 |\r\n+---+\r\n|0  |\r\n+---+\r\n\r\n\r\nscala> tbl2.select(($\"c0\" + 2).as(\"c1\")).createOrReplaceTempView(\"tmp_view2\")\r\n\r\nscala> val v2 = spark.table(\"tmp_view2\")\r\nv2: org.apache.spark.sql.DataFrame = [c1: int]\r\n\r\nscala> v2.cache()\r\nres15: v2.type = [c1: int]\r\n\r\nscala> v2.show(false)\r\n+---+\r\n|c1 |\r\n+---+\r\n|2  |\r\n+---+\r\n\r\n\r\nscala> sql(\"DROP TABLE tbl2\")\r\nres17: org.apache.spark.sql.DataFrame = []\r\n\r\nscala> v2.show(false)\r\n+---+\r\n|c1 |\r\n+---+\r\n|2  |\r\n+---+\r\n```",
+        "createdAt" : "2021-02-20T11:54:53Z",
+        "updatedAt" : "2021-02-20T11:54:53Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "15ccb9e19e728bc3cc0fe4e3e609676fc90b6975",
+    "line" : 4,
+    "diffHunk" : "@@ -1,1 +27,31 @@In case of an external table, only the associated metadata information is removed from the metastore database.\n\nIf the table is cached, the command uncaches the table and all its dependents.\n\n### Syntax"
+  }
+]

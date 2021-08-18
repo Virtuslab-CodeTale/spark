@@ -1098,5 +1098,104 @@
     "commit" : "37c6b9714f9499608807a39a5e646630dff8c330",
     "line" : 37,
     "diffHunk" : "@@ -1,1 +924,928 @@        identifier: Seq[String],\n        isStreaming: Boolean = false,\n        performCheck: Boolean = false): Option[LogicalPlan] = {\n      // Permanent View can't refer to temp views, no need to lookup at all.\n      if (isResolvingView && !referredTempViewNames.contains(identifier)) return None"
+  },
+  {
+    "id" : "8fbd8eea-ac74-43b7-a742-ea532e200c99",
+    "prId" : 31570,
+    "prUrl" : "https://github.com/apache/spark/pull/31570#pullrequestreview-614932111",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6c19e874-4611-444e-8456-8ecd9eea39e4",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "I know the logic in TimeWindowing is a bit long and you may not want to add additional complexity there, but I feel this still has to be consolidated with TimeWindowing (that said TimeWindowing needs to refactor a bit after adding logic on session window). Because there're lots of similarities and the limitation is applied altogether, like only allowing a time window should include session window, and vice versa.",
+        "createdAt" : "2021-03-18T02:29:54Z",
+        "updatedAt" : "2021-03-18T03:37:02Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "28c07ca0-236d-4020-aa97-1480a405f4b4",
+        "parentId" : "6c19e874-4611-444e-8456-8ecd9eea39e4",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Or, at least counting windows should consider both.",
+        "createdAt" : "2021-03-18T02:34:06Z",
+        "updatedAt" : "2021-03-18T03:37:03Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "04ca039bdf74c3b71be5fe53574906f426f25256",
+    "line" : 17,
+    "diffHunk" : "@@ -1,1 +3971,3975 @@ * [[SessionWindowExpression]] is the only column in group by.\n */\nobject ResolveSessionWindow extends Rule[LogicalPlan] {\n\n  private def hasWindowFunction(groupList: Seq[Expression]): Boolean ="
+  },
+  {
+    "id" : "92b17f33-053c-4282-8a20-cfefedefb409",
+    "prId" : 31570,
+    "prUrl" : "https://github.com/apache/spark/pull/31570#pullrequestreview-614932111",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "37d90217-d92c-4325-8239-099b4cc44ea9",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "I see how to deal with meta fields (start, end) is slightly different from time window. Would the difference be bugging when we consolidate twos into one? I have no specific preference, but would like to be consistent with both so that we don't deal with differences in maintenance.\r\n\r\nThat said, let's change both (OK to do it on follow-up PR), or follow the current approach.",
+        "createdAt" : "2021-03-18T02:40:25Z",
+        "updatedAt" : "2021-03-18T03:37:02Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "04ca039bdf74c3b71be5fe53574906f426f25256",
+    "line" : 29,
+    "diffHunk" : "@@ -1,1 +3983,3987 @@  }\n\n  private final val WINDOW_COL_NAME = \"session_window\"\n\n  def apply(plan: LogicalPlan): LogicalPlan = plan.resolveOperators {"
+  },
+  {
+    "id" : "0b28f9a7-4474-4e2b-88ca-e9d78af70b3c",
+    "prId" : 31570,
+    "prUrl" : "https://github.com/apache/spark/pull/31570#pullrequestreview-614932111",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "73e4a2b1-7479-4ebe-8832-587a2ff8f8c3",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "`hasWindowFunction` and `windowExpressions` should count time window as well. I guess it'll be simpler to resolve when we consolidate, but it would depend on how more complicated it will become.",
+        "createdAt" : "2021-03-18T02:45:52Z",
+        "updatedAt" : "2021-03-18T03:37:02Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "04ca039bdf74c3b71be5fe53574906f426f25256",
+    "line" : 32,
+    "diffHunk" : "@@ -1,1 +3986,3990 @@\n  def apply(plan: LogicalPlan): LogicalPlan = plan.resolveOperators {\n    case p @ Aggregate(groupingExpr, aggregateExpr, _) if hasWindowFunction(groupingExpr) =>\n      val child = p.child\n      val windowExpressions ="
+  },
+  {
+    "id" : "bc77ff8a-4555-45de-987c-02984ca25431",
+    "prId" : 31570,
+    "prUrl" : "https://github.com/apache/spark/pull/31570#pullrequestreview-614932111",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "312d2a77-f9bc-48d7-b418-6422f4598d57",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "I feel this is less clearer, probably better to mention another key column(s) are required? Like \"Cannot use session_window without additional key column(s)\", or if we assume end users know about the concept of \"global aggregation\", \"Cannot apply session_window on global aggregation\".",
+        "createdAt" : "2021-03-18T02:50:31Z",
+        "updatedAt" : "2021-03-18T03:37:02Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "04ca039bdf74c3b71be5fe53574906f426f25256",
+    "line" : 56,
+    "diffHunk" : "@@ -1,1 +4010,4014 @@        val partitionExpression = groupingExpr.filterNot(hasWindowFunction)\n        if (partitionExpression.isEmpty) {\n          p.failAnalysis(\"Cannot use session_window as the only group by column.\")\n        }\n"
   }
 ]

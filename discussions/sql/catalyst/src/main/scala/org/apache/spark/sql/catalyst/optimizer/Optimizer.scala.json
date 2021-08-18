@@ -834,5 +834,115 @@
     "commit" : "b5d704112549310e2592aad21bd8308386ff0cf8",
     "line" : 21,
     "diffHunk" : "@@ -1,1 +512,516 @@   */\n  private def removeAliasOnlyProject(plan: LogicalPlan): LogicalPlan = plan match {\n    case p @ Project(projectList, child) =>\n      val aliasOnly = projectList.length == child.output.length &&\n        projectList.zip(child.output).forall {"
+  },
+  {
+    "id" : "5ffa3d52-b8e9-43f4-8c39-965ef6162b73",
+    "prId" : 31567,
+    "prUrl" : "https://github.com/apache/spark/pull/31567#pullrequestreview-590873109",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e5b45719-a23b-4f5f-81af-367747d12dc6",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Shall we update the comments here too to describe the case when we push the limit with cross join?",
+        "createdAt" : "2021-02-16T04:13:14Z",
+        "updatedAt" : "2021-02-23T03:20:22Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e0915b93a6cd528b6c07e603b98762a1134a7640",
+    "line" : 12,
+    "diffHunk" : "@@ -1,1 +545,549 @@    // below FULL OUTER JOIN in the general case without a more invasive rewrite.\n    // We also need to ensure that this limit pushdown rule will not eventually introduce limits\n    // on both sides if it is applied multiple times. Therefore:\n    //   - If one side is already limited, stack another limit on top if the new limit is smaller.\n    //     The redundant limit will be collapsed by the CombineLimits rule."
+  },
+  {
+    "id" : "c7488cbe-b793-4763-b953-77b29f42cd47",
+    "prId" : 31567,
+    "prUrl" : "https://github.com/apache/spark/pull/31567#pullrequestreview-591899952",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "86ad22ad-c3cf-48c2-8492-322dd541adc1",
+        "parentId" : null,
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "It seems that we can also push down limit into left side, for LEFT SEMI and LEFT ANTI join, right?\r\nI can create a minor PR if it's not on your plan @wangyum , thanks.",
+        "createdAt" : "2021-02-17T05:42:03Z",
+        "updatedAt" : "2021-02-23T03:20:22Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2659c7b5-fd93-4d4d-a599-0266c680ed39",
+        "parentId" : "86ad22ad-c3cf-48c2-8492-322dd541adc1",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "It seems we can not pushdown `LEFT SEMI JOIN`, for example:\r\n```scala\r\nspark.range(20).selectExpr(\"id % 10 as id\").repartition(1).write.saveAsTable(\"t1\")\r\nspark.range(5, 9, 1).repartition(1).write.saveAsTable(\"t2\")\r\nval df = spark.sql(\"select * from t1 LEFT SEMI JOIN t2 on t1.id = t2.id limit 3\")\r\ndf.explain()\r\ndf.show\r\n```\r\n\r\nCurrent:\r\n```\r\n== Physical Plan ==\r\nAdaptiveSparkPlan isFinalPlan=false\r\n+- CollectLimit 3\r\n   +- BroadcastHashJoin [id#10L], [id#11L], LeftSemi, BuildRight, false\r\n      :- Filter isnotnull(id#10L)\r\n      :  +- FileScan parquet default.t1[id#10L] Batched: true, DataFilters: [isnotnull(id#10L)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/Users/yumwang/spark/SPARK-28169/spark-warehouse/org.apache.spark..., PartitionFilters: [], PushedFilters: [IsNotNull(id)], ReadSchema: struct<id:bigint>\r\n      +- BroadcastExchange HashedRelationBroadcastMode(List(input[0, bigint, false]),false), [id=#69]\r\n         +- Filter isnotnull(id#11L)\r\n            +- FileScan parquet default.t2[id#11L] Batched: true, DataFilters: [isnotnull(id#11L)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/Users/yumwang/spark/SPARK-28169/spark-warehouse/org.apache.spark..., PartitionFilters: [], PushedFilters: [IsNotNull(id)], ReadSchema: struct<id:bigint>\r\n\r\n\r\n+---+\r\n| id|\r\n+---+\r\n|  5|\r\n|  6|\r\n|  7|\r\n+---+\r\n```\r\n\r\nPushdown:\r\n```\r\n== Physical Plan ==\r\nAdaptiveSparkPlan isFinalPlan=false\r\n+- CollectLimit 3\r\n   +- BroadcastHashJoin [id#10L], [id#11L], LeftSemi, BuildRight, false\r\n      :- LocalLimit 3\r\n      :  +- Filter isnotnull(id#10L)\r\n      :     +- LocalLimit 3\r\n      :        +- FileScan parquet default.t1[id#10L] Batched: true, DataFilters: [], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/Users/yumwang/spark/SPARK-28169/spark-warehouse/org.apache.spark..., PartitionFilters: [], PushedFilters: [], ReadSchema: struct<id:bigint>\r\n      +- BroadcastExchange HashedRelationBroadcastMode(List(input[0, bigint, false]),false), [id=#77]\r\n         +- Filter isnotnull(id#11L)\r\n            +- FileScan parquet default.t2[id#11L] Batched: true, DataFilters: [isnotnull(id#11L)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/Users/yumwang/spark/SPARK-28169/spark-warehouse/org.apache.spark..., PartitionFilters: [], PushedFilters: [IsNotNull(id)], ReadSchema: struct<id:bigint>\r\n\r\n\r\n+---+\r\n| id|\r\n+---+\r\n+---+\r\n```",
+        "createdAt" : "2021-02-17T07:13:10Z",
+        "updatedAt" : "2021-02-23T03:20:22Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "aed680e6-a507-41ae-a477-49a4419b6d45",
+        "parentId" : "86ad22ad-c3cf-48c2-8492-322dd541adc1",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@wangyum - yes, you are right. My bad. LEFT OUTER/RIGHT OUTER join will output the left/right side rows anyway no matter of being matched or not. So they are safe for limit push down, but not LEFT SEMI/LEFT ANTI.",
+        "createdAt" : "2021-02-17T07:20:19Z",
+        "updatedAt" : "2021-02-23T03:20:22Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0e55ea6a-b10c-44f6-9696-f99756f2358b",
+        "parentId" : "86ad22ad-c3cf-48c2-8492-322dd541adc1",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "Actually, what about LEFT SEMI / LEFT ANTI join without condition? They should be planned into physical operator `BroadcastNestedLoopJoin` instead. ",
+        "createdAt" : "2021-02-17T07:28:02Z",
+        "updatedAt" : "2021-02-23T03:20:22Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e0915b93a6cd528b6c07e603b98762a1134a7640",
+    "line" : 19,
+    "diffHunk" : "@@ -1,1 +551,555 @@      val newJoin = joinType match {\n        case RightOuter => join.copy(right = maybePushLocalLimit(exp, right))\n        case LeftOuter => join.copy(left = maybePushLocalLimit(exp, left))\n        case _: InnerLike if conditionOpt.isEmpty =>\n          join.copy("
+  },
+  {
+    "id" : "0076c246-974b-4e8f-99ac-b0f2bff2a585",
+    "prId" : 31538,
+    "prUrl" : "https://github.com/apache/spark/pull/31538#pullrequestreview-588906078",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1d2698ad-adfb-4ef6-9d75-b92f193dfc6f",
+        "parentId" : null,
+        "authorId" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "body" : "Would this affect other places where the `sameOutput` method is used? It kinda looks like fixing a symptom and the real problem is a bit deeper. The `sameOutput` is used only in few places, but it internally uses `semanticEquals` that is very common.",
+        "createdAt" : "2021-02-11T19:16:22Z",
+        "updatedAt" : "2021-02-11T19:16:22Z",
+        "lastEditedBy" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2595b143-1e98-4cbf-bb82-86b263b68ad4",
+        "parentId" : "1d2698ad-adfb-4ef6-9d75-b92f193dfc6f",
+        "authorId" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "body" : "In the `LogicalPlan` there is this comment:\r\n```\r\n  /**\r\n   * This method checks if the same `ExprId` refers to an unique attribute in a plan tree.\r\n   * Some plan transformers (e.g., `RemoveNoopOperators`) rewrite logical\r\n   * plans based on this assumption.\r\n   */\r\n  def checkIfExprIdsAreGloballyUnique(plan: LogicalPlan): Boolean = {\r\n    checkIfSameExprIdNotReused(plan) && hasUniqueExprIdsForOutput(plan)\r\n  }\r\n```\r\n\r\nIt sounds like the `RemoveNoopOperators` is correct and the deeper issue is with the `ExprId` getting reused.\r\n",
+        "createdAt" : "2021-02-11T19:22:28Z",
+        "updatedAt" : "2021-02-11T19:22:28Z",
+        "lastEditedBy" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9212a85ddb82ffc2178b3e8e6c361eb18bfb3e6a",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +496,500 @@    // Eliminate no-op Projects\n    case p @ Project(projectList, child)\n      if projectList.forall(isAttribute) && child.sameOutput(p) => child\n\n    // Eliminate no-op Window"
   }
 ]

@@ -1,0 +1,222 @@
+[
+  {
+    "id" : "7e9b13a0-2b0a-4ea2-8d48-d10e5b531138",
+    "prId" : 31495,
+    "prUrl" : "https://github.com/apache/spark/pull/31495#pullrequestreview-613262018",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e1a6f9b8-f07f-496a-b68b-8b18b7d84cb2",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Note for reviewers: see MicroBatchExecution / ContinuousExecution around calling `source.commit()`. To provide the offset metadata to source side we read offset metadata for previous batch, which is probably written by this driver in previous batches. micro-batch: (batchId - 1), continuous mode: batchId.",
+        "createdAt" : "2021-02-06T04:22:38Z",
+        "updatedAt" : "2021-02-09T00:33:26Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3ffb9d8d-a74c-4c75-8770-8b533eaa75e8",
+        "parentId" : "e1a6f9b8-f07f-496a-b68b-8b18b7d84cb2",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "`TreeMap` seems overkill to me if we only cache at most 2 batches. How about using a 2-size array? We can put/get the elements by the index of (batchId % 2).\r\n\r\nFor example:\r\n\r\n```scala\r\nprivate val cachedMetadata = Array[OffsetSeq](null, null)\r\n\r\n// put\r\ncachedMetadata(batchId % 2) = metadata\r\n\r\n// get\r\nOption(cachedMetadata(batchId % 2)).orElse(super.get(batchId))\r\n```",
+        "createdAt" : "2021-02-06T13:17:52Z",
+        "updatedAt" : "2021-02-09T00:33:26Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a0e09640-319f-4408-9219-c6af8903ea55",
+        "parentId" : "e1a6f9b8-f07f-496a-b68b-8b18b7d84cb2",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "TreeMap approach is pretty much intuitive compared to this (doesn't make any issue if things get broken in upside), and the overhead should be pretty much trivial compared to FS ops (we're addressing 100 of ms whereas this wouldn't contribute even 1 ms). Let's not do over-engineering.",
+        "createdAt" : "2021-02-07T03:08:54Z",
+        "updatedAt" : "2021-02-09T00:33:26Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1e326d61-7a73-4f5d-92de-014aba8805bf",
+        "parentId" : "e1a6f9b8-f07f-496a-b68b-8b18b7d84cb2",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Or I should just do this in MicroBatchExecution / ContinuousExecution instead - then the code doesn't need to be generalized. Let me have a time to revisit this.",
+        "createdAt" : "2021-02-07T04:07:16Z",
+        "updatedAt" : "2021-02-09T00:33:26Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "66805925-6bd8-4721-a179-f35711dc9fed",
+        "parentId" : "e1a6f9b8-f07f-496a-b68b-8b18b7d84cb2",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Hmm... it looks easier to change here and reflect to both micro-batch and continuous mode. Let's leave this as it is.\r\n\r\nI would worry about not coupling metadata with batch ID - it could bring critical issue on committing to source when something is slightly messed up. e.g. In file stream source we delete source files based on the commit. We cannot trade-off between correctness and performance. I'd prefer safer approach unless it's identified to have a noticeable performance impact.",
+        "createdAt" : "2021-02-07T20:07:12Z",
+        "updatedAt" : "2021-02-09T00:33:26Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3fb85b97-75a6-46cc-87e8-fec6e34ce487",
+        "parentId" : "e1a6f9b8-f07f-496a-b68b-8b18b7d84cb2",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "> e.g. In file stream source we delete source files based on the commit. \r\n\r\nI don't understand why this could bring a correctness issue (I'm still very new to streaming so I may miss some use cases). The only problem I can imagine now is `get(batchId)` may lead to the correctness issue as `batchId` like 2 or 4 results in the same index. But this can also be addressed by saving the `batchId` at the same time, e.g., `Array[(batchId, OffsetSeq)]`, which I think also addresses your concern for batchId coupling.\r\n\r\nBTW, I did a minor performance test between these two ways, and seems it does have a performance impact:\r\n\r\n```scala\r\n\r\n// ~270ms\r\ntimeTakeMs {\r\n  treeMap.put(1, \"1\")\r\n  treeMap.put(2, \"3\")\r\n  treeMap.put(3, \"3\")\r\n  treeMap.headMap(2, true).clear()\r\n}\r\n\r\n// ~0ms\r\ntimeTakeMs {\r\n  array(0) = \"0\"\r\n  array(1) = \"1\"\r\n  array(0) = \"2\"\r\n}\r\n```\r\n\r\nThoughts?",
+        "createdAt" : "2021-02-08T04:21:49Z",
+        "updatedAt" : "2021-02-09T00:33:26Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "34596d0e-f6b8-46bd-89b8-e37431a66e94",
+        "parentId" : "e1a6f9b8-f07f-496a-b68b-8b18b7d84cb2",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "https://gist.github.com/HeartSaVioR/111ed75aa2dc4672e36968c02db83e26\r\n\r\n```\r\nimport java.lang.{Long => JLong}\r\nimport java.util.{ArrayList, Collections, TreeMap}\r\n\r\ndef c(treeMap: TreeMap[Long, String]): Long = {\r\n  val t1 = System.nanoTime()\r\n  treeMap.put(1, \"1\")\r\n  treeMap.put(2, \"3\")\r\n  treeMap.put(3, \"3\")\r\n  treeMap.headMap(2, true).clear()\r\n  (System.nanoTime() - t1)\r\n}\r\n\r\ndef d(treeMap: TreeMap[Long, String], idx: Long, value: String): Long = {\r\n  val t1 = System.nanoTime()\r\n  treeMap.put(idx, value)\r\n  treeMap.headMap(idx - 2, true).clear()\r\n  (System.nanoTime() - t1)\r\n}\r\n\r\ndef experimentC(): Unit = {\r\n  val latencies = new ArrayList[JLong]()\r\n  val warmupCount = 1000000\r\n  val runCount = 10000000\r\n\r\n  (1 to warmupCount).foreach { _ =>\r\n    val t = new java.util.TreeMap[Long, String]()\r\n    c(t)\r\n  }\r\n\r\n  (1 to runCount).foreach { _ =>\r\n    val t = new java.util.TreeMap[Long, String]()\r\n    latencies.add(JLong.valueOf(c(t)))\r\n  }\r\n\r\n  java.util.Collections.sort(latencies)\r\n\r\n  printLatencies(latencies)\r\n}\r\n\r\ndef experimentD(): Unit = {\r\n  val latencies = new ArrayList[JLong]()\r\n  val warmupCount = 1000000\r\n  val runCount = 10000000\r\n\r\n  val t = new java.util.TreeMap[Long, String]()\r\n  (1 to warmupCount).foreach { idx =>\r\n    d(t, idx, idx.toString)\r\n  }\r\n\r\n  val t2 = new java.util.TreeMap[Long, String]()\r\n  (1 to runCount).foreach { idx =>\r\n    latencies.add(JLong.valueOf(d(t2, idx, idx.toString)))\r\n  }\r\n\r\n  printLatencies(latencies)\r\n}\r\n\r\ndef printLatencies(latencies: ArrayList[JLong]): Unit = {\r\n  val arraySize = latencies.size()\r\n  val minIdx = 0\r\n  val maxIdx = arraySize - 1\r\n  val percentile50 = (arraySize * 0.5).toInt\r\n  val percentile90 = (arraySize * 0.9).toInt\r\n  val percentile99 = (arraySize * 0.99).toInt\r\n  val percentile999 = (arraySize * 0.999).toInt\r\n  val percentile9999 = (arraySize * 0.9999).toInt\r\n  val percentile99999 = (arraySize * 0.99999).toInt\r\n  val percentile999999 = (arraySize * 0.999999).toInt\r\n\r\n  java.util.Collections.sort(latencies)\r\n\r\n  Seq(minIdx, percentile50, percentile90, percentile99, percentile999, percentile9999, percentile99999, percentile999999, maxIdx).foreach { idx =>\r\n    printLatency(latencies, idx)\r\n  }  \r\n}\r\n\r\ndef printLatency(latencies: ArrayList[JLong], idx: Int): Unit = {\r\n  println(s\"$idx th : ${latencies.get(idx) / 1000} microseconds = ${latencies.get(idx) / 1000000} milliseconds\")\r\n}\r\n\r\n// experimentC()\r\n\r\n/*\r\n0 th : 0 microseconds = 0 milliseconds\r\n5000000 th : 0 microseconds = 0 milliseconds\r\n9000000 th : 0 microseconds = 0 milliseconds\r\n9900000 th : 0 microseconds = 0 milliseconds\r\n9990000 th : 1 microseconds = 0 milliseconds\r\n9999000 th : 9 microseconds = 0 milliseconds\r\n9999900 th : 37 microseconds = 0 milliseconds\r\n9999990 th : 223 microseconds = 0 milliseconds\r\n9999999 th : 53612 microseconds = 53 milliseconds\r\n*/\r\n\r\nexperimentD()\r\n\r\n/*\r\n0 th : 0 microseconds = 0 milliseconds\r\n5000000 th : 0 microseconds = 0 milliseconds\r\n9000000 th : 0 microseconds = 0 milliseconds\r\n9900000 th : 0 microseconds = 0 milliseconds\r\n9990000 th : 0 microseconds = 0 milliseconds\r\n9999000 th : 6 microseconds = 0 milliseconds\r\n9999900 th : 25 microseconds = 0 milliseconds\r\n9999990 th : 150 microseconds = 0 milliseconds\r\n9999999 th : 57887 microseconds = 57 milliseconds\r\n*/\r\n```\r\n\r\n2018 13-inch MBP, i7 quad-core 2.7Ghz\r\n\r\n```\r\n./bin/spark-shell --driver-memory 2g\r\n...\r\nWelcome to\r\n      ____              __\r\n     / __/__  ___ _____/ /__\r\n    _\\ \\/ _ \\/ _ `/ __/  '_/\r\n   /___/ .__/\\_,_/_/ /_/\\_\\   version 3.0.1\r\n      /_/\r\n\r\nUsing Scala version 2.12.10 (Java HotSpot(TM) 64-Bit Server VM, Java 1.8.0_191)\r\n```\r\n\r\nStill think this really matters?",
+        "createdAt" : "2021-02-08T05:44:11Z",
+        "updatedAt" : "2021-02-09T00:33:26Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "441e17ce-f264-4a12-9d0a-2308bb5898d0",
+        "parentId" : "e1a6f9b8-f07f-496a-b68b-8b18b7d84cb2",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Even without warmup (commenting out),\r\n\r\n```\r\n// experimentC()\r\n\r\n...\r\n9999990 th : 1632 microseconds = 1 milliseconds\r\n9999999 th : 60999 microseconds = 60 milliseconds\r\n\r\n// experimentD()\r\n\r\n...\r\n9999990 th : 321 microseconds = 0 milliseconds\r\n9999999 th : 35074 microseconds = 35 milliseconds\r\n```\r\n",
+        "createdAt" : "2021-02-08T05:48:53Z",
+        "updatedAt" : "2021-02-09T00:33:26Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2b0abeee-07cf-4336-b3e3-ca92bd73b9c9",
+        "parentId" : "e1a6f9b8-f07f-496a-b68b-8b18b7d84cb2",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Ok..I saw where the problem is with my test. You're right the latency is trivial.\r\n\r\nI'm not against your solution here. But since we've reached here, I'd like to mention one more thing that TreeMap tends to produce the instant object `AscendingSubMap` for each batch while Array doesn't. Although, It might also be trivial.",
+        "createdAt" : "2021-02-08T07:02:33Z",
+        "updatedAt" : "2021-02-09T00:33:26Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bffe42cc-cd2f-4943-9345-ee29635506ec",
+        "parentId" : "e1a6f9b8-f07f-496a-b68b-8b18b7d84cb2",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "This is another sort of micro-optimization; realistic latency of micro-batch is 1s+ (doesn't matter if we consider very tight micro-batch, like 500ms) and we worry about creating \"an\" object per such period which will be marked as \"unused\" after couple of batches.\r\n\r\nThis is the clear example why micro-optimization is bad without understanding full context - optimization should evaluate about the impact and proceed only when it contributes at least 1% (I'd rather not even concern about 1% though if the sub-optimal code is more intuitive).",
+        "createdAt" : "2021-02-08T07:34:02Z",
+        "updatedAt" : "2021-02-09T00:33:26Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "127e088f-ca9e-404b-b817-225cef337eb4",
+        "parentId" : "e1a6f9b8-f07f-496a-b68b-8b18b7d84cb2",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Thanks for bringing the details, it makes sense to me. But please also note that I wouldn't raise such optimization changes if the `TreeMap` is already an existing implementation. However, for a PR, I think it's good to have more inputs regardless of the final decision.",
+        "createdAt" : "2021-02-08T07:47:50Z",
+        "updatedAt" : "2021-02-09T00:33:26Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4d9f5e0c-ee8d-4af2-8804-f5fcfcb4ac75",
+        "parentId" : "e1a6f9b8-f07f-496a-b68b-8b18b7d84cb2",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "The reason I am concerning on the input on possible micro-optimization is that it changes the viewpoint of the codebase to performance and doesn't evaluate based on other viewpoints. There're bunch of points to discuss on this change, is this better to be put to OffsetSeq or better to place it on both MicroBatchExecution/ContinuousExecution (and why), which code would be most intuitive to maintainers or contributors, etc. Once the performance perspective comes in and gains traction, other perspectives tend to be disregarded. That should be just one of viewpoints, and shouldn't be overvalued.",
+        "createdAt" : "2021-02-08T08:00:57Z",
+        "updatedAt" : "2021-02-09T00:33:26Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7b58eaa3-a811-4c5e-aef1-d11e5b5494be",
+        "parentId" : "e1a6f9b8-f07f-496a-b68b-8b18b7d84cb2",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "I know your concern. I like those general optimization ideas too instead of hacks(micro-optimization). Here the argument may be that you think the `Array` way is not intuitive enough. Well, I'm actually neutral on this as it's also not too complex as it is. Let's move on since I already +1 for the current solution :)",
+        "createdAt" : "2021-02-08T08:52:58Z",
+        "updatedAt" : "2021-02-09T00:33:26Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "89351348-8693-48fa-ac87-ce032af1a654",
+        "parentId" : "e1a6f9b8-f07f-496a-b68b-8b18b7d84cb2",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "I've gone through this thread and changing the current solution would introduce quite some non-trivial code structures and the gain would be not significant from memory point of view so +1 to keep it as-is.",
+        "createdAt" : "2021-03-16T13:46:22Z",
+        "updatedAt" : "2021-03-16T13:46:22Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "03801f726a1443736dd7e404ba6a6ac1f8740c10",
+    "line" : 19,
+    "diffHunk" : "@@ -1,1 +55,59 @@      // cache metadata as it will be read again\n      cachedMetadata.put(batchId, metadata)\n      // we don't access metadata for (batchId - 2) batches; evict them\n      cachedMetadata.headMap(batchId - 2, true).clear()\n    }"
+  },
+  {
+    "id" : "fbd52a26-5bc3-4a70-bbf4-c5b8a5535f46",
+    "prId" : 31495,
+    "prUrl" : "https://github.com/apache/spark/pull/31495#pullrequestreview-587115741",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "124619b4-f2ad-4f31-80fe-0701c2799c85",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "What about moving `cachedMetadata` to  `HDFSMetadataLog`? Seems like other metadata logs can benefit too.",
+        "createdAt" : "2021-02-09T02:37:06Z",
+        "updatedAt" : "2021-02-09T02:37:06Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9f74e1a7-c033-4ddb-a5e0-2b892df6ce6c",
+        "parentId" : "124619b4-f2ad-4f31-80fe-0701c2799c85",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "There're different usage patterns and characteristics against these metadata logs, and the change is rather only bound to the usage pattern of offsetLog.\r\ne.g. commitLog is only added per batch, and read only when query is started or restored from checkpoint.",
+        "createdAt" : "2021-02-09T02:50:50Z",
+        "updatedAt" : "2021-02-09T02:50:51Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2c1a0c09-5bae-4225-8277-35ab1dd00d20",
+        "parentId" : "124619b4-f2ad-4f31-80fe-0701c2799c85",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "@zsxwing thoughts?",
+        "createdAt" : "2021-02-09T15:09:49Z",
+        "updatedAt" : "2021-02-09T15:09:50Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "46f52f82-b5b7-462f-b13a-722fa6ea054f",
+        "parentId" : "124619b4-f2ad-4f31-80fe-0701c2799c85",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "You can check by yourself: find `commitLog.get(` and you get nothing except tests. find `commitLog.getLatest(` and realize that is only happening when starting/restarting query. Simple enough?",
+        "createdAt" : "2021-02-09T23:32:15Z",
+        "updatedAt" : "2021-02-09T23:32:15Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "03801f726a1443736dd7e404ba6a6ac1f8740c10",
+    "line" : 12,
+    "diffHunk" : "@@ -1,1 +48,52 @@  extends HDFSMetadataLog[OffsetSeq](sparkSession, path) {\n\n  private val cachedMetadata = new ju.TreeMap[Long, OffsetSeq]()\n\n  override def add(batchId: Long, metadata: OffsetSeq): Boolean = {"
+  }
+]

@@ -20,5 +20,71 @@
     "commit" : "58679bd9e27bb376fd9e6ea2baa780fe3454f23a",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +462,466 @@  }\n\n  test(\"SPARK-34417: test fillMap() for column with a dot in the name\") {\n    val na = \"n/a\"\n    checkAnswer("
+  },
+  {
+    "id" : "bad5897d-1238-4cb1-b422-c988d553f686",
+    "prId" : 31545,
+    "prUrl" : "https://github.com/apache/spark/pull/31545#pullrequestreview-588326886",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1dcc854f-dc41-4352-bab7-21bc341be6eb",
+        "parentId" : null,
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "I think this will fail if you have `Map(\"Col\" -> na)` because of the same reason due to Line 424 in `DataFrameNaFunctions.scala`?",
+        "createdAt" : "2021-02-11T03:44:26Z",
+        "updatedAt" : "2021-03-02T01:41:51Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "069e9834-c802-408b-af1e-8f0cb3e29094",
+        "parentId" : "1dcc854f-dc41-4352-bab7-21bc341be6eb",
+        "authorId" : "2aac12c0-5b21-45d8-99f0-6e7832629f6d",
+        "body" : "No, it does not fail. Since column is successfully resolved at ```df.resolve(colName)```, it will not go to 424.\r\nOnly for the data frame columns not present in the na-fill-map, it will go to line 424.",
+        "createdAt" : "2021-02-11T04:45:16Z",
+        "updatedAt" : "2021-03-02T01:41:51Z",
+        "lastEditedBy" : "2aac12c0-5b21-45d8-99f0-6e7832629f6d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dafae276-cb65-4f86-acd7-6c95308568a2",
+        "parentId" : "1dcc854f-dc41-4352-bab7-21bc341be6eb",
+        "authorId" : "2aac12c0-5b21-45d8-99f0-6e7832629f6d",
+        "body" : "@imback82 i think your point is that if data frame has a column having dot in the name, but it is not part of the null fill map then it will fail.\r\nYes, it will fail, example below.\r\n```import org.apache.spark.sql.SparkSession\r\n\r\nobject ColumnNameWithDot {\r\n\r\n  def main(args: Array[String]): Unit = {\r\n\r\n    val spark = SparkSession.builder.appName(\"Simple Application\")\r\n      .config(\"spark.master\", \"local\").getOrCreate()\r\n\r\n    spark.sparkContext.setLogLevel(\"OFF\")\r\n\r\n    import spark.implicits._\r\n    val df = Seq((\"abc\", 23), (\"def\", 44), (null, 0)).toDF(\"ColWith.Dot\", \"Col.2\")\r\n    df.na.fill(Map(\"`ColWith.Dot`\" -> \"na\"))\r\n      .show()\r\n  }\r\n}",
+        "createdAt" : "2021-02-11T05:23:42Z",
+        "updatedAt" : "2021-03-02T01:41:51Z",
+        "lastEditedBy" : "2aac12c0-5b21-45d8-99f0-6e7832629f6d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "92f499c2-4605-4af6-a433-2bd0e666f6a2",
+        "parentId" : "1dcc854f-dc41-4352-bab7-21bc341be6eb",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "Can you run this test after changing it to `Map(\"Col\" -> na)`? I see the following failure, which should be handled:\r\n```\r\nsbt:spark-sql> testOnly *DataFrameNaFunctionsSuite -- -z \"SPARK-34417\"\r\n[info] - SPARK-34417 - test fillMap() for column with a dot in the name *** FAILED *** (2 seconds, 274 milliseconds)\r\n[info]   org.apache.spark.sql.AnalysisException: Cannot resolve column name \"ColWith.Dot\" among (ColWith.Dot, Col); did you mean to quote the `ColWith.Dot` column?\r\n[info]   at org.apache.spark.sql.Dataset.org$apache$spark$sql$Dataset$$resolveException(Dataset.scala:272)\r\n[info]   at org.apache.spark.sql.Dataset.$anonfun$resolve$1(Dataset.scala:263)\r\n...\r\n```",
+        "createdAt" : "2021-02-11T05:25:54Z",
+        "updatedAt" : "2021-03-02T01:41:51Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a1279d75-9174-4671-bcef-c50519839bf0",
+        "parentId" : "1dcc854f-dc41-4352-bab7-21bc341be6eb",
+        "authorId" : "2aac12c0-5b21-45d8-99f0-6e7832629f6d",
+        "body" : "Handled the above failure.",
+        "createdAt" : "2021-02-11T08:33:12Z",
+        "updatedAt" : "2021-03-02T01:41:51Z",
+        "lastEditedBy" : "2aac12c0-5b21-45d8-99f0-6e7832629f6d",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "896652c34aaf8ecc9bcaaa4f81ccb149dd0c4a76",
+    "line" : 9,
+    "diffHunk" : "@@ -1,1 +466,470 @@    checkAnswer(\n      Seq((\"abc\", 23L), (\"def\", 44L), (null, 0L)).toDF(\"ColWith.Dot\", \"Col\")\n        .na.fill(Map(\"`ColWith.Dot`\" -> na)),\n      Row(\"abc\", 23) :: Row(\"def\", 44L) :: Row(na, 0L) :: Nil)\n  }"
   }
 ]
