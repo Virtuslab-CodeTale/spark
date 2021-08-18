@@ -1,0 +1,156 @@
+[
+  {
+    "id" : "bb0e23c7-c843-46f2-8375-b36d32617610",
+    "prId" : 26682,
+    "prUrl" : "https://github.com/apache/spark/pull/26682#pullrequestreview-349002294",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a3921f4d-9f2c-45ef-acb3-c0d7b4bc6b2f",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "What is the relation between resources file, ResourceProfile and discovery script?\r\n\r\nAll resources specified in ResourceProfile need to obtained via running discovery script?\r\n\r\n\r\n\r\n",
+        "createdAt" : "2020-01-15T06:27:09Z",
+        "updatedAt" : "2020-01-17T01:51:16Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "85a03001-0eff-4dcf-9a47-888c2a4ac4ca",
+        "parentId" : "a3921f4d-9f2c-45ef-acb3-c0d7b4bc6b2f",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : " The ResourceProfile defines what resources the executor is supposed to have - the requirements.  4 cores, 1 GPU, 1 FPGA, etc.\r\nThe resource file is only used in standalone mode where the Worker is responsible for assigning resources to the executors.  The discovery script is used for any resources that aren't specified in the resource file.   You can actually mix them if you want - for instance in standalone mode lets say your workers know about GPUs, but not FPGA's.  The worker woudl start your executor passing a resources file with the GPU assignments, but then the executor would have to run the discovery script to find what FPGA's are available to it.\r\n\r\nThis PR isn't really changing how that is done, that is from the original accelerator aware scheduling work. This PR only changes where it gets the requirements from. Now it gets it from the ResourceProfile rather then the spark configs.\r\n\r\nSo to clarify a bit more Spark is relying on the cluster manager to assign containers with the resource you request. In the case of Standalone mode the Worker starts the executor assigning it resources via the resources file.  In the case of yarn and k8s, they just give you a container and don't tell you what resources are on it, so we use the discovery Script to find the addresses of those resources yarn/k8s gave you.",
+        "createdAt" : "2020-01-15T14:33:53Z",
+        "updatedAt" : "2020-01-17T01:51:16Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f139b660-c07b-4fb4-9a99-56590daa0d5c",
+        "parentId" : "a3921f4d-9f2c-45ef-acb3-c0d7b4bc6b2f",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "Is it possible for yarn or k8s (or mesos ?) to give an executor which does not satisfy the resource constraint ? (in case of oversubscription of gpu's, etc ? We used to validate allocation for cpu/memory a while back ... probably does not do that anymore for cpu/mem)",
+        "createdAt" : "2020-01-26T08:26:00Z",
+        "updatedAt" : "2020-01-26T08:51:12Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3c12b0ba-3232-4e67-8dd0-8f111cf61615",
+        "parentId" : "a3921f4d-9f2c-45ef-acb3-c0d7b4bc6b2f",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "Not currently unless those resource managers are lying.  Right now for instance if you request GPUs from yarn and its not configured for it, it throws an exception.  I thought the same was true on k8s and we don't support on mesos. On the yarn side in the YarnAllocator we also set the resources when we get the matching requests so yarn would have to be telling us that the container it gave us matches with those resources.\r\n\r\nIf it did give us one and we accepted it, then the executor wouldn't start up if it didn't discovery enough resources that match the resource requirement.  \r\n\r\n",
+        "createdAt" : "2020-01-27T16:02:05Z",
+        "updatedAt" : "2020-01-27T16:02:06Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6962ecf1-ba3b-496d-a52d-00a5fdb3ae84",
+        "parentId" : "a3921f4d-9f2c-45ef-acb3-c0d7b4bc6b2f",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "Sounds good, so this is our expectation that any RM should not give a container which is under-provisioned in terms of requested resources (over provisioning is fine I guess ? Like more memory or more GPU's than requested). Thanks for clarifying.",
+        "createdAt" : "2020-01-27T21:48:29Z",
+        "updatedAt" : "2020-01-27T21:48:29Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "14bb5af7-e348-4870-a815-5ed6d95c94f0",
+        "parentId" : "a3921f4d-9f2c-45ef-acb3-c0d7b4bc6b2f",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "that is correct, that should be considered a bug in the RM.  over provisioned is fine.  ",
+        "createdAt" : "2020-01-27T21:54:19Z",
+        "updatedAt" : "2020-01-27T21:54:19Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "75091102d6bd64a61fb903c8df3edf9ca047e879",
+    "line" : 119,
+    "diffHunk" : "@@ -1,1 +281,285 @@   * It first looks to see if resource were explicitly specified in the resources file\n   * (this would include specified address assignments and it only specified in certain\n   * cluster managers) and then it looks at the ResourceProfile to get\n   * any others not specified in the file. The resources not explicitly set in the file require a\n   * discovery script for it to run to get the addresses of the resource."
+  },
+  {
+    "id" : "aafe9983-aa21-4aef-8ed1-b964ecafa9f5",
+    "prId" : 26682,
+    "prUrl" : "https://github.com/apache/spark/pull/26682#pullrequestreview-349021493",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "05bca05a-3de0-4735-8c05-a1137bc6ecfe",
+        "parentId" : null,
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "I am trying to understand how this method is used, and what it means.\r\nIf possible, can you point me to some info ? Thx\r\n(I see that it is a refactoring of inline code to a method, but was wondering what it was actually trying to do).",
+        "createdAt" : "2020-01-26T08:15:53Z",
+        "updatedAt" : "2020-01-26T08:51:12Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bf4964ff-e9b7-44c7-b725-2995c4a1c28e",
+        "parentId" : "05bca05a-3de0-4735-8c05-a1137bc6ecfe",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "Sure it needs more documentation then, I'll update the comment to have more context and perhaps clarify the names a bit.  \r\nThis is used for task resources (doesn't apply to executor resources, only task level and only supported when value < 1, we don't allow 2.33 for instance) when you have fractional amounts.   For instance you can set spark.task.resource.gpu.amount=0.33 and what this really means is that I want 3 tasks to use the same GPU.\r\nso do that inside Spark we convert this into an amount and a number of parts per resource.  Really number of parts you can think of as the number of slots per GPU address.   For 0.33 the amount = 1 and the numparts becomes 3. If the  spark.task.resource.gpu.amount=2 the amount =2 and numparts = 1.   So numparts is the number of ways to subdivide a resource address when the amount = 1.",
+        "createdAt" : "2020-01-27T15:56:14Z",
+        "updatedAt" : "2020-01-27T15:56:14Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4997e2e4-17eb-4544-8782-00a825bdf874",
+        "parentId" : "05bca05a-3de0-4735-8c05-a1137bc6ecfe",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "note it ends up being used stored here: https://github.com/apache/spark/blob/master/core/src/main/scala/org/apache/spark/resource/ResourceUtils.scala#L64\r\n\r\nIt ultimately ends up being used here: https://github.com/apache/spark/blob/master/core/src/main/scala/org/apache/spark/resource/ResourceAllocator.scala#L33 \r\nwhere we track the allocations of each resource.  this allows for a single address to be used multiple times\r\n",
+        "createdAt" : "2020-01-27T16:59:26Z",
+        "updatedAt" : "2020-01-27T16:59:26Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8515ebe8-4a69-4018-af8f-ecb719780e74",
+        "parentId" : "05bca05a-3de0-4735-8c05-a1137bc6ecfe",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "I attempted to clarify the comment here:\r\n\r\nhttps://github.com/apache/spark/pull/27313/commits/d270a731629ca53fb14a32fb2f17e732cd9a16a1\r\n\r\nReally I should probably go through everywhere that is used and try to clarify but I think that would be separate PR",
+        "createdAt" : "2020-01-27T17:22:54Z",
+        "updatedAt" : "2020-01-27T17:22:55Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3d67da56-a320-4414-95d9-1f437a411b01",
+        "parentId" : "05bca05a-3de0-4735-8c05-a1137bc6ecfe",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "I am slightly confused about this.\r\n\r\nIf gpus on an executor is 2 and spark.task.resource.gpu.amount=0.33, is it invalid configuration \r\n ? Or does it mean we run only 2 tasks on that node for that resource profile ?\r\n\r\nIf spark.task.resource.gpu.amount=1 and executor  has 2 gpu's, does it mean the task needs both gpu's ? Or only  1 ?\r\n\r\nWhat does it mean to have spark.task.resource.gpu.amount > 1 ?\r\n",
+        "createdAt" : "2020-01-27T22:00:57Z",
+        "updatedAt" : "2020-01-27T22:00:57Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "588f5e02-0d35-40a4-9109-afdc70ef6add",
+        "parentId" : "05bca05a-3de0-4735-8c05-a1137bc6ecfe",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "> If gpus on an executor is 2 and spark.task.resource.gpu.amount=0.33, is it invalid configuration\r\n\r\nYes its valid, executor has 2 gpus and you allow 3 tasks on each gpu, means you can run 6 total tasks in parallel (assuming you have 6 cores and spark.task.cpus=1).\r\n\r\n> If spark.task.resource.gpu.amount=1 and executor has 2 gpu's, does it mean the task needs both gpu's ? Or only 1 ?\r\n\r\nIt means each task gets 1 gpu, so if executor has 2 gpus you can run 2 tasks. \r\n\r\nif you have spark.task.resource.gpu.amount > 1 that means each task gets that amount of GPUs.   Meaning executor gpus=4 and spark.task.resource.gpu.amount=2, means each task gets 2 gpus and you have 2 tasks total on that executor.\r\n\r\nIf you configure spark.task.resource.gpu.amount=4 and spark.executor.resource.gpu.amount=1 - spark throws an error as its invalid configuration.\r\n\r\nThe idea was spark.task.resource.gpu.amount acts just like spark.task.cpus - with the addition it also supports the fractional amounts in case you want to run multiple tasks on a single gpu.   \r\n",
+        "createdAt" : "2020-01-27T22:30:30Z",
+        "updatedAt" : "2020-01-27T22:30:30Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "75091102d6bd64a61fb903c8df3edf9ca047e879",
+    "line" : 24,
+    "diffHunk" : "@@ -1,1 +136,140 @@        s\"The resource amount ${amount} must be either <= 0.5, or a whole number.\")\n    } else {\n      1\n    }\n    (Math.ceil(amount).toInt, parts)"
+  }
+]

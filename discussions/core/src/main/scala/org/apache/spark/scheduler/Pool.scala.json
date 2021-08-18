@@ -1,0 +1,167 @@
+[
+  {
+    "id" : "2752373a-5d7e-49d2-82fd-ace8a227adb8",
+    "prId" : 26696,
+    "prUrl" : "https://github.com/apache/spark/pull/26696#pullrequestreview-334420350",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9ec1b4ec-e301-4d5f-bd61-020a936af00f",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "shall we count running tasks?",
+        "createdAt" : "2019-12-18T11:56:37Z",
+        "updatedAt" : "2019-12-19T05:50:56Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ad5c181d-1dd6-447b-b6bb-f725ded5876d",
+        "parentId" : "9ec1b4ec-e301-4d5f-bd61-020a936af00f",
+        "authorId" : "29a3e834-d9e3-42dc-ab25-20ba332ef3f2",
+        "body" : "what do you mean?\r\nnumTasksRemaining includes running tasks + tasks not yet scheduled",
+        "createdAt" : "2019-12-19T05:53:37Z",
+        "updatedAt" : "2019-12-19T05:53:37Z",
+        "lastEditedBy" : "29a3e834-d9e3-42dc-ab25-20ba332ef3f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f9a85f9475d5851f5bdd79e18141950330421445",
+    "line" : 36,
+    "diffHunk" : "@@ -1,1 +145,149 @@            val schedulable = iterator.next()\n            val numTasksRemaining = schedulable.getSortedTaskSetQueue\n              .map(tsm => tsm.tasks.length - tsm.tasksSuccessful).sum\n            val allocatedSlots = Math.max(\n              totalSlots * schedulable.weight / totalWeights,"
+  },
+  {
+    "id" : "07798087-c9c1-498b-b006-ca6de1710fd5",
+    "prId" : 26696,
+    "prUrl" : "https://github.com/apache/spark/pull/26696#pullrequestreview-334420678",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "073550f8-61f0-475c-97de-8a56b4714ec6",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "this `shouldRedistribute` seems unnecessary, shall we just write `while (totalSlots > 0)` and keep decreasing `totalSlots` in the loop body?",
+        "createdAt" : "2019-12-18T11:59:09Z",
+        "updatedAt" : "2019-12-19T05:50:56Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "34cd10bf-5d62-4875-95e1-e2bd74ed6e7f",
+        "parentId" : "073550f8-61f0-475c-97de-8a56b4714ec6",
+        "authorId" : "29a3e834-d9e3-42dc-ab25-20ba332ef3f2",
+        "body" : "I couldn't yet think of a way to get rid of the `shouldRedistribute `\r\nHowever, I've added the check on `totalSlots` as a shortcut",
+        "createdAt" : "2019-12-19T05:54:48Z",
+        "updatedAt" : "2019-12-19T05:54:49Z",
+        "lastEditedBy" : "29a3e834-d9e3-42dc-ab25-20ba332ef3f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f9a85f9475d5851f5bdd79e18141950330421445",
+    "line" : 44,
+    "diffHunk" : "@@ -1,1 +153,157 @@              nextWeights -= schedulable.weight\n              nextSlots -= numTasksRemaining\n              shouldRedistribute = true\n              iterator.remove()\n            }"
+  },
+  {
+    "id" : "3bf7ceb0-4351-485d-bb3a-15348b301886",
+    "prId" : 26696,
+    "prUrl" : "https://github.com/apache/spark/pull/26696#pullrequestreview-334420880",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "891f33ed-1fed-42fd-87cd-4d964ab36204",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "we can stop the loop earlier if `remainingSlots` becomes 0.",
+        "createdAt" : "2019-12-18T12:00:45Z",
+        "updatedAt" : "2019-12-19T05:50:56Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0cd20b88-b0b2-4186-ae87-273b7d0df331",
+        "parentId" : "891f33ed-1fed-42fd-87cd-4d964ab36204",
+        "authorId" : "29a3e834-d9e3-42dc-ab25-20ba332ef3f2",
+        "body" : "we shouldn't exit the loop because we need to update the remaining schedulables with 0 slots.\r\nI've added a shortcut for the 0 case.",
+        "createdAt" : "2019-12-19T05:55:36Z",
+        "updatedAt" : "2019-12-19T05:55:47Z",
+        "lastEditedBy" : "29a3e834-d9e3-42dc-ab25-20ba332ef3f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f9a85f9475d5851f5bdd79e18141950330421445",
+    "line" : 64,
+    "diffHunk" : "@@ -1,1 +173,177 @@          schedulableQueue.asScala.toSeq.sortWith(taskSetSchedulingAlgorithm.comparator)\n        var remainingSlots = numSlots\n        for (schedulable <- sortedSchedulableQueue) {\n          if (remainingSlots == 0) {\n            schedulable.updateAvailableSlots(0)"
+  },
+  {
+    "id" : "4959c1c5-da50-48e4-a5c8-605e5442676d",
+    "prId" : 26696,
+    "prUrl" : "https://github.com/apache/spark/pull/26696#pullrequestreview-335679334",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9b005fe9-07ca-4e7a-80ac-4cec5eee2a96",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "For each `schedulable`, we either allocate enough slots to fully satisfy the remaining tasks, or we don't allocate slots at all. Is it expected in the FAIR pool?",
+        "createdAt" : "2019-12-19T07:11:57Z",
+        "updatedAt" : "2019-12-19T07:11:58Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "497d3127-c8be-436b-b27c-111539af4986",
+        "parentId" : "9b005fe9-07ca-4e7a-80ac-4cec5eee2a96",
+        "authorId" : "29a3e834-d9e3-42dc-ab25-20ba332ef3f2",
+        "body" : "For this first outer loop, each iteration will find all the schedulables which have leftover slots and redistributed them accordingly, looping until none have leftover slots. At this point no slots can be redistributed.\r\n\r\nThe loop starting on line 165 below handles the remaining schedulables.",
+        "createdAt" : "2019-12-19T08:13:52Z",
+        "updatedAt" : "2019-12-19T08:13:52Z",
+        "lastEditedBy" : "29a3e834-d9e3-42dc-ab25-20ba332ef3f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9c790945-5179-44bc-ab70-120b30174632",
+        "parentId" : "9b005fe9-07ca-4e7a-80ac-4cec5eee2a96",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "is it exactly the same as how the FAIR pool assign resources?",
+        "createdAt" : "2019-12-19T11:47:21Z",
+        "updatedAt" : "2019-12-19T11:47:31Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0cf6af6a-fb5d-43ed-bead-6cebd08a03d2",
+        "parentId" : "9b005fe9-07ca-4e7a-80ac-4cec5eee2a96",
+        "authorId" : "29a3e834-d9e3-42dc-ab25-20ba332ef3f2",
+        "body" : "You got me thinking more about this by using the word \"exactly\". It is the combination of TaskSchedulerImpl, Pool (including FAIR/FIFO scheduling algos), and TaskSetManager (including delay scheduling), etc. which determine how resources are assigned. \r\nThe goal for this approach is to simulate scheduling without delay scheduling.\r\nThis helps determine how much you are underutilizing resources due to delay scheduling.\r\n\r\nSo far the most recent diff seems to fall short due to at least a couple reasons:\r\n1.  Scheduling is different depending on if `TaskSchedulerImpl.resourceOffers` is called one by one with single offers vs if it is called with all offers in one batch. `Schedulable.getSortedTaskSetQueue` is called only once per `resourceOffers` call, meaning that for a batch call, it only follows the scheduling algorithm for the first task that is scheduled (seems like a bug). \r\n2. The approach doesn't exactly follow FAIR ordering, such as the minShareRatio and schedulable name based ordering found in `FairSchedulingAlgorithm.`\r\n\r\nI have a rough idea for an alternative implementation which does a more direct simulation, utilizing the `SchedulingAlgorithm` trait directly. I'll do more thinking in the coming days.",
+        "createdAt" : "2019-12-20T17:12:59Z",
+        "updatedAt" : "2019-12-20T17:13:28Z",
+        "lastEditedBy" : "29a3e834-d9e3-42dc-ab25-20ba332ef3f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "169252e2-1a34-431a-bb1a-e304f04a2c4c",
+        "parentId" : "9b005fe9-07ca-4e7a-80ac-4cec5eee2a96",
+        "authorId" : "29a3e834-d9e3-42dc-ab25-20ba332ef3f2",
+        "body" : "2. from above can be solved by utilizing the `SchedulingAlgorithm` as mentioned, but 1. still remains. A couple more problematic areas:\r\n\r\n- Slots can be rejected due to [blacklisting](https://github.com/apache/spark/blob/master/core/src/main/scala/org/apache/spark/scheduler/TaskSetManager.scala#L392)\r\n- Slots can be rejected due to not meeting [resource requirements](https://github.com/apache/spark/blob/master/core/src/main/scala/org/apache/spark/scheduler/TaskSchedulerImpl.scala#L344)\r\n\r\nI'm trying to think of an idea where the TSM will report directly if it rejected due to delay scheduling, but I am having trouble thinking how to utilize that data due to problem 1. in previous comment.",
+        "createdAt" : "2019-12-23T00:33:13Z",
+        "updatedAt" : "2019-12-23T00:33:13Z",
+        "lastEditedBy" : "29a3e834-d9e3-42dc-ab25-20ba332ef3f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f9a85f9475d5851f5bdd79e18141950330421445",
+    "line" : 40,
+    "diffHunk" : "@@ -1,1 +149,153 @@              totalSlots * schedulable.weight / totalWeights,\n              schedulable.minShare)\n            if (numTasksRemaining < allocatedSlots) {\n              schedulable.updateAvailableSlots(numTasksRemaining)\n              nextWeights -= schedulable.weight"
+  }
+]

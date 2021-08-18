@@ -20,5 +20,115 @@
     "commit" : "25ec746753f29acd5e248d03db48211a3876a7c1",
     "line" : 53,
     "diffHunk" : "@@ -1,1 +103,107 @@      getOnly(\"INPUTFORMAT/OUTPUTFORMAT\", formatClasses, other.formatClasses),\n      getOnly(\"SERDE\", serde, other.serde),\n      serdeProperties ++ other.serdeProperties)\n  }\n}"
+  },
+  {
+    "id" : "a7aba2dd-0c23-4f7d-b4da-e632155ee9bc",
+    "prId" : 26717,
+    "prUrl" : "https://github.com/apache/spark/pull/26717#pullrequestreview-329578172",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "69ead60f-2f94-487b-b17c-8961dc771d58",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I'm not sure we need it. We use statements for commands that have both v1 and v2 versions, and we need to pick one in the analyzer.\r\n\r\ntemp view is managed by Spark itself, so we only have one command for CREATE TEMP VIEW USING. We should just reuse the existing `CreateTempViewUsing` command.",
+        "createdAt" : "2019-12-04T08:12:33Z",
+        "updatedAt" : "2019-12-04T08:12:34Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ca9cb5a2-41c2-4de1-9f30-7c5e0f543e92",
+        "parentId" : "69ead60f-2f94-487b-b17c-8961dc771d58",
+        "authorId" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "body" : "Thanks for the explanation. So I guess we don't need any of the changes except the one removing ```visitCreateTable``` from ```SparkSqlParser```?",
+        "createdAt" : "2019-12-06T05:05:19Z",
+        "updatedAt" : "2019-12-06T05:05:19Z",
+        "lastEditedBy" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ba04caf8-db11-4fa6-b415-03a25e58d4ef",
+        "parentId" : "69ead60f-2f94-487b-b17c-8961dc771d58",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "We can move `CreateTempViewUsing` to catalyst and simply the code. Removing the old CREATE EXTERNAL TABLE USING is another topic and should be discussed more as it's a breaking change.",
+        "createdAt" : "2019-12-06T05:27:00Z",
+        "updatedAt" : "2019-12-06T05:27:00Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2c0a9260-2407-469f-80a0-7c604c7efc5e",
+        "parentId" : "69ead60f-2f94-487b-b17c-8961dc771d58",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "`CREATE EXTERNAL TABLE ... USING` is disallowed for now. So I think you mean`CREATE TEMPORARY TABLE ... USING`? @cloud-fan ",
+        "createdAt" : "2019-12-06T22:40:55Z",
+        "updatedAt" : "2019-12-06T22:40:55Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3ae64b9c-7b7d-4d4a-94c8-bc589733754d",
+        "parentId" : "69ead60f-2f94-487b-b17c-8961dc771d58",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "So `CreateTempViewUsing` always uses session catalog if a catalog is provided?",
+        "createdAt" : "2019-12-06T22:46:49Z",
+        "updatedAt" : "2019-12-06T22:46:49Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "86d2481e-99ac-4093-8eb1-20c2fbbef3b1",
+        "parentId" : "69ead60f-2f94-487b-b17c-8961dc771d58",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "ah yes, CREATE TEMPORARY TABLE ... USING\r\n\r\n`CreateTempViewUsing` doesn't need catalog at all. It needs `SessionCatalog` now because somehow we manage temp views by `SessionCatalog`, but we may refactor it in the future.",
+        "createdAt" : "2019-12-09T05:09:24Z",
+        "updatedAt" : "2019-12-09T05:09:24Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3a1ff691-4702-4571-9d68-93e68bf35f92",
+        "parentId" : "69ead60f-2f94-487b-b17c-8961dc771d58",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "hmm, `CreateTempViewUsing` is an execution command and depends on few things in sql core. Seems we can not move it simply.",
+        "createdAt" : "2019-12-09T21:46:36Z",
+        "updatedAt" : "2019-12-09T21:46:37Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e054bf2a-061a-4e4a-9e11-f644b567f8ef",
+        "parentId" : "69ead60f-2f94-487b-b17c-8961dc771d58",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "then there is not much we can do...",
+        "createdAt" : "2019-12-10T03:31:07Z",
+        "updatedAt" : "2019-12-10T03:31:08Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b691c3b4-0dff-4a0b-91d5-238ea15faba2",
+        "parentId" : "69ead60f-2f94-487b-b17c-8961dc771d58",
+        "authorId" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "body" : "I will close this PR. Thanks a lot for your help! @viirya @cloud-fan ",
+        "createdAt" : "2019-12-10T04:02:13Z",
+        "updatedAt" : "2019-12-10T04:02:14Z",
+        "lastEditedBy" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "074309d2e4c3766c02b36bfa1677d073507aa6b8",
+    "line" : 7,
+    "diffHunk" : "@@ -1,1 +105,109 @@ * A CREATE TEMP VIEW USING statement, as parsed from SQL.\n */\ncase class CreateTempViewUsingStatement(\n    viewName: Seq[String],\n    userSpecifiedSchema: Option[StructType],"
   }
 ]

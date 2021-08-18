@@ -218,5 +218,104 @@
     "commit" : "d724fa48dc8d9b419e46efd2a9d7858003908245",
     "line" : 17,
     "diffHunk" : "@@ -1,1 +110,114 @@    if (dt instanceof UserDefinedType) {\n      return isMutable(((UserDefinedType) dt).sqlType());\n    }\n\n    return mutableFieldTypes.contains(dt) || dt instanceof DecimalType ||"
+  },
+  {
+    "id" : "b4dcf42d-6364-4d47-9af1-072124d7e33a",
+    "prId" : 26680,
+    "prUrl" : "https://github.com/apache/spark/pull/26680#pullrequestreview-323514230",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0f995055-9923-4e8c-b8fe-d83662e62a2d",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "shall we also zero-out the bytes if it's null?",
+        "createdAt" : "2019-11-27T08:43:21Z",
+        "updatedAt" : "2019-12-02T06:08:59Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1cfbb680-d3e3-4111-bdc9-593d9ef3cfff",
+        "parentId" : "0f995055-9923-4e8c-b8fe-d83662e62a2d",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "Methinks only if we directly call `getInterval` API, otherwise, this won't hurt. WDYT?",
+        "createdAt" : "2019-11-27T08:54:00Z",
+        "updatedAt" : "2019-12-02T06:08:59Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8ec83eb3-26e6-4bdc-a4b6-58a5b25e108e",
+        "parentId" : "0f995055-9923-4e8c-b8fe-d83662e62a2d",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "It's important to keep the binary format deterministic. If an interval field is null, it's better to guarantee that the value portion is all 0, rather than random values.\r\n\r\nWe can only rely on binary equality check if the binary format is deterministic.",
+        "createdAt" : "2019-11-27T08:57:43Z",
+        "updatedAt" : "2019-12-02T06:08:59Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d51b534c-16ba-498f-8f6e-9bb7dfa90f11",
+        "parentId" : "0f995055-9923-4e8c-b8fe-d83662e62a2d",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "OK, let zero-out them to keep safe.",
+        "createdAt" : "2019-11-27T09:02:16Z",
+        "updatedAt" : "2019-12-02T06:08:59Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b87fdf69b8ea1b1a8546e32f0b7bfbc7fb0dd8b7",
+    "line" : 19,
+    "diffHunk" : "@@ -1,1 +304,308 @@    long cursor = getLong(ordinal) >>> 32;\n    assert cursor > 0 : \"invalid cursor \" + cursor;\n    if (value == null) {\n      setNullAt(ordinal);\n      // zero-out the bytes"
+  },
+  {
+    "id" : "23f0870c-5e03-4ae8-95d4-ee42445de08c",
+    "prId" : 26680,
+    "prUrl" : "https://github.com/apache/spark/pull/26680#pullrequestreview-323513882",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "93720230-fc00-4d1a-a96f-32d300f1be82",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "in `setDecimal` we use `cursor << 32`. Why change it?",
+        "createdAt" : "2019-11-27T08:43:47Z",
+        "updatedAt" : "2019-12-02T06:08:59Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5383ecc6-c864-4ea4-be25-5d1fc63be5c5",
+        "parentId" : "93720230-fc00-4d1a-a96f-32d300f1be82",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "I have no strong opinion here, I do this just to make a reservation for the interval values in the variable-length portion.  I guess this won't be needed",
+        "createdAt" : "2019-11-27T08:50:22Z",
+        "updatedAt" : "2019-12-02T06:08:59Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e5197fc6-d4b8-44f1-bfe4-0315fcb5889d",
+        "parentId" : "93720230-fc00-4d1a-a96f-32d300f1be82",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "This is different from decimal, which is var-length. We know the length is always 16 for interval values.\r\n\r\nAnyway, it doesn't hurt to encode the length here. Let's keep it.",
+        "createdAt" : "2019-11-27T09:01:41Z",
+        "updatedAt" : "2019-12-02T06:08:59Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b87fdf69b8ea1b1a8546e32f0b7bfbc7fb0dd8b7",
+    "line" : 25,
+    "diffHunk" : "@@ -1,1 +310,314 @@      Platform.putLong(baseObject, baseOffset + cursor + 8, 0L);\n      // keep the offset for future update\n      Platform.putLong(baseObject, getFieldOffset(ordinal), (cursor << 32) | 16L);\n    } else {\n      Platform.putInt(baseObject, baseOffset + cursor, value.months);"
   }
 ]

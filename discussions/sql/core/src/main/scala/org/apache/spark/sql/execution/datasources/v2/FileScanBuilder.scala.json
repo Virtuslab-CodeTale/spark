@@ -75,5 +75,159 @@
     "commit" : "bbc85db716de1db24bdb67f2ca9075dcaa648ded",
     "line" : 30,
     "diffHunk" : "@@ -1,1 +61,65 @@  }\n\n  def setFilters(pFilters: Seq[Expression], dFilters: Seq[Expression]): Unit = {\n    partitionFilters = pFilters\n    dataFilters = dFilters"
+  },
+  {
+    "id" : "09f9efe1-4e92-4562-89f0-f4dc9b662dac",
+    "prId" : 26751,
+    "prUrl" : "https://github.com/apache/spark/pull/26751#pullrequestreview-328311189",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "cc1937bc-0972-4913-9b14-13478008ed26",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Yes. This looks like the minimal change in this layer.",
+        "createdAt" : "2019-12-06T16:24:10Z",
+        "updatedAt" : "2019-12-11T13:38:27Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4d732b28eb0ca2a383b3d0ad4d9da7742f138d32",
+    "line" : 18,
+    "diffHunk" : "@@ -1,1 +41,45 @@  protected def readDataSchema(): StructType = {\n    val requiredNameSet = createRequiredNameSet()\n    val schema = if (supportsNestedSchemaPruning) requiredSchema else dataSchema\n    val fields = schema.fields.filter { field =>\n      val colName = PartitioningUtils.getColName(field, isCaseSensitive)"
+  },
+  {
+    "id" : "008bcddd-7f69-46d4-bbee-aab1b30f284b",
+    "prId" : 26751,
+    "prUrl" : "https://github.com/apache/spark/pull/26751#pullrequestreview-330793286",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4d89c19c-ae55-4c64-b326-b15505494c0c",
+        "parentId" : null,
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "could we write \"use `requiredSchema` as a reference and perform the pruning on top level.\"? \r\n\r\nBTW, for data source such as csv or json, even the top level pruning is not supported. In this case, does it mean the `readDaraSchema` will be always the full schema?",
+        "createdAt" : "2019-12-11T01:08:02Z",
+        "updatedAt" : "2019-12-11T13:38:27Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "31d26898-8763-4b09-92df-0a240eadfaf9",
+        "parentId" : "4d89c19c-ae55-4c64-b326-b15505494c0c",
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "Okay, I figure. For those data sources that don't support top level pruning, we will only return the required top level columns in readDataSchema. I guess in this case, the reader implementations still read the full data, and handle it internally, but pass less data into Spark. Wondering why we can not do similar thing in readers for nested data structure?",
+        "createdAt" : "2019-12-11T01:16:38Z",
+        "updatedAt" : "2019-12-11T13:38:27Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7746acca-4dd9-4b19-b1f2-0ace8d0762df",
+        "parentId" : "4d89c19c-ae55-4c64-b326-b15505494c0c",
+        "authorId" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "body" : "I think you are right and it seems that data sources such as CSV and JSON try to simply ignore columns that are not needed in readers (e.g. spark.sql.csv.parser.columnPruning.enabled).\r\n\r\nWhile CSV doesn't support nested data, JSON can potentially benefit from this. I haven't checked the JSON reader in detail to see whether it will need any changes. Sounds like a potential follow-up?",
+        "createdAt" : "2019-12-11T13:38:48Z",
+        "updatedAt" : "2019-12-11T13:45:18Z",
+        "lastEditedBy" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "47aef93f-681e-4cce-957a-7e6741ba9b01",
+        "parentId" : "4d89c19c-ae55-4c64-b326-b15505494c0c",
+        "authorId" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "body" : "I've updated the comment as well.",
+        "createdAt" : "2019-12-11T13:39:40Z",
+        "updatedAt" : "2019-12-11T13:39:40Z",
+        "lastEditedBy" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f7df5aae-60db-4c22-b536-cce0699335a6",
+        "parentId" : "4d89c19c-ae55-4c64-b326-b15505494c0c",
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "It's not in the scope of this PR, but I feel we could always pass the pruned `requiredSchema` to the readers even for those not supporting any schema pruning. Thus, the benefit will be 1) move less data into Spark even the readers still require read the full data 2) The code will be consistent between handling nested schema pruning and top level pruning. ",
+        "createdAt" : "2019-12-11T18:50:18Z",
+        "updatedAt" : "2019-12-11T18:50:18Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e5f63f08-4556-469a-84f9-81cd38286941",
+        "parentId" : "4d89c19c-ae55-4c64-b326-b15505494c0c",
+        "authorId" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "body" : "I agree and it will also be trivial because the changes in this layer are minimal.",
+        "createdAt" : "2019-12-11T19:39:16Z",
+        "updatedAt" : "2019-12-11T19:39:16Z",
+        "lastEditedBy" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4d732b28eb0ca2a383b3d0ad4d9da7742f138d32",
+    "line" : 12,
+    "diffHunk" : "@@ -1,1 +36,40 @@    // File formats that don't support nested schema pruning,\n    // use `requiredSchema` as a reference and prune only top-level columns.\n    this.requiredSchema = requiredSchema\n  }\n"
+  },
+  {
+    "id" : "ceb24f52-f3bd-4190-8604-0efe3200c549",
+    "prId" : 26751,
+    "prUrl" : "https://github.com/apache/spark/pull/26751#pullrequestreview-331183703",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "cbf5f01f-5e63-47d1-ba8f-15a1ce7187ee",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "If supportsNestedSchemaPruning is true but SQLConf.get.nestedSchemaPruningEnabled is disabled? We should use `dataSchema`?",
+        "createdAt" : "2019-12-11T01:28:56Z",
+        "updatedAt" : "2019-12-11T13:38:27Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b02cab6c-56e6-4331-bdc1-627e72326245",
+        "parentId" : "cbf5f01f-5e63-47d1-ba8f-15a1ce7187ee",
+        "authorId" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "body" : "If `SQLConf.get.nestedSchemaPruningEnabled` is false, we will use the old path without nested schema pruning. So, the passed `requiredSchema` will always be the source of truth for ORC and Parquet. I've added a test to `SchemaPruningSuite` to confirm this.",
+        "createdAt" : "2019-12-11T13:44:34Z",
+        "updatedAt" : "2019-12-11T13:49:55Z",
+        "lastEditedBy" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "03340b31-17d4-4ba4-9071-9de8803e8b56",
+        "parentId" : "cbf5f01f-5e63-47d1-ba8f-15a1ce7187ee",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "hmm, so what is the difference using `requiredSchema` or `dataSchema`? When using the old path without nested schema pruning, the passed `requiredSchema` is always the source of truth. When `supportsNestedSchemaPruning` is false, don't we also go the old path, but we turn to `dataSchema`?? \r\n",
+        "createdAt" : "2019-12-12T00:50:06Z",
+        "updatedAt" : "2019-12-12T00:50:44Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f9cc3caf-e0a3-48e7-80c9-26103e15c558",
+        "parentId" : "cbf5f01f-5e63-47d1-ba8f-15a1ce7187ee",
+        "authorId" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "body" : "The difference between those two is that `requiredSchema` can have pruned nested columns if nested schema pruning is enabled. Therefore, ORC and Parquet must always use data types from `requiredSchema`. If nested schema pruning is disabled, `requiredSchema` will have pruned only top-level columns. In that case, it is still safe to use data types from `requiredSchema`. CSV/JSON/Avro will always use `requiredSchema` as a reference but keep data types from `dataSchema`, so that even if Spark passes a schema with pruned nested columns, we still use data types defined in `dataSchema` to match the behavior before this PR.",
+        "createdAt" : "2019-12-12T12:06:26Z",
+        "updatedAt" : "2019-12-12T12:06:26Z",
+        "lastEditedBy" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4d732b28eb0ca2a383b3d0ad4d9da7742f138d32",
+    "line" : 18,
+    "diffHunk" : "@@ -1,1 +41,45 @@  protected def readDataSchema(): StructType = {\n    val requiredNameSet = createRequiredNameSet()\n    val schema = if (supportsNestedSchemaPruning) requiredSchema else dataSchema\n    val fields = schema.fields.filter { field =>\n      val colName = PartitioningUtils.getColName(field, isCaseSensitive)"
   }
 ]

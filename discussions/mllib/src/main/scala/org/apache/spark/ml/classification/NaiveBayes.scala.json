@@ -1,0 +1,68 @@
+[
+  {
+    "id" : "ed878bc4-b77a-4c76-8558-132f84f800f9",
+    "prId" : 26679,
+    "prUrl" : "https://github.com/apache/spark/pull/26679#pullrequestreview-324015863",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4a70e1c6-2251-4c1c-b52e-4deb9f2c6426",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Hm, but isn't it redundant to serialize all these zeroes? how big will it be -- O(n^2) if n is the number of features?\r\nIs it backwards-compatible?",
+        "createdAt" : "2019-11-27T18:13:30Z",
+        "updatedAt" : "2019-11-27T18:13:30Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b56fcba1-7c9e-479e-9a6a-144d57a15d83",
+        "parentId" : "4a70e1c6-2251-4c1c-b52e-4deb9f2c6426",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "In MNB/CNB/BNB, it is a empty matrix (numRows=0, numCols=0), so it should be tiny.\r\nIn GNB, it is a matrix of size = #class x #feature , as big as `theta` matrix.\r\nI also test the backwards-compatibilty: save a model in 2.4.4, and load it in this PR, it works fine.\r\n",
+        "createdAt" : "2019-11-28T01:33:41Z",
+        "updatedAt" : "2019-11-28T01:33:41Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f624271e05dd8ff29f0f86cb2777b78881682847",
+    "line" : 13,
+    "diffHunk" : "@@ -1,1 +247,251 @@      case Multinomial | Bernoulli =>\n        val theta = new DenseMatrix(numLabels, numFeatures, thetaArray, true)\n        new NaiveBayesModel(uid, pi.compressed, theta.compressed, Matrices.zeros(0, 0))\n          .setOldLabels(labelArray)\n      case Complement =>"
+  },
+  {
+    "id" : "50a20fb7-84ac-450c-8e2f-e62218fbf18e",
+    "prId" : 26679,
+    "prUrl" : "https://github.com/apache/spark/pull/26679#pullrequestreview-324020702",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b29a5141-1a5c-4c9a-b06e-800d15c1fa2f",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Would you get an NPE if loading a model saved with 2.4, where it's null? or am I missing that 2.4 would not have had this behavior (i.e. this is all new)?",
+        "createdAt" : "2019-11-28T01:50:04Z",
+        "updatedAt" : "2019-11-28T01:50:04Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9952fff5-9af2-4644-834e-4193963c247c",
+        "parentId" : "b29a5141-1a5c-4c9a-b06e-800d15c1fa2f",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "Yes, it is all new, the matrix `sigma` is just added in https://github.com/apache/spark/pull/26413 last week.",
+        "createdAt" : "2019-11-28T01:58:02Z",
+        "updatedAt" : "2019-11-28T01:58:03Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f624271e05dd8ff29f0f86cb2777b78881682847",
+    "line" : 42,
+    "diffHunk" : "@@ -1,1 +589,593 @@      instance.getModelType match {\n        case Multinomial | Bernoulli | Complement =>\n          require(instance.sigma.numRows == 0 && instance.sigma.numCols == 0)\n        case Gaussian =>\n          require(instance.sigma.numRows != 0 && instance.sigma.numCols != 0)"
+  }
+]

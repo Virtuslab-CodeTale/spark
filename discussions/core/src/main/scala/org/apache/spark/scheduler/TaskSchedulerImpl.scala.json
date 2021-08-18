@@ -757,5 +757,60 @@
     "commit" : "24c8ad9ae23d360c7bb5bc813d04e6f5f6715d93",
     "line" : 161,
     "diffHunk" : "@@ -1,1 +525,529 @@  def resourceOffers(\n      offers: IndexedSeq[WorkerOffer],\n      isAllFreeResources: Boolean = true): Seq[Seq[TaskDescription]] = synchronized {\n    // Mark each slave as alive and remember its hostname\n    // Also track if new executor is added"
+  },
+  {
+    "id" : "1b66bc76-0385-41f9-8057-70060ee949a2",
+    "prId" : 26696,
+    "prUrl" : "https://github.com/apache/spark/pull/26696#pullrequestreview-329724204",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0979ed2d-2b33-4508-b615-de1c500e60e1",
+        "parentId" : null,
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "I think that rather than calling `rootPool.updateAvailableSlots()` on every `resourceOffer`, it would be more efficient to just call it when the total number has changed -- here and in the `resourceOffer` branch where its updated.  Might not matter much, hopefully `updateAvailableSlots()` isn't too expensive, but still I think that would be better.",
+        "createdAt" : "2019-12-09T16:26:52Z",
+        "updatedAt" : "2019-12-19T05:50:56Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1f15852f-5e01-4f5d-a6ca-ed4c2ae5c942",
+        "parentId" : "0979ed2d-2b33-4508-b615-de1c500e60e1",
+        "authorId" : "29a3e834-d9e3-42dc-ab25-20ba332ef3f2",
+        "body" : "updateAvailableSlots is dependent on both the total number of slots + what tasksets/pools are present. Will take a look to see how feasible doing the update incrementally is.",
+        "createdAt" : "2019-12-10T10:17:43Z",
+        "updatedAt" : "2019-12-19T05:50:56Z",
+        "lastEditedBy" : "29a3e834-d9e3-42dc-ab25-20ba332ef3f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f9a85f9475d5851f5bdd79e18141950330421445",
+    "line" : 56,
+    "diffHunk" : "@@ -1,1 +817,821 @@      taskIds.foreach(cleanupTaskState)\n    }\n    executorIdToCores.remove(executorId).foreach(totalSlots -= _ / CPUS_PER_TASK)\n\n    val host = executorIdToHost(executorId)"
+  },
+  {
+    "id" : "2b276a5a-023e-4d57-8c39-c7f681346cec",
+    "prId" : 26696,
+    "prUrl" : "https://github.com/apache/spark/pull/26696#pullrequestreview-333051758",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "103aa9ba-a4d8-44f9-ad65-d6b5f449b404",
+        "parentId" : null,
+        "authorId" : "29a3e834-d9e3-42dc-ab25-20ba332ef3f2",
+        "body" : "can anyone confirm whether it is true that the first resource offer for an executor will include all cores?\r\neven if this is true it feels odd to rely on it.",
+        "createdAt" : "2019-12-17T06:16:26Z",
+        "updatedAt" : "2019-12-19T05:50:56Z",
+        "lastEditedBy" : "29a3e834-d9e3-42dc-ab25-20ba332ef3f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f9a85f9475d5851f5bdd79e18141950330421445",
+    "line" : 37,
+    "diffHunk" : "@@ -1,1 +407,411 @@        hostToExecutors(o.host) += o.executorId\n        executorAdded(o.executorId, o.host)\n        // Assumes the first offer will include all cores (free cores == all cores)\n        executorIdToCores(o.executorId) = o.cores\n        totalSlots += o.cores / CPUS_PER_TASK"
   }
 ]

@@ -42,5 +42,181 @@
     "commit" : "2ceb46ec733b5c42b7bd07c41e51b36efd1936e0",
     "line" : 51,
     "diffHunk" : "@@ -1,1 +72,76 @@   *                   topic name, etc.\n   */\n  Table getTable(StructType schema, Transform[] partitioning, Map<String, String> properties);\n\n  /**"
+  },
+  {
+    "id" : "ac5ec0c0-9186-48f8-8031-d24f7539f4c0",
+    "prId" : 26750,
+    "prUrl" : "https://github.com/apache/spark/pull/26750#pullrequestreview-328043202",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d3f14a58-bce6-40fc-82f4-69e556d54c12",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "So, the main idea of this PR is to remove the case-insensitive requirements from the original java `TableProvider` DSv2 design?",
+        "createdAt" : "2019-12-05T19:07:25Z",
+        "updatedAt" : "2019-12-05T19:07:25Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b2d9a926-4b7d-48b6-82e1-45486c63a86b",
+        "parentId" : "d3f14a58-bce6-40fc-82f4-69e556d54c12",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "cc @dbtsai and @aokolnychyi for Iceberg.",
+        "createdAt" : "2019-12-05T19:09:55Z",
+        "updatedAt" : "2019-12-05T19:09:55Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "614bdd4f-cfbc-442d-801d-649893c62bf1",
+        "parentId" : "d3f14a58-bce6-40fc-82f4-69e556d54c12",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "no, the main idea is to add a new overload method to accept user-specified partitioning. Since we need to change the API, we change the option type as well, see https://github.com/apache/spark/pull/26750/files#r354692676",
+        "createdAt" : "2019-12-06T07:58:33Z",
+        "updatedAt" : "2019-12-06T07:58:33Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7fcee0cac5a093481a8740aabda9dd5083bbdaf4",
+    "line" : 44,
+    "diffHunk" : "@@ -1,1 +62,66 @@   *                                  schema.\n   */\n  Table getTable(StructType schema, Map<String, String> properties);\n\n  /**"
+  },
+  {
+    "id" : "4167a230-311e-4d2e-aa2c-83f7c1690fea",
+    "prId" : 26750,
+    "prUrl" : "https://github.com/apache/spark/pull/26750#pullrequestreview-328030537",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "707671aa-7b35-43d4-bc5f-f8cb7b851403",
+        "parentId" : null,
+        "authorId" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "body" : "I did miss most of the discussions unfortunately. Would this be used as table properties directly? Also include read/write options? Or are the read/write options going to translate to a catalog and identifier as we had discussed some time ago?\r\n\r\nI guess a path based table would have a `location` table property, which constitutes the old option \"path\"`, correct?",
+        "createdAt" : "2019-12-06T02:29:57Z",
+        "updatedAt" : "2019-12-06T02:29:57Z",
+        "lastEditedBy" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "aa9ba73e-3379-47bb-87a7-05727ccbad64",
+        "parentId" : "707671aa-7b35-43d4-bc5f-f8cb7b851403",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Yes, it's used as table properties directly, not read/write options. The read/write options are case-insensitive and passed through `Table.newScanBuilder`/`Table.newWriteBuilder`.\r\n\r\nTable properties doesn't have to be case-insensitive. So here I just define it as case-preserving. The implementation is free to interpret it case-sensitive or case-insensitive. (Spark can't control it anyway)\r\n\r\nIf you read a table with `DataFrameReader`, then the options will be passed to the data source twice: once with `TableProvider.getTable`, once with `Table.newScanOptions`.\r\n\r\nIf you create the table first with `CREATE TABLE USING v2Provider TBLPROPERTIES ...`, and then read the table with `DataFrameReader.option(...).table`, then table properties and read options are different.",
+        "createdAt" : "2019-12-06T07:17:53Z",
+        "updatedAt" : "2019-12-06T08:05:01Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9fb66018-ab9b-4b78-b6c6-7ae363172142",
+        "parentId" : "707671aa-7b35-43d4-bc5f-f8cb7b851403",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "a path based table would have a `location` table property, but I don't know why we can't reuse the old name `path`. cc @rdblue ",
+        "createdAt" : "2019-12-06T07:18:41Z",
+        "updatedAt" : "2019-12-06T07:18:42Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7fcee0cac5a093481a8740aabda9dd5083bbdaf4",
+    "line" : 21,
+    "diffHunk" : "@@ -1,1 +42,46 @@   * Implementations should infer the table schema and partitioning.\n   *\n   * @param properties The specified table properties. It's case preserving (contains exactly what\n   *                   users specified) and implementations are free to use it case sensitively or\n   *                   insensitively. It should be able to identify a table, e.g. file path, Kafka"
+  },
+  {
+    "id" : "3c2b21f8-ab3a-45f2-bc12-168428fde50d",
+    "prId" : 26750,
+    "prUrl" : "https://github.com/apache/spark/pull/26750#pullrequestreview-329649800",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "79e03ba0-8156-4f1c-821e-f127797468c3",
+        "parentId" : null,
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "I am a bit curious about the parameter order in these 3 methods:\r\n```\r\ngetTable(properties)\r\ngetTable(schema, properties)\r\ngetTable(schema, partitioning, properties)\r\n```\r\nIs it on purpose? Why not:\r\n```\r\ngetTable(properties)\r\ngetTable(properties, schema)\r\ngetTable(properties, schema, partitioning)\r\n```",
+        "createdAt" : "2019-12-09T21:23:47Z",
+        "updatedAt" : "2019-12-09T21:32:21Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b310e0b9-9ede-48cb-8223-a9f8aedfd960",
+        "parentId" : "79e03ba0-8156-4f1c-821e-f127797468c3",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I just follow the order in `TableCatalog.createTable`",
+        "createdAt" : "2019-12-10T02:41:30Z",
+        "updatedAt" : "2019-12-10T02:41:30Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7abed5f5-2873-4ae1-b031-938655ad4b12",
+        "parentId" : "79e03ba0-8156-4f1c-821e-f127797468c3",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "Do you mind changing the parameter order? It is a bit wired.\r\nBesides, previously the parameter order is like\r\n```\r\ngetTable(options)\r\ngetTable(options, schema)\r\n```\r\n",
+        "createdAt" : "2019-12-10T04:06:57Z",
+        "updatedAt" : "2019-12-10T04:06:57Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6800b738-5615-40bb-9433-f88d3f4613e7",
+        "parentId" : "79e03ba0-8156-4f1c-821e-f127797468c3",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I don't have a strong preference, but probably better to be consistent with `createTable`?",
+        "createdAt" : "2019-12-10T04:30:30Z",
+        "updatedAt" : "2019-12-10T04:30:30Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "42a8e93e-b1b6-4031-917a-6a43617b85e9",
+        "parentId" : "79e03ba0-8156-4f1c-821e-f127797468c3",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "Well, I think consistency in the trait TableProvider itself is more important.",
+        "createdAt" : "2019-12-10T05:37:26Z",
+        "updatedAt" : "2019-12-10T05:37:26Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5ce66995-b3a2-468a-9907-a011ef915cee",
+        "parentId" : "79e03ba0-8156-4f1c-821e-f127797468c3",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "why is this not consistent?\r\n```\r\ngetTable(properties)\r\ngetTable(schema, properties)\r\ngetTable(schema, partitioning, properties)\r\n```",
+        "createdAt" : "2019-12-10T07:55:34Z",
+        "updatedAt" : "2019-12-10T07:55:35Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "51dbf82a-62f5-486c-91ff-2181bb8b9e08",
+        "parentId" : "79e03ba0-8156-4f1c-821e-f127797468c3",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "I think this is the common practice. The three methods look neater when each parameter is in a fixed position\r\n```\r\ngetTable(properties)\r\ngetTable(properties, schema)\r\ngetTable(properties, schema, partitioning)\r\n```",
+        "createdAt" : "2019-12-10T08:14:26Z",
+        "updatedAt" : "2019-12-10T18:37:01Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7fcee0cac5a093481a8740aabda9dd5083bbdaf4",
+    "line" : 73,
+    "diffHunk" : "@@ -1,1 +78,82 @@   *                                  table schema/partitioning.\n   */\n  Table getTable(\n      StructType schema,\n      Transform[] partitioning,"
   }
 ]

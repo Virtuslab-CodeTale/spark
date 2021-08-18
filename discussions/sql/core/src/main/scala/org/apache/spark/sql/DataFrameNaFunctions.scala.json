@@ -86,5 +86,71 @@
     "commit" : "58679bd9e27bb376fd9e6ea2baa780fe3454f23a",
     "line" : 22,
     "diffHunk" : "@@ -1,1 +358,362 @@      val attr = df.resolve(colName) match {\n        case a: Attribute => a\n        case _ => throw new UnsupportedOperationException(\n          s\"Nested field ${colName} is not supported.\")\n      }"
+  },
+  {
+    "id" : "0ce10adb-9218-4218-990c-ff12acd390ef",
+    "prId" : 26738,
+    "prUrl" : "https://github.com/apache/spark/pull/26738#pullrequestreview-337939826",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8252e56d-2fda-4c63-910c-651e8d7c7890",
+        "parentId" : null,
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "This fix relies on the type coercion rule to do the casting in the another side. It could cause the difference of query results. For example, \r\n\r\n ```\r\n  def createNaNDF(): DataFrame = {\r\n    Seq[(java.lang.Integer, java.lang.Long, java.lang.Short,\r\n      java.lang.Byte, java.lang.Float, java.lang.Double)](\r\n      (2, 2L, 2.toShort, 2.toByte, 2.0f, 2.0)\r\n    ).toDF(\"int\", \"long\", \"short\", \"byte\", \"float\", \"double\")\r\n  }\r\n\r\n  test(\"replace float with double\") {\r\n    createNaNDF().na.replace(\"*\", Map(\r\n      2.3 -> 9.0\r\n    )).show()\r\n\r\n    createNaNDF().na.replace(\"*\", Map(\r\n      2.3 -> 9.0\r\n    )).explain(true)\r\n  }\r\n```",
+        "createdAt" : "2019-12-30T02:54:07Z",
+        "updatedAt" : "2019-12-30T02:56:13Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b6dc198c-7886-4278-b1a4-d6350831d42e",
+        "parentId" : "8252e56d-2fda-4c63-910c-651e8d7c7890",
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "Before this PR, \r\n\r\n```\r\n+---+----+-----+----+-----+------+\r\n|int|long|short|byte|float|double|\r\n+---+----+-----+----+-----+------+\r\n|  9|   9|    9|   9|  2.0|   2.0|\r\n+---+----+-----+----+-----+------+\r\n\r\n== Parsed Logical Plan ==\r\nProject [CASE WHEN (int#99 = cast(2.3 as int)) THEN cast(9.0 as int) ELSE int#99 END AS int#117, CASE WHEN (long#100L = cast(2.3 as bigint)) THEN cast(9.0 as bigint) ELSE long#100L END AS long#118L, CASE WHEN (short#101 = cast(2.3 as smallint)) THEN cast(9.0 as smallint) ELSE short#101 END AS short#119, CASE WHEN (byte#102 = cast(2.3 as tinyint)) THEN cast(9.0 as tinyint) ELSE byte#102 END AS byte#120, CASE WHEN (float#103 = cast(2.3 as float)) THEN cast(9.0 as float) ELSE float#103 END AS float#121, CASE WHEN (double#104 = cast(2.3 as double)) THEN cast(9.0 as double) ELSE double#104 END AS double#122]\r\n+- Project [_1#86 AS int#99, _2#87L AS long#100L, _3#88 AS short#101, _4#89 AS byte#102, _5#90 AS float#103, _6#91 AS double#104]\r\n   +- LocalRelation [_1#86, _2#87L, _3#88, _4#89, _5#90, _6#91]\r\n\r\n== Analyzed Logical Plan ==\r\nint: int, long: bigint, short: smallint, byte: tinyint, float: float, double: double\r\nProject [CASE WHEN (int#99 = cast(2.3 as int)) THEN cast(9.0 as int) ELSE int#99 END AS int#117, CASE WHEN (long#100L = cast(2.3 as bigint)) THEN cast(9.0 as bigint) ELSE long#100L END AS long#118L, CASE WHEN (short#101 = cast(2.3 as smallint)) THEN cast(9.0 as smallint) ELSE short#101 END AS short#119, CASE WHEN (byte#102 = cast(2.3 as tinyint)) THEN cast(9.0 as tinyint) ELSE byte#102 END AS byte#120, CASE WHEN (float#103 = cast(2.3 as float)) THEN cast(9.0 as float) ELSE float#103 END AS float#121, CASE WHEN (double#104 = cast(2.3 as double)) THEN cast(9.0 as double) ELSE double#104 END AS double#122]\r\n+- Project [_1#86 AS int#99, _2#87L AS long#100L, _3#88 AS short#101, _4#89 AS byte#102, _5#90 AS float#103, _6#91 AS double#104]\r\n   +- LocalRelation [_1#86, _2#87L, _3#88, _4#89, _5#90, _6#91]\r\n\r\n== Optimized Logical Plan ==\r\nProject [CASE WHEN (_1#86 = 2) THEN 9 ELSE _1#86 END AS int#117, CASE WHEN (_2#87L = 2) THEN 9 ELSE _2#87L END AS long#118L, CASE WHEN (_3#88 = 2) THEN 9 ELSE _3#88 END AS short#119, CASE WHEN (_4#89 = 2) THEN 9 ELSE _4#89 END AS byte#120, CASE WHEN (_5#90 = 2.3) THEN 9.0 ELSE _5#90 END AS float#121, CASE WHEN (_6#91 = 2.3) THEN 9.0 ELSE _6#91 END AS double#122]\r\n+- LocalRelation [_1#86, _2#87L, _3#88, _4#89, _5#90, _6#91]\r\n\r\n== Physical Plan ==\r\n*(1) Project [CASE WHEN (_1#86 = 2) THEN 9 ELSE _1#86 END AS int#117, CASE WHEN (_2#87L = 2) THEN 9 ELSE _2#87L END AS long#118L, CASE WHEN (_3#88 = 2) THEN 9 ELSE _3#88 END AS short#119, CASE WHEN (_4#89 = 2) THEN 9 ELSE _4#89 END AS byte#120, CASE WHEN (_5#90 = 2.3) THEN 9.0 ELSE _5#90 END AS float#121, CASE WHEN (_6#91 = 2.3) THEN 9.0 ELSE _6#91 END AS double#122]\r\n+- *(1) LocalTableScan [_1#86, _2#87L, _3#88, _4#89, _5#90, _6#91]\r\n```\r\n\r\n\r\nAfter this PR, \r\n```\r\n+---+----+-----+----+-----+------+\r\n|int|long|short|byte|float|double|\r\n+---+----+-----+----+-----+------+\r\n|  2|   2|    2|   2|  2.0|   2.0|\r\n+---+----+-----+----+-----+------+\r\n\r\n== Parsed Logical Plan ==\r\n'Project [CASE WHEN (int#99 = 2.3) THEN cast(9.0 as int) ELSE int#99 END AS int#117, CASE WHEN (long#100L = 2.3) THEN cast(9.0 as bigint) ELSE long#100L END AS long#118, CASE WHEN (short#101 = 2.3) THEN cast(9.0 as smallint) ELSE short#101 END AS short#119, CASE WHEN (byte#102 = 2.3) THEN cast(9.0 as tinyint) ELSE byte#102 END AS byte#120, CASE WHEN (float#103 = 2.3) THEN cast(9.0 as float) ELSE float#103 END AS float#121, CASE WHEN (double#104 = 2.3) THEN cast(9.0 as double) ELSE double#104 END AS double#122]\r\n+- Project [_1#86 AS int#99, _2#87L AS long#100L, _3#88 AS short#101, _4#89 AS byte#102, _5#90 AS float#103, _6#91 AS double#104]\r\n   +- LocalRelation [_1#86, _2#87L, _3#88, _4#89, _5#90, _6#91]\r\n\r\n== Analyzed Logical Plan ==\r\nint: int, long: bigint, short: smallint, byte: tinyint, float: float, double: double\r\nProject [CASE WHEN (cast(int#99 as double) = 2.3) THEN cast(9.0 as int) ELSE int#99 END AS int#117, CASE WHEN (cast(long#100L as double) = 2.3) THEN cast(9.0 as bigint) ELSE long#100L END AS long#118L, CASE WHEN (cast(short#101 as double) = 2.3) THEN cast(9.0 as smallint) ELSE short#101 END AS short#119, CASE WHEN (cast(byte#102 as double) = 2.3) THEN cast(9.0 as tinyint) ELSE byte#102 END AS byte#120, CASE WHEN (cast(float#103 as double) = 2.3) THEN cast(9.0 as float) ELSE float#103 END AS float#121, CASE WHEN (double#104 = 2.3) THEN cast(9.0 as double) ELSE double#104 END AS double#122]\r\n+- Project [_1#86 AS int#99, _2#87L AS long#100L, _3#88 AS short#101, _4#89 AS byte#102, _5#90 AS float#103, _6#91 AS double#104]\r\n   +- LocalRelation [_1#86, _2#87L, _3#88, _4#89, _5#90, _6#91]\r\n\r\n== Optimized Logical Plan ==\r\nProject [CASE WHEN (cast(_1#86 as double) = 2.3) THEN 9 ELSE _1#86 END AS int#117, CASE WHEN (cast(_2#87L as double) = 2.3) THEN 9 ELSE _2#87L END AS long#118L, CASE WHEN (cast(_3#88 as double) = 2.3) THEN 9 ELSE _3#88 END AS short#119, CASE WHEN (cast(_4#89 as double) = 2.3) THEN 9 ELSE _4#89 END AS byte#120, CASE WHEN (cast(_5#90 as double) = 2.3) THEN 9.0 ELSE _5#90 END AS float#121, CASE WHEN (_6#91 = 2.3) THEN 9.0 ELSE _6#91 END AS double#122]\r\n+- LocalRelation [_1#86, _2#87L, _3#88, _4#89, _5#90, _6#91]\r\n\r\n== Physical Plan ==\r\n*(1) Project [CASE WHEN (cast(_1#86 as double) = 2.3) THEN 9 ELSE _1#86 END AS int#117, CASE WHEN (cast(_2#87L as double) = 2.3) THEN 9 ELSE _2#87L END AS long#118L, CASE WHEN (cast(_3#88 as double) = 2.3) THEN 9 ELSE _3#88 END AS short#119, CASE WHEN (cast(_4#89 as double) = 2.3) THEN 9 ELSE _4#89 END AS byte#120, CASE WHEN (cast(_5#90 as double) = 2.3) THEN 9.0 ELSE _5#90 END AS float#121, CASE WHEN (_6#91 = 2.3) THEN 9.0 ELSE _6#91 END AS double#122]\r\n+- *(1) LocalTableScan [_1#86, _2#87L, _3#88, _4#89, _5#90, _6#91]\r\n```",
+        "createdAt" : "2019-12-30T02:55:38Z",
+        "updatedAt" : "2019-12-30T02:56:13Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "430cfa34-16e7-428d-a129-d3b37f1b6a97",
+        "parentId" : "8252e56d-2fda-4c63-910c-651e8d7c7890",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "The new behavior makes more sense, but I agree that the PR description needs update to reflect all the changes. cc @johnhany97 ",
+        "createdAt" : "2019-12-30T03:23:12Z",
+        "updatedAt" : "2019-12-30T03:23:12Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7140da27-247b-45c1-972d-16adf3a505e1",
+        "parentId" : "8252e56d-2fda-4c63-910c-651e8d7c7890",
+        "authorId" : "6aa4fe6e-d8b4-470d-9ebd-61d8303b117f",
+        "body" : "Nice catch there @gatorsmile. I've updated the PR description. Should I also update the PR title? Let me know if you'd like me to add in more details into the PR description.",
+        "createdAt" : "2020-01-01T17:52:05Z",
+        "updatedAt" : "2020-01-01T17:52:05Z",
+        "lastEditedBy" : "6aa4fe6e-d8b4-470d-9ebd-61d8303b117f",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e68b870c-4c84-4237-8784-77e0c320c609",
+        "parentId" : "8252e56d-2fda-4c63-910c-651e8d7c7890",
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "Yes, we also need to update the PR title. ",
+        "createdAt" : "2020-01-03T03:28:43Z",
+        "updatedAt" : "2020-01-03T03:28:44Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b3709a16e89284584922995f4877c31b5095aafe",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +457,461 @@    def buildExpr(v: Any) = Cast(Literal(v), keyExpr.dataType)\n    val branches = replacementMap.flatMap { case (source, target) =>\n      Seq(Literal(source), buildExpr(target))\n    }.toSeq\n    new Column(CaseKeyWhen(keyExpr, branches :+ keyExpr)).as(col.name)"
   }
 ]

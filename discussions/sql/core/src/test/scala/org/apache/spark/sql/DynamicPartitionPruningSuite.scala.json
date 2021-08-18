@@ -174,5 +174,49 @@
     "commit" : "f92a594deafb98d36e5001937d6dc781891be7fe",
     "line" : 46,
     "diffHunk" : "@@ -1,1 +1338,1342 @@                  |FROM df1\n                  |  JOIN df2\n                  |  ON struct(df1.k) = struct(df2.k)\n                  |    AND df2.id < 2\n                  |\"\"\".stripMargin)"
+  },
+  {
+    "id" : "a5704557-47bb-4fcf-a19e-44683aa3e493",
+    "prId" : 26744,
+    "prUrl" : "https://github.com/apache/spark/pull/26744#pullrequestreview-326491579",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "880dbf2c-30f1-417e-8213-eb15868cb5d6",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Why does this change match the description \"no predicate on the dimension table\"?",
+        "createdAt" : "2019-12-03T08:57:30Z",
+        "updatedAt" : "2019-12-03T08:57:31Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fb3d400e-bcfe-4501-8fbf-d975fcb5f1d5",
+        "parentId" : "880dbf2c-30f1-417e-8213-eb15868cb5d6",
+        "authorId" : "cb93ab63-5789-483a-864c-9467d1506bf5",
+        "body" : "If we don't change it. `partScan` will always be None. `hasPartitionPruningFilter` will be false after we change it. It will match \"no predicate on the dimension table\"\r\n```\r\nvar partScan = getPartitionTableScan(l, left)\r\nif (partScan.isDefined && canPruneLeft(joinType) &&\r\n    hasPartitionPruningFilter(right)) {\r\n    val hasBenefit = pruningHasBenefit(l, partScan.get, r, right)\r\n    newLeft = insertPredicate(l, newLeft, r, right, rightKeys, hasBenefit)\r\n} else {\r\n    partScan = getPartitionTableScan(r, right)\r\n    if (partScan.isDefined && canPruneRight(joinType) &&\r\n        hasPartitionPruningFilter(left) ) {\r\n        val hasBenefit = pruningHasBenefit(r, partScan.get, l, left)\r\n        newRight = insertPredicate(r, newRight, l, left, leftKeys, hasBenefit)\r\n    }\r\n}\r\n```",
+        "createdAt" : "2019-12-03T09:22:23Z",
+        "updatedAt" : "2019-12-03T09:27:17Z",
+        "lastEditedBy" : "cb93ab63-5789-483a-864c-9467d1506bf5",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7baaf953-8f95-4be7-a614-fb2e54c64214",
+        "parentId" : "880dbf2c-30f1-417e-8213-eb15868cb5d6",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Yes. This should be a join on the partitioned column, `fact_sk.store_id`, because the previous test covers `not a partition column` case. And, `no predicate on the dimension table` should mean `WHERE s.country = 'NL'`.",
+        "createdAt" : "2019-12-03T22:26:39Z",
+        "updatedAt" : "2019-12-03T22:26:39Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b3de7630146d21778c72ed27c94ad8824ad7dde2",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +424,428 @@            |SELECT * FROM fact_sk f\n            |JOIN dim_store s\n            |ON f.store_id = s.store_id\n          \"\"\".stripMargin)\n"
   }
 ]

@@ -460,5 +460,49 @@
     "commit" : "f921ddd3913d8b749abd2d8de645e5d098d73823",
     "line" : 100,
     "diffHunk" : "@@ -1,1 +373,377 @@       */\n      event.blockUpdatedInfo.blockId match {\n        case ShuffleDataBlockId(shuffleId, _, _) => exec.addShuffle(shuffleId)\n        case _ => // For now we only update on data blocks\n      }"
+  },
+  {
+    "id" : "3dc440d9-62c2-4735-bec5-2910b9e5970c",
+    "prId" : 26682,
+    "prUrl" : "https://github.com/apache/spark/pull/26682#pullrequestreview-349001212",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "78267ef8-343f-400a-9570-079be9bc0e99",
+        "parentId" : null,
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "What is the impact if concurrent updates to execResourceProfileCount (via put) result in inconsistency w.r.t execResourceProfileCount itself and w.r.t executors ? (due to the 'put' happening - across this class).\r\nIf we expect execResourceProfileCount for some key to be some value V while updating it to V1, we could use compute() instead and ensure the invariant is satisfied ? Or do we not expect this to happen ?",
+        "createdAt" : "2020-01-26T08:47:48Z",
+        "updatedAt" : "2020-01-26T08:51:12Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d26df732-680a-4760-ba68-8b654eab4bd5",
+        "parentId" : "78267ef8-343f-400a-9570-079be9bc0e99",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "so that shouldn't happen to execResourceProfileCount  because all of the calls to modify it are from the event listener which is single threaded.  There is a call to get that can happen from separate threads but that won't affect the modify case.   We update both executors and execResourceProfileCount at the same time on adding and removing so those should be in lock step.\r\nI think I can change them to compute if it makes it easier to read?",
+        "createdAt" : "2020-01-27T16:44:06Z",
+        "updatedAt" : "2020-01-27T16:44:06Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "38fd43b4-bcb4-42f1-b889-901d236d9e26",
+        "parentId" : "78267ef8-343f-400a-9570-079be9bc0e99",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "If all updates are expected to be single threaded, then change to compute makes no sense (it will simply complicate the code) - I probably missed some note indicating this is the expectation !\r\nThanks for elaborating Tom.",
+        "createdAt" : "2020-01-27T21:52:22Z",
+        "updatedAt" : "2020-01-27T21:52:23Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "75091102d6bd64a61fb903c8df3edf9ca047e879",
+    "line" : 108,
+    "diffHunk" : "@@ -1,1 +427,431 @@          s\"count is now $newcount\")\n        new Tracker(resourceProfileId)\n      })\n    // if we had added executor before without knowing the resource profile id, fix it up\n    if (execTracker.resourceProfileId == UNKNOWN_RESOURCE_PROFILE_ID &&"
   }
 ]
