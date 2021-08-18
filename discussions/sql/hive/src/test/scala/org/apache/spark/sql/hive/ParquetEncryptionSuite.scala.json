@@ -1,0 +1,57 @@
+[
+  {
+    "id" : "e7adb204-4651-42af-842f-541de97fe7b1",
+    "prId" : 32146,
+    "prUrl" : "https://github.com/apache/spark/pull/32146#pullrequestreview-643642329",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5f93c737-783b-40c5-8778-9a613c91feab",
+        "parentId" : null,
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "This is always 1 as your test writing the data into a brand new temporary directory:\r\nhttps://github.com/apache/spark/blob/aa507a47fbbe6e034726448f676df841754c6734/sql/hive/src/test/scala/org/apache/spark/sql/hive/ParquetEncryptionSuite.scala#L41\r\n\r\nI have checked out your PR and run test just to be sure.\r\n\r\nThat temp directory contained only one **parquet** file:\r\n- /Users/attilazsoltpiros/git/attilapiros/spark/target/tmp/spark-9998c611-24e0-4147-bb60-625f6bfa11ea/parquet/part-00000-dffeefb2-e638-4e85-a42c-3763ae8919e3-c000.snappy.parquet\r\n\r\nThe others are filtered out by `getListOfParquetFiles()` as their suffixes are different:\r\n- /Users/attilazsoltpiros/git/attilapiros/spark/target/tmp/spark-9998c611-24e0-4147-bb60-625f6bfa11ea/parquet/._SUCCESS.crc\r\n- /Users/attilazsoltpiros/git/attilapiros/spark/target/tmp/spark-9998c611-24e0-4147-bb60-625f6bfa11ea/parquet/.part-00000-dffeefb2-e638-4e85-a42c-3763ae8919e3-c000.snappy.parquet.crc\r\n- /Users/attilazsoltpiros/git/attilapiros/spark/target/tmp/spark-9998c611-24e0-4147-bb60-625f6bfa11ea/parquet/_SUCCESS)",
+        "createdAt" : "2021-04-23T14:30:51Z",
+        "updatedAt" : "2021-04-24T09:09:19Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "23087dcb-fbf2-4c52-a73d-3ea7e5012234",
+        "parentId" : "5f93c737-783b-40c5-8778-9a613c91feab",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "And of course as a consequence in line 70 you do not need the `maxBy`.",
+        "createdAt" : "2021-04-23T19:41:58Z",
+        "updatedAt" : "2021-04-24T09:09:19Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f0eeddcb-3dad-4e61-abd5-e86452130879",
+        "parentId" : "5f93c737-783b-40c5-8778-9a613c91feab",
+        "authorId" : "875277cf-c2a5-4cac-809c-e195874f49d8",
+        "body" : "You're right, @attilapiros , but I think that this method would be useful for other ParquetEncryptionSuite tests that could be added in the future if it were a bit more generic. How about if it loops over all the parquet part files in the folder and checks that all of them have the correct magic string? ",
+        "createdAt" : "2021-04-23T20:01:21Z",
+        "updatedAt" : "2021-04-24T09:09:19Z",
+        "lastEditedBy" : "875277cf-c2a5-4cac-809c-e195874f49d8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d8b95a82-a578-427b-909f-4c44bb51edca",
+        "parentId" : "5f93c737-783b-40c5-8778-9a613c91feab",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "I see in this case let's change this `maxBy` to a `foreach { parquetFile =>`.",
+        "createdAt" : "2021-04-23T20:28:41Z",
+        "updatedAt" : "2021-04-24T09:09:19Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "599c71dcd781a34073bf28113c1aa31ae4f24448",
+    "line" : 75,
+    "diffHunk" : "@@ -1,1 +73,77 @@  private def verifyParquetEncrypted(parquetDir: String): Unit = {\n    val parquetPartitionFiles = getListOfParquetFiles(new File(parquetDir))\n    assert(parquetPartitionFiles.size >= 1)\n    parquetPartitionFiles.foreach { parquetFile =>\n      val magicString = \"PARE\""
+  }
+]

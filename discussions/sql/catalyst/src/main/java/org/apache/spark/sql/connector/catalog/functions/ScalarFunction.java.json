@@ -97,5 +97,148 @@
     "commit" : "5096fac302554f88723777ed15583ee8b4b9a4f4",
     "line" : 62,
     "diffHunk" : "@@ -1,1 +76,80 @@ * the class defines both the magic method and the {@link #produceResult}, and Spark will use\n * {@link #MAGIC_METHOD_NAME} over the {@link #produceResult(InternalRow)} as it takes higher\n * precedence. Also note that the magic method is annotated as a static method in this case.\n * <p>\n * Resolution on magic method is done during query analysis, where Spark looks up the magic"
+  },
+  {
+    "id" : "197eceff-1925-4ae7-b6c5-b9dd4572eac9",
+    "prId" : 32082,
+    "prUrl" : "https://github.com/apache/spark/pull/32082#pullrequestreview-638534119",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c05ff875-3cea-47e3-96a3-93a4ce2d62c4",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "This conflicts with the doc above which says\r\n```\r\n * For each input row, Spark will call a produceResult method that corresponds to the\r\n * {@link #inputTypes() input data types}.\r\n```\r\n\r\nShall we update the doc above?",
+        "createdAt" : "2021-04-15T13:19:22Z",
+        "updatedAt" : "2021-04-27T19:27:48Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ceb7257e-2475-4f8d-af85-24df88afa44e",
+        "parentId" : "c05ff875-3cea-47e3-96a3-93a4ce2d62c4",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Sure, will update it. It currently says \"If no direct method is found or when not using codegen, Spark will call produceResult\" which is different from what this PR does, which always call the magic method if it's defined. Do you think it matters much?",
+        "createdAt" : "2021-04-15T16:44:14Z",
+        "updatedAt" : "2021-04-27T19:27:48Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ea3abe79-9727-4d6f-8718-5f2dbd1a8af1",
+        "parentId" : "c05ff875-3cea-47e3-96a3-93a4ce2d62c4",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "let's update it to match the actual behavior.",
+        "createdAt" : "2021-04-19T07:21:53Z",
+        "updatedAt" : "2021-04-27T19:27:48Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c18715fcc304f4a805d420e193d4a3884b3f7e4f",
+    "line" : 17,
+    "diffHunk" : "@@ -1,1 +33,37 @@ * <b>IMPORTANT</b>: the default implementation of {@link #produceResult} throws\n * {@link UnsupportedOperationException}. Users can choose to override this method, or implement\n * a \"magic method\" with name {@link #MAGIC_METHOD_NAME} which takes individual parameters\n * instead of a {@link InternalRow}. The magic method will be loaded by Spark through Java\n * reflection and will also provide better performance in general, due to optimizations such as"
+  },
+  {
+    "id" : "9efda96a-75cf-45d4-bd9a-ed9c918c55d9",
+    "prId" : 32082,
+    "prUrl" : "https://github.com/apache/spark/pull/32082#pullrequestreview-641666076",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b5aeb1ba-11d6-4ccb-a680-9e0fc2cd3e23",
+        "parentId" : null,
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "Why is this needed? I think that the magic name should be \"produceResult\" just like the `InternalRow` version so that it is clear what the method is supposed to do.",
+        "createdAt" : "2021-04-21T20:51:16Z",
+        "updatedAt" : "2021-04-27T19:27:48Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "40a88572-06b3-4bb7-84bf-dada36cc85bb",
+        "parentId" : "b5aeb1ba-11d6-4ccb-a680-9e0fc2cd3e23",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "I thought about that initially, but since `StructType` maps to `InternalRow`, we need a way to differentiate a) magic method with a single parameter of `StructType` and b) the default non-magic method. Users can only define the latter in this situation but in Spark we'll lookup magic method first as it has higher priority. This may cause some issue.",
+        "createdAt" : "2021-04-22T00:53:57Z",
+        "updatedAt" : "2021-04-27T19:27:48Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c18715fcc304f4a805d420e193d4a3884b3f7e4f",
+    "line" : 68,
+    "diffHunk" : "@@ -1,1 +84,88 @@ */\npublic interface ScalarFunction<R> extends BoundFunction {\n  String MAGIC_METHOD_NAME = \"invoke\";\n\n  /**"
+  },
+  {
+    "id" : "eb81f128-2782-4663-8715-b55d9763f2be",
+    "prId" : 32082,
+    "prUrl" : "https://github.com/apache/spark/pull/32082#pullrequestreview-647397510",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4626f067-080f-4e7d-bae6-e622d518943b",
+        "parentId" : null,
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "@cloud-fan I think we can also consider adding another \"static invoke\" API for those stateless UDFs. From the benchmark you did sometime back it seems this can give a decent performance improvement. WDYT?\r\n```\r\nJava HotSpot(TM) 64-Bit Server VM 1.8.0_161-b12 on Mac OS X 10.14.6\r\nIntel(R) Core(TM) i7-6920HQ CPU @ 2.90GHz\r\nUDF perf:                                 Best Time(ms)   Avg Time(ms)   Stdev(ms)    Rate(M/s)   Per Row(ns)   Relative\r\n------------------------------------------------------------------------------------------------------------------------\r\nnative add                                        14206          14516         535         70.4          14.2       1.0X\r\nudf add                                           24609          25271         898         40.6          24.6       0.6X\r\nnew udf add                                       18657          19096         726         53.6          18.7       0.8X\r\nnew row udf add                                   21128          22343        1478         47.3          21.1       0.7X\r\nstatic udf add                                    16678          16887         278         60.0          16.7       0.9X\r\n```",
+        "createdAt" : "2021-04-27T19:37:44Z",
+        "updatedAt" : "2021-04-27T19:38:00Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "53733edd-c4a5-46e6-9fda-b74920638e70",
+        "parentId" : "4626f067-080f-4e7d-bae6-e622d518943b",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "@sunchao can you spend some time on the API design? I'd love to see this feature!",
+        "createdAt" : "2021-04-28T09:08:22Z",
+        "updatedAt" : "2021-04-28T09:08:22Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2f45a2bb-8f42-4a14-aac8-733406d8ba9d",
+        "parentId" : "4626f067-080f-4e7d-bae6-e622d518943b",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Sure will do. It should similar to the current `invoke` and we can leverage `StaticInvoke` for the purpose. Do you think we can do this in a separate PR?",
+        "createdAt" : "2021-04-28T16:54:36Z",
+        "updatedAt" : "2021-04-28T16:54:36Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bacbb609-083e-4f7e-9ec9-b0ee29b225cc",
+        "parentId" : "4626f067-080f-4e7d-bae6-e622d518943b",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "yea",
+        "createdAt" : "2021-04-28T17:20:59Z",
+        "updatedAt" : "2021-04-28T17:20:59Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2d464d23-f8c0-480b-bddb-dd6f23db7078",
+        "parentId" : "4626f067-080f-4e7d-bae6-e622d518943b",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Created https://issues.apache.org/jira/browse/SPARK-35261",
+        "createdAt" : "2021-04-28T18:36:17Z",
+        "updatedAt" : "2021-04-28T18:36:18Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c18715fcc304f4a805d420e193d4a3884b3f7e4f",
+    "line" : 27,
+    "diffHunk" : "@@ -1,1 +43,47 @@ * <pre>\n *   public class IntegerAdd implements{@code ScalarFunction<Integer>} {\n *     public int invoke(int left, int right) {\n *       return left + right;\n *     }"
   }
 ]

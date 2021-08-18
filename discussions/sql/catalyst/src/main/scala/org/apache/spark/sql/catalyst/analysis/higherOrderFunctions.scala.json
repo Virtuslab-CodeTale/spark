@@ -1,0 +1,46 @@
+[
+  {
+    "id" : "f8b21cd4-1819-4a20-a982-34b703973598",
+    "prId" : 32082,
+    "prUrl" : "https://github.com/apache/spark/pull/32082#pullrequestreview-645475293",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "de21f930-72bb-4726-88ff-17ed67522025",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "If the current catalog is a custom v2 catalog, and the function name has only a single part, seems `AsFunctionIdentifier` always return None, while we should treat it as a temp function first.",
+        "createdAt" : "2021-04-26T16:12:07Z",
+        "updatedAt" : "2021-04-27T19:27:48Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e900ba46-fbd5-48cb-8376-3238ee97b536",
+        "parentId" : "de21f930-72bb-4726-88ff-17ed67522025",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "@cloud-fan Thanks. Yes you are right, it will fail in this case. I think we can perhaps get rid of `AsFunctionIdentifier` and following similar logic as you pointed above:\r\n```scala\r\ncase u @ UnresolvedFunction(nameParts, children, false, filter, ignoreNulls)\r\n    if hasLambdaAndResolvedArguments(children) =>\r\n  val CatalogAndIdentifier(catalog, ident) = nameParts\r\n  if (nameParts.length == 1 || CatalogV2Util.isSessionCatalog(catalog)) {\r\n   ...\r\n  }\r\n}\r\n```\r\n\r\n",
+        "createdAt" : "2021-04-27T01:01:44Z",
+        "updatedAt" : "2021-04-27T19:27:48Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "de6d136c-988f-4354-abc9-718cd3a3a85d",
+        "parentId" : "de21f930-72bb-4726-88ff-17ed67522025",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Neverwind the above. I've updated `AsFunctionIdentifier` to handle the built-in/temp function case so the logic here is much simpler now.",
+        "createdAt" : "2021-04-27T06:20:19Z",
+        "updatedAt" : "2021-04-27T19:27:48Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c18715fcc304f4a805d420e193d4a3884b3f7e4f",
+    "line" : 22,
+    "diffHunk" : "@@ -1,1 +35,39 @@\n  override def apply(plan: LogicalPlan): LogicalPlan = plan.resolveExpressions {\n    case u @ UnresolvedFunction(AsFunctionIdentifier(ident), children, false, filter, ignoreNulls)\n        if hasLambdaAndResolvedArguments(children) =>\n      withPosition(u) {"
+  }
+]

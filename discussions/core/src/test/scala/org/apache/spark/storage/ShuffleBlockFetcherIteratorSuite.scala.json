@@ -42,5 +42,60 @@
     "commit" : "eea80f5c8c487a7117036b7cfb963137a4b7eeb5",
     "line" : 115,
     "diffHunk" : "@@ -1,1 +159,163 @@      detectCorrupt,\n      detectCorruptUseExtraMemory,\n      shuffleMetrics.getOrElse(tContext.taskMetrics().createTempShuffleReadMetrics()),\n      doBatchFetch)\n  }"
+  },
+  {
+    "id" : "00fea512-2060-44bd-97b5-8a869473b8b8",
+    "prId" : 32140,
+    "prUrl" : "https://github.com/apache/spark/pull/32140#pullrequestreview-681457279",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "edc39322-7a52-46ad-91f1-a8905126ad40",
+        "parentId" : null,
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "Also add tests for:\r\na) deserialization failure results in initiating fallback.\r\nb) fetch failure of both merged block and fallback block should get reported to driver as fetch failure.\r\n\r\nAre these handled already ?",
+        "createdAt" : "2021-06-10T17:58:12Z",
+        "updatedAt" : "2021-06-10T17:58:43Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a0341f6b-c8ca-466e-806e-1f26b734da3c",
+        "parentId" : "edc39322-7a52-46ad-91f1-a8905126ad40",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "> a) deserialization failure results in initiating fallback.\r\n\r\nYes, the test `fallback to original shuffle block when a merged block chunk is corrupt` does this. It tests the fallback when the shuffle merged chunk is deserialized during processing of `SuccessFetchResult`.\r\n\r\n> b) fetch failure of both merged block and fallback block should get reported to driver as fetch failure.\r\n\r\nWhen there is a fetch failure of a merged block, then the iterator falls back to fetch original blocks. So, we don't report that to the driver because the task didn't fail because of it. It tries to fetch the original blocks that make up that merged blocks.\r\n\r\nI have added tests for the various conditions that trigger fallback but these simulate fetches of all original blocks to be successful.  I haven't added a test which triggers fallback but the iterator fails to fetch an original block and that throws FetchFailedException. That follows the existing code but I will still add this test for it.\r\n",
+        "createdAt" : "2021-06-10T18:42:34Z",
+        "updatedAt" : "2021-06-10T18:42:34Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "232b135c-9d6a-4046-99dd-5643c683d293",
+        "parentId" : "edc39322-7a52-46ad-91f1-a8905126ad40",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "I have added test for (b) `failed to fetch merged block as well as fallback block should throw a FetchFailedException`",
+        "createdAt" : "2021-06-10T23:57:51Z",
+        "updatedAt" : "2021-06-10T23:57:51Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e4d43518-8c94-4906-8084-65a2a590844d",
+        "parentId" : "edc39322-7a52-46ad-91f1-a8905126ad40",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "To clarify, what I meant was that on both failing, driver should see it as a fetch failure (wont see the merge part - but will see a fetch failure).",
+        "createdAt" : "2021-06-11T05:19:31Z",
+        "updatedAt" : "2021-06-11T05:19:31Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ad89a0208a5e3f880fca502c297362388a104dd7",
+    "line" : 34,
+    "diffHunk" : "@@ -1,1 +49,53 @@\nclass ShuffleBlockFetcherIteratorSuite extends SparkFunSuite with PrivateMethodTester {\n\n  private var transfer: BlockTransferService = _\n  private var mapOutputTracker: MapOutputTracker = _"
   }
 ]

@@ -438,5 +438,247 @@
     "commit" : "4af6ee73221a55e3cd7239f151ec33d5e802cbe4",
     "line" : 63,
     "diffHunk" : "@@ -1,1 +261,265 @@    val address = req.address\n\n    @inline def enqueueDeferredFetchRequestIfNecessary(): Unit = {\n      if (remainingBlocks.isEmpty && deferredBlocks.nonEmpty) {\n        val blocks = deferredBlocks.map { blockId =>"
+  },
+  {
+    "id" : "ec15c2c7-f5d6-4bbf-a34a-6751d5627305",
+    "prId" : 32140,
+    "prUrl" : "https://github.com/apache/spark/pull/32140#pullrequestreview-669648092",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ea0bb9c8-0672-4f7d-926b-21c6893d1e18",
+        "parentId" : null,
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "Note to self: Most of this is as before. Have added conditions for shuffleChunks",
+        "createdAt" : "2021-05-27T00:46:09Z",
+        "updatedAt" : "2021-06-03T04:54:51Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ad89a0208a5e3f880fca502c297362388a104dd7",
+    "line" : 387,
+    "diffHunk" : "@@ -1,1 +822,826 @@              }\n            } catch {\n              case e: IOException =>\n                buf.release()\n                if (blockId.isShuffleChunk) {"
+  },
+  {
+    "id" : "f3ea0c43-8847-4e9a-b097-86d7dfb0efd1",
+    "prId" : 32140,
+    "prUrl" : "https://github.com/apache/spark/pull/32140#pullrequestreview-676358897",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "fdc6bbe6-1884-4161-a79f-7e3719496a3e",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "How about:\r\n\r\n```scala\r\nlogDebug(\"Sending request for %d blocks (%s) from %s\".format(\r\n      request.blocks.size, Utils.bytesToString(request.size), request.address.hostPort))\r\nif (hasMergedBlocks) {\r\n pushBasedFetchHelper.sendFetchMergedStatusRequest(request)\r\n} else {\r\n sendRequest(request)\r\n numBlocksInFlightPerAddress(remoteAddress) = \r\n   numBlocksInFlightPerAddress.getOrElse(remoteAddress, 0) + request.blocks.size\r\n}\r\n```",
+        "createdAt" : "2021-06-09T14:13:27Z",
+        "updatedAt" : "2021-06-09T15:22:50Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ad89a0208a5e3f880fca502c297362388a104dd7",
+    "line" : 518,
+    "diffHunk" : "@@ -1,1 +1023,1027 @@    }\n\n    def send(remoteAddress: BlockManagerId, request: FetchRequest): Unit = {\n      if (request.forMergedMetas) {\n        pushBasedFetchHelper.sendFetchMergedStatusRequest(request)"
+  },
+  {
+    "id" : "5a34e403-839c-439f-809a-8658a998e3a5",
+    "prId" : 32140,
+    "prUrl" : "https://github.com/apache/spark/pull/32140#pullrequestreview-680352296",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7ac7d25a-548b-4207-ae94-1488dbedb195",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Hm..is it possible there's only `FetchRequest(hasMergedBlocks)` at the beginning? In that case, it seems to cause the fetching process to hang.\r\n\r\nWe probably need to call `fetchUpToMaxBytes()` here if `reqsInFlight=0`.",
+        "createdAt" : "2021-06-09T15:02:59Z",
+        "updatedAt" : "2021-06-09T15:22:50Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c8c8e373-7caa-4539-a726-00f80c30ac49",
+        "parentId" : "7ac7d25a-548b-4207-ae94-1488dbedb195",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "> Hm..is it possible there's only FetchRequest(hasMergedBlocks) at the beginning? In that case, it seems to cause the fetching process to hang.\r\n\r\nIt will not cause the fetch process to hang if there is just one FetchRequest with merged blocks.\r\nConsider this example that if there is a FetchRequest for a merged block `ShuffleBlock(0, -1, 0)`,\r\n- the iterator will send out the request to fetch the metadata for this block in `PushBasedFetchHelper.sendFetchMergedStatusRequest`. \r\n- The iterator will wait for a response in the result queue at `results.take()`.\r\n- Once it receives a response, which is either `MergedBlocksMetaFetchResult` or `MergedBlocksMetaFailedFetchResult`, it adds more FetchRequests to the fetch queue and sets `result = null`.\r\n- `fetchUpToMaxBytes()` is always called after processing the response.\r\n- Since `result = null`, while loop repeats and waits again for a response in the result queue.  \r\n\r\nI will also add a UT for this case just to verify this.",
+        "createdAt" : "2021-06-09T17:26:32Z",
+        "updatedAt" : "2021-06-09T21:09:00Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1ae81302-f137-4537-bd9a-3d890e215feb",
+        "parentId" : "7ac7d25a-548b-4207-ae94-1488dbedb195",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "I have added a UT as well to verify this  `iterator has just 1 merged block and fails to fetch the meta`. PTAL",
+        "createdAt" : "2021-06-09T21:02:42Z",
+        "updatedAt" : "2021-06-09T21:02:42Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "565c3616-d9f5-46b6-83c8-544ea537763a",
+        "parentId" : "7ac7d25a-548b-4207-ae94-1488dbedb195",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "> * fetchUpToMaxBytes() is always called after processing the response.\r\n\r\nI doubt this point. But I'd check the test first since I could miss something.",
+        "createdAt" : "2021-06-10T03:20:06Z",
+        "updatedAt" : "2021-06-10T03:20:07Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "86f51d7c-55ab-468d-af6b-d85eaa2a6ec5",
+        "parentId" : "7ac7d25a-548b-4207-ae94-1488dbedb195",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "Actually, this is the existing code which I haven't modified. The while loop inside iterator.next() is as below, so `fetchUpToMaxBytes` is always called after a response is matched and processed.\r\n```\r\n    while (result == null) {\r\n      val startFetchWait = System.nanoTime()\r\n      result = results.take()\r\n      val fetchWaitTime = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startFetchWait)\r\n      shuffleMetrics.incFetchWaitTime(fetchWaitTime)\r\n\r\n      result match {...}\r\n \r\n      // Send fetch requests up to maxBytesInFlight\r\n      fetchUpToMaxBytes()\r\n    }\r\n    ```\r\n ",
+        "createdAt" : "2021-06-10T04:50:49Z",
+        "updatedAt" : "2021-06-10T04:50:50Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bbcd2708-e0dc-44b4-a931-c5740a22773a",
+        "parentId" : "7ac7d25a-548b-4207-ae94-1488dbedb195",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Oh, I see. I misread it.",
+        "createdAt" : "2021-06-10T05:20:44Z",
+        "updatedAt" : "2021-06-10T05:20:45Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ad89a0208a5e3f880fca502c297362388a104dd7",
+    "line" : 501,
+    "diffHunk" : "@@ -1,1 +946,950 @@          fetchRequests ++= additionalRemoteReqs\n          // Set result to null to force another iteration.\n          result = null\n\n        case PushMergedRemoteMetaFailedFetchResult(shuffleId, reduceId, address) =>"
+  },
+  {
+    "id" : "9cafca31-607d-46b5-825d-ea6f30872c65",
+    "prId" : 32140,
+    "prUrl" : "https://github.com/apache/spark/pull/32140#pullrequestreview-679074787",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "94eb7c18-01bd-480e-ada0-62a0a049ebb0",
+        "parentId" : null,
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "Note: Here we are assuming `localBlocks` is empty when method was invoked.",
+        "createdAt" : "2021-06-10T16:10:27Z",
+        "updatedAt" : "2021-06-10T17:58:43Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ad89a0208a5e3f880fca502c297362388a104dd7",
+    "line" : 155,
+    "diffHunk" : "@@ -1,1 +419,423 @@      pushMergedLocalBlockBytes\n    val blocksToFetchCurrentIteration = numBlocksToFetch - prevNumBlocksToFetch\n    assert(blocksToFetchCurrentIteration == localBlocks.size +\n      numHostLocalBlocks + numRemoteBlocks + pushMergedLocalBlocks.size,\n        s\"The number of non-empty blocks $blocksToFetchCurrentIteration doesn't equal to the sum \" +"
+  },
+  {
+    "id" : "bd674e46-d5d2-447d-a2b9-971c451611f1",
+    "prId" : 32140,
+    "prUrl" : "https://github.com/apache/spark/pull/32140#pullrequestreview-681231368",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "afbd0a6d-51e0-4f51-9912-d6ae134a282c",
+        "parentId" : null,
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "Is `mergeContinuousShuffleBlockIdsIfNeeded` relevant for merged blocks/chunks ?\r\nIf not, any side effects of doing this ?",
+        "createdAt" : "2021-06-10T16:15:47Z",
+        "updatedAt" : "2021-06-10T17:58:43Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b91cc71a-d529-4552-8eb0-5f9c9fba12fc",
+        "parentId" : "afbd0a6d-51e0-4f51-9912-d6ae134a282c",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "> Is mergeContinuousShuffleBlockIdsIfNeeded relevant for merged blocks/chunks ?\r\n\r\nNo, it is not relevant for merged blocks/chunks. For both merged blocks/chunks, I am passing `enabledBatchFetch = false` so `mergeContinuousShuffleBlockIdsIfNeeded` returns the passed in blocks.\r\n\r\nI am not seeing any side effects of reusing this method for merged blocks/chunks. IIUC, this method enforces the limit of `maxBlocksInFlightPerAddress` for a  FetchRequest and is the one that modifies `numBlocksToFetch` for remote requests.",
+        "createdAt" : "2021-06-10T20:29:08Z",
+        "updatedAt" : "2021-06-10T20:29:08Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ad89a0208a5e3f880fca502c297362388a104dd7",
+    "line" : 195,
+    "diffHunk" : "@@ -1,1 +455,459 @@      enableBatchFetch: Boolean,\n      forMergedMetas: Boolean = false): ArrayBuffer[FetchBlockInfo] = {\n    val mergedBlocks = mergeContinuousShuffleBlockIdsIfNeeded(curBlocks, enableBatchFetch)\n    numBlocksToFetch += mergedBlocks.size\n    val retBlocks = new ArrayBuffer[FetchBlockInfo]"
+  },
+  {
+    "id" : "4572c8ec-d988-44df-9035-11d6e6103a5b",
+    "prId" : 32140,
+    "prUrl" : "https://github.com/apache/spark/pull/32140#pullrequestreview-691290168",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d5fd45c5-b419-4537-b3f5-fe25082d318f",
+        "parentId" : null,
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "For a small enough chunk, cant this not throw exception ?",
+        "createdAt" : "2021-06-23T01:17:38Z",
+        "updatedAt" : "2021-06-23T01:27:17Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6a489fef-35ab-4f49-b5f0-eb4f108f2808",
+        "parentId" : "d5fd45c5-b419-4537-b3f5-fe25082d318f",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "Merged chunks are going to be 2MB. Only the last chunk in a merged file can be smaller than 2mb. So this can still throw  exception. But I am handling the exception in the following catch block to initiate a fallback. Do you see any issues with this?",
+        "createdAt" : "2021-06-23T02:37:16Z",
+        "updatedAt" : "2021-06-23T06:34:29Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1d39ec7c-1cf6-40a4-ab8f-0fc2f95a4fab",
+        "parentId" : "d5fd45c5-b419-4537-b3f5-fe25082d318f",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "What I am trying to understand is, we will be initiating a fallback and discarding merge even though there is nothing really wrong here - other than the fact that chunk was too small to decompress - right ? (in case chunk was split at a boundary which causes decompression to fail).\r\nWant to make sure I am not missing something here.\r\n\r\nThe 2mb is configurable, so we can have `maxBytesInFlight` and chunk sizes of different sizes - do we enforce any constraint on these to prevent this sort of issue ?",
+        "createdAt" : "2021-06-23T08:06:19Z",
+        "updatedAt" : "2021-06-23T08:06:19Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ffc31e6c-80fa-4ddf-b98f-0820e1ca44fd",
+        "parentId" : "d5fd45c5-b419-4537-b3f5-fe25082d318f",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "> What I am trying to understand is, we will be initiating a fallback and discarding merge even though there is nothing really wrong here - other than the fact that chunk was too small to decompress - right ? (in case chunk was split at a boundary which causes decompression to fail).\r\n\r\nA shuffle merged chunk contains shuffle blocks in its entirety. It will never contain a partial shuffle block. This is documented for the configuration `minChunkSizeInMergedShuffleFile`\r\n```\r\n  /**\r\n   * The minimum size of a chunk when dividing a merged shuffle file into multiple chunks during\r\n   * push-based shuffle.\r\n   * A merged shuffle file consists of multiple small shuffle blocks. Fetching the\r\n   * complete merged shuffle file in a single response increases the memory requirements for the\r\n   * clients. Instead of serving the entire merged file, the shuffle service serves the\r\n   * merged file in `chunks`. A `chunk` constitutes few shuffle blocks in entirety and this\r\n   * configuration controls how big a chunk can get. A corresponding index file for each merged\r\n   * shuffle file will be generated indicating chunk boundaries.\r\n   */\r\n  public int minChunkSizeInMergedShuffleFile() {\r\n    return Ints.checkedCast(JavaUtils.byteStringAsBytes(\r\n        conf.get(\"spark.shuffle.server.minChunkSizeInMergedShuffleFile\", \"2m\")));\r\n  }\r\n  ```\r\nSo if this fails for a shuffle chunk, it would be because the shuffle chunk was corrupt.",
+        "createdAt" : "2021-06-23T13:58:36Z",
+        "updatedAt" : "2021-06-23T13:58:36Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5526337e-80aa-4692-a812-36f0227fc944",
+        "parentId" : "d5fd45c5-b419-4537-b3f5-fe25082d318f",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "Thanks for clarifying ! This addresses my concern.",
+        "createdAt" : "2021-06-24T02:43:45Z",
+        "updatedAt" : "2021-06-24T02:43:46Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ad89a0208a5e3f880fca502c297362388a104dd7",
+    "line" : 384,
+    "diffHunk" : "@@ -1,1 +819,823 @@              if (streamCompressedOrEncrypted && detectCorruptUseExtraMemory) {\n                // TODO: manage the memory used here, and spill it into disk in case of OOM.\n                input = Utils.copyStreamUpTo(input, maxBytesInFlight / 3)\n              }\n            } catch {"
   }
 ]

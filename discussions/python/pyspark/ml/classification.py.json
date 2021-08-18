@@ -53,5 +53,38 @@
     "commit" : "ed26d2cef4d321b0c5fee7a2a851f9535beb12c9",
     "line" : 16,
     "diffHunk" : "@@ -1,1 +3154,3158 @@            rawPredictionUDF = udf(func, VectorUDT())\n            aggregatedDataset = aggregatedDataset.withColumn(\n                self.getRawPredictionCol(), rawPredictionUDF(aggregatedDataset[accColName]))\n\n        if self.getPredictionCol():"
+  },
+  {
+    "id" : "5710567c-3c59-4715-8051-481a77397f87",
+    "prId" : 32124,
+    "prUrl" : "https://github.com/apache/spark/pull/32124#pullrequestreview-637254151",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a88d29e9-c44f-4074-940f-d7481d5c6158",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Just checking that these _should_ change for reasons you highlighted in the R comments above? these are more correct answers?",
+        "createdAt" : "2021-04-15T13:56:15Z",
+        "updatedAt" : "2021-04-15T13:56:15Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d14051af-a51f-40ab-be07-05c6b6de2c37",
+        "parentId" : "a88d29e9-c44f-4074-940f-d7481d5c6158",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "Firstly, this dataset only contains two instances, so I think the result maybe not reliable:\r\n\r\nR:\r\n```r\r\n> library(e1071)\r\n> label <- factor((c(1.0, 0.0)))\r\n> features <- as.matrix(data.frame(c(1.0, 1.0), c(1.0, 2.0), c(1.0, 3.0)))\r\n> C <- 2.0 / 2 / 0.01\r\n> model <- svm(features, label, type='C', kernel='linear', cost=C, scale=F, tolerance=1e-4)\r\n> w <- -t(model$coefs) %*% model$SV\r\n> w\r\n     c.1..1. c.1..2. c.1..3.\r\n[1,]       0     0.4     0.8\r\n> model$rho\r\n[1] -2.2\r\n> predict(model, features)\r\n1 2 \r\n1 0 \r\nLevels: 0 1\r\n```\r\n\r\n\r\nmaster:\r\n```\r\n>>> df = sc.parallelize([Row(label=1.0, features=Vectors.dense(1.0, 1.0, 1.0)), Row(label=0.0, features=Vectors.dense(1.0, 2.0, 3.0))]).toDF()\r\n>>> svm = LinearSVC()\r\n>>> svm.setRegParam(0.01)\r\nLinearSVC_c0eb3d7e4ecb\r\n>>> model = svm.fit(df)\r\n21/04/16 09:17:11 ERROR OWLQN: Failure! Resetting history: breeze.optimize.NaNHistory: \r\n>>> model.summary().objectiveHistory\r\n[1.0, 0.8483595765125, 0.7130226960596805, 0.6959063640335401, 0.6931614154979393, 0.677666741843437, 0.5879414534831688, 0.0930620718342175, 0.09048677587921486, 0.07102532249029628, 0.04374349680010344, 0.023954120035139716, 0.023830521501263628, 0.02320692346265251, 0.0215105944133274, 0.010552738391597573, 0.01051515768008, 0.009931999904022892, 0.008750399708406655, 0.0069553439215890535, 0.006868546522886791, 0.006515326943672154, 0.006347452798458171, 0.006187248462236068, 0.006164709258006091, 0.006053452700831725, 0.0060260493716176936, 0.005887552134192266, 0.005887136407436091, 0.005880225305895262, 0.005859805832943488, 0.005843641492521756, 0.005843641492521756, 0.00584486187964547, 0.005843267361152545, 0.005843241969094577, 0.005843234493660629, 0.0058432258624429665, 0.005843208081880606, 0.005843193072290253, 0.005843171629631225, 0.005843141001368335, 0.005843114614745189, 0.005843059249359493, 0.005843017763481445, 0.005842944768449553, 0.005842902553628102, 0.005842759959850206, 0.0058426880723804935, 0.0058424738985869045, 0.005842333714732286, 0.005842029622612579, 0.005841764628607474, 0.005841335619271196, 0.005840857505437478, 0.005840248258184164, 0.0058394259571752215, 0.005838527516717635, 0.00583821354404327, 0.005837212690021832, 0.005837208597515555, 0.005836810329205446, 0.005836776694348312, 0.00583640540121474, 0.00583635673616978, 0.005836167737106047, 0.005836194033268012, 0.00583616729576746, 0.0058361672269734615, 0.0058392815360454285, 0.005837679815125598, 0.005836401523490996, 0.005837908002584265, 0.005836192352808301, 0.005836670387508997, 0.005836202175777219, 0.005836200250798619, 0.005838876113322196]\r\n>>> model.summary().totalIterations\r\n77\r\n>>> model.transform(df).show()\r\n+-----+-------------+--------------------+----------+\r\n|label|     features|       rawPrediction|prediction|\r\n+-----+-------------+--------------------+----------+\r\n|  1.0|[1.0,1.0,1.0]|[-1.0000039068924...|       1.0|\r\n|  0.0|[1.0,2.0,3.0]|[0.99999460575938...|       0.0|\r\n+-----+-------------+--------------------+----------+\r\n```\r\n\r\n\r\nthis PR:\r\n```\r\n>>> from pyspark.sql import Row\r\n>>> from pyspark.ml.linalg import Vectors\r\n>>> from pyspark.ml.classification import LinearSVC\r\n>>> \r\n>>> df = sc.parallelize([Row(label=1.0, features=Vectors.dense(1.0, 1.0, 1.0)), Row(label=0.0, features=Vectors.dense(1.0, 2.0, 3.0))]).toDF()\r\n>>> svm = LinearSVC()\r\n>>> svm.setRegParam(0.01)\r\nLinearSVC_09863ffadcb7\r\n>>> model = svm.fit(df)\r\n>>> model.summary().objectiveHistory\r\n[1.0, 0.02084985122275127, 0.013524781160976402, 0.007607689403049228, 0.005824637199209566, 0.005323658700671529, 0.01838013981356318, 0.005089779695828527, 0.009036497849295026, 0.005023675663196612, 0.006332321775223654, 0.005004910245203961, 0.005002395070241166, 0.005000981376776186, 0.005042760733060569, 0.005000267637684085, 0.005013305173582782, 0.005000064609216319, 0.005004925699118321, 0.0050000068554171585, 0.005000088146444176, 0.005000002943794836, 0.005000000740400182, 0.005001814975687912, 0.005000001493803021, 0.0050001206863792644, 0.005000000123809999, 0.005000005933099882, 0.005000000031021147, 0.005000002103382519, 0.005000000004626093, 0.005000000001086049, 0.005001888167096368, 0.005000000754488572, 0.005000000108570436, 0.005001877526710762, 0.005000000861973192, 0.005000000216054848, 0.005001866885777133]\r\n>>> model.summary().totalIterations\r\n38\r\n>>> model.transform(df).show()\r\n+-----+-------------+--------------------+----------+\r\n|label|     features|       rawPrediction|prediction|\r\n+-----+-------------+--------------------+----------+\r\n|  1.0|[1.0,1.0,1.0]|[-0.9999981142568...|       1.0|\r\n|  0.0|[1.0,2.0,3.0]|[0.99999811425680...|       0.0|\r\n+-----+-------------+--------------------+----------+\r\n```\r\n\r\nunfortunately, spark's solutions are not like R's, but between the two solution, this PR convergen faster than existing one (which has a `OWLQN: Failure` warning)\r\n",
+        "createdAt" : "2021-04-16T01:22:44Z",
+        "updatedAt" : "2021-04-16T01:22:45Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5857a52f9cb9fe787b22dfdfd647e04b801224db",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +572,576 @@    0.0\n    >>> model.coefficients\n    DenseVector([0.0, -1.0319, -0.5159])\n    >>> model.intercept\n    2.579645978780695"
   }
 ]
