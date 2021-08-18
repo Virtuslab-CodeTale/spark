@@ -119,5 +119,137 @@
     "commit" : "bcf2df7d34559bbb078e00e0ba3bca1547a0585f",
     "line" : 23,
     "diffHunk" : "@@ -1,1 +1252,1256 @@      }\n      // cleanup the rest of the files\n      src.listFiles().foreach(_.delete())\n      src.delete()\n    }"
+  },
+  {
+    "id" : "fb1e79a5-fb4b-4a9a-a554-4245524813b3",
+    "prId" : 30187,
+    "prUrl" : "https://github.com/apache/spark/pull/30187#pullrequestreview-520941035",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "cb769b6c-bff0-4c9d-8230-c061b929e45a",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "does it still work if we only refresh table t?",
+        "createdAt" : "2020-10-30T04:23:12Z",
+        "updatedAt" : "2020-10-31T01:40:49Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1f51a527-c724-4d5a-af6f-684cbf79880c",
+        "parentId" : "cb769b6c-bff0-4c9d-8230-c061b929e45a",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "+1 for @cloud-fan 's comment. Shall we add a test case for that?",
+        "createdAt" : "2020-10-30T16:17:30Z",
+        "updatedAt" : "2020-10-31T01:40:49Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3dd45837-ea56-4ef2-b5c8-4e258220ed47",
+        "parentId" : "cb769b6c-bff0-4c9d-8230-c061b929e45a",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "no ... if we refresh the table selecting from `tempView2` will fail with:\r\n``` \r\n\"java.io.FileNotFoundException: File ... does not exist\r\nIt is possible the underlying files have been updated. You can explicitly invalidate the cache in Spark by running 'REFRESH TABLE tableName' command in SQL or by recreating the Dataset/DataFrame involved.\r\n```\r\n\r\n(BTW this happens without this PR if we have `CACHE TABLE t`)\r\n\r\nI think the reason is that, in the case of refresh table `t`, we'd invalidate the table relation cache in the session catalog. Since `tempView2` is a temporary view, it will just use cached plan, which still contains a reference to the relation that was just removed from the cache, and therefore its metadata is not refreshed. On the other hand, since `tempView1` is a persistent view, it will recreate the relation and the file index, and produce correct result.\r\n\r\nThe reason why `REFRESH TABLE tempView1` works is because, as opposed to invalidate the table relation cache, we'd update the cached logical plan by refreshing its metadata (e.g., file index). This way, the reference to the relation in `tempView2` also gets updated.\r\n\r\nI'm not sure if this is a desired behavior. Perhaps in the case of refreshing table `t`, we should refresh its plan in the table relation cache instead of removing it from the cache?",
+        "createdAt" : "2020-10-30T17:40:23Z",
+        "updatedAt" : "2020-10-31T01:40:49Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a66237f8-4ad1-42be-9d08-1085c5902786",
+        "parentId" : "cb769b6c-bff0-4c9d-8230-c061b929e45a",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "It's okay. Please add a test case with `intercept[FileNotFoundException`. The test case will monitor the behavior change across Spark versions.",
+        "createdAt" : "2020-10-30T18:40:31Z",
+        "updatedAt" : "2020-10-31T01:40:49Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b427b7d1c0e5b60f96d9a38c7d00dff43d15e423",
+    "line" : 17,
+    "diffHunk" : "@@ -1,1 +1222,1226 @@\n          Utils.deleteRecursively(path)\n          sql(\"REFRESH TABLE tempView1\")\n          checkAnswer(sql(\"SELECT * FROM tempView1\"), Seq.empty)\n          checkAnswer(sql(\"SELECT * FROM tempView2\"), Seq.empty)"
+  },
+  {
+    "id" : "f9d37df4-3840-4931-a0df-06db06527102",
+    "prId" : 30187,
+    "prUrl" : "https://github.com/apache/spark/pull/30187#pullrequestreview-521022288",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "cf9c45c4-c510-4f7d-a8f8-963853cede2a",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Ur, in this case, does `SELECT * FROM t` works?",
+        "createdAt" : "2020-10-30T20:14:48Z",
+        "updatedAt" : "2020-10-31T01:40:49Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "03c1c04b-a949-4010-971c-b0de747dfb22",
+        "parentId" : "cf9c45c4-c510-4f7d-a8f8-963853cede2a",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Yes it works because unlike `tempView1`, this will recreate a logical relation with the updated file index. I can add a\r\n```\r\ncheckAnswer(sql(\"SELECT * FROM t\"), Seq.empty)\r\n```\r\n\r\nif you want ...",
+        "createdAt" : "2020-10-30T20:20:41Z",
+        "updatedAt" : "2020-10-31T01:40:49Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5f279b83-f800-4530-8cdb-6b66b8bd08a9",
+        "parentId" : "cf9c45c4-c510-4f7d-a8f8-963853cede2a",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Thanks! Yes. Please!",
+        "createdAt" : "2020-10-30T20:40:16Z",
+        "updatedAt" : "2020-10-31T01:40:49Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b427b7d1c0e5b60f96d9a38c7d00dff43d15e423",
+    "line" : 35,
+    "diffHunk" : "@@ -1,1 +1240,1244 @@\n          Utils.deleteRecursively(path)\n          sql(\"REFRESH TABLE t\")\n          checkAnswer(sql(\"SELECT * FROM t\"), Seq.empty)\n          val exception = intercept[Exception] {"
+  },
+  {
+    "id" : "68be23d6-9680-4858-a14c-05e9856a815e",
+    "prId" : 30187,
+    "prUrl" : "https://github.com/apache/spark/pull/30187#pullrequestreview-521102278",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3e79a088-0e5d-4dd0-ad28-027ba443a817",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Since the test case name is `querying cached view`, do we need `CACHE TABLE` after this line?",
+        "createdAt" : "2020-10-30T22:56:21Z",
+        "updatedAt" : "2020-10-31T01:40:49Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f98989e1-5e59-41cf-8625-aa82486d5611",
+        "parentId" : "3e79a088-0e5d-4dd0-ad28-027ba443a817",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "You're right. I'll remove \"cached\" from the test name instead since cache is irrelevant in this issue.",
+        "createdAt" : "2020-10-31T01:39:48Z",
+        "updatedAt" : "2020-10-31T01:40:49Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b427b7d1c0e5b60f96d9a38c7d00dff43d15e423",
+    "line" : 31,
+    "diffHunk" : "@@ -1,1 +1236,1240 @@          Seq((1 -> \"a\")).toDF(\"i\", \"j\").write.parquet(path.getCanonicalPath)\n          sql(s\"CREATE TABLE t USING parquet LOCATION '${path.toURI}'\")\n          sql(\"CREATE TEMPORARY VIEW tempView1 AS SELECT * FROM t\")\n          checkAnswer(sql(\"SELECT * FROM tempView1\"), Seq(Row(1, \"a\")))\n"
   }
 ]

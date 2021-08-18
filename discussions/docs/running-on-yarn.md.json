@@ -141,5 +141,60 @@
     "commit" : "078bae1a8bb879d7c37ecb44209eadef2642ff37",
     "line" : 57,
     "diffHunk" : "@@ -1,1 +624,628 @@For example, suppose you would like to point log url link to Job History Server directly instead of let NodeManager http server redirects it, you can configure `spark.history.custom.executor.log.url` as below:\n\n<code>&#123;&#123;HTTP_SCHEME&#125;&#125;&lt;JHS_HOST&gt;:&lt;JHS_PORT&gt;/jobhistory/logs/&#123;&#123;NM_HOST&#125;&#125;:&#123;&#123;NM_PORT&#125;&#125;/&#123;&#123;CONTAINER_ID&#125;&#125;/&#123;&#123;CONTAINER_ID&#125;&#125;/&#123;&#123;USER&#125;&#125;/&#123;&#123;FILE_NAME&#125;&#125;?start=-4096</code>\n\nNOTE: you need to replace `<JHS_POST>` and `<JHS_PORT>` with actual value."
+  },
+  {
+    "id" : "e517d367-0c81-42d6-88f1-8a885cc4081a",
+    "prId" : 30204,
+    "prUrl" : "https://github.com/apache/spark/pull/30204#pullrequestreview-530301133",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "cd2f4cdc-5ef7-43eb-a834-a45b9dc74e11",
+        "parentId" : null,
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "I wish yarn supported allocation to multiple queues (so that DL workloads could use a queue with gpu's, and 'regular' queue for non-DL stages within the same application) - and not tie it at the application level.\r\n\r\nNode labels could be used for this - iirc we dont use that for resource profile, but only at executor/application level, right ?\r\nAre we planning to support specifying this per resource profile later ?",
+        "createdAt" : "2020-11-13T16:10:39Z",
+        "updatedAt" : "2020-11-13T19:50:27Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "49f398d4-7dd6-404c-9ab2-aed2639018ca",
+        "parentId" : "cd2f4cdc-5ef7-43eb-a834-a45b9dc74e11",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "we currently do not. this falls under the allow other spark confs to be specified in the profile and was to be added after initial development.  this definitely makes sense though as I know of a couple companies that have things setup this way.  I'm honestly not sure if it can be done via yarn api right now though. I thought they added ability to request application master container go to separate queue from the other ones but not sure if you can ask for containers from different queue.  \r\nDo you have immediate use case for this? ",
+        "createdAt" : "2020-11-13T17:25:53Z",
+        "updatedAt" : "2020-11-13T19:50:27Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f17f4e40-f1db-46da-b923-58e85368c85e",
+        "parentId" : "cd2f4cdc-5ef7-43eb-a834-a45b9dc74e11",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "No immediate use case; but I was looking at the possibilities for using resource profiles for composite jobs doing both data prep and DL in single app, and ability to leverage either a queue with GPU resources or specify node labels for a resource profile would help.\r\n\r\nIf it is already tracked in a separate jira, that is fine ! Will wait for that to be merged :-)",
+        "createdAt" : "2020-11-13T18:11:54Z",
+        "updatedAt" : "2020-11-13T19:50:27Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b1d9f964-4dab-4d5e-9535-e41e8c0f75fa",
+        "parentId" : "cd2f4cdc-5ef7-43eb-a834-a45b9dc74e11",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "https://issues.apache.org/jira/browse/SPARK-33447",
+        "createdAt" : "2020-11-13T18:18:27Z",
+        "updatedAt" : "2020-11-13T19:50:27Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6f5321ffe8637ae32434ac2d5eaff476fc3e0d19",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +646,650 @@Stage level scheduling is supported on YARN when dynamic allocation is enabled. One thing to note that is YARN specific is that each ResourceProfile requires a different container priority on YARN. The mapping is simply the ResourceProfile id becomes the priority, on YARN lower numbers are higher priority. This means that profiles created earlier will have a higher priority in YARN. Normally this won't matter as Spark finishes one stage before starting another one, the only case this might have an affect is in a job server type scenario, so its something to keep in mind.\nNote there is a difference in the way custom resources are handled between the base default profile and custom ResourceProfiles. To allow for the user to request YARN containers with extra resources without Spark scheduling on them, the user can specify resources via the <code>spark.yarn.executor.resource.</code> config. Those configs are only used in the base default profile though and do not get propogated into any other custom ResourceProfiles. This is because there would be no way to remove them if you wanted a stage to not have them. This results in your default profile getting custom resources defined in <code>spark.yarn.executor.resource.</code> plus spark defined resources of GPU or FPGA. Spark converts GPU and FPGA resources into the YARN built in types <code>yarn.io/gpu</code>) and <code>yarn.io/fpga</code>, but does not know the mapping of any other resources. Any other Spark custom resources are not propogated to YARN for the default profile. So if you want Spark to schedule based off a custom resource and have it requested from YARN, you must specify it in both YARN (<code>spark.yarn.{driver/executor}.resource.</code>) and Spark (<code>spark.{driver/executor}.resource.</code>) configs. Leave the Spark config off if you only want YARN containers with the extra resources but Spark not to schedule using them. Now for custom ResourceProfiles, it doesn't currently have a way to only specify YARN resources without Spark scheduling off of them. This means for custom ResourceProfiles we propogate all the resources defined in the ResourceProfile to YARN. We still convert GPU and FPGA to the YARN build in types as well. This requires that the name of any custom resources you specify match what they are defined as in YARN.\n\n# Important notes\n"
   }
 ]

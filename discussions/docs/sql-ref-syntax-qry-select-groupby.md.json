@@ -64,5 +64,203 @@
     "commit" : "170f692379b4e8497e85ae588d9b7272b30bc0d2",
     "line" : 6,
     "diffHunk" : "@@ -1,1 +30,34 @@\n```sql\nGROUP BY group_expression [ , group_expression [ , ... ] ] [ WITH { ROLLUP | CUBE } ]\n\nGROUP BY { group_expression | { ROLLUP | CUBE | GROUPING SETS } (grouping_set [ , ...]) } [ , ... ]"
+  },
+  {
+    "id" : "021d7a15-3e4f-4114-ad4d-9346a2462fb7",
+    "prId" : 30212,
+    "prUrl" : "https://github.com/apache/spark/pull/30212#pullrequestreview-620807849",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "53ac7ca1-9d2b-410f-9772-02c4a840abbc",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "is this corrected? I though the result is a union of `GROUP BY warehouse, product`, `GROUP BY warehouse`, `GROUP BY ()` (global aggregate).",
+        "createdAt" : "2021-03-25T07:36:32Z",
+        "updatedAt" : "2021-03-30T05:55:50Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1d98f29e-4403-4246-909f-eaee7a4890de",
+        "parentId" : "53ac7ca1-9d2b-410f-9772-02c4a840abbc",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> is this corrected? I though the result is a union of `GROUP BY warehouse, product`, `GROUP BY warehouse`, `GROUP BY ()` (global aggregate).\r\n\r\n```\r\nspark-sql> CREATE TABLE dealer (id INT, city STRING, car_model STRING, quantity INT);\r\nTime taken: 3.084 seconds\r\nspark-sql> INSERT INTO dealer VALUES\r\n         >     (100, 'Fremont', 'Honda Civic', 10),\r\n         >     (100, 'Fremont', 'Honda Accord', 15),\r\n         >     (100, 'Fremont', 'Honda CRV', 7),\r\n         >     (200, 'Dublin', 'Honda Civic', 20),\r\n         >     (200, 'Dublin', 'Honda Accord', 10),\r\n         >     (200, 'Dublin', 'Honda CRV', 3),\r\n         >     (300, 'San Jose', 'Honda Civic', 5),\r\n         >     (300, 'San Jose', 'Honda Accord', 8);\r\n21/03/25 15:48:47 WARN ObjectStore: Failed to get database global_temp, returning NoSuchObjectException\r\nTime taken: 2.332 seconds\r\nspark-sql>  select id, city, sum(quantity) from dealer group by rollup(id, city);\r\n100\tNULL\t32\r\n300\tNULL\t13\r\n200\tNULL\t33\r\nNULL\tNULL\t78\r\n200\tDublin\t33\r\n300\tSan Jose\t13\r\n100\tFremont\t32\r\nTime taken: 1.388 seconds, Fetched 7 row(s)\r\nspark-sql> select id, city, sum(quantity) from dealer group by grouping sets((id, city), (id), ());\r\n100\tNULL\t32\r\n300\tNULL\t13\r\n200\tNULL\t33\r\nNULL\tNULL\t78\r\n200\tDublin\t33\r\n300\tSan Jose\t13\r\n100\tFremont\t32\r\nTime taken: 0.284 seconds, Fetched 7 row(s)\r\nspark-sql> explain select id, city, sum(quantity) from dealer group by rollup(id, city);\r\n== Physical Plan ==\r\nAdaptiveSparkPlan isFinalPlan=false\r\n+- HashAggregate(keys=[id#68, city#69, spark_grouping_id#67L], functions=[sum(quantity#62)])\r\n   +- Exchange hashpartitioning(id#68, city#69, spark_grouping_id#67L, 200), ENSURE_REQUIREMENTS, [id=#113]\r\n      +- HashAggregate(keys=[id#68, city#69, spark_grouping_id#67L], functions=[partial_sum(quantity#62)])\r\n         +- Expand [List(quantity#62, id#59, city#60, 0), List(quantity#62, id#59, null, 1), List(quantity#62, null, null, 3)], [quantity#62, id#68, city#69, spark_grouping_id#67L]\r\n            +- Scan hive default.dealer [quantity#62, id#59, city#60], HiveTableRelation [`default`.`dealer`, org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe, Data Cols: [id#59, city#60, car_model#61, quantity#62], Partition Cols: []]\r\n\r\n\r\nTime taken: 0.064 seconds, Fetched 1 row(s)\r\nspark-sql> explain select id, city, sum(quantity) from dealer group by grouping sets((id, city), (id), ());\r\n== Physical Plan ==\r\nAdaptiveSparkPlan isFinalPlan=false\r\n+- HashAggregate(keys=[id#86, city#87, spark_grouping_id#85L], functions=[sum(quantity#80)])\r\n   +- Exchange hashpartitioning(id#86, city#87, spark_grouping_id#85L, 200), ENSURE_REQUIREMENTS, [id=#136]\r\n      +- HashAggregate(keys=[id#86, city#87, spark_grouping_id#85L], functions=[partial_sum(quantity#80)])\r\n         +- Expand [List(quantity#80, id#77, city#78, 0), List(quantity#80, id#77, null, 1), List(quantity#80, null, null, 3)], [quantity#80, id#86, city#87, spark_grouping_id#85L]\r\n            +- Scan hive default.dealer [quantity#80, id#77, city#78], HiveTableRelation [`default`.`dealer`, org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe, Data Cols: [id#77, city#78, car_model#79, quantity#80], Partition Cols: []]\r\n\r\n\r\nTime taken: 0.063 seconds, Fetched 1 row(s)\r\nspark-sql>\r\n```",
+        "createdAt" : "2021-03-25T07:51:59Z",
+        "updatedAt" : "2021-03-30T05:55:50Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "bfc03afaf9fc0974cb218b3b3121829ae9e5c413",
+    "line" : 57,
+    "diffHunk" : "@@ -1,1 +73,77 @@    based on multiple grouping sets. `ROLLUP` is a shorthand for `GROUPING SETS`. For example,\n    `GROUP BY warehouse, product WITH ROLLUP` or `GROUP BY ROLLUP(warehouse, product)` is equivalent to\n    `GROUP BY GROUPING SETS((warehouse, product), (warehouse), ())`.\n    `GROUP BY ROLLUP(warehouse, product, (warehouse, location))` is equivalent to\n    `GROUP BY GROUPING SETS((warehouse, product, location), (warehouse, product), (warehouse), ())`."
+  },
+  {
+    "id" : "094ee1b4-2f10-4299-a7ac-5d682fb677dc",
+    "prId" : 30212,
+    "prUrl" : "https://github.com/apache/spark/pull/30212#pullrequestreview-620816925",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "90d8fdf8-7e19-4e72-b619-9c05f765231f",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "seems we miss the document of multiple grouping sets, which is newly added in this PR. What does `GROUP BY ROLLUP(a, b), ROLLUP(c, d)` mean?",
+        "createdAt" : "2021-03-25T07:39:48Z",
+        "updatedAt" : "2021-03-30T05:55:50Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c1e1c3a3-d766-431a-9585-6e60472eb7ba",
+        "parentId" : "90d8fdf8-7e19-4e72-b619-9c05f765231f",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> seems we miss the document of multiple grouping sets, which is newly added in this PR. What does `GROUP BY ROLLUP(a, b), ROLLUP(c, d)` mean?\r\n\r\nWe can't support this now. We should support this in https://github.com/apache/spark/pull/30144\r\nWhen We doing https://github.com/apache/spark/pull/30144 we found current grouping analytic's code need to refactor then can make it support more flexible case like postgresSQL and Oracle.",
+        "createdAt" : "2021-03-25T08:04:25Z",
+        "updatedAt" : "2021-03-30T05:55:50Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "bfc03afaf9fc0974cb218b3b3121829ae9e5c413",
+    "line" : 74,
+    "diffHunk" : "@@ -1,1 +88,92 @@     (product, warehouse, location), (warehouse), (product), (warehouse, product), ())`.\n    The N elements of a `CUBE` specification results in 2^N `GROUPING SETS`.\n\n* **aggregate_name**\n"
+  },
+  {
+    "id" : "adee9b36-d9be-4522-aefb-85578667d204",
+    "prId" : 30212,
+    "prUrl" : "https://github.com/apache/spark/pull/30212#pullrequestreview-620880560",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "fe0e97b7-a116-42c0-a26c-9c0a6348c74e",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Shall we remove the `[ , ... ]` at the end since we don't support it right now?",
+        "createdAt" : "2021-03-25T09:05:12Z",
+        "updatedAt" : "2021-03-30T05:55:50Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "eeac5c03-8cd5-4109-8213-a065b3f6dd8b",
+        "parentId" : "fe0e97b7-a116-42c0-a26c-9c0a6348c74e",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> Shall we remove the `[ , ... ]` at the end since we don't support it right now?\r\n\r\nSyntactically speaking, we can support this after this pr, but currently does not support executio.",
+        "createdAt" : "2021-03-25T09:19:00Z",
+        "updatedAt" : "2021-03-30T05:55:50Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "bfc03afaf9fc0974cb218b3b3121829ae9e5c413",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +33,37 @@    [ { WITH ROLLUP | WITH CUBE | GROUPING SETS (grouping_set [ , ...]) } ]\n\nGROUP BY { group_expression | { ROLLUP | CUBE | GROUPING SETS } (grouping_set [ , ...]) } [ , ... ]\n```\n"
+  },
+  {
+    "id" : "09dba661-96e4-42a0-996b-64ed80d88639",
+    "prId" : 30212,
+    "prUrl" : "https://github.com/apache/spark/pull/30212#pullrequestreview-621099203",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9b94febb-626e-454a-86ea-e80be6e6d791",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "BTW do we really support `GROUP BY a, b GROUPING SETS (c, d)`?",
+        "createdAt" : "2021-03-25T09:15:38Z",
+        "updatedAt" : "2021-03-30T05:55:50Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b49464fd-fb95-4260-af9a-b131024980f2",
+        "parentId" : "9b94febb-626e-454a-86ea-e80be6e6d791",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> BTW do we really support `GROUP BY a, b GROUPING SETS (c, d)`?\r\n\r\nNot yet. Same reason as https://github.com/apache/spark/pull/30212#discussion_r601171306",
+        "createdAt" : "2021-03-25T09:23:41Z",
+        "updatedAt" : "2021-03-30T05:55:50Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c4aa1d2a-ed4e-4cca-9eac-1c332f7eff95",
+        "parentId" : "9b94febb-626e-454a-86ea-e80be6e6d791",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "maybe we should change this to\r\n```\r\nGROUP BY group_expression [ , group_expression [ , ... ] ]\r\n    [ { WITH ROLLUP | WITH CUBE } ]\r\n```\r\n\r\n`GROUP BY GROUPING SETS (grouping_set [ , ...])` is covered by the syntax below.",
+        "createdAt" : "2021-03-25T09:27:45Z",
+        "updatedAt" : "2021-03-30T05:55:50Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8b54480f-791e-4a0e-b66e-ee7df045280d",
+        "parentId" : "9b94febb-626e-454a-86ea-e80be6e6d791",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "You can see the comment https://github.com/apache/spark/pull/30212/files#r529501391\r\n\r\nNot all case can be covered such as `GROUP BY A, B grouping sets(a, (a, b ))`",
+        "createdAt" : "2021-03-25T13:18:52Z",
+        "updatedAt" : "2021-03-30T05:55:50Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "bfc03afaf9fc0974cb218b3b3121829ae9e5c413",
+    "line" : 2,
+    "diffHunk" : "@@ -1,1 +31,35 @@```sql\nGROUP BY group_expression [ , group_expression [ , ... ] ]\n    [ { WITH ROLLUP | WITH CUBE | GROUPING SETS (grouping_set [ , ...]) } ]\n\nGROUP BY { group_expression | { ROLLUP | CUBE | GROUPING SETS } (grouping_set [ , ...]) } [ , ... ]"
+  },
+  {
+    "id" : "ae4eed70-2cac-47e7-8c82-acacf7c81f5f",
+    "prId" : 30212,
+    "prUrl" : "https://github.com/apache/spark/pull/30212#pullrequestreview-621965436",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9d158156-ddfc-4878-94af-8ee223dffbc8",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "`(warehouse, product)` is duplicated, is it OK?",
+        "createdAt" : "2021-03-26T09:14:18Z",
+        "updatedAt" : "2021-03-30T05:55:50Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "937199f3-d751-46cc-a5f8-9c407b42ce96",
+        "parentId" : "9d158156-ddfc-4878-94af-8ee223dffbc8",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> `(warehouse, product)` is duplicated, is it OK?\r\n\r\nIt's right",
+        "createdAt" : "2021-03-26T09:38:17Z",
+        "updatedAt" : "2021-03-30T05:55:50Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "eae1af58-63ad-4caf-9625-ac931b1d996e",
+        "parentId" : "9d158156-ddfc-4878-94af-8ee223dffbc8",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> `(warehouse, product)` is duplicated, is it OK?\r\n\r\nEach grouping_set will be a subset of result and same result in PpostgresSQL\r\n![image](https://user-images.githubusercontent.com/46485123/112616090-4758bd00-8e5e-11eb-933f-cab866d7bdcc.png)\r\n",
+        "createdAt" : "2021-03-26T10:08:49Z",
+        "updatedAt" : "2021-03-30T05:55:50Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "bfc03afaf9fc0974cb218b3b3121829ae9e5c413",
+    "line" : 72,
+    "diffHunk" : "@@ -1,1 +86,90 @@    `GROUP BY CUBE(warehouse, product, (warehouse, location))` is equivalent to\n    `GROUP BY GROUPING SETS((warehouse, product, location), (warehouse, product), (warehouse, location),\n     (product, warehouse, location), (warehouse), (product), (warehouse, product), ())`.\n    The N elements of a `CUBE` specification results in 2^N `GROUPING SETS`.\n"
   }
 ]

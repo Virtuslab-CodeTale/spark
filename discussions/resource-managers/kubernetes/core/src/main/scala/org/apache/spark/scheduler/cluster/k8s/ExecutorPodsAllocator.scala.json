@@ -449,5 +449,38 @@
     "commit" : "bb578d296e77af20b4c3a006ac0349a84630fdad",
     "line" : 71,
     "diffHunk" : "@@ -1,1 +181,185 @@    }\n\n    val notDeletedPods = lastSnapshot.executorPods.filterKeys(!_deletedExecutorIds.contains(_))\n    // Map the pods into per ResourceProfile id so we can check per ResourceProfile,\n    // add a fast path if not using other ResourceProfiles."
+  },
+  {
+    "id" : "44ddf916-3cd9-4b81-9468-2d169aa94075",
+    "prId" : 30204,
+    "prUrl" : "https://github.com/apache/spark/pull/30204#pullrequestreview-524366418",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "22e84670-1e50-435a-904b-86a8e34730e4",
+        "parentId" : null,
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "How often is `onNewSnapshots` called ?\r\nTrying to understand the cost of this method given the changes.",
+        "createdAt" : "2020-11-03T09:42:03Z",
+        "updatedAt" : "2020-11-13T19:50:27Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9c32c940-edd3-466a-a80d-9ab621b7529d",
+        "parentId" : "22e84670-1e50-435a-904b-86a8e34730e4",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "this is called by the ExecutorPodsSnapshotsStoreImpl potentially pretty often. Its on start, whenever you set the total executors (which would be dynamic allocation manager updating things), and there is an allocation timer that fires (spark.kubernetes.allocation.batch.delay=1s default) that updates the allocator on any k8s pod changes. We only request small number of pods at a time and iterate, so if you request 20 executors, its definitely going to go through here a few times.\r\n\r\nSince it can potentially be called a lot, this is why I made the normal case with no resource profiles a fast path and constructing the resource profile to pod state only when we are using them.  I didn't actually profile that to see how slow it could be but was thinking it still shouldn't be that bad.  The alternative is to store the resource profile to pod state but this required a lot more changes to the snapshot store and lifecycle manager.",
+        "createdAt" : "2020-11-05T15:17:41Z",
+        "updatedAt" : "2020-11-13T19:50:27Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6f5321ffe8637ae32434ac2d5eaff476fc3e0d19",
+    "line" : 68,
+    "diffHunk" : "@@ -1,1 +122,126 @@    // assume that the pod was either never created (the API server never properly\n    // handled the creation request), or the API server created the pod but we missed\n    // both the creation and deletion events. In either case, delete the missing pod\n    // if possible, and mark such a pod to be rescheduled below.\n    val currentTime = clock.getTimeMillis()"
   }
 ]

@@ -86,5 +86,38 @@
     "commit" : "db9f0baffd424beba5f9efd19620d781cfb2b22b",
     "line" : 31,
     "diffHunk" : "@@ -1,1 +784,788 @@      withView(\"v1\") {\n        withSQLConf(STORE_ANALYZED_PLAN_FOR_VIEW.key -> \"true\") {\n          sql(\"CREATE TEMPORARY VIEW v1 AS SELECT * FROM t\")\n          Seq(4, 6, 5).toDF(\"c1\").write.mode(\"overwrite\").format(\"parquet\").saveAsTable(\"t\")\n          val e = intercept[SparkException] {"
+  },
+  {
+    "id" : "b146e108-c977-4763-ae04-c289ead96321",
+    "prId" : 30229,
+    "prUrl" : "https://github.com/apache/spark/pull/30229#pullrequestreview-522578843",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "80194068-ed47-48ca-ae87-4fa2834a4bdb",
+        "parentId" : null,
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "Weirdly, `AnalyzeColumnCommand` throws `NoSuchTableException` if the temp view is not cached (even if it exists):\r\nhttps://github.com/apache/spark/blob/3959f0d9879fa7fa9e8f2e8ed8c8b12003d21788/sql/core/src/main/scala/org/apache/spark/sql/execution/command/AnalyzeColumnCommand.scala#L72-L78\r\nSo, this line doesn't need to be updated.",
+        "createdAt" : "2020-11-03T05:20:40Z",
+        "updatedAt" : "2020-11-03T18:46:05Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f769fea4-88c7-43f3-a568-6bb6415206e3",
+        "parentId" : "80194068-ed47-48ca-ae87-4fa2834a4bdb",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "We can create a separate PR to fix it. I think it should be `AnalysisException` with clear message to mention that it's not cached.",
+        "createdAt" : "2020-11-03T14:56:14Z",
+        "updatedAt" : "2020-11-03T18:46:05Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c80e8eb5828ff68a1ebab4f9ee56b55b852ba7d0",
+    "line" : 9,
+    "diffHunk" : "@@ -1,1 +180,184 @@      }.getMessage\n      assert(e3.contains(s\"$viewName is a temp view not table or permanent view\"))\n      assertNoSuchTable(s\"ANALYZE TABLE $viewName COMPUTE STATISTICS FOR COLUMNS id\")\n    }\n  }"
   }
 ]

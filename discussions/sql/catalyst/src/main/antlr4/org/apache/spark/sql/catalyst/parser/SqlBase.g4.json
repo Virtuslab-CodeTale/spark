@@ -163,5 +163,203 @@
     "commit" : "c049bd953a3b01ad3f47173e02ba7f926890d193",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +248,252 @@    | SET TIME ZONE .*?                                                #setTimeZone\n    | SET configKey EQ configValue                                     #setQuotedConfiguration\n    | SET configKey (EQ .*?)?                                          #setQuotedConfiguration\n    | SET .*? EQ configValue                                           #setQuotedConfiguration\n    | SET .*?                                                          #setConfiguration"
+  },
+  {
+    "id" : "6e4f7f8d-84ce-4634-b623-ca89ce4feada",
+    "prId" : 30212,
+    "prUrl" : "https://github.com/apache/spark/pull/30212#pullrequestreview-539723269",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a7dab057-7ad0-4cd6-9bf0-5d5a9f719b3d",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Why do we still need this def?",
+        "createdAt" : "2020-11-24T11:38:38Z",
+        "updatedAt" : "2021-03-30T05:55:49Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7d9631a5-39f1-4a36-9a33-6748633d7cde",
+        "parentId" : "a7dab057-7ad0-4cd6-9bf0-5d5a9f719b3d",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> Why do we still need this def?\r\n\r\nGROUP BY A, B grouping sets(a,  (a, b )\r\nGROUP BY A, B `, `grouping sets(a, (a, b))\r\nBoth support , so we still need this.",
+        "createdAt" : "2020-11-24T12:16:46Z",
+        "updatedAt" : "2021-03-30T05:55:49Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7adcaba7-bcd7-440d-b761-58df298ba933",
+        "parentId" : "a7dab057-7ad0-4cd6-9bf0-5d5a9f719b3d",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "Do you mean  this line ?\r\n```\r\n  | GROUP BY kind=GROUPING SETS '(' groupingSet (',' groupingSet)* ')'\r\n```",
+        "createdAt" : "2020-11-24T16:09:02Z",
+        "updatedAt" : "2021-03-30T05:55:49Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5434fcbe-c322-4687-a99b-e90329fde763",
+        "parentId" : "a7dab057-7ad0-4cd6-9bf0-5d5a9f719b3d",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "> GROUP BY A, B , grouping sets(a, (a, b))\r\n\r\nAh, you mean `GROUP BY A, B  grouping sets(a, (a, b))`? It seems the parser cannot accpet `GROUP BY A, B , grouping sets(a, (a, b))` now.",
+        "createdAt" : "2020-11-27T05:33:38Z",
+        "updatedAt" : "2021-03-30T05:55:49Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f159c543-cd59-43e7-bed9-f212a0e965ed",
+        "parentId" : "a7dab057-7ad0-4cd6-9bf0-5d5a9f719b3d",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> > GROUP BY A, B , grouping sets(a, (a, b))\r\n> \r\n> Ah, you mean `GROUP BY A, B grouping sets(a, (a, b))`? It seems the parser cannot accpet `GROUP BY A, B , grouping sets(a, (a, b))`.\r\n\r\nI mean we need  \r\n```\r\n| kind=GROUPING SETS '(' groupingSet (',' groupingSet)* ')')?\r\n```\r\nto support `group by a, b grouping sets(a, (a, b))`\r\nand since we add `GROUPING SET` in   groupingExpressionWithGroupingAnalytics\r\nso we  support `group by a, b, grouping sets(a, (a, b))`. Also \r\n`| GROUP BY kind=GROUPING SETS '(' groupingSet (',' groupingSet)* ')'` this line can be remove since  we add `GROUPING SETS` in  groupingExpressionWithGroupingAnalytics\r\n\r\nCurrently we only support this in grammar, but can't execute because of https://github.com/apache/spark/pull/30144",
+        "createdAt" : "2020-11-27T05:41:02Z",
+        "updatedAt" : "2021-03-30T05:55:49Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "16ff65a4-2e79-4fdb-b231-63cb01b7bf97",
+        "parentId" : "a7dab057-7ad0-4cd6-9bf0-5d5a9f719b3d",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "> since we add GROUPING SET in groupingExpressionWithGroupingAnalytics\r\nso we support group by a, b, grouping sets(a, (a, b))\r\n\r\nCould you add tests?",
+        "createdAt" : "2020-11-27T05:45:13Z",
+        "updatedAt" : "2021-03-30T05:55:49Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4f02cc3b-a10c-44c9-b9e5-363dff6448e7",
+        "parentId" : "a7dab057-7ad0-4cd6-9bf0-5d5a9f719b3d",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "After this work done the I will change code about https://github.com/apache/spark/pull/30144 base on this pr, then we can support  \r\n` GROUP BY A, B , grouping sets(a, (a, b))`\r\n` GROUP BY A, B , cube(a, (a, b))` etc..",
+        "createdAt" : "2020-11-27T05:46:42Z",
+        "updatedAt" : "2021-03-30T05:55:49Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "131903b5-931b-4da5-83d8-3de0037420c9",
+        "parentId" : "a7dab057-7ad0-4cd6-9bf0-5d5a9f719b3d",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> > since we add GROUPING SET in groupingExpressionWithGroupingAnalytics\r\n> > so we support group by a, b, grouping sets(a, (a, b))\r\n> \r\n> Could you add tests?\r\n\r\nSince for https://github.com/apache/spark/pull/30212#discussion_r531393983\r\nwe just add this test in PlanParserSuite in this pr, ok ?",
+        "createdAt" : "2020-11-27T05:55:17Z",
+        "updatedAt" : "2021-03-30T05:55:49Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "bfc03afaf9fc0974cb218b3b3121829ae9e5c413",
+    "line" : 10,
+    "diffHunk" : "@@ -1,1 +594,598 @@      WITH kind=ROLLUP\n    | WITH kind=CUBE\n    | kind=GROUPING SETS '(' groupingSet (',' groupingSet)* ')')?\n    ;\n"
+  },
+  {
+    "id" : "d6cc96c4-72ea-4d20-b9e4-f3d894115e4e",
+    "prId" : 30212,
+    "prUrl" : "https://github.com/apache/spark/pull/30212#pullrequestreview-539735498",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a869da80-3432-45e8-bbeb-ddd9fa96cd2c",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "If this PR includes the `groupingSet` support for `CUBE`/`ROLLUP`, please add tests for the new feature.",
+        "createdAt" : "2020-11-24T11:41:22Z",
+        "updatedAt" : "2021-03-30T05:55:49Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ba827b6b-e63c-4d35-807c-32281bca5272",
+        "parentId" : "a869da80-3432-45e8-bbeb-ddd9fa96cd2c",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "`(ROLLUP | CUBE | GROUPING SETS) ` => `kind=(ROLLUP | CUBE | GROUPING SETS) `?",
+        "createdAt" : "2020-11-24T11:41:44Z",
+        "updatedAt" : "2021-03-30T05:55:49Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4519597f-67d6-44d2-be09-68d469e934e2",
+        "parentId" : "a869da80-3432-45e8-bbeb-ddd9fa96cd2c",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> `(ROLLUP | CUBE | GROUPING SETS) ` => `kind=(ROLLUP | CUBE | GROUPING SETS) `?\r\n\r\nKind can't be assigned to not a set.",
+        "createdAt" : "2020-11-24T12:19:26Z",
+        "updatedAt" : "2021-03-30T05:55:49Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "da25d79d-88f0-4d9b-ac4f-6200c292f5b4",
+        "parentId" : "a869da80-3432-45e8-bbeb-ddd9fa96cd2c",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> If this PR includes the `groupingSet` support for `CUBE`/`ROLLUP`, please add tests for the new feature.\r\n\r\nyea",
+        "createdAt" : "2020-11-24T12:20:41Z",
+        "updatedAt" : "2021-03-30T05:55:49Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "75727483-047a-4188-bc76-38c8cd65ad4c",
+        "parentId" : "a869da80-3432-45e8-bbeb-ddd9fa96cd2c",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "> Kind can't be assigned to a set.\r\n\r\nhttps://github.com/apache/spark/blob/d082ad0abfe0bc26760626ae0ecb415a8d508a1f/sql/catalyst/src/main/antlr4/org/apache/spark/sql/catalyst/parser/SqlBase.g4#L776 ?",
+        "createdAt" : "2020-11-27T05:38:20Z",
+        "updatedAt" : "2021-03-30T05:55:49Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "72ead8b6-0a0a-4bcd-af80-0746342f7a3c",
+        "parentId" : "a869da80-3432-45e8-bbeb-ddd9fa96cd2c",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "==\r\n![image](https://user-images.githubusercontent.com/46485123/100415463-29996800-30b7-11eb-80ea-830f678491d7.png)\r\n![image](https://user-images.githubusercontent.com/46485123/100415472-2d2cef00-30b7-11eb-8a84-b166f6a59760.png)",
+        "createdAt" : "2020-11-27T05:48:17Z",
+        "updatedAt" : "2021-03-30T05:55:49Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "57fe0d86-25c3-4c2d-85cb-b7cbe013aa32",
+        "parentId" : "a869da80-3432-45e8-bbeb-ddd9fa96cd2c",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "Sorry for my mistake in https://github.com/apache/spark/pull/30212#discussion_r529502777\r\n\r\n`Kind can't be assigned to a set. ` is wrong , should be `Kind can't be assigned to not a set.`",
+        "createdAt" : "2020-11-27T05:49:33Z",
+        "updatedAt" : "2021-03-30T05:55:49Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1a55714a-8948-40fb-8cff-5dcc96b6b643",
+        "parentId" : "a869da80-3432-45e8-bbeb-ddd9fa96cd2c",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Ah, ok.",
+        "createdAt" : "2020-11-27T06:35:30Z",
+        "updatedAt" : "2021-03-30T05:55:50Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "bfc03afaf9fc0974cb218b3b3121829ae9e5c413",
+    "line" : 20,
+    "diffHunk" : "@@ -1,1 +603,607 @@\ngroupingAnalytics\n    : (ROLLUP | CUBE | GROUPING SETS)  '(' groupingSet (',' groupingSet)* ')'\n    ;\n"
   }
 ]

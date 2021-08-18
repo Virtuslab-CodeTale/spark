@@ -31,5 +31,148 @@
     "commit" : "3b97a8d4945cd76a0894311dcd9a12862c5a5df0",
     "line" : 6,
     "diffHunk" : "@@ -1,1 +83,87 @@-- Support nested CUBE/ROLLUP/GROUPING SETS in GROUPING SETS\nSELECT a, b, count(1) FROM testData GROUP BY a, GROUPING SETS(ROLLUP(a, b));\nSELECT a, b, count(1) FROM testData GROUP BY a, GROUPING SETS(GROUPING SETS((a, b), (a), ()));\n\nSELECT a, b, count(1) FROM testData GROUP BY a, GROUPING SETS((a, b), GROUPING SETS(ROLLUP(a, b)));"
+  },
+  {
+    "id" : "00617953-edd1-4077-ab02-1710ba1d4104",
+    "prId" : 30212,
+    "prUrl" : "https://github.com/apache/spark/pull/30212#pullrequestreview-539752093",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "46b11be4-0a7d-4e45-bd1b-bc92fd5c7359",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Could you add more test patterns? For example,\r\n```\r\nscala> sql(\"select a, b, sum(c) from t group by cube ((a, b), ())\").show()\r\n+---+---+------+\r\n|  a|  b|sum(c)|\r\n+---+---+------+\r\n+---+---+------+\r\n\r\npostgres=# select a, b, sum(c) from t group by cube ((a, b), ());\r\n2020-11-27 15:43:52.365 JST [23118] ERROR:  syntax error at or near \")\" at character 52\r\n2020-11-27 15:43:52.365 JST [23118] STATEMENT:  select a, b, sum(c) from t group by cube ((a, b), ());\r\nERROR:  syntax error at or near \")\"\r\nLINE 1: select a, b, sum(c) from t group by cube ((a, b), ());\r\n```",
+        "createdAt" : "2020-11-27T06:44:34Z",
+        "updatedAt" : "2021-03-30T05:55:50Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2845ed3c-b3e3-47b7-8793-172fbf148304",
+        "parentId" : "46b11be4-0a7d-4e45-bd1b-bc92fd5c7359",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "Yea, PostgresSQL not support empty set.\r\nWill add more test after code refactor",
+        "createdAt" : "2020-11-27T06:51:37Z",
+        "updatedAt" : "2021-03-30T05:55:50Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3a369631-ed01-4eed-8071-93df7e686932",
+        "parentId" : "46b11be4-0a7d-4e45-bd1b-bc92fd5c7359",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Btw, any database-like system supporting an empty set in CUBE?",
+        "createdAt" : "2020-11-27T07:13:49Z",
+        "updatedAt" : "2021-03-30T05:55:50Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5135ddc0-8c27-42b7-8e20-8687a8414dd1",
+        "parentId" : "46b11be4-0a7d-4e45-bd1b-bc92fd5c7359",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> Btw, any database-like system supporting an empty set in CUBE?\r\n\r\nHave not see this point in their doc, and I have no env to test for this...",
+        "createdAt" : "2020-11-27T07:15:36Z",
+        "updatedAt" : "2021-03-30T05:55:50Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9e1380ab-1d0a-4258-89ee-2438c98b60be",
+        "parentId" : "46b11be4-0a7d-4e45-bd1b-bc92fd5c7359",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "```\r\n// PostgreSQL\r\npostgres=# select a, b, sum(c) from t group by grouping sets((a, b), (a), ());\r\n a | b | sum \r\n---+---+-----\r\n   |   |   3\r\n 1 | 1 |   1\r\n 2 | 2 |   2\r\n 2 |   |   2\r\n 1 |   |   1\r\n(5 rows)\r\n\r\npostgres=# select a, b, sum(c) from t group by cube((a, b), (a), ());\r\nERROR:  syntax error at or near \")\"\r\nLINE 1: select a, b, sum(c) from t group by cube((a, b), (a), ());\r\n\r\n// Spark\r\nscala> sql(\"select a, b, sum(c) from t group by grouping sets((a, b), (a), ());\").show()\r\n+----+----+------+\r\n|   a|   b|sum(c)|\r\n+----+----+------+\r\n|   1|   1|     1|\r\n|   2|   2|     2|\r\n|null|null|     3|\r\n|   1|null|     1|\r\n|   2|null|     2|\r\n+----+----+------+\r\n\r\nscala> sql(\"select a, b, sum(c) from t group by cube((a, b), (a), ());\").show()\r\n+----+----+------+\r\n|   a|   b|sum(c)|\r\n+----+----+------+\r\n|   1|   1|     1|\r\n|   1|null|     1|\r\n|null|null|     3|\r\n|   2|   2|     2|\r\n|null|null|     3|\r\n|   1|null|     1|\r\n|   1|   1|     1|\r\n|   1|   1|     1|\r\n|   2|   2|     2|\r\n|   2|null|     2|\r\n|   2|null|     2|\r\n|   2|   2|     2|\r\n|   2|   2|     2|\r\n|   1|   1|     1|\r\n+----+----+------+",
+        "createdAt" : "2020-11-27T07:17:28Z",
+        "updatedAt" : "2021-03-30T05:55:50Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2fa62e81-741b-4c7f-be57-33d8033c7f5d",
+        "parentId" : "46b11be4-0a7d-4e45-bd1b-bc92fd5c7359",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "May be we should add a check rule that cube/rollup groupingsets should not have empty set?\r\nthe result seems ok. ",
+        "createdAt" : "2020-11-27T07:21:00Z",
+        "updatedAt" : "2021-03-30T05:55:50Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "bfc03afaf9fc0974cb218b3b3121829ae9e5c413",
+    "line" : 9,
+    "diffHunk" : "@@ -1,1 +24,28 @@-- CUBE\nSELECT course, year, SUM(earnings) FROM courseSales GROUP BY CUBE(course, year) ORDER BY course, year;\nSELECT course, year, SUM(earnings) FROM courseSales GROUP BY CUBE(course, year, (course, year)) ORDER BY course, year;\nSELECT course, year, SUM(earnings) FROM courseSales GROUP BY CUBE(course, year, (course, year), ()) ORDER BY course, year;\n"
+  },
+  {
+    "id" : "8c332d9f-e63a-4e86-9b3e-b108c385e05a",
+    "prId" : 30212,
+    "prUrl" : "https://github.com/apache/spark/pull/30212#pullrequestreview-540455889",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "22fedf97-38a5-45a8-844f-ae069453d39f",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Could you check the behaviour of other systems (other than postgresql) when having an empty set in cube/rollup?",
+        "createdAt" : "2020-11-28T14:14:09Z",
+        "updatedAt" : "2021-03-30T05:55:50Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3d8776dc-cb77-4a16-b5a1-81f8ee6a7793",
+        "parentId" : "22fedf97-38a5-45a8-844f-ae069453d39f",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> Could you check the behaviour of other systems (other than postgresql) when having an empty set in cube/rollup?\r\n\r\nTest in Oracle, it not support empty set in groupingset of cube/rollup too.\r\n![image](https://user-images.githubusercontent.com/46485123/100535966-681a5880-3258-11eb-84da-849266ac02fe.png)\r\n",
+        "createdAt" : "2020-11-29T07:34:50Z",
+        "updatedAt" : "2021-03-30T05:55:50Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "48ea3960-7158-484d-a4bd-cc3c13dbf337",
+        "parentId" : "22fedf97-38a5-45a8-844f-ae069453d39f",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "And which place should we prevent this illegal case?\r\n 1. In AstBuilder throw a ParseException \r\n 2. In Analyzer  throw a AnalysisException\r\n 3. in Cube/Rollup class with a assert ` assert(groupingSets.forall(_.nonEmpty))`\r\n\r\nIMO we should throw ParseExceptionin AstBuilder",
+        "createdAt" : "2020-11-29T07:39:12Z",
+        "updatedAt" : "2021-03-30T05:55:50Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cf846c01-65a5-4af9-92a7-951d9a3c66fb",
+        "parentId" : "22fedf97-38a5-45a8-844f-ae069453d39f",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Okay, thanks for the check. So, could you follow the PostgreSQL/Oracle behaviour? Let's revisit it if other reviewers leave comments about the behaviour.",
+        "createdAt" : "2020-11-29T07:41:33Z",
+        "updatedAt" : "2021-03-30T05:55:50Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cfd16d18-3791-42c9-babb-639054b27d5f",
+        "parentId" : "22fedf97-38a5-45a8-844f-ae069453d39f",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> Okay, thanks for the check. So, could you follow the PostgreSQL/Oracle behaviour? Let's revisit it if other reviewers leave comments about the behaviour.\r\n\r\nYea, updated",
+        "createdAt" : "2020-11-29T08:01:07Z",
+        "updatedAt" : "2021-03-30T05:55:50Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "bfc03afaf9fc0974cb218b3b3121829ae9e5c413",
+    "line" : 10,
+    "diffHunk" : "@@ -1,1 +25,29 @@SELECT course, year, SUM(earnings) FROM courseSales GROUP BY CUBE(course, year) ORDER BY course, year;\nSELECT course, year, SUM(earnings) FROM courseSales GROUP BY CUBE(course, year, (course, year)) ORDER BY course, year;\nSELECT course, year, SUM(earnings) FROM courseSales GROUP BY CUBE(course, year, (course, year), ()) ORDER BY course, year;\n\n-- GROUPING SETS"
   }
 ]

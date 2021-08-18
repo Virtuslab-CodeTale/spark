@@ -1,0 +1,112 @@
+[
+  {
+    "id" : "deedd31f-cce1-4504-a3af-906a9560165f",
+    "prId" : 30203,
+    "prUrl" : "https://github.com/apache/spark/pull/30203#pullrequestreview-523100693",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "286d0d3a-6ee5-4ea4-81ca-d72f1fe91646",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "The fix itself is logically making sense. But my concern is that we set this deterministic flag true by default for Python UDFs (and Scala UDFs too). When users just use UDFs actually without knowing it (which I believe is arguably pretty common), they will get the same answer from UDFs users intended to work as non-deterministically after this fix.\r\n\r\n@gatorsmile and @cloud-fan, actually, shouldn't we set it as `false` by default? - I am reading https://github.com/apache/spark/commit/ebc24a9b7fde273ee4912f9bc1c5059703f7b31e. It's an arbitrary user-defined function so I think it makes sense to have the most loose condition by default.",
+        "createdAt" : "2020-11-03T04:31:46Z",
+        "updatedAt" : "2020-11-03T04:32:54Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "21d92cca-7efc-43c2-91b3-90757aedba26",
+        "parentId" : "286d0d3a-6ee5-4ea4-81ca-d72f1fe91646",
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "I see your point but if we can't rely on the deterministic flag then we have serious issues in other rules as well. Please consider the example in the description. I think column `d` should be equal to `c` no matter if the UDF is deterministic or not. The `CollapseProject` rule duplicates the UDF call (because it is flagged as deterministic) and that's why we have 2 instances when `ExtractPythonUDFs` starts to run.\r\n\r\nThe following happens without this PR:\r\n```\r\n=== Applying Rule org.apache.spark.sql.catalyst.optimizer.CollapseProject ===\r\n!Project [a#7, b#8, c#12, c#12 AS d#16]         Project [_1#2 AS a#7, _2#3 AS b#8, dummyUDF(_1#2) AS c#12, dummyUDF(_1#2) AS d#16]\r\n!+- Project [a#7, b#8, dummyUDF(a#7) AS c#12]   +- LocalRelation [_1#2, _2#3]\r\n!   +- Project [_1#2 AS a#7, _2#3 AS b#8]       \r\n!      +- LocalRelation [_1#2, _2#3] \r\n\r\n...\r\n\r\n=== Applying Rule org.apache.spark.sql.execution.python.ExtractPythonUDFs ===\r\n!Project [_1#2 AS a#7, _2#3 AS b#8, dummyUDF(_1#2) AS c#12, dummyUDF(_1#2) AS d#16]   Project [_1#2 AS a#7, _2#3 AS b#8, pythonUDF1#22 AS c#12, pythonUDF1#22 AS d#16]\r\n!+- LocalRelation [_1#2, _2#3]                                                        +- BatchEvalPython [dummyUDF(_1#2), dummyUDF(_1#2)], [pythonUDF0#21, pythonUDF1#22]\r\n!                                                                                        +- LocalRelation [_1#2, _2#3]\r\n```\r\nwhich can mean different values for `c` and `d` if the UDF is non-deterministic but is flagged deterministic.",
+        "createdAt" : "2020-11-03T09:32:35Z",
+        "updatedAt" : "2020-11-03T09:32:35Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a25d7976-3f08-4bd0-b645-202874646a71",
+        "parentId" : "286d0d3a-6ee5-4ea4-81ca-d72f1fe91646",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "> actually, shouldn't we set it as false by default? \r\n\r\nThe problem is the performance regression caused by changing the default value. What we can do now is educating the users harder, like mentioning this thing in the Scala/Python UDF doc page.",
+        "createdAt" : "2020-11-03T14:45:04Z",
+        "updatedAt" : "2020-11-03T14:45:11Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8a6550b4-6163-4be0-a88e-49af915c0b23",
+        "parentId" : "286d0d3a-6ee5-4ea4-81ca-d72f1fe91646",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Indeed, the example in the PR should have c and d equal no matter what, ideally, as it shouldn't be evaluated multiple times. But then, being deterministic doesn't matter; how would changing the default be the right fix? I don't doubt it should be 'fixed' so that even non-deterministic UDFs aren't surprisingly reevaluated. Is the point that the current handling for non-deterministic UDFs slower, even though it evaluates them just once by design? that seems weird.",
+        "createdAt" : "2020-11-03T14:59:02Z",
+        "updatedAt" : "2020-11-03T14:59:02Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4925a7fb-fc2e-46b1-b3d1-0cad542eb787",
+        "parentId" : "286d0d3a-6ee5-4ea4-81ca-d72f1fe91646",
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "I think @cloud-fan was referring to that if we changed the default to non-deterministic then some of the optimization rules would not handle those UDF expressions and would leave them untouched. E.g. `PushDownPredicates` would not push them down, which could cause performance regression.\r\n\r\nIMHO, it is the user's responsibility to set the deterministic flag right regardless what is the default. And if a UDF is flagged deterministic we should do the optimizations.",
+        "createdAt" : "2020-11-03T17:26:41Z",
+        "updatedAt" : "2020-11-03T17:31:08Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "aef32e38-6be2-4ad5-8a99-2f5b1955a73d",
+        "parentId" : "286d0d3a-6ee5-4ea4-81ca-d72f1fe91646",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "OK I see. But surely the safer assumption is that it is not deterministic, if the user doesn't say? I get that it harms perf, but could be a correctness issue? well I trust the judgment of people here that know much more about it",
+        "createdAt" : "2020-11-03T17:51:11Z",
+        "updatedAt" : "2020-11-03T17:51:11Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "19756abc-c6b5-4c37-9ffa-9a1058f2dedd",
+        "parentId" : "286d0d3a-6ee5-4ea4-81ca-d72f1fe91646",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Just 2 cents, educating the users harder can be done in any way (regardless of the default value), and imagine the education doesn't work, deterministic by default would be much critical on the impact. (we can't trade off correctness and performance.) I'd in favor of consider it non-deterministic by default.",
+        "createdAt" : "2020-11-03T20:26:40Z",
+        "updatedAt" : "2020-11-03T20:26:41Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "90a226c7-8535-4fd2-9297-0492eecf6830",
+        "parentId" : "286d0d3a-6ee5-4ea4-81ca-d72f1fe91646",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Changing the default is orthogonal to this PR IMO.",
+        "createdAt" : "2020-11-04T05:04:05Z",
+        "updatedAt" : "2020-11-04T05:04:05Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9d792639-8d84-47ae-9006-357640d2ba99",
+        "parentId" : "286d0d3a-6ee5-4ea4-81ca-d72f1fe91646",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "I agree that is orthogonal and isn't a blocker for this PR. Would we like to move the discussion further on dev@ mailing list, or it sounds like we are happy with filing a new JIRA issue and raising a PR to change the default?",
+        "createdAt" : "2020-11-04T07:35:12Z",
+        "updatedAt" : "2020-11-04T07:35:12Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7acea826da87a264a498ffcab8215474532b14e6",
+    "line" : 4,
+    "diffHunk" : "@@ -1,1 +219,223 @@  }\n\n  private def canonicalizeDeterministic(u: PythonUDF) = {\n    if (u.deterministic) {\n      u.canonicalized.asInstanceOf[PythonUDF]"
+  }
+]

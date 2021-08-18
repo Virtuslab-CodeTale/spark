@@ -1,0 +1,178 @@
+[
+  {
+    "id" : "7237f2e6-2b1d-4a0a-a52d-06585eb93ccf",
+    "prId" : 30244,
+    "prUrl" : "https://github.com/apache/spark/pull/30244#pullrequestreview-523971266",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e77adc31-2b28-4273-b44b-83543254f499",
+        "parentId" : null,
+        "authorId" : "38185ef1-4e8f-44e7-a0c2-952eeffa486a",
+        "body" : "Along the same lines as the `STRUCTURED STREAMING` tag, I'm wondering if this one also might need a leading glob for subdirectories called core.",
+        "createdAt" : "2020-11-05T01:20:52Z",
+        "updatedAt" : "2020-11-05T02:21:31Z",
+        "lastEditedBy" : "38185ef1-4e8f-44e7-a0c2-952eeffa486a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f6cd1a25-373e-437e-b424-0197bff3f516",
+        "parentId" : "e77adc31-2b28-4273-b44b-83543254f499",
+        "authorId" : "38185ef1-4e8f-44e7-a0c2-952eeffa486a",
+        "body" : "There are only three possible matches that I can find, as listed below. There are only three and of those one of them is the root `core` directory. So let's look at the other two.\r\n\r\n```bash\r\n$ find . -type d -iname 'core'           \r\n./resource-managers/kubernetes/core\r\n./core\r\n./sql/core\r\n```\r\n\r\nLooking at the files in /resource-managers/kubernetes/core, it doesn't feel like any of them are \"core\" - but I could be misinformed on what we consider `CORE`. The files underneath the kubernetes path are all related to k8s deployment and scheduling (and all of the things that go with that on k8s, such as persistent volume claims and persistent volume mounts, etc). While these do feel potentially like `core` behaviors, if this were the case I would expect the other cluster managers to also fall under this section.\r\n\r\nAs for `./sql/core`, this one I do believe should be a match. One of the files below it is `sql/core/src/main/scala/org/apache/spark/sql/Dataset.scala`. Definitely I think that the main file defining the `Dataset` type is core.\r\n\r\nI would propose that we add `sql/core/**/*` to the list of globs for `CORE` so as to match everything underneath `sql/core` but to still avoid the things underneath `resource-managers`.",
+        "createdAt" : "2020-11-05T01:31:05Z",
+        "updatedAt" : "2020-11-05T02:21:31Z",
+        "lastEditedBy" : "38185ef1-4e8f-44e7-a0c2-952eeffa486a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7bff66d7-443c-41ce-be8b-bef0b2f6b527",
+        "parentId" : "e77adc31-2b28-4273-b44b-83543254f499",
+        "authorId" : "38185ef1-4e8f-44e7-a0c2-952eeffa486a",
+        "body" : "I've yet to take action on this one, but I'm leading towards adding an additional rule for `sql/core/**/*` so as to avoid the resource-managers/kubernetes/core folders while still picking up the \"core\" SQL files such as Dataset.scala etc.\r\n\r\nDoes anybody have any thoughts on whether or not we'd like the files underneath `./resource-managers/kubernetes/core` to be labeled as `CORE`? My gut tells me no, but I'm still pretty new here so I'll go with whatever you guys suggest.  cc @HyukjinKwon @dongjoon-hyun @RussellSpitzer @rdblue \r\n\r\nAfter that, I believe this PR is ready to be merged. We will need to open an issue for the `actions/labeler` team to cut a release with `any` / `all` support. Their current suggestion in a relatively old issue (linked in the main issue at https://issues.apache.org/jira/browse/SPARK-33282) is to use the `main` branch (renamed from `master`), but I had difficulty with getting matches using that and overall I'm not that excited about the idea of using a non-released version.\r\n\r\nI'd prefer to open an issue to cut a release with support for `all` and `any` (we really only need `any` to handle the negated matches correctly), add a link to the issue to the labeler file, and then merge this and update it once said release has been cut.",
+        "createdAt" : "2020-11-05T01:57:11Z",
+        "updatedAt" : "2020-11-05T02:21:31Z",
+        "lastEditedBy" : "38185ef1-4e8f-44e7-a0c2-952eeffa486a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5515d7e1-3484-4185-a1a7-221b8ec5dae5",
+        "parentId" : "e77adc31-2b28-4273-b44b-83543254f499",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "I intended only to have a match with the root `core` when I added. If it works in a different way, we should fix it.\r\nI would prefer to keep `sql/core/**/*` as `SQL`. That's what I usually have seen from other PRs.\r\n\r\nAlso, let's focus on converting it to labeler action instead of adding/removing/changing other patterns here.",
+        "createdAt" : "2020-11-05T04:37:14Z",
+        "updatedAt" : "2020-11-05T04:37:15Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c3304fbf-3ab2-4640-a1e7-9ab337b522fe",
+        "parentId" : "e77adc31-2b28-4273-b44b-83543254f499",
+        "authorId" : "38185ef1-4e8f-44e7-a0c2-952eeffa486a",
+        "body" : "Ah ok. I wasn't sure on the original intended behavior for a few of them but I agree let's keep it focused on converting it to the labeler action for now (other than the few bits that don't seem to be stable yet - though I'm going to give those another go now that I've gotten a lot more experience with this labeler).\r\n\r\nTLDR: I will leave it as originally intended 👍 ",
+        "createdAt" : "2020-11-05T07:03:46Z",
+        "updatedAt" : "2020-11-05T07:03:46Z",
+        "lastEditedBy" : "38185ef1-4e8f-44e7-a0c2-952eeffa486a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7f7b3b0ec9353d0077ad4687caa9744df67c615a",
+    "line" : 75,
+    "diffHunk" : "@@ -1,1 +73,77 @@CORE:\n  # - any: [\"core/**/*\", \"!**/*UI.scala\", \"!**/ui/**/*\"] # If any file matches all of the globs defined in the list started by `any`, label is applied.\n  - \"core/**/*\"\n  - \"common/kvstore/**/*\"\n  - \"common/network-common/**/*\""
+  },
+  {
+    "id" : "28c663cc-fb49-47f9-a029-57065938befe",
+    "prId" : 30244,
+    "prUrl" : "https://github.com/apache/spark/pull/30244#pullrequestreview-523970834",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d6a5d47e-e69b-4fdd-856f-7e8809b0390a",
+        "parentId" : null,
+        "authorId" : "38185ef1-4e8f-44e7-a0c2-952eeffa486a",
+        "body" : "I've also found some `README` files that don't end in `.md`. Not sure if these should be updated to use `.md` or if we should add a match for `**/README*`.\r\n\r\nThese are the two files:\r\n```\r\n- ./assembly/README\r\n- ./mllib/src/main/resources/org/apache/spark/ml/feature/stopwords/README\r\n```",
+        "createdAt" : "2020-11-05T01:35:57Z",
+        "updatedAt" : "2020-11-05T02:21:31Z",
+        "lastEditedBy" : "38185ef1-4e8f-44e7-a0c2-952eeffa486a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ca72dbf5-d07e-432c-bd8d-70ecf388580d",
+        "parentId" : "d6a5d47e-e69b-4fdd-856f-7e8809b0390a",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "SGTM",
+        "createdAt" : "2020-11-05T04:39:04Z",
+        "updatedAt" : "2020-11-05T04:39:04Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c29d13d3-0ba7-405b-87bf-0cc9f64a70ea",
+        "parentId" : "d6a5d47e-e69b-4fdd-856f-7e8809b0390a",
+        "authorId" : "38185ef1-4e8f-44e7-a0c2-952eeffa486a",
+        "body" : "Ok. I'll leave them as is. I'm not sure what exactly their purpose is so I'll follow up in another PR on those two files.",
+        "createdAt" : "2020-11-05T07:02:49Z",
+        "updatedAt" : "2020-11-05T07:02:49Z",
+        "lastEditedBy" : "38185ef1-4e8f-44e7-a0c2-952eeffa486a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7f7b3b0ec9353d0077ad4687caa9744df67c615a",
+    "line" : 67,
+    "diffHunk" : "@@ -1,1 +65,69 @@DOCS:\n  - \"docs/**/*\"\n  - \"**/README.md\"\n  - \"**/CONTRIBUTING.md\"\nEXAMPLES:"
+  },
+  {
+    "id" : "6d499721-22d7-44e5-8e3f-41ac28d06064",
+    "prId" : 30244,
+    "prUrl" : "https://github.com/apache/spark/pull/30244#pullrequestreview-523880746",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6fe011e2-ab8b-4ca4-a384-eff3f8310602",
+        "parentId" : null,
+        "authorId" : "38185ef1-4e8f-44e7-a0c2-952eeffa486a",
+        "body" : "This is how the `any` should look when it's supported in a release upstream.",
+        "createdAt" : "2020-11-05T02:23:38Z",
+        "updatedAt" : "2020-11-05T02:23:39Z",
+        "lastEditedBy" : "38185ef1-4e8f-44e7-a0c2-952eeffa486a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7f7b3b0ec9353d0077ad4687caa9744df67c615a",
+    "line" : 87,
+    "diffHunk" : "@@ -1,1 +85,89 @@  - \"bin/spark-shell*\"\nSQL:\n#- any: [\"**/sql/**/*\", \"!python/pyspark/sql/avro/**/*\", \"!python/pyspark/sql/streaming.py\", \"!python/pyspark/sql/tests/test_streaming.py\"]\n  - \"**/sql/**/*\"\n  - \"common/unsafe/**/*\""
+  },
+  {
+    "id" : "2d80a130-b22a-4c23-b321-08e7b4ca73cc",
+    "prId" : 30244,
+    "prUrl" : "https://github.com/apache/spark/pull/30244#pullrequestreview-524928685",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4416d87a-c683-4032-84fd-a2042d729924",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "We can either wait for them to support in this PR, or merge this PR first with a followup later when they start to support. I don't mind either way - whichever way you prefer.",
+        "createdAt" : "2020-11-05T04:40:58Z",
+        "updatedAt" : "2020-11-05T04:40:58Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "253388ed-cbf0-4aeb-8645-1db6c388a490",
+        "parentId" : "4416d87a-c683-4032-84fd-a2042d729924",
+        "authorId" : "38185ef1-4e8f-44e7-a0c2-952eeffa486a",
+        "body" : "Cool. I opened an issue upstream asking when they thought they might be releasing a stable build with `any` / `all`. We can follow up on them later so that at least the large majority of PRs will be correctly labeled.",
+        "createdAt" : "2020-11-05T07:01:28Z",
+        "updatedAt" : "2020-11-05T07:01:28Z",
+        "lastEditedBy" : "38185ef1-4e8f-44e7-a0c2-952eeffa486a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "aea41e6a-f8ea-429c-87e0-c3196ee3d924",
+        "parentId" : "4416d87a-c683-4032-84fd-a2042d729924",
+        "authorId" : "38185ef1-4e8f-44e7-a0c2-952eeffa486a",
+        "body" : "The issue is mentioned in the JIRA issue I opened up about following up on the labeler.",
+        "createdAt" : "2020-11-06T08:05:41Z",
+        "updatedAt" : "2020-11-06T08:05:41Z",
+        "lastEditedBy" : "38185ef1-4e8f-44e7-a0c2-952eeffa486a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7f7b3b0ec9353d0077ad4687caa9744df67c615a",
+    "line" : 60,
+    "diffHunk" : "@@ -1,1 +58,62 @@ - \"scalastyle-config.xml\"\n # These can be added in the above `any` clause (and the /dev/**/* glob removed) when\n # `any`/`all` support is released\n # - \"!dev/github_jira_sync.py\"\n # - \"!dev/merge_spark_pr.py\""
+  }
+]

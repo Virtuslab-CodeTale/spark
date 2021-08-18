@@ -603,5 +603,258 @@
     "commit" : "9973c1a4d6bbaa089b120e47a8418e99b132704d",
     "line" : 15,
     "diffHunk" : "@@ -1,1 +95,99 @@      exprs: Seq[Expression],\n      addFunc: Expression => Boolean = addExpr): Unit = {\n    val exprSetForAll = mutable.Set[Expr]()\n    addExprTree(exprs.head, addExprToSet(_, exprSetForAll))\n"
+  },
+  {
+    "id" : "639ce858-5d83-4a11-b110-4d27ca8697d2",
+    "prId" : 30245,
+    "prUrl" : "https://github.com/apache/spark/pull/30245#pullrequestreview-524931237",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "561e97ef-ec09-4a7b-bdf2-89d73d30640e",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Do we need to handle `head` and `tail` seperately?",
+        "createdAt" : "2020-11-05T22:27:39Z",
+        "updatedAt" : "2020-11-10T05:20:11Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f3e17cab-1715-4dad-98f3-c3a6bf18b4bb",
+        "parentId" : "561e97ef-ec09-4a7b-bdf2-89d73d30640e",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "For expression `head`, we add underlying expressions into `exprSetForAll` set. But for expressions in `tail`, we keep intersect between `exprSetForAll` and `exprSet`.\r\n\r\nWe can merge two blocks, but in the block we need to check if current expression is head expression and do different logic based on the check.\r\n\r\nI prefer current one since it looks simpler.",
+        "createdAt" : "2020-11-06T08:10:03Z",
+        "updatedAt" : "2020-11-10T05:20:11Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b41572884401d5e02d6cda69068433376c6ab328",
+    "line" : 33,
+    "diffHunk" : "@@ -1,1 +95,99 @@      addExprTree(expr, addExprToSet(_, otherExprSet))\n      exprSet.intersect(otherExprSet)\n    }\n\n    commonExprSet.foreach(expr => addFunc(expr.e))"
+  },
+  {
+    "id" : "9dcf3a95-5e10-4cf3-81fb-d4f9fa1d3b12",
+    "prId" : 30245,
+    "prUrl" : "https://github.com/apache/spark/pull/30245#pullrequestreview-526858412",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e42f2d40-fad3-4bec-88fe-14da2f433b1d",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "`childrenToRecurse` is an inner method, shall we make `commonChildrenToRecurse` an inner method as well and put it next to `childrenToRecurse`?",
+        "createdAt" : "2020-11-09T09:58:29Z",
+        "updatedAt" : "2020-11-10T05:20:11Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2aed6695-35aa-4bfe-a8ee-295b35708d84",
+        "parentId" : "e42f2d40-fad3-4bec-88fe-14da2f433b1d",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Seems like we can merge them like this?\r\n```\r\n    // There are some special expressions that we should not recurse into all of its children.\r\n    //   1. CodegenFallback: it's children will not be used to generate code (call eval() instead)\r\n    //   2. If: common subexpressions will always be evaluated at the beginning, but the true and\r\n    //          false expressions in `If` may not get accessed, according to the predicate\r\n    //          expression. We should only recurse into the predicate expression.\r\n    //   3. CaseWhen: like `If`, the children of `CaseWhen` only get accessed in a certain\r\n    //                condition. We should only recurse into the first condition expression as it\r\n    //                will always get accessed.\r\n    //   4. Coalesce: it's also a conditional expression, we should only recurse into the first\r\n    //                children, because others may not get accessed.\r\n    lazy val (childrenToRecurse, commonChildrenToRecurse) = expr match {\r\n      case _: CodegenFallback => (Nil, Nil)\r\n      case i: If => (i.predicate :: Nil, Seq(Seq(i.trueValue, i.falseValue)))\r\n      case c: CaseWhen =>\r\n        val (Seq(headCondition), otherConditions) = c.branches.map(_._1).splitAt(1)\r\n        val values = c.branches.map(_._2) ++ c.elseValue\r\n        (headCondition :: Nil, Seq(otherConditions, values))\r\n      case c: Coalesce => (c.children.head :: Nil, Seq(c.children.tail))\r\n      case other => (other.children, Nil)\r\n    }\r\n```\r\nThen, I think its better to update the comment above for describing how to handle these \"special expressions (If, CaseWhen, and Coalesce)\".",
+        "createdAt" : "2020-11-09T12:19:57Z",
+        "updatedAt" : "2020-11-10T05:20:11Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4500315e-da65-40a6-922b-32f53cf485f7",
+        "parentId" : "e42f2d40-fad3-4bec-88fe-14da2f433b1d",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "I prefer to separate them. The merged method looks quite hard to read, IMO.",
+        "createdAt" : "2020-11-09T20:03:11Z",
+        "updatedAt" : "2020-11-10T05:20:11Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b6098a79-bd54-4366-bffc-aff5fa2e0998",
+        "parentId" : "e42f2d40-fad3-4bec-88fe-14da2f433b1d",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "> childrenToRecurse is an inner method, shall we make commonChildrenToRecurse an inner method as well and put it next to childrenToRecurse?\r\n\r\n@cloud-fan That is what I did initially, but put it outside later for review comment https://github.com/apache/spark/pull/30245#discussion_r518409583. Both work for me. ",
+        "createdAt" : "2020-11-09T20:09:18Z",
+        "updatedAt" : "2020-11-10T05:20:11Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "08480029-1349-43c1-b585-ee22737e4ddb",
+        "parentId" : "e42f2d40-fad3-4bec-88fe-14da2f433b1d",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Then shall we move `childrenToRecurse` out too?",
+        "createdAt" : "2020-11-10T04:54:20Z",
+        "updatedAt" : "2020-11-10T05:20:11Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "71678749-9537-4f95-82ed-c700d54e8ef8",
+        "parentId" : "e42f2d40-fad3-4bec-88fe-14da2f433b1d",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "okay.",
+        "createdAt" : "2020-11-10T05:14:28Z",
+        "updatedAt" : "2020-11-10T05:20:11Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b41572884401d5e02d6cda69068433376c6ab328",
+    "line" : 110,
+    "diffHunk" : "@@ -1,1 +152,156 @@    if (!skip && !addFunc(expr)) {\n      childrenToRecurse(expr).foreach(addExprTree(_, addFunc))\n      commonChildrenToRecurse(expr).filter(_.nonEmpty).foreach(addCommonExprs(_, addFunc))\n    }\n  }"
+  },
+  {
+    "id" : "f4621294-c63c-4386-806e-e0e065642178",
+    "prId" : 30245,
+    "prUrl" : "https://github.com/apache/spark/pull/30245#pullrequestreview-526735611",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "095234c8-086a-4c8d-8596-08ef7f380d64",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Why do we need to handle `conditions` and `values` separately?",
+        "createdAt" : "2020-11-09T12:24:22Z",
+        "updatedAt" : "2020-11-10T05:20:11Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7c4304c5-46bb-4a27-b2d9-d0804378784a",
+        "parentId" : "095234c8-086a-4c8d-8596-08ef7f380d64",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "A subexpression in conditions is definitely run because it is shared among `conditions`. It doesn't need to be shared in `values`. Similarly, a subexpression among `values` doesn't need to be in `conditions` because no matter which condition is true, it will be evaluated.",
+        "createdAt" : "2020-11-09T20:00:52Z",
+        "updatedAt" : "2020-11-10T05:20:11Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4f1b9ce5-0934-4cb0-8e32-949c065e6091",
+        "parentId" : "095234c8-086a-4c8d-8596-08ef7f380d64",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Ah, ok. Thanks. Could you leave comments about it in the code side?",
+        "createdAt" : "2020-11-09T23:26:14Z",
+        "updatedAt" : "2020-11-10T05:20:11Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b41572884401d5e02d6cda69068433376c6ab328",
+    "line" : 68,
+    "diffHunk" : "@@ -1,1 +130,134 @@      val conditions = c.branches.tail.map(_._1)\n      val values = c.branches.map(_._2) ++ c.elseValue\n      Seq(conditions, values)\n    case c: Coalesce => Seq(c.children.tail)\n    case _ => Nil"
+  },
+  {
+    "id" : "3390053f-9edd-465b-b664-3a0fe2145354",
+    "prId" : 30245,
+    "prUrl" : "https://github.com/apache/spark/pull/30245#pullrequestreview-696157440",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f2fc8e37-f6e8-4edf-8da5-79d8321258a2",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "There is a flaw here: we exclude the first condition, so a common subexpressions in the rest of the conditions doesn't mean it's always evaluated.\r\n\r\ne.g. `CaseWhen(cond1, ... cond2, ..., cond2, ...)`, `cond2` is shared between the rest conditions but it's not always evaluated.",
+        "createdAt" : "2021-06-29T18:34:51Z",
+        "updatedAt" : "2021-06-29T18:34:52Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "de0bb093-1af9-4aec-b6f6-7848c8aa112b",
+        "parentId" : "f2fc8e37-f6e8-4edf-8da5-79d8321258a2",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "yes, this is related to #32977. This looks more a aggressive optimization. Consider if we respect short-circuit evaluation practice for CaseWhen, this might be an issue if users reply short-circuit evaluation to guard later conditions.\r\n\r\nSafest approach is to only consider all conditions.",
+        "createdAt" : "2021-06-29T18:42:26Z",
+        "updatedAt" : "2021-06-29T18:44:54Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7ff328b9-4ec5-49ea-8ae9-332e75d20aab",
+        "parentId" : "f2fc8e37-f6e8-4edf-8da5-79d8321258a2",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "WDYT? Should we only consider all conditions?",
+        "createdAt" : "2021-06-29T18:49:32Z",
+        "updatedAt" : "2021-06-29T18:49:32Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b27268ab-8fd9-4c44-8621-eb425976d9d5",
+        "parentId" : "f2fc8e37-f6e8-4edf-8da5-79d8321258a2",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I think we should. I hit an issue caused by it in my refactor and I'll open a PR for the refactor with multiple bugs fixed.",
+        "createdAt" : "2021-06-29T18:59:02Z",
+        "updatedAt" : "2021-06-29T18:59:02Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "19f68321-665f-4932-8554-47b2329fac88",
+        "parentId" : "f2fc8e37-f6e8-4edf-8da5-79d8321258a2",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Ok, thanks!",
+        "createdAt" : "2021-06-29T19:05:44Z",
+        "updatedAt" : "2021-06-29T19:05:44Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2577a4e4-5ef0-43ab-b20d-5cde0e814aa9",
+        "parentId" : "f2fc8e37-f6e8-4edf-8da5-79d8321258a2",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "BTW, does #32980 conflict with your refactor?",
+        "createdAt" : "2021-06-29T19:06:15Z",
+        "updatedAt" : "2021-06-29T19:06:15Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "970db39c-6bfd-4520-9fa0-06c5d7d0ad9a",
+        "parentId" : "f2fc8e37-f6e8-4edf-8da5-79d8321258a2",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "only some trivial conflicts, #32980 should be merged first as it has been reviewed and approved.",
+        "createdAt" : "2021-06-29T19:22:30Z",
+        "updatedAt" : "2021-06-29T19:22:30Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0d2e6586-c1f1-4d1a-9057-ff2178f6b2d1",
+        "parentId" : "f2fc8e37-f6e8-4edf-8da5-79d8321258a2",
+        "authorId" : "92aa9573-b64a-4a86-aebf-54c827df3ed0",
+        "body" : "FWIW, I also addressed this issue in https://github.com/apache/spark/pull/32987 which assumed CaseWhen's (and Coalesce) should short circuit and guard later conditions. The main benefit/difference is if you have\r\n\r\n`CaseWhen(cond1, ..., cond1, ..., cond2, ...)`, `cond1` gets pulled out as a subexpression when it wouldn't otherwise even with https://github.com/apache/spark/pull/33142 I think",
+        "createdAt" : "2021-06-30T13:25:12Z",
+        "updatedAt" : "2021-06-30T13:25:12Z",
+        "lastEditedBy" : "92aa9573-b64a-4a86-aebf-54c827df3ed0",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b41572884401d5e02d6cda69068433376c6ab328",
+    "line" : 66,
+    "diffHunk" : "@@ -1,1 +128,132 @@      // a subexpression among values doesn't need to be in conditions because no matter which\n      // condition is true, it will be evaluated.\n      val conditions = c.branches.tail.map(_._1)\n      val values = c.branches.map(_._2) ++ c.elseValue\n      Seq(conditions, values)"
   }
 ]

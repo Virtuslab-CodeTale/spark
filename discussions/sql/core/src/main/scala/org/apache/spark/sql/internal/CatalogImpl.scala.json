@@ -383,5 +383,170 @@
     "commit" : "bcf2df7d34559bbb078e00e0ba3bca1547a0585f",
     "line" : 10,
     "diffHunk" : "@@ -1,1 +544,548 @@\n      // recache with the same name and cache level.\n      sparkSession.sharedState.cacheManager.cacheQuery(newTable, cacheName, cacheLevel)\n    }\n  }"
+  },
+  {
+    "id" : "0477fd1e-a334-4761-a817-bd475d10c268",
+    "prId" : 30215,
+    "prUrl" : "https://github.com/apache/spark/pull/30215#pullrequestreview-521159155",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6ef9e3b8-ea3c-4084-9db4-adbc9d8f8269",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "We don't need `blocking = true`?",
+        "createdAt" : "2020-10-31T18:01:27Z",
+        "updatedAt" : "2020-10-31T18:01:27Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d221bcf0-e3a5-4245-ab08-40261d5d288b",
+        "parentId" : "6ef9e3b8-ea3c-4084-9db4-adbc9d8f8269",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "because the default value is already true",
+        "createdAt" : "2020-10-31T18:21:21Z",
+        "updatedAt" : "2020-10-31T18:21:21Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f5062f7b3706cbcbc6a9f9707361093a380329db",
+    "line" : 17,
+    "diffHunk" : "@@ -1,1 +499,503 @@    // Uncache the logicalPlan. Note this is a no-op for the table itself if it's not cached, but\n    // will invalidate all caches referencing this table.\n    sparkSession.sharedState.cacheManager.uncacheQuery(table, cascade = true)\n    if (isCached(table)) {\n      // Cache it again."
+  },
+  {
+    "id" : "694e4923-ad84-405f-9740-147577a3d990",
+    "prId" : 30187,
+    "prUrl" : "https://github.com/apache/spark/pull/30187#pullrequestreview-520900738",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6b734238-069f-44b1-b10a-47e711546d82",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Hmm, we will recache the table lazily. But for other caches referencing this table, we just uncache them and don't recache them. Does it sound inconsistent?",
+        "createdAt" : "2020-10-30T05:49:04Z",
+        "updatedAt" : "2020-10-31T01:40:49Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f1fa022a-5f32-44bf-99b9-99167c0fdaa7",
+        "parentId" : "6b734238-069f-44b1-b10a-47e711546d82",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Nvm, we only recache if the table is cached. So for this case, the table is not cached at all, we don't recache it.",
+        "createdAt" : "2020-10-30T05:57:05Z",
+        "updatedAt" : "2020-10-31T01:40:49Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "514dd3e8-a618-452f-aeb8-f975ae65b477",
+        "parentId" : "6b734238-069f-44b1-b10a-47e711546d82",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Not related to this PR. Since we recache the table lazily, the other caches referencing this table seems to me need to be recached. It is more consistent and seems to me we should not implicitly change the cache status of the other cached query plans. I'd like to recache these other caches if possible. WDYT? @cloud-fan ",
+        "createdAt" : "2020-10-30T16:52:04Z",
+        "updatedAt" : "2020-10-31T01:40:49Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "286b6181-8e48-44fc-a0b9-ecc4073e72e9",
+        "parentId" : "6b734238-069f-44b1-b10a-47e711546d82",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "you mean instead of invalidating all the other caches we'd recache them? yeah it sounds reasonable to me. It seems currently the behavior for _other_ caches is somewhat undefined.",
+        "createdAt" : "2020-10-30T17:45:44Z",
+        "updatedAt" : "2020-10-31T01:40:49Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b427b7d1c0e5b60f96d9a38c7d00dff43d15e423",
+    "line" : 29,
+    "diffHunk" : "@@ -1,1 +540,544 @@\n      // recache with the same name and cache level.\n      sparkSession.sharedState.cacheManager.cacheQuery(table, cacheName, cacheLevel)\n    }\n  }"
+  },
+  {
+    "id" : "d1fa479c-4de4-4b07-8fcd-a194c637ae8e",
+    "prId" : 30187,
+    "prUrl" : "https://github.com/apache/spark/pull/30187#pullrequestreview-523899322",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9b115e98-c116-449f-9c94-bacf51dbf076",
+        "parentId" : null,
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "Add it to the migration guide?",
+        "createdAt" : "2020-11-04T03:57:34Z",
+        "updatedAt" : "2020-11-04T03:57:35Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "51bc9846-71b0-4b87-bbeb-6715a5ce9a8c",
+        "parentId" : "9b115e98-c116-449f-9c94-bacf51dbf076",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "hmm which migration guide should I add this to? note Spark already invalidate cache when the target table is cached, and this just extend it to the case when the table itself is not cached.",
+        "createdAt" : "2020-11-04T19:46:45Z",
+        "updatedAt" : "2020-11-04T19:46:46Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b153dd96-9e56-4ed2-9991-de64d28ffb68",
+        "parentId" : "9b115e98-c116-449f-9c94-bacf51dbf076",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "I think he meant https://github.com/apache/spark/blob/master/docs/sql-migration-guide.md to update. I tend to agree that it's safe to mention it unless it's obviously a bug fix.",
+        "createdAt" : "2020-11-05T02:48:06Z",
+        "updatedAt" : "2020-11-05T02:48:07Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2e9c98a2-8ff9-442f-9844-e625e8d791e5",
+        "parentId" : "9b115e98-c116-449f-9c94-bacf51dbf076",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Thanks for the pointer @HyukjinKwon . I'll update there.",
+        "createdAt" : "2020-11-05T02:51:52Z",
+        "updatedAt" : "2020-11-05T02:51:53Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "260c6176-26fd-44e2-a568-48ea943242b7",
+        "parentId" : "9b115e98-c116-449f-9c94-bacf51dbf076",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Created #30256",
+        "createdAt" : "2020-11-05T03:20:55Z",
+        "updatedAt" : "2020-11-05T03:20:55Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5d9ce13a-9e8c-454e-ba00-40b06af41c2c",
+        "parentId" : "9b115e98-c116-449f-9c94-bacf51dbf076",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Thanks @sunchao ",
+        "createdAt" : "2020-11-05T03:23:44Z",
+        "updatedAt" : "2020-11-05T03:23:44Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b427b7d1c0e5b60f96d9a38c7d00dff43d15e423",
+    "line" : 18,
+    "diffHunk" : "@@ -1,1 +532,536 @@    // note this is a no-op for the table itself if it's not cached, but will invalidate all\n    // caches referencing this table.\n    sparkSession.sharedState.cacheManager.uncacheQuery(table, cascade = true)\n\n    if (cache.nonEmpty) {"
   }
 ]

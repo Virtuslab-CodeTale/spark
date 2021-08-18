@@ -1,0 +1,79 @@
+[
+  {
+    "id" : "e99d115e-b22a-4138-9d4c-10919d5aa60f",
+    "prId" : 30204,
+    "prUrl" : "https://github.com/apache/spark/pull/30204#pullrequestreview-530292964",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6f7a1219-2234-4ae9-aa46-d96e2c9c8b58",
+        "parentId" : null,
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "Instead of creating `customResources` above, will this not work ?\r\n```\r\nval customResourceNames = execReq.map(_.id.resourceName).toSet\r\nval customResources = ereqs.requests.filter(v => customResourceNames.contains(v._1))\r\n```",
+        "createdAt" : "2020-11-12T03:46:18Z",
+        "updatedAt" : "2020-11-13T19:50:27Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "08e83740-d183-4180-b45a-3c066719a342",
+        "parentId" : "6f7a1219-2234-4ae9-aa46-d96e2c9c8b58",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "we could but its less efficient you have to iterate over execReq a second time and then over all the requests we just added, now that should be very fast, but just thought since already iterating over it just do it at same time.  If you prefer it this way I can change it?",
+        "createdAt" : "2020-11-13T16:54:51Z",
+        "updatedAt" : "2020-11-13T19:50:27Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "76f6ddf6-7e98-48e4-9d33-fee9ecb521f4",
+        "parentId" : "6f7a1219-2234-4ae9-aa46-d96e2c9c8b58",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "You are right, I am assuming `ereqs.requests` is not very large; and was looking to minimize code.\r\nForgot to add 'nit' as prefix to my comment :-)\r\n\r\nUp to you if it simplifies the logic !",
+        "createdAt" : "2020-11-13T18:09:11Z",
+        "updatedAt" : "2020-11-13T19:50:27Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6f5321ffe8637ae32434ac2d5eaff476fc3e0d19",
+    "line" : 68,
+    "diffHunk" : "@@ -1,1 +320,324 @@      ereqs.resource(req.id.resourceName, req.amount, req.discoveryScript.orElse(\"\"),\n        req.vendor.orElse(\"\"))\n    }\n    val customResourceNames = execReq.map(_.id.resourceName).toSet\n    val customResources = ereqs.requests.filter(v => customResourceNames.contains(v._1))"
+  },
+  {
+    "id" : "95e4e752-ef34-4611-b3c9-b667eb47683a",
+    "prId" : 30204,
+    "prUrl" : "https://github.com/apache/spark/pull/30204#pullrequestreview-530246684",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c5bf17b7-e300-4373-b742-d7cf94814724",
+        "parentId" : null,
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "Can we replace `DefaultProfileExecutorResources` with `ExecutorResourcesOrDefaults` ?\r\nI am not sure what value it was adding which use of `ExecutorResourcesOrDefaults` cant cover.",
+        "createdAt" : "2020-11-12T03:52:13Z",
+        "updatedAt" : "2020-11-13T19:50:27Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d60665d0-dbdd-4998-97c7-0f524123bf05",
+        "parentId" : "c5bf17b7-e300-4373-b742-d7cf94814724",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "So they were intentionally different.  the default version doesn't have total and couple of the values are optional. This is used just to store what was in the default configs, not really do much logic on it for things like am I in a pyspark app or does the cluster manager calculate overhead differently.\r\n Once we get ExecutorResourcesOrDefaults everything there is required to be filled in as its either what is specific in the profile or falls back to the default value, or logic based on cluster manager inputs. Since its all fields are always filled out and the cluster manager code doesn't need special code to handle Optional fields.\r\nBut having said all that, really the main difference is in the optional of memoryOverheadMiB. I could use ExecutorResourcesOrDefaults for everything as long as I had a way for that to indicate not set. I could use -1 as special value if we really want to but thought having 2 was clearer.   But again I'm fine to combine as its not a big deal, what do you think?",
+        "createdAt" : "2020-11-13T17:09:25Z",
+        "updatedAt" : "2020-11-13T19:50:27Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6f5321ffe8637ae32434ac2d5eaff476fc3e0d19",
+    "line" : 107,
+    "diffHunk" : "@@ -1,1 +380,384 @@      customResources: Map[String, ExecutorResourceRequest])\n\n  private[spark] case class DefaultProfileExecutorResources(\n      cores: Int,\n      executorMemoryMiB: Long,"
+  }
+]

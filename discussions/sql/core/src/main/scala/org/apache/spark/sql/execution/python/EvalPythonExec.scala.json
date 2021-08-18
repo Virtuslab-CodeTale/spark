@@ -1,0 +1,178 @@
+[
+  {
+    "id" : "6ad4d1ba-44bd-4e4a-8c0d-eba0b5bbe6ae",
+    "prId" : 30242,
+    "prUrl" : "https://github.com/apache/spark/pull/30242#pullrequestreview-536712123",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a2257fc4-5344-42f6-ae63-6e14491a7efe",
+        "parentId" : null,
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "ditto",
+        "createdAt" : "2020-11-23T17:49:54Z",
+        "updatedAt" : "2020-12-02T00:28:56Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "46613dda79fad1173c2f6305f8fefd5fa44b803b",
+    "line" : 66,
+    "diffHunk" : "@@ -1,1 +177,181 @@        while (thread.isAlive) {\n          // Use `context.wait()` instead of `Thread.sleep()` with the same reason above.\n          context.wait(10)\n        }\n      }"
+  },
+  {
+    "id" : "1c42df00-71e4-4e88-ac83-272a0092c7b0",
+    "prId" : 30242,
+    "prUrl" : "https://github.com/apache/spark/pull/30242#pullrequestreview-538120276",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b0373b07-8a8a-4025-9956-fb39f740b361",
+        "parentId" : null,
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "Did you mean `Thread.sleep(10)`? `Object.wait` is not supposed to use like this. ",
+        "createdAt" : "2020-11-23T17:50:51Z",
+        "updatedAt" : "2020-12-02T00:28:56Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "db70f9a0-50ac-4892-a1fd-c587ee68cf44",
+        "parentId" : "b0373b07-8a8a-4025-9956-fb39f740b361",
+        "authorId" : "43998e22-6c2f-401d-9914-8cecf6fad929",
+        "body" : "I do mean `wait`. This will run within `synchronized(context)` and we should release the lock for the writer thread while waiting.",
+        "createdAt" : "2020-11-25T01:11:52Z",
+        "updatedAt" : "2020-12-02T00:28:56Z",
+        "lastEditedBy" : "43998e22-6c2f-401d-9914-8cecf6fad929",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e46434a0-5de0-48c9-945e-dea377a9a8ca",
+        "parentId" : "b0373b07-8a8a-4025-9956-fb39f740b361",
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "I didn't realize it. It's better to not rely on this in a listener. This is something we should consider to improve in future. It's a bad idea to hold an implicit lock when calling user's listener because it's pretty easy to cause surprising deadlock.",
+        "createdAt" : "2020-11-25T02:55:35Z",
+        "updatedAt" : "2020-12-02T00:28:56Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "46613dda79fad1173c2f6305f8fefd5fa44b803b",
+    "line" : 57,
+    "diffHunk" : "@@ -1,1 +168,172 @@        // It's a bad idea to hold an implicit lock when calling user's listener because it's\n        // pretty easy to cause surprising deadlock.\n        context.wait(10)\n\n        thread = this.thread.get()"
+  },
+  {
+    "id" : "e317498b-0444-4fc8-8165-90a1ac59131a",
+    "prId" : 30242,
+    "prUrl" : "https://github.com/apache/spark/pull/30242#pullrequestreview-538085185",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "541572b7-45fd-47c1-b10b-325bf2ad3fb7",
+        "parentId" : null,
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "Will this change the thread that `iter.hasNext` is running? We can add the listeners without checking it.",
+        "createdAt" : "2020-11-23T18:05:02Z",
+        "updatedAt" : "2020-12-02T00:28:56Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3016b96c-b619-4f5d-b5d4-324a3a29fe50",
+        "parentId" : "541572b7-45fd-47c1-b10b-325bf2ad3fb7",
+        "authorId" : "43998e22-6c2f-401d-9914-8cecf6fad929",
+        "body" : "Actually this is to make sure the upstream iterator is initialized. The upstream iterator must be initialized earlier as it might register another completion listener and the listener should run later than this one.",
+        "createdAt" : "2020-11-25T01:15:57Z",
+        "updatedAt" : "2020-12-02T00:28:56Z",
+        "lastEditedBy" : "43998e22-6c2f-401d-9914-8cecf6fad929",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "46613dda79fad1173c2f6305f8fefd5fa44b803b",
+    "line" : 41,
+    "diffHunk" : "@@ -1,1 +152,156 @@  private val thread = new AtomicReference[Thread]()\n\n  if (iter.hasNext) {\n    val failed = new AtomicBoolean(false)\n"
+  },
+  {
+    "id" : "1665a495-e48b-4597-b8cd-b9b855641e1f",
+    "prId" : 30242,
+    "prUrl" : "https://github.com/apache/spark/pull/30242#pullrequestreview-538085185",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3628e157-982e-4a08-8d5b-7afdcd022e2e",
+        "parentId" : null,
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "This assumes the task completion listener to stop `thread` runs before this one. Otherwise, it would hang forever. I'm wondering if there is any better solution to avoid this implicit assumption. ",
+        "createdAt" : "2020-11-23T18:35:37Z",
+        "updatedAt" : "2020-12-02T00:28:56Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a632ed0f-2045-4e64-be34-82ab383e6bdb",
+        "parentId" : "3628e157-982e-4a08-8d5b-7afdcd022e2e",
+        "authorId" : "43998e22-6c2f-401d-9914-8cecf6fad929",
+        "body" : "The task completion lister will wait for the `thread` to stop within this listener, and the `thread` will stop soon as it checks `!context.isCompleted() && !context.isInterrupted()`.",
+        "createdAt" : "2020-11-25T01:15:08Z",
+        "updatedAt" : "2020-12-02T00:28:56Z",
+        "lastEditedBy" : "43998e22-6c2f-401d-9914-8cecf6fad929",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "46613dda79fad1173c2f6305f8fefd5fa44b803b",
+    "line" : 48,
+    "diffHunk" : "@@ -1,1 +159,163 @@    }\n\n    context.addTaskCompletionListener[Unit] { _ =>\n      var thread = this.thread.get()\n"
+  },
+  {
+    "id" : "ac7c86fd-f815-41b9-9b5c-0dbe85c62080",
+    "prId" : 30242,
+    "prUrl" : "https://github.com/apache/spark/pull/30242#pullrequestreview-544413069",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "77b082dd-7693-4407-ad91-7e1bf19863c8",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "This is a bit scary. Is there a better way?",
+        "createdAt" : "2020-12-03T10:03:04Z",
+        "updatedAt" : "2020-12-03T10:03:05Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "00268e2c-1d2d-4989-bf02-dca30f1eda51",
+        "parentId" : "77b082dd-7693-4407-ad91-7e1bf19863c8",
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "> It's a bad idea to hold an implicit lock when calling user's listener because it's pretty easy to cause surprising deadlock.\r\n\r\nMaybe we can fix this first. The this listener doesn't need to rely on an implicit lock.",
+        "createdAt" : "2020-12-03T19:24:01Z",
+        "updatedAt" : "2020-12-03T19:24:01Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "24e5ec4b-a2c3-40e8-b6fb-9536ee0dd1cd",
+        "parentId" : "77b082dd-7693-4407-ad91-7e1bf19863c8",
+        "authorId" : "43998e22-6c2f-401d-9914-8cecf6fad929",
+        "body" : "I see. Let me change the strategy here.",
+        "createdAt" : "2020-12-03T20:38:27Z",
+        "updatedAt" : "2020-12-03T20:38:28Z",
+        "lastEditedBy" : "43998e22-6c2f-401d-9914-8cecf6fad929",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "46613dda79fad1173c2f6305f8fefd5fa44b803b",
+    "line" : 56,
+    "diffHunk" : "@@ -1,1 +167,171 @@        // works under `synchronized(context)`. We might need to consider to improve in the future.\n        // It's a bad idea to hold an implicit lock when calling user's listener because it's\n        // pretty easy to cause surprising deadlock.\n        context.wait(10)\n"
+  }
+]
