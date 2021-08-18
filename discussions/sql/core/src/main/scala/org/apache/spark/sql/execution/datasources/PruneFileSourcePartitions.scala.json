@@ -64,5 +64,115 @@
     "commit" : "6fe106ce84e83641d66d572c45050b25761bbf3d",
     "line" : 19,
     "diffHunk" : "@@ -1,1 +67,71 @@    // instead of using the non-convertible part from `remainingFilterInCnf`. Otherwise, the\n    // result filters can be very long.\n    (ExpressionSet(partitionFilters ++ extraPartitionFilters), remainingFilters)\n  }\n"
+  },
+  {
+    "id" : "548fa766-8382-4cfe-bb31-491d91bb218d",
+    "prId" : 27157,
+    "prUrl" : "https://github.com/apache/spark/pull/27157#pullrequestreview-341046625",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3d5320b5-d1ce-44dc-8ff1-f5ac9daca412",
+        "parentId" : null,
+        "authorId" : "fdf14d51-7a8c-4235-b6a2-99d0c173e917",
+        "body" : "The reason for the condition \r\n```\r\n(dataFilters.nonEmpty && scan.dataFilters.isEmpty)\r\n```` \r\nIs that unlike the `partitionFilters` which are pushed down and don't need to be reevaluated (which will make the  `partitionKeyFilters.nonEmpty` to be `false` in the next iteration) the `dataFilters` will remain non empty so `scan.dataFilters.isEmpty` is needed to make sure we don't get stack overflow.",
+        "createdAt" : "2020-01-10T09:37:29Z",
+        "updatedAt" : "2020-01-18T05:56:27Z",
+        "lastEditedBy" : "fdf14d51-7a8c-4235-b6a2-99d0c173e917",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d181e38a4440c7673b1c14ead96d9d9be2720ea3",
+    "line" : 47,
+    "diffHunk" : "@@ -1,1 +99,103 @@          scan.readPartitionSchema, filters, output)\n      // The dataFilters are pushed down only once\n      if (partitionKeyFilters.nonEmpty || (dataFilters.nonEmpty && scan.dataFilters.isEmpty)) {\n        val prunedV2Relation =\n          v2Relation.copy(scan = scan.withFilters(partitionKeyFilters.toSeq, dataFilters))"
+  },
+  {
+    "id" : "e41a724f-2da9-45b0-8eb0-ddd36d6c46aa",
+    "prId" : 27112,
+    "prUrl" : "https://github.com/apache/spark/pull/27112#pullrequestreview-340496731",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "566ca50c-636c-4f3c-a777-c764b5d959b7",
+        "parentId" : null,
+        "authorId" : "fdf14d51-7a8c-4235-b6a2-99d0c173e917",
+        "body" : "I suggest to pass also the `dataFilters`.\r\nThis is useful for FileIndex implementations that use the `dataFilters` to do the file listing.\r\nFor example, we use this to provide data skipping for all file based datasources.\r\nI suggest something like this guykhazma@ de3415b80b92e635dbc0b331515a8cec4c5098d6\r\n",
+        "createdAt" : "2020-01-08T15:29:36Z",
+        "updatedAt" : "2020-01-08T15:37:49Z",
+        "lastEditedBy" : "fdf14d51-7a8c-4235-b6a2-99d0c173e917",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "032de8fa-2c98-4665-910c-245e5d5660c3",
+        "parentId" : "566ca50c-636c-4f3c-a777-c764b5d959b7",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "@guykhazma Thanks for the suggestion.\r\nHowever, the `PartitioningAwareFileIndex` doesn't use the data filters for listing files. Could you provide an example that the data filters will be useful here?\r\nAlso, the data filters are supposed to be pushed down in `FileScanBuiler` (e.g ORC/Parquet)\r\n",
+        "createdAt" : "2020-01-08T18:55:54Z",
+        "updatedAt" : "2020-01-08T18:55:54Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2e6c154c-69c7-4d06-bea0-1f8e2af24f0d",
+        "parentId" : "566ca50c-636c-4f3c-a777-c764b5d959b7",
+        "authorId" : "fdf14d51-7a8c-4235-b6a2-99d0c173e917",
+        "body" : "@gengliangwang this is useful for enabling data skipping on all file formats including formats which doesn't support pushdown (e.g CSV, JSON) by replacing the FileIndex implementation with a FileIndex which use also the `dataFilters` to filter the file listing.",
+        "createdAt" : "2020-01-09T10:42:18Z",
+        "updatedAt" : "2020-01-09T10:42:33Z",
+        "lastEditedBy" : "fdf14d51-7a8c-4235-b6a2-99d0c173e917",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "42b777f8-575e-4f8e-aedd-d02c36763fb6",
+        "parentId" : "566ca50c-636c-4f3c-a777-c764b5d959b7",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "This is the old v1 code path, let's not touch it in this PR.",
+        "createdAt" : "2020-01-09T12:49:38Z",
+        "updatedAt" : "2020-01-09T12:49:38Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "61b2b763-5cab-4ec1-8d2e-01920aed995e",
+        "parentId" : "566ca50c-636c-4f3c-a777-c764b5d959b7",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "and for v2 code path, the data filters are already pushed in the rule `V2ScanRelationPushDown`",
+        "createdAt" : "2020-01-09T12:50:54Z",
+        "updatedAt" : "2020-01-09T12:50:54Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "58a4a07c50fd0ef54ca55fe1883d228eeb8464b2",
+    "line" : 70,
+    "diffHunk" : "@@ -1,1 +78,82 @@        val prunedFileIndex = catalogFileIndex.filterPartitions(partitionKeyFilters.toSeq)\n        val prunedFsRelation =\n          fsRelation.copy(location = prunedFileIndex)(fsRelation.sparkSession)\n        // Change table stats based on the sizeInBytes of pruned files\n        val withStats = logicalRelation.catalogTable.map(_.copy("
+  },
+  {
+    "id" : "84698262-1db8-44b8-b2b2-0d6b79150e65",
+    "prId" : 27112,
+    "prUrl" : "https://github.com/apache/spark/pull/27112#pullrequestreview-341539241",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a252b2d0-90bc-4594-9484-49cbe2728da9",
+        "parentId" : null,
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "CSV datasource in #26973 doesn't fall to the case but parquet/orc does. And `withPartitionFilters` is not invoke for CSV. What's wrong with CSV when filters push down is enabled?",
+        "createdAt" : "2020-01-11T20:10:53Z",
+        "updatedAt" : "2020-01-11T20:10:53Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "58a4a07c50fd0ef54ca55fe1883d228eeb8464b2",
+    "line" : 85,
+    "diffHunk" : "@@ -1,1 +90,94 @@      }\n\n    case op @ PhysicalOperation(projects, filters,\n        v2Relation @ DataSourceV2ScanRelation(_, scan: FileScan, output))\n        if filters.nonEmpty && scan.readDataSchema.nonEmpty =>"
   }
 ]

@@ -1,0 +1,57 @@
+[
+  {
+    "id" : "537b28d3-980c-45ed-ba96-16e380b4902c",
+    "prId" : 27135,
+    "prUrl" : "https://github.com/apache/spark/pull/27135#pullrequestreview-341296783",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1cd8a645-a4f7-4589-b076-9608f32f6954",
+        "parentId" : null,
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "I am not familiar with the Core module.\r\nBut is it possible that `totalExecutionTime - executorOverhead - gettingResultTime - schedulerDelay` is negative?\r\nIf so, is the calculation correct?",
+        "createdAt" : "2020-01-09T06:35:01Z",
+        "updatedAt" : "2020-01-09T06:35:01Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "42d2f876-8dce-4289-a736-4c6595ae14bc",
+        "parentId" : "1cd8a645-a4f7-4589-b076-9608f32f6954",
+        "authorId" : "43862cc9-6434-439e-aa05-2f884d36f9d7",
+        "body" : "It is impossible.\r\nI write math.max(xxx, 0) here,  just be consistent with the calculation of the executorComputingTimeProportion \r\nL297:\r\n```\r\n val executorComputingTimeProportion =\r\n          math.max(100 - schedulerDelayProportion - shuffleReadTimeProportion -\r\n            shuffleWriteTimeProportion - serializationTimeProportion -\r\n            deserializationTimeProportion - gettingResultTimeProportion, 0)\r\n```",
+        "createdAt" : "2020-01-09T07:54:09Z",
+        "updatedAt" : "2020-01-09T07:54:26Z",
+        "lastEditedBy" : "43862cc9-6434-439e-aa05-2f884d36f9d7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d951c922-154a-4069-91af-3063f2b2cd5b",
+        "parentId" : "1cd8a645-a4f7-4589-b076-9608f32f6954",
+        "authorId" : "43862cc9-6434-439e-aa05-2f884d36f9d7",
+        "body" : "In fact,\r\n\r\n```\r\nexecutorComputingTime = executorRunTime - shuffleReadTime - shuffleWriteTime=totalExecutionTime - executorOverhead - gettingResultTime- schedulerDelay-shuffleReadTime - shuffleWriteTime\r\n\r\nexecutorComputingTimeProportion = (totalExecutionTime - executorOverhead - gettingResultTime - schedulerDelay-shuffleReadTime - shuffleWriteTime) / totalExecutionTime * 100\r\n```\r\n\r\nbut in the old code `executorComputingTime` does not minus `schedulerDelay`",
+        "createdAt" : "2020-01-09T08:02:55Z",
+        "updatedAt" : "2020-01-09T08:03:15Z",
+        "lastEditedBy" : "43862cc9-6434-439e-aa05-2f884d36f9d7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1a3a255c-2c76-4236-9a29-c9b4cd2257af",
+        "parentId" : "1cd8a645-a4f7-4589-b076-9608f32f6954",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "I think it's fine for consistency and perhaps to account for rounding errors or something. I'm OK with it as the current calculation does seem obviously wrong in at least one case.",
+        "createdAt" : "2020-01-10T16:59:47Z",
+        "updatedAt" : "2020-01-10T16:59:47Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "eb38cf9ac7a4daafeebdafc84eeef163c16c90b8",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +289,293 @@        val executorOverhead = serializationTime + deserializationTime\n        val executorRunTime = if (taskInfo.duration.isDefined) {\n          math.max(totalExecutionTime - executorOverhead - gettingResultTime - schedulerDelay, 0)\n        } else {\n          metricsOpt.map(_.executorRunTime).getOrElse("
+  }
+]

@@ -7280,5 +7280,137 @@
     "commit" : "24c8ad9ae23d360c7bb5bc813d04e6f5f6715d93",
     "line" : 10,
     "diffHunk" : "@@ -1,1 +550,554 @@      \"documentation for more details.\")\n    .internal()\n    .version(\"3.0.0\")\n    .booleanConf\n    .createWithDefault(false)"
+  },
+  {
+    "id" : "578ea9a9-4631-4f56-8dbb-a4072a8ff366",
+    "prId" : 27085,
+    "prUrl" : "https://github.com/apache/spark/pull/27085#pullrequestreview-339003541",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "26b0f3ff-9523-48e3-a123-e51e55214b27",
+        "parentId" : null,
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Couldn't it be 0, potentially? So you only keep one last compacted log file, instead of one compacted + one normal.",
+        "createdAt" : "2020-01-03T19:22:11Z",
+        "updatedAt" : "2020-01-09T00:50:36Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4e52220c-1cd4-4782-8037-9cf00c46c67a",
+        "parentId" : "26b0f3ff-9523-48e3-a123-e51e55214b27",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "If I'm not missing, it can't be, as setting this 0 means we allow compacting the event log file which running app is writing now. It also doesn't make sense for finished app as well, since all jobs should have been finished when app is finished - so compaction would lose all job-related events.",
+        "createdAt" : "2020-01-06T02:52:06Z",
+        "updatedAt" : "2020-01-09T00:50:37Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "518c036a-e8d0-45ea-a840-1e513c84bce1",
+        "parentId" : "26b0f3ff-9523-48e3-a123-e51e55214b27",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Hmm, I see. Merging the last two logs might still result in some savings, but probably not worth it if it means having extra logic to say \"don't filter out things that started in the last log file\".\r\n\r\nOn a side note, compaction currently overrides all the \"retained blah\" configurations; so at the end you may end up, for example, with very few jobs in the Spark UI, whereas the retention settings say you should keep the last 1000 jobs or so.",
+        "createdAt" : "2020-01-06T18:48:06Z",
+        "updatedAt" : "2020-01-09T00:50:37Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "90922d89-4bd7-43e4-832d-6a8dc2b96bbd",
+        "parentId" : "26b0f3ff-9523-48e3-a123-e51e55214b27",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "> On a side note, compaction currently overrides all the \"retained blah\" configurations\r\n\r\nYeah, that's actually the point I have been thinking about, as end users may see only few of jobs if they set this to 1 and the log files are just compacted.\r\n\r\nMaybe we could improve event filter to configure max retained jobs on compact file so that some of finished jobs can be still tracked (`live jobs + finished jobs <= max retained jobs`). It cannot be strictly max, as live jobs could have been more than the configured value, so may need to have better name.\r\n\r\nLooks like it could be further TODO worth filing JIRA issue.",
+        "createdAt" : "2020-01-07T02:33:11Z",
+        "updatedAt" : "2020-01-09T00:50:37Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "163bda018d054a0d41e983e6c448ce3b3e746d35",
+    "line" : 13,
+    "diffHunk" : "@@ -1,1 +205,209 @@        \"the overall size of event log files.\")\n      .intConf\n      .checkValue(_ > 0, \"Max event log files to retain should be higher than 0.\")\n      .createWithDefault(Integer.MAX_VALUE)\n"
+  },
+  {
+    "id" : "f421e0ab-6437-489e-baf1-97374d4a1508",
+    "prId" : 27085,
+    "prUrl" : "https://github.com/apache/spark/pull/27085#pullrequestreview-351341355",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "567ca6e8-7c46-4420-98e6-f4f625b105d1",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "I think we should have added some docs here too.",
+        "createdAt" : "2020-01-31T03:39:50Z",
+        "updatedAt" : "2020-01-31T03:39:50Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3cf83bab-5564-4abc-b3fa-1d77ee164e37",
+        "parentId" : "567ca6e8-7c46-4420-98e6-f4f625b105d1",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "It was to ease of test for compaction but after reviewing it's no longer need to be a configuration.\r\nI'll just remove this and convert it to be constant unless we figure out needs to adjust manually.",
+        "createdAt" : "2020-01-31T07:35:29Z",
+        "updatedAt" : "2020-01-31T07:35:29Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "183ef3f7-9b7a-456b-a016-88cf1eec9172",
+        "parentId" : "567ca6e8-7c46-4420-98e6-f4f625b105d1",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Just realized there's test to modify the value to ensure compaction doesn't skip with low value. I'll retain the configuration and add some doc.",
+        "createdAt" : "2020-01-31T08:02:40Z",
+        "updatedAt" : "2020-01-31T08:02:40Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "163bda018d054a0d41e983e6c448ce3b3e746d35",
+    "line" : 18,
+    "diffHunk" : "@@ -1,1 +210,214 @@  private[spark] val EVENT_LOG_COMPACTION_SCORE_THRESHOLD =\n    ConfigBuilder(\"spark.eventLog.rolling.compaction.score.threshold\")\n      .internal()\n      .doubleConf\n      .createWithDefault(0.7d)"
+  },
+  {
+    "id" : "3d0dec25-488e-446c-9b71-66c2809b1dd2",
+    "prId" : 27085,
+    "prUrl" : "https://github.com/apache/spark/pull/27085#pullrequestreview-351330567",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f5b49bc3-01de-4632-9396-a62f7bd62dc1",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Why didn't we make it optional, or defaults to -1 to express \"all event log files will be retained\"?",
+        "createdAt" : "2020-01-31T03:56:14Z",
+        "updatedAt" : "2020-01-31T03:56:14Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6a27cb72-53ed-4496-8cab-54b1f4c830f0",
+        "parentId" : "f5b49bc3-01de-4632-9396-a62f7bd62dc1",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "I think this default value \"naturally\" fits the semantic of the configuration even we don't indicate Integer.MAX_VALUE as special value. No need to care the configuration specially. This approach seems to be already used for couple of configurations.",
+        "createdAt" : "2020-01-31T07:30:56Z",
+        "updatedAt" : "2020-01-31T07:30:57Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "163bda018d054a0d41e983e6c448ce3b3e746d35",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +206,210 @@      .intConf\n      .checkValue(_ > 0, \"Max event log files to retain should be higher than 0.\")\n      .createWithDefault(Integer.MAX_VALUE)\n\n  private[spark] val EVENT_LOG_COMPACTION_SCORE_THRESHOLD ="
   }
 ]

@@ -64,5 +64,159 @@
     "commit" : "06b3cb8109ea3e68aae54141d1d91ebb87f479c5",
     "line" : 78,
     "diffHunk" : "@@ -1,1 +156,160 @@   * @return total size of all partitions\n   */\n  def calculateLocationsSizesParallel(\n      sparkSession: SparkSession,\n      paths: Seq[Option[Path]]): Long = {"
+  },
+  {
+    "id" : "f1df65c3-8712-4b8e-a2d8-a46d9bf00f92",
+    "prId" : 27079,
+    "prUrl" : "https://github.com/apache/spark/pull/27079#pullrequestreview-338380042",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0bc19584-8f79-484b-ac89-29de5a1f8647",
+        "parentId" : null,
+        "authorId" : "39fe625f-8c54-48bc-ac6f-7279921adf02",
+        "body" : "$durationInMs is intended to round up to integer or long.\r\ndivided by 1e6 makes it double, may keep (1000 * 1000) please",
+        "createdAt" : "2020-01-02T19:17:19Z",
+        "updatedAt" : "2020-01-08T01:45:47Z",
+        "lastEditedBy" : "39fe625f-8c54-48bc-ac6f-7279921adf02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "04d43df8-ffe2-4176-a43a-1e7beef449f1",
+        "parentId" : "0bc19584-8f79-484b-ac89-29de5a1f8647",
+        "authorId" : "78cb7df6-a1c6-4bcb-99c1-16fd18fb32f7",
+        "body" : "Thanks for pointing it out!",
+        "createdAt" : "2020-01-03T09:29:02Z",
+        "updatedAt" : "2020-01-08T01:45:47Z",
+        "lastEditedBy" : "78cb7df6-a1c6-4bcb-99c1-16fd18fb32f7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0ecf4f3d-58aa-4b98-80ea-7088fec99e61",
+        "parentId" : "0bc19584-8f79-484b-ac89-29de5a1f8647",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Do you mean to change to debug level here?",
+        "createdAt" : "2020-01-04T16:27:02Z",
+        "updatedAt" : "2020-01-08T01:45:47Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b40e8400-f58e-48bc-bf87-50cfcdf5f202",
+        "parentId" : "0bc19584-8f79-484b-ac89-29de5a1f8647",
+        "authorId" : "78cb7df6-a1c6-4bcb-99c1-16fd18fb32f7",
+        "body" : "@srowen yes, it could be called in the \"else\" branch above, and one partition per log would be too much if the number of partitions is very large.\r\n```\r\npartitions.map { p =>\r\n  calculateLocationSize(sessionState, catalogTable.identifier, p.storage.locationUri)\r\n}.sum\r\n```",
+        "createdAt" : "2020-01-05T04:09:46Z",
+        "updatedAt" : "2020-01-08T01:45:47Z",
+        "lastEditedBy" : "78cb7df6-a1c6-4bcb-99c1-16fd18fb32f7",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b7ac910a8431f7bad97efe5d0cbeb2b64d04e775",
+    "line" : 38,
+    "diffHunk" : "@@ -1,1 +130,134 @@    }.getOrElse(0L)\n    val durationInMs = (System.nanoTime() - startTime) / (1000 * 1000)\n    logDebug(s\"It took $durationInMs ms to calculate the total file size under path $locationUri.\")\n\n    size"
+  },
+  {
+    "id" : "1d5ccc49-99c5-4fc3-9e35-12155820b6fd",
+    "prId" : 27079,
+    "prUrl" : "https://github.com/apache/spark/pull/27079#pullrequestreview-338000772",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0a832a2e-1573-4152-bfc1-b6d0a02bea51",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "For easy-to-see, how about merging this log into one in line 80?",
+        "createdAt" : "2020-01-02T23:22:06Z",
+        "updatedAt" : "2020-01-08T01:45:47Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c9b291cf-4833-4fc1-8e98-01d4a8e422e8",
+        "parentId" : "0a832a2e-1573-4152-bfc1-b6d0a02bea51",
+        "authorId" : "78cb7df6-a1c6-4bcb-99c1-16fd18fb32f7",
+        "body" : "ok, merged to one line log",
+        "createdAt" : "2020-01-03T09:29:38Z",
+        "updatedAt" : "2020-01-08T01:45:47Z",
+        "lastEditedBy" : "78cb7df6-a1c6-4bcb-99c1-16fd18fb32f7",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b7ac910a8431f7bad97efe5d0cbeb2b64d04e775",
+    "line" : 11,
+    "diffHunk" : "@@ -1,1 +62,66 @@      // Calculate table size as a sum of the visible partitions. See SPARK-21079\n      val partitions = sessionState.catalog.listPartitions(catalogTable.identifier)\n      logInfo(s\"Starting to calculate sizes for ${partitions.length} partitions.\")\n      if (spark.sessionState.conf.parallelFileListingInStatsComputation) {\n        val paths = partitions.map(x => new Path(x.storage.locationUri.get))"
+  },
+  {
+    "id" : "952c2d47-a469-4737-9e6e-58cff85f7be0",
+    "prId" : 27079,
+    "prUrl" : "https://github.com/apache/spark/pull/27079#pullrequestreview-338602410",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2c504d83-3931-4ce1-bf35-6b1fbce00597",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Because the two branches above differ in several ways, it might be cleaner to just put two different log statements in the branches above instead of this",
+        "createdAt" : "2020-01-04T16:27:27Z",
+        "updatedAt" : "2020-01-08T01:45:47Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "87e0ea54-b3be-4d55-9795-91e7e710656f",
+        "parentId" : "2c504d83-3931-4ce1-bf35-6b1fbce00597",
+        "authorId" : "78cb7df6-a1c6-4bcb-99c1-16fd18fb32f7",
+        "body" : "If I put two different logs in the branches, I would need to have two `totalSize` values in two branches and return them after the logs. Besides, the majority of two logs would still be the same (except the partition info). So the code may look redundant that way... what do you think?",
+        "createdAt" : "2020-01-05T04:25:21Z",
+        "updatedAt" : "2020-01-08T01:45:47Z",
+        "lastEditedBy" : "78cb7df6-a1c6-4bcb-99c1-16fd18fb32f7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c985de23-84b6-4cf7-819d-7b486ac01b56",
+        "parentId" : "2c504d83-3931-4ce1-bf35-6b1fbce00597",
+        "authorId" : "78cb7df6-a1c6-4bcb-99c1-16fd18fb32f7",
+        "body" : "@maropu @srowen Maybe I could change back to the initial version, which prints a log with partition info in the branch for partitioned table?\r\n```\r\nlogInfo(s\"Starting to calculate sizes for ${partitions.length} partitions.\")\r\n```\r\nIn this way we keep the \"partitioned table\" logic only in that branch. Then the final log applies to both non-partitioned and partitioned tables.\r\n```\r\nlogInfo(s\"It took ${(System.nanoTime() - startTime) / (1000 * 1000)} ms to calculate\" +\r\n        s\" the total size for table ${catalogTable.identifier}.\")\r\n```",
+        "createdAt" : "2020-01-05T04:39:55Z",
+        "updatedAt" : "2020-01-08T01:45:47Z",
+        "lastEditedBy" : "78cb7df6-a1c6-4bcb-99c1-16fd18fb32f7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "078f9cb5-32c2-454d-ae4a-08df4565a02d",
+        "parentId" : "2c504d83-3931-4ce1-bf35-6b1fbce00597",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "I don't feel strongly about it, just sounded simpler to me to keep the current structure",
+        "createdAt" : "2020-01-05T14:41:11Z",
+        "updatedAt" : "2020-01-08T01:45:47Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "65b775ce-5965-40ca-9f6e-6788d464f46e",
+        "parentId" : "2c504d83-3931-4ce1-bf35-6b1fbce00597",
+        "authorId" : "78cb7df6-a1c6-4bcb-99c1-16fd18fb32f7",
+        "body" : "@srowen @maropu I did the changes as described above, please see if it's better",
+        "createdAt" : "2020-01-06T11:49:09Z",
+        "updatedAt" : "2020-01-08T01:45:47Z",
+        "lastEditedBy" : "78cb7df6-a1c6-4bcb-99c1-16fd18fb32f7",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b7ac910a8431f7bad97efe5d0cbeb2b64d04e775",
+    "line" : 19,
+    "diffHunk" : "@@ -1,1 +78,82 @@      }\n    }\n    logInfo(s\"It took ${(System.nanoTime() - startTime) / (1000 * 1000)} ms to calculate\" +\n      s\" the total size for table ${catalogTable.identifier}.\")\n    totalSize"
   }
 ]

@@ -64,5 +64,82 @@
     "commit" : "009c553b7f6e12c584deb002f8e52d47017f1845",
     "line" : 18,
     "diffHunk" : "@@ -1,1 +155,159 @@\n    instr.logParams(this, labelCol, featuresCol, weightCol, predictionCol, probabilityCol,\n      rawPredictionCol, leafCol, impurity, numTrees, featureSubsetStrategy, maxDepth, maxBins,\n      maxMemoryInMB, minInfoGain, minInstancesPerNode, minWeightFractionPerNode, seed,\n      subsamplingRate, thresholds, cacheNodeIds, checkpointInterval, bootstrap)"
+  },
+  {
+    "id" : "c7f34c84-4f67-485b-865c-a58d908f0c5e",
+    "prId" : 27097,
+    "prUrl" : "https://github.com/apache/spark/pull/27097#pullrequestreview-340380625",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "fc647cf3-174e-461f-ba73-4873a81d0a68",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "How does this interact with min instances per node above? it seems like they try to set the same value. Hm. Should one override the other?",
+        "createdAt" : "2020-01-06T14:39:49Z",
+        "updatedAt" : "2020-01-06T14:39:50Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0e17ef87-8ab3-4243-ba34-cce401b20eb5",
+        "parentId" : "fc647cf3-174e-461f-ba73-4873a81d0a68",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "minInstancesPerNode: Minimum number of instances each child must have after split. If a split causes the left or right child to have fewer than minInstancesPerNode, the split will be discarded as invalid.\r\n\r\nminWeightFractionPerNode: Minimum fraction of the weighted sample count that each child must have after split. If a split causes the fraction of the total weight in the left or right child to be less than minWeightFractionPerNode, the split will be discarded as invalid.\r\n\r\nin RandomForest\r\n```scala\r\n    val violatesMinInstancesPerNode = (leftRawCount < metadata.minInstancesPerNode) ||\r\n      (rightRawCount < metadata.minInstancesPerNode)\r\n    val violatesMinWeightPerNode = (leftCount < metadata.minWeightPerNode) ||\r\n      (rightCount < metadata.minWeightPerNode)\r\n    // If left child or right child doesn't satisfy minimum weight per node or minimum\r\n    // instances per node, then this split is invalid, return invalid information gain stats.\r\n    if (violatesMinInstancesPerNode || violatesMinWeightPerNode) {\r\n      return ImpurityStats.getInvalidImpurityStats(parentImpurityCalculator)\r\n    }\r\n\r\n```\r\n\r\nI think if one of above conditions is met, a node split will be discarded.",
+        "createdAt" : "2020-01-07T02:15:52Z",
+        "updatedAt" : "2020-01-07T02:15:52Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "93f05e93-884a-4ceb-ad8d-0cbda7262384",
+        "parentId" : "fc647cf3-174e-461f-ba73-4873a81d0a68",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Yes, I mean more from an API perspective, they are setting the 'same thing', sort of. The weighted value is a generalization of the existing parameter. Would you set both, really? maybe the existing setter just sets the new value too. The check against weight vs minimum weight, when weights are all 1.0, would be the same. Is that simpler?",
+        "createdAt" : "2020-01-07T03:09:00Z",
+        "updatedAt" : "2020-01-07T03:09:01Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7c5f1448-356f-4b6c-a352-c7afb0dff016",
+        "parentId" : "fc647cf3-174e-461f-ba73-4873a81d0a68",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "the `minWeightFractionPerNode` is a fraction, so it is in range [0, 1],\r\nabove `metadata.minWeightPerNode` = `minWeightFractionPerNode` * SumOfWeights.\r\n\r\nthis param was first added in https://github.com/apache/spark/pull/21632, I am neutral on it.",
+        "createdAt" : "2020-01-08T07:16:16Z",
+        "updatedAt" : "2020-01-08T07:16:49Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8037356a-44d8-4131-ab14-6daaac5d2c1c",
+        "parentId" : "fc647cf3-174e-461f-ba73-4873a81d0a68",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Oh OK, it's the proportion of weight. It isn't new right? OK I get it. It will just be a fraction of sum of weights now.",
+        "createdAt" : "2020-01-08T14:49:51Z",
+        "updatedAt" : "2020-01-08T14:50:12Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b2d66e10-cf22-49b4-95b1-839dd77c63eb",
+        "parentId" : "fc647cf3-174e-461f-ba73-4873a81d0a68",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "Yes, it has been added for quite a while.",
+        "createdAt" : "2020-01-09T09:20:17Z",
+        "updatedAt" : "2020-01-09T09:20:17Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "14a57c8f7658d8d28bc3c6bfc76c85e78b2ec75d",
+    "line" : 22,
+    "diffHunk" : "@@ -1,1 +70,74 @@  /** @group setParam */\n  @Since(\"3.0.0\")\n  def setMinWeightFractionPerNode(value: Double): this.type = set(minWeightFractionPerNode, value)\n\n  /** @group setParam */"
   }
 ]

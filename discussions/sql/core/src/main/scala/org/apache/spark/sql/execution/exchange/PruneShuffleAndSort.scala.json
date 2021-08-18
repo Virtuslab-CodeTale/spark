@@ -1,0 +1,57 @@
+[
+  {
+    "id" : "7a9bfcee-fcbf-4e9d-ac7f-f8c230cf28a9",
+    "prId" : 27096,
+    "prUrl" : "https://github.com/apache/spark/pull/27096#pullrequestreview-370886190",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "89421603-db32-4342-a668-fa32fe2ffa6f",
+        "parentId" : null,
+        "authorId" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "body" : "Why doesn't this apply to `RangeParititoning`? Is it just we assume `repartition()` would only do `HashPartitioning`?\r\nAnd what happens if someone does `df1.join(df2, Seq(\"id\"), \"left\").repartition(100, df(\"some_other_column\")).repartition(20, df1(\"id\"))` or `df1.join(df2, Seq(\"id\"), \"left\").sortWithinPartition(df1(\"some_other_column\")).sortWithinPartition(df1(\"id\"))` ? We should be able to optimize that out too, right? It would be nice to make this rule more general and cover a wider range of cases.",
+        "createdAt" : "2020-02-12T17:01:44Z",
+        "updatedAt" : "2020-04-23T06:11:37Z",
+        "lastEditedBy" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "801457b7-6a2b-410d-9fd2-0bc9cd2c77dc",
+        "parentId" : "89421603-db32-4342-a668-fa32fe2ffa6f",
+        "authorId" : "29a3e834-d9e3-42dc-ab25-20ba332ef3f2",
+        "body" : "Thanks for providing feedback.\r\nLet me take a look into your specific examples  and think a little more about it.",
+        "createdAt" : "2020-02-13T07:48:46Z",
+        "updatedAt" : "2020-04-23T06:11:37Z",
+        "lastEditedBy" : "29a3e834-d9e3-42dc-ab25-20ba332ef3f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9a14203f-c732-40db-8499-5a5246af6ea9",
+        "parentId" : "89421603-db32-4342-a668-fa32fe2ffa6f",
+        "authorId" : "29a3e834-d9e3-42dc-ab25-20ba332ef3f2",
+        "body" : "@maryannxue \r\nThis PR focused on fixing removing unnecessary sorting and shuffling after a join, which potentially includes its own ShuffleExchangeExec with HashPartioning. Both cases you mentioned are already optimized properly:  the shuffling on \"some_other_column\" is removed and all sortWithinPartitions are removed (due to previous optimizations in logical plan, and the optimizations introduced here)\r\n\r\nI wouldn't mind generalizing to all Partitioning types of the ShuffleExchangeExec, but I am not sure how to compare two partitioning types for equality. You can see the special case for HashPartitioning in this PR.",
+        "createdAt" : "2020-02-24T03:15:02Z",
+        "updatedAt" : "2020-04-23T06:11:37Z",
+        "lastEditedBy" : "29a3e834-d9e3-42dc-ab25-20ba332ef3f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d0a0fc36-4fd8-474e-b18b-25b25885ea2d",
+        "parentId" : "89421603-db32-4342-a668-fa32fe2ffa6f",
+        "authorId" : "29a3e834-d9e3-42dc-ab25-20ba332ef3f2",
+        "body" : "@maryannxue ping",
+        "createdAt" : "2020-03-09T02:09:43Z",
+        "updatedAt" : "2020-04-23T06:11:37Z",
+        "lastEditedBy" : "29a3e834-d9e3-42dc-ab25-20ba332ef3f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9db29e60cb0f3fc033b8ccf8e414fd9d3eafa257",
+    "line" : 35,
+    "diffHunk" : "@@ -1,1 +33,37 @@      case operator @ ShuffleExchangeExec(upper: HashPartitioning, child, _) =>\n        child.outputPartitioning match {\n          case lower: HashPartitioning if upper.semanticEquals(lower) => child\n          case _ @ PartitioningCollection(partitionings) =>\n            if (partitionings.exists{"
+  }
+]

@@ -1,0 +1,134 @@
+[
+  {
+    "id" : "96657ff3-8f09-4a2e-bfd8-6ef8a3f9ceb9",
+    "prId" : 27085,
+    "prUrl" : "https://github.com/apache/spark/pull/27085#pullrequestreview-338820888",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "56b383ec-be3c-4389-829f-0c51932ffc26",
+        "parentId" : null,
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "minor: can avoid this if score is too low.",
+        "createdAt" : "2020-01-03T19:01:50Z",
+        "updatedAt" : "2020-01-09T00:50:36Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4744f2c0-d5cd-4d9d-b7e0-f4311357e54e",
+        "parentId" : "56b383ec-be3c-4389-829f-0c51932ffc26",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "The score is calculated under the information of EventFilter despite the fact the information is actually built from EventFilterBuilder. Technically there will be no difference if we add EventFilterBuilder to provide statistics, but it's semantically different.\r\n\r\nThe difference of two interfaces is that EventFilterBuilder is in inconsistent state, as flowing event into listener bus will change the state of builder, whereas EventFilter is a snapshot holding the state for loaded at a specific moment; so the event filter builder should be only used to build the event filter, and event filter will be used for all other things.",
+        "createdAt" : "2020-01-06T02:42:25Z",
+        "updatedAt" : "2020-01-09T00:50:37Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e5bdb1a5-f83a-4d1b-8f86-dfdb9845d337",
+        "parentId" : "56b383ec-be3c-4389-829f-0c51932ffc26",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Nevermind, I missed this was used in the very next line.",
+        "createdAt" : "2020-01-06T18:45:06Z",
+        "updatedAt" : "2020-01-09T00:50:37Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "163bda018d054a0d41e983e6c448ce3b3e746d35",
+    "line" : 87,
+    "diffHunk" : "@@ -1,1 +85,89 @@      val builders = initializeBuilders(fs, filesToCompact.map(_.getPath))\n\n      val filters = builders.map(_.createFilter())\n      val minScore = filters.flatMap(_.statistics()).map(calculateScore).min\n"
+  },
+  {
+    "id" : "e33c4884-5224-4dca-bb06-ad8ca61d0562",
+    "prId" : 27085,
+    "prUrl" : "https://github.com/apache/spark/pull/27085#pullrequestreview-340233278",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a07aae3c-0894-489b-9a20-399cac408c97",
+        "parentId" : null,
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "can probably be private",
+        "createdAt" : "2020-01-08T22:39:59Z",
+        "updatedAt" : "2020-01-09T00:50:37Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "de685f63-9b4f-4d81-adc8-f97a8a8077cc",
+        "parentId" : "a07aae3c-0894-489b-9a20-399cac408c97",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "This is used as the return type of `compact`, hence have to follow the scope of the method - it's public.",
+        "createdAt" : "2020-01-08T23:52:35Z",
+        "updatedAt" : "2020-01-09T00:50:37Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8d4fb3a2-5863-40f7-8e18-42eb4c527c23",
+        "parentId" : "a07aae3c-0894-489b-9a20-399cac408c97",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "As we marked the scope of EventFilter as `private[spark]`, I'll change EventLogFileCompactor to `private[spark]` and change CompactionResult/CompactionResultCode to `private[spark]` as well. \r\n\r\nMaybe we could make it tighter (`private[history]` or `private[deploy]`) - please let me know if it's preferred. Thanks!",
+        "createdAt" : "2020-01-08T23:57:42Z",
+        "updatedAt" : "2020-01-09T00:50:37Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "810c2b49-bb75-48bd-be5e-9ba88b2d518b",
+        "parentId" : "a07aae3c-0894-489b-9a20-399cac408c97",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Hmm. I guess this package is not considered a public API (as nothing under `deploy` is), so in those cases I've been leaning towards just leaving the class as public. `private` makes sense if the class doesn't exit the scope of the package, which is not the case here.",
+        "createdAt" : "2020-01-09T00:21:20Z",
+        "updatedAt" : "2020-01-09T00:50:37Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "992cc539-c013-4e3a-bf0f-8dcd91c19b09",
+        "parentId" : "a07aae3c-0894-489b-9a20-399cac408c97",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "OK will leave them as public. Thanks.",
+        "createdAt" : "2020-01-09T00:42:47Z",
+        "updatedAt" : "2020-01-09T00:50:37Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "163bda018d054a0d41e983e6c448ce3b3e746d35",
+    "line" : 203,
+    "diffHunk" : "@@ -1,1 +201,205 @@ *                     Otherwise it will be None.\n */\ncase class CompactionResult(code: CompactionResultCode.Value, compactIndex: Option[Long])\n\nobject CompactionResultCode extends Enumeration {"
+  },
+  {
+    "id" : "41ec6212-1ee8-4d65-a238-8442358a081c",
+    "prId" : 27085,
+    "prUrl" : "https://github.com/apache/spark/pull/27085#pullrequestreview-340186173",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "97cbfb54-c471-48ec-985d-1d3efef5390c",
+        "parentId" : null,
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "can probably be private",
+        "createdAt" : "2020-01-08T22:40:05Z",
+        "updatedAt" : "2020-01-09T00:50:37Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "163bda018d054a0d41e983e6c448ce3b3e746d35",
+    "line" : 205,
+    "diffHunk" : "@@ -1,1 +203,207 @@case class CompactionResult(code: CompactionResultCode.Value, compactIndex: Option[Long])\n\nobject CompactionResultCode extends Enumeration {\n  val SUCCESS, NOT_ENOUGH_FILES, LOW_SCORE_FOR_COMPACTION = Value\n}"
+  }
+]

@@ -3364,5 +3364,104 @@
     "commit" : "fbbf78542b2ceeb4c98e5416d60641fbcac6d0dd",
     "line" : 68,
     "diffHunk" : "@@ -1,1 +1126,1130 @@      }\n\n      val conflictPlans = collectConflictPlans(right)\n\n      /*"
+  },
+  {
+    "id" : "32bd8429-c7f5-4b88-a144-22ac229bdeb0",
+    "prId" : 27095,
+    "prUrl" : "https://github.com/apache/spark/pull/27095#pullrequestreview-338482685",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3250ab2f-0817-43ad-a66c-f64d64c4ddc8",
+        "parentId" : null,
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "@cloud-fan this was introduced to handle commands where namespace is used as optional  (`SHOW NAMESPACES` for example). Is this approach (which treats empty `Seq` as `None`) reasonable?",
+        "createdAt" : "2020-01-04T08:03:03Z",
+        "updatedAt" : "2020-01-07T05:54:46Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "94966e6f-a4ba-4085-921a-49b21e0bf3a4",
+        "parentId" : "3250ab2f-0817-43ad-a66c-f64d64c4ddc8",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "This may not be a good idea since empty `Seq` can mean `None` or `Nil`.\r\n\r\nHow about we add `Option` as following since namespace can be optional in a command:\r\n```scala\r\ncase class ResolvedNamespace(catalog: SupportsNamespaces, namespace: Option[Seq[String]])\r\n  extends LeafNode {\r\n  override def output: Seq[Attribute] = Nil\r\n}\r\n\r\ncase class UnresolvedNamespace(multipartIdentifier: Option[Seq[String]]) extends LeafNode {\r\n  override lazy val resolved: Boolean = false\r\n  override def output: Seq[Attribute] = Nil\r\n}\r\n```",
+        "createdAt" : "2020-01-04T08:26:31Z",
+        "updatedAt" : "2020-01-07T05:54:46Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "adc55bf7-5133-4ba0-a534-9b8d70be19d1",
+        "parentId" : "3250ab2f-0817-43ad-a66c-f64d64c4ddc8",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "`CatalogAndNamespace` doesn't look up the namespace, but look up the catalog. I think it can handle Nil, which resolves catalog to the current catalog, and return Nil as the namespace identifier.",
+        "createdAt" : "2020-01-05T06:00:36Z",
+        "updatedAt" : "2020-01-07T05:54:46Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "59ae31f4-bccc-4d73-98c1-88ee38b4e2e7",
+        "parentId" : "3250ab2f-0817-43ad-a66c-f64d64c4ddc8",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "The conflict here is that `SHOW NAMESPACES` treats `None` as `Nil`, but `SHOW TABLES` treats `None` as `current namespace`, thus causing the ambiguity. To make `SHOW TABLES` work with `Nil` approach (the current one), I have to do the following:\r\n```scala\r\n    case ShowTablesStatement(NonSessionCatalogAndNamespace(catalog, ns), pattern) =>\r\n      val namespace = if (ns.isEmpty && currentCatalog.name.equals(catalog.name)) {\r\n        catalogManager.currentNamespace.toSeq\r\n      } else { ns }\r\n      ShowTables(catalog.asTableCatalog, namespace, pattern)\r\n```",
+        "createdAt" : "2020-01-05T07:03:43Z",
+        "updatedAt" : "2020-01-07T05:54:46Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "56b4e1c4-238b-4ca6-aac6-2621eee4e2df",
+        "parentId" : "3250ab2f-0817-43ad-a66c-f64d64c4ddc8",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I think `SHOW TABLES` is a special case, can we manually handle it in `ResolveNamespace`?",
+        "createdAt" : "2020-01-06T04:03:48Z",
+        "updatedAt" : "2020-01-07T05:54:46Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f5b7fb27-6a45-49ef-8e15-da92b392b9ae",
+        "parentId" : "3250ab2f-0817-43ad-a66c-f64d64c4ddc8",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "OK, will do.",
+        "createdAt" : "2020-01-06T06:19:08Z",
+        "updatedAt" : "2020-01-07T05:54:46Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b31f07bbf1ed0ae0e19498eea70e8c316e340262",
+    "line" : 8,
+    "diffHunk" : "@@ -1,1 +735,739 @@          ResolvedNamespace(currentCatalog.asNamespaceCatalog, catalogManager.currentNamespace))\n      case UnresolvedNamespace(Seq()) =>\n        ResolvedNamespace(currentCatalog.asNamespaceCatalog, Seq.empty[String])\n      case UnresolvedNamespace(CatalogAndNamespace(catalog, ns)) =>\n        ResolvedNamespace(catalog.asNamespaceCatalog, ns)"
+  },
+  {
+    "id" : "b9b291d6-1058-4e43-b538-8398e352ceea",
+    "prId" : 27095,
+    "prUrl" : "https://github.com/apache/spark/pull/27095#pullrequestreview-339018463",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "bc887912-2ae8-4378-a0d2-bae655eb5220",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "We can move this logic to `CatalogAndNamespace`, but I'm fine with what it is now.",
+        "createdAt" : "2020-01-07T03:48:53Z",
+        "updatedAt" : "2020-01-07T05:54:46Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b31f07bbf1ed0ae0e19498eea70e8c316e340262",
+    "line" : 7,
+    "diffHunk" : "@@ -1,1 +734,738 @@        s.copy(namespace =\n          ResolvedNamespace(currentCatalog.asNamespaceCatalog, catalogManager.currentNamespace))\n      case UnresolvedNamespace(Seq()) =>\n        ResolvedNamespace(currentCatalog.asNamespaceCatalog, Seq.empty[String])\n      case UnresolvedNamespace(CatalogAndNamespace(catalog, ns)) =>"
   }
 ]

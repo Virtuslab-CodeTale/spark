@@ -75,5 +75,126 @@
     "commit" : "e177c2a3a99ce2ed64c0562035f0552a4c25c919",
     "line" : 38,
     "diffHunk" : "@@ -1,1 +113,117 @@        Utils.buildLocationMetadata(fileIndex.rootPaths, maxMetadataValueLength)\n    Map(\n      \"Format\" -> s\"${this.getClass.getSimpleName.replace(\"Scan\", \"\").toLowerCase(Locale.ROOT)}\",\n      \"ReadSchema\" -> readDataSchema.catalogString,\n      \"PartitionFilters\" -> seqToString(partitionFilters),"
+  },
+  {
+    "id" : "b6e0c21e-6ae0-4eda-9ca8-a2535a0d2b5b",
+    "prId" : 27157,
+    "prUrl" : "https://github.com/apache/spark/pull/27157#pullrequestreview-340896450",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1fa29e5e-e438-4f60-8785-088462675418",
+        "parentId" : null,
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "It seems too many methods to implement in `FileScan`.\r\nHow about just\r\n```\r\ndef filters: Seq[Expression]\r\ndef withFilters(filters: Seq[Expression]): FileScan\r\n```\r\nAnd we get the data/partition filters in FileScan.",
+        "createdAt" : "2020-01-09T23:28:58Z",
+        "updatedAt" : "2020-01-18T05:56:27Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9c883af5-cd18-42de-9420-b2910d20f0d5",
+        "parentId" : "1fa29e5e-e438-4f60-8785-088462675418",
+        "authorId" : "fdf14d51-7a8c-4235-b6a2-99d0c173e917",
+        "body" : "ok, agree, I will make the necessary changes",
+        "createdAt" : "2020-01-09T23:30:41Z",
+        "updatedAt" : "2020-01-18T05:56:27Z",
+        "lastEditedBy" : "fdf14d51-7a8c-4235-b6a2-99d0c173e917",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0e62085f-aeb9-464d-9018-0ae52debf1f4",
+        "parentId" : "1fa29e5e-e438-4f60-8785-088462675418",
+        "authorId" : "fdf14d51-7a8c-4235-b6a2-99d0c173e917",
+        "body" : "@gengliangwang it's seem to me more straight forward to split the filters to `dataFilters` and `partitionFilters` within the `PruneFileSourcePartitions` rule as there is a need to resolve the partition columns from the relation in order to get the `partitionFilters` and `dataFilters`.\r\n\r\nAlso from the point of view of the `FileScan` trait it seems cleaner to have as a metadata in the description distinction between the `dataFilters` and `partitionFilters`.\r\n\r\nOne option is to have \r\n```\r\ndef withFilters(partitionFilters: Seq[Expression], dataFilters: Seq[Expression]): FileScan\r\n```\r\ninstead of 2 functions one for the `dataFilters` and one for the `partitionFilters`.\r\n\r\nWhat do you think?",
+        "createdAt" : "2020-01-09T23:53:12Z",
+        "updatedAt" : "2020-01-18T05:56:27Z",
+        "lastEditedBy" : "fdf14d51-7a8c-4235-b6a2-99d0c173e917",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a6fe56e5-d59f-4eda-9f6a-907e00f3cde9",
+        "parentId" : "1fa29e5e-e438-4f60-8785-088462675418",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "> def withFilters(partitionFilters: Seq[Expression], dataFilters: Seq[Expression]): FileScan\r\n\r\nthis one seems good",
+        "createdAt" : "2020-01-10T00:08:58Z",
+        "updatedAt" : "2020-01-18T05:56:27Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "44d642e1-7fac-4b43-8b4c-98679829fa37",
+        "parentId" : "1fa29e5e-e438-4f60-8785-088462675418",
+        "authorId" : "fdf14d51-7a8c-4235-b6a2-99d0c173e917",
+        "body" : "@gengliangwang fixed per the comment",
+        "createdAt" : "2020-01-10T00:27:59Z",
+        "updatedAt" : "2020-01-18T05:56:27Z",
+        "lastEditedBy" : "fdf14d51-7a8c-4235-b6a2-99d0c173e917",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d181e38a4440c7673b1c14ead96d9d9be2720ea3",
+    "line" : 8,
+    "diffHunk" : "@@ -1,1 +64,68 @@   * Returns the data filters that can be use for file listing\n   */\n  def dataFilters: Seq[Expression]\n\n  /**"
+  },
+  {
+    "id" : "892a2cf7-cf79-4051-8743-b814589d418c",
+    "prId" : 27112,
+    "prUrl" : "https://github.com/apache/spark/pull/27112#pullrequestreview-340872312",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e3b351e9-6491-4f0e-bea1-4d629e3e537e",
+        "parentId" : null,
+        "authorId" : "fdf14d51-7a8c-4235-b6a2-99d0c173e917",
+        "body" : "@gengliangwang @cloud-fan continuing the discussion from above (the comment was on the wrong line).\r\nThe `V2ScanRelationPushDown` rule will pushdown the `dataFilters` only to datasources which support pushdown by implementing the `SupportsPushDownFilters` trait.\r\nDatasources such as `csv` and `json` do not implement the `SupportsPushDownFilters` trait. In order to support data skipping uniformly for all file based data sources, we override the `listFiles` method in a FileIndex implementation, which consults external metadata and prunes the list of files.\r\nThe suggestion is to make the necessary changes to have the `dataFilters` passed to the `listFiles` as well.\r\nOtherwise, one would have to create a new datasource implementation in order to support each file based datasource that doesn't have a built in pushdown mechanism.",
+        "createdAt" : "2020-01-09T14:09:55Z",
+        "updatedAt" : "2020-01-09T14:11:59Z",
+        "lastEditedBy" : "fdf14d51-7a8c-4235-b6a2-99d0c173e917",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "72d76287-41f8-47ff-b115-a57a53baaa1e",
+        "parentId" : "e3b351e9-6491-4f0e-bea1-4d629e3e537e",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "This makes sense to me. @gengliangwang what do you think?\r\n\r\nAt least you can disable v2 file source to bring back this feature.",
+        "createdAt" : "2020-01-09T14:31:21Z",
+        "updatedAt" : "2020-01-09T14:31:22Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2487e393-e47f-4eb1-bbfb-8346d2e75261",
+        "parentId" : "e3b351e9-6491-4f0e-bea1-4d629e3e537e",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "Yes, it makes sense if there is a `fileIndex` can use the `dataFilters`.\r\n@guykhazma  could you create a PR for this?",
+        "createdAt" : "2020-01-09T18:47:32Z",
+        "updatedAt" : "2020-01-09T18:47:33Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "daaf3b51-4bfe-4ef9-942b-6d68481946c3",
+        "parentId" : "e3b351e9-6491-4f0e-bea1-4d629e3e537e",
+        "authorId" : "fdf14d51-7a8c-4235-b6a2-99d0c173e917",
+        "body" : "@gengliangwang @cloud-fan sure, thanks.\r\nI have opened this [PR](https://github.com/apache/spark/pull/27157)",
+        "createdAt" : "2020-01-09T23:10:04Z",
+        "updatedAt" : "2020-01-09T23:10:04Z",
+        "lastEditedBy" : "fdf14d51-7a8c-4235-b6a2-99d0c173e917",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "58a4a07c50fd0ef54ca55fe1883d228eeb8464b2",
+    "line" : 84,
+    "diffHunk" : "@@ -1,1 +104,108 @@\n  protected def partitions: Seq[FilePartition] = {\n    val selectedPartitions = fileIndex.listFiles(partitionFilters, Seq.empty)\n    val maxSplitBytes = FilePartition.maxSplitBytes(sparkSession, selectedPartitions)\n    val partitionAttributes = fileIndex.partitionSchema.toAttributes"
   }
 ]

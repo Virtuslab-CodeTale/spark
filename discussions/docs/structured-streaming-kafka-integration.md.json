@@ -284,5 +284,115 @@
     "commit" : "738b704b36156e5eb606838bbb9184021602f0ec",
     "line" : 41,
     "diffHunk" : "@@ -1,1 +578,582 @@<tr><th>Property Name</th><th>Default</th><th>Meaning</th><th>Since Version</th></tr>\n<tr>\n  <td>spark.kafka.consumer.fetchedData.cache.timeout</td>\n  <td>The minimum amount of time a fetched data may sit idle in the pool before it is eligible for eviction by the evictor.</td>\n  <td>5m (5 minutes)</td>"
+  },
+  {
+    "id" : "84118534-284c-4760-9498-0c7db05d0574",
+    "prId" : 27146,
+    "prUrl" : "https://github.com/apache/spark/pull/27146#pullrequestreview-341620330",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7e42e793-cba4-421f-b2a0-3ada7c153988",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Just a question. Does `The following information` cover all configurations used in `paramsToSeq`? It seems that `setAuthenticationConfigIfNeeded` injects more config in addition to the following twos.",
+        "createdAt" : "2020-01-10T08:29:16Z",
+        "updatedAt" : "2020-01-13T02:16:09Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "15d781f9-0530-4a38-a0ca-8ed147839e64",
+        "parentId" : "7e42e793-cba4-421f-b2a0-3ada7c153988",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Technically you're right, the cache key will contain the configuration including auth config Spark will inject. I've not mentioned it as we start to explain the internal which end users may be OK with only knowing abstracted info.\r\n\r\nAnd same configuration goes to same addition, except a case where delegation token is renewed. Not 100% sure about details, @gaborgsomogyi could you help me confirming this?",
+        "createdAt" : "2020-01-10T08:39:43Z",
+        "updatedAt" : "2020-01-13T02:16:09Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1fe7d36e-ded6-4d03-9150-9c99a6a906a5",
+        "parentId" : "7e42e793-cba4-421f-b2a0-3ada7c153988",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "@dongjoon-hyun really good point! If delegation token used then time to time new producer must be created and the old must be evicted otherwise the query will fail. There are multiple ways to reach that (not yet analyzed how it's done in the latest change made by @HeartSaVioR but I'm on it):\r\n* Either the cache key contains authentication information (dynamic jaas config). This way the new producer creation and old eviction would be automatic. Without super deep consideration that's my suggested way.\r\n* Or the cache key NOT contains authentication information (dynamic jaas config). This way additional logic must be added to handle this scenario. At the first place I have the feeling it would just add complexity increase and would make this part of code brittle.\r\n\r\nAs I understand from @HeartSaVioR comment the first approach is implemented at the moment. If that so then I'm fine with that but I would mention 2 things here:\r\n* The key may contain authentication information\r\n* There could be situations where more than one producer is instantiated. This is important because producers are consuming significant amount of memory as @zsxwing pointed out.",
+        "createdAt" : "2020-01-10T10:11:25Z",
+        "updatedAt" : "2020-01-13T02:16:09Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "15dd21a2-0089-4453-9bcd-f8ab5d109e73",
+        "parentId" : "7e42e793-cba4-421f-b2a0-3ada7c153988",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "I think we take the first approach - I just followed the way we did it before.\r\n\r\nBack to the topic, would we like to add the details on the guide doc? I'll address it if we would like to let end users know about. Otherwise we could leave it as it is.",
+        "createdAt" : "2020-01-10T12:10:40Z",
+        "updatedAt" : "2020-01-13T02:16:09Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "acbfc78e-7cb0-4d83-97a3-c65309d74fe2",
+        "parentId" : "7e42e793-cba4-421f-b2a0-3ada7c153988",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "I agree the first bullet point is questionable since it's a deep detail but the second is an important memory sizing information. Let's hear what @dongjoon-hyun thinks.",
+        "createdAt" : "2020-01-10T13:50:39Z",
+        "updatedAt" : "2020-01-13T02:16:09Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f16a21ec-2a50-4361-ba4e-36a06c1f5b68",
+        "parentId" : "7e42e793-cba4-421f-b2a0-3ada7c153988",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "I think this would be more useful if you want to explain how a user can force separate producers to be used. Otherwise it's an internal detail that doesn't really affect users.",
+        "createdAt" : "2020-01-10T18:03:05Z",
+        "updatedAt" : "2020-01-13T02:16:09Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "665d095f-09d1-43ba-b27b-06b6372d16e0",
+        "parentId" : "7e42e793-cba4-421f-b2a0-3ada7c153988",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "+1 for @vanzin 's advice.",
+        "createdAt" : "2020-01-10T19:05:21Z",
+        "updatedAt" : "2020-01-13T02:16:09Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cba12eb8-ed5a-4a0d-82c7-4f2e0940410e",
+        "parentId" : "7e42e793-cba4-421f-b2a0-3ada7c153988",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Hmm... would we like to guide how to tweak it, or would like to just hide it? The reason I explain this is that end users may encounter an issue on producer pool and would like to debug a bit, but if it feels us to be too internal, sounds OK to hide it as well.",
+        "createdAt" : "2020-01-11T05:07:50Z",
+        "updatedAt" : "2020-01-13T02:16:09Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "62b2ed3e-6f80-4b62-a11f-826026c7c5a1",
+        "parentId" : "7e42e793-cba4-421f-b2a0-3ada7c153988",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Just added some explanation since it makes sense to let end users know about it to debug.",
+        "createdAt" : "2020-01-13T02:17:36Z",
+        "updatedAt" : "2020-01-13T02:17:36Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d3c3094973efff05bb7a3a7038c55903b8f8d476",
+    "line" : 26,
+    "diffHunk" : "@@ -1,1 +807,811 @@Given Kafka producer instance is designed to be thread-safe, Spark initializes a Kafka producer instance and co-use across tasks for same caching key.\n\nThe caching key is built up from the following information:\n\n* Kafka producer configuration"
   }
 ]

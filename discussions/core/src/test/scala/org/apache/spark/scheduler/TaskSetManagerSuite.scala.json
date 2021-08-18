@@ -141,5 +141,126 @@
     "commit" : "d87b311be85819ae884e2a24d94926fdd51165de",
     "line" : 53,
     "diffHunk" : "@@ -1,1 +1961,1965 @@    // executorDecommissionSpeculationTriggerTimeoutOpt\n    // (TASK 2 -> 15, TASK 3 -> 15)\n    manager.executorDecommission(\"exec2\")\n    assert(manager.tidToExecutorKillTimeMapping.keySet === Set(2, 3))\n    assert(manager.tidToExecutorKillTimeMapping(2) === 15*1000)"
+  },
+  {
+    "id" : "01834924-3b45-459b-9b18-e486c39cb19b",
+    "prId" : 27116,
+    "prUrl" : "https://github.com/apache/spark/pull/27116#pullrequestreview-339793690",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b0e28a89-b1f8-4964-952e-34a8063b29e1",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "how can we schedule the task before receiving resource offers?",
+        "createdAt" : "2020-01-07T14:45:38Z",
+        "updatedAt" : "2020-01-08T05:49:09Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "59f97c5a-b1f3-4014-aedf-a366f2cef9d0",
+        "parentId" : "b0e28a89-b1f8-4964-952e-34a8063b29e1",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Because this test is kind of somehow hacky. Instead of using mock  schedulerBackend and taskScheduler, we use the real `CoarseGrainedSchedulerBackend` and `TaskSchedulerImpl` from a `SparkContext` due to the reason that we want use `reset()` within `CoarseGrainedSchedulerBackend`. As a result, when we call `sched.submitTasks(taskSet)`, it will schedule tasks immediately.\r\n\r\nI shall put this background in the comment, too.",
+        "createdAt" : "2020-01-08T01:57:13Z",
+        "updatedAt" : "2020-01-08T05:49:09Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8fb098c6-661f-47c8-aae9-c9128fc2419b",
+        "parentId" : "b0e28a89-b1f8-4964-952e-34a8063b29e1",
+        "authorId" : "2c1bd8aa-c665-4159-a689-57743063347c",
+        "body" : "But how does changing number of tasks from 2 to 4 fix this.? as per your comment here, https://github.com/apache/spark/pull/27115#discussion_r363722012 this still remains flaky. Please refer https://github.com/apache/spark/pull/27115 for proper fix instead",
+        "createdAt" : "2020-01-08T02:29:59Z",
+        "updatedAt" : "2020-01-08T05:49:09Z",
+        "lastEditedBy" : "2c1bd8aa-c665-4159-a689-57743063347c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "da897d1d-bf4a-444f-94b1-012df13d18e9",
+        "parentId" : "b0e28a89-b1f8-4964-952e-34a8063b29e1",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Because there's only two executors will be launched here. So, 2 tasks can be scheduled automatically, while other 2 tasks needs to be scheduled manually(a.k.a `resourceOffer`).",
+        "createdAt" : "2020-01-08T02:37:43Z",
+        "updatedAt" : "2020-01-08T05:49:09Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bfb28ba0-500e-4b3a-9ae1-07637174cfb1",
+        "parentId" : "b0e28a89-b1f8-4964-952e-34a8063b29e1",
+        "authorId" : "2c1bd8aa-c665-4159-a689-57743063347c",
+        "body" : "There is no guarantee that the first two will not finish before calling `resourceOffer`, this fix just reduces the window of the failure but doesn't fix it. To resolve this scenario https://github.com/apache/spark/pull/27115 uses tasks which do not finish.",
+        "createdAt" : "2020-01-08T02:40:16Z",
+        "updatedAt" : "2020-01-08T05:49:09Z",
+        "lastEditedBy" : "2c1bd8aa-c665-4159-a689-57743063347c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fcd3af4c-0912-4ea6-aafc-e3b1f3a483c1",
+        "parentId" : "b0e28a89-b1f8-4964-952e-34a8063b29e1",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "You're right as this point and we shall workaround it by increasing revive interval of `CoarseGrainedSchedulerBackend`.\r\n\r\nAs for your fix, I think it's kinda overkill but nothing else.",
+        "createdAt" : "2020-01-08T05:51:59Z",
+        "updatedAt" : "2020-01-08T05:52:21Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a2ce62c4-23ba-4166-95a0-797fbaebcbc5",
+        "parentId" : "b0e28a89-b1f8-4964-952e-34a8063b29e1",
+        "authorId" : "2c1bd8aa-c665-4159-a689-57743063347c",
+        "body" : "I don't understand how is mine a overkill when actually what should matter is better approach for fix always. As i mentioned earlier, this PR duplicates development and review effort for https://github.com/apache/spark/pull/27115 then why still insist here.?",
+        "createdAt" : "2020-01-08T11:07:46Z",
+        "updatedAt" : "2020-01-08T11:07:46Z",
+        "lastEditedBy" : "2c1bd8aa-c665-4159-a689-57743063347c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b13e70594f3fd3a63bb903bd8b351e636ce565e2",
+    "line" : 17,
+    "diffHunk" : "@@ -1,1 +1925,1929 @@    // due to the reason that we want to use reset() of `CoarseGrainedSchedulerBackend`.\n    // So, it's possible that tasks have already been scheduled after we call\n    // `sched.submitTasks(taskSet)` but before `manager.resourceOffer`. In this case,\n    // we'd get None task after `resourceOffer`. So, here, we intentionally set up a\n    // 4 tasks TaskSet in order to feed 2 tasks to the executors and leave another two"
+  },
+  {
+    "id" : "ef4ae9ec-968b-4720-b41f-3bf0d1824324",
+    "prId" : 27115,
+    "prUrl" : "https://github.com/apache/spark/pull/27115#pullrequestreview-339816185",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b11cc640-05a9-410e-b4a1-a5e2e928ea74",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "what can go wrong if we don't call `eventually`? The task is long-running now.",
+        "createdAt" : "2020-01-08T11:40:29Z",
+        "updatedAt" : "2020-01-08T16:54:16Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "05dd4fa1-c10a-4746-84bf-256960826e3c",
+        "parentId" : "b11cc640-05a9-410e-b4a1-a5e2e928ea74",
+        "authorId" : "2c1bd8aa-c665-4159-a689-57743063347c",
+        "body" : "As `org.apache.spark.scheduler.TaskSetManager#taskInfos` will be filled in the actual scheduling cycle via `org.apache.spark.scheduler.TaskSetManager#resourceOffer` this eventual loops just waits for it to be scheduled",
+        "createdAt" : "2020-01-08T11:55:17Z",
+        "updatedAt" : "2020-01-08T16:54:16Z",
+        "lastEditedBy" : "2c1bd8aa-c665-4159-a689-57743063347c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b03d2055815814ff4ba8039a0493c637ba3e130d",
+    "line" : 25,
+    "diffHunk" : "@@ -1,1 +1930,1934 @@    val manager = sched.invokePrivate(taskSetManagers()).get(stageId).get(stageAttemptId)\n\n    val (task0, task1) = eventually(timeout(10.seconds), interval(100.milliseconds)) {\n      (manager.taskInfos(0), manager.taskInfos(1))\n    }"
   }
 ]

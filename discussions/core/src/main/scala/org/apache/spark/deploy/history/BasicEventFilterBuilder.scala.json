@@ -1,0 +1,46 @@
+[
+  {
+    "id" : "7deeb4c1-5380-4a10-8746-b91bdd00dcf9",
+    "prId" : 27085,
+    "prUrl" : "https://github.com/apache/spark/pull/27085#pullrequestreview-338820313",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b4498178-b78f-4e3e-a488-0335bca84eda",
+        "parentId" : null,
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "There's also `SparkListenerBlockManagerAdded` / `SparkListenerBlockManagerRemoved`. That has an extra complication that the driver is a block manager and generates an add event, and that one should never be filtered out.",
+        "createdAt" : "2020-01-03T18:49:28Z",
+        "updatedAt" : "2020-01-09T00:50:36Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b567ae77-3f91-4bba-a8c8-2db6e4286d0a",
+        "parentId" : "b4498178-b78f-4e3e-a488-0335bca84eda",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "The intention is not rejecting these kinds of events as any implementations of EventFilter don't know how to determine whether it should be accepted or not, but if we have some cases whether it should never be rejected, it would be better to explicitly accept these cases for safety.\r\n\r\nThanks for guiding on the case as driver being a block manager. Looking into the code of AppStatusListener, there seems to be no information to determine whether the block manager is driver or not; it seems safer to accept all.",
+        "createdAt" : "2020-01-06T02:03:24Z",
+        "updatedAt" : "2020-01-09T00:50:37Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6f16da41-8a9c-4ada-b94f-60cd996c501f",
+        "parentId" : "b4498178-b78f-4e3e-a488-0335bca84eda",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "We shouldn't be accepting block manager events for executors that are dead. That basically means that even after you compact the log files, you'll get all the executors in the UI. It defeats the filtering of the executor added / removed events.\r\n\r\nThe driver is different because it does not generate an executor added event, just a block manager added event. So when filtering block manager events you need to check whether the block manager ID refers either to the driver or a live executor.",
+        "createdAt" : "2020-01-06T18:44:08Z",
+        "updatedAt" : "2020-01-09T00:50:37Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "163bda018d054a0d41e983e6c448ce3b3e746d35",
+    "line" : 163,
+    "diffHunk" : "@@ -1,1 +161,165 @@    case e: SparkListenerExecutorBlacklisted => liveExecutors.contains(e.executorId)\n    case e: SparkListenerExecutorUnblacklisted => liveExecutors.contains(e.executorId)\n    case e: SparkListenerStageExecutorMetrics => liveExecutors.contains(e.execId)\n    case e: SparkListenerBlockManagerAdded => acceptBlockManagerEvent(e.blockManagerId)\n    case e: SparkListenerBlockManagerRemoved => acceptBlockManagerEvent(e.blockManagerId)"
+  }
+]

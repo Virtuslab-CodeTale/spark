@@ -570,5 +570,170 @@
     "commit" : "0e749403b4bb127341849827cc95313752b6c715",
     "line" : 27,
     "diffHunk" : "@@ -1,1 +2177,2181 @@        >>> df1.withColumn(\"col1\", df1.id * 2).sameSemantics(df2.withColumn(\"col0\", df2.id * 2))\n        True\n        \"\"\"\n        if not isinstance(other, DataFrame):\n            raise ValueError(\"other parameter should be of DataFrame; however, got %s\""
+  },
+  {
+    "id" : "43f1a73e-0fd7-4112-8a05-fe3f3ddcb80d",
+    "prId" : 27109,
+    "prUrl" : "https://github.com/apache/spark/pull/27109#pullrequestreview-339367137",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1c4202d9-a371-4536-beab-b7548c98922f",
+        "parentId" : null,
+        "authorId" : "981b170c-729a-429c-b115-0350ea50b32b",
+        "body" : "Could you explain why use mixins here? Since these are never used outside this context nor (as far as I can tell) mimic the Scala counterpart, the approach seems a bit counterintuitive.\r\n\r\nWouldn't make more sense to use proper instances, same way as `DataFrameNaFunctions` or `DataFrameStatFunctions`?\r\n\r\nThis question also applies to `GroupedData` and its mxin.",
+        "createdAt" : "2020-01-06T14:22:38Z",
+        "updatedAt" : "2020-01-07T13:30:30Z",
+        "lastEditedBy" : "981b170c-729a-429c-b115-0350ea50b32b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a206058d-2731-47c8-80f2-9119ee18470a",
+        "parentId" : "1c4202d9-a371-4536-beab-b7548c98922f",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Ah you mean API usages like:\r\n\r\n```python\r\ndf.pandas.mapInPandas(...)\r\n```\r\n\r\nvia defining an instance like `DataFrameNaFunctions` or `DataFrameStatFunctions`? I actually considered this approach first. If I could write it from the first place, I think I could consider this option without concerning about backward compatibility.\r\n\r\nIf you mean defining `DataFrameNaFunctions` or `DataFrameStatFunctions` and calling directly at API calls of `DataFrame` or `SparkSession`, the API names have to be exposed at at `DataFrame` or `SparkSession` level .. which is ugly.\r\n\r\nAlso, Scala guys are pretty used to mixins. If we think self type trait, I think it fits to the purpose.\r\n\r\nLastly (trivial but still), I wanted to make the codes a bit more pandas friendly by mimicking in case we can have some more pandas dev guys.",
+        "createdAt" : "2020-01-06T14:53:44Z",
+        "updatedAt" : "2020-01-07T13:30:30Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ac349ebc-1629-4eae-a55a-6c7a522eaf70",
+        "parentId" : "1c4202d9-a371-4536-beab-b7548c98922f",
+        "authorId" : "981b170c-729a-429c-b115-0350ea50b32b",
+        "body" : "In general I am trying to get a better feeling of overall purpose of such refactoring.\r\n\r\nAs for now there is no indication that any of these mixins will be ever used outside the current context (`DataFrame` and `GroupedData`). That impression is further enforced by explicit type checks ([here](https://github.com/apache/spark/blob/cfd78393e76f454503e7cf5416f6d56f1efffd0a/python/pyspark/sql/pandas/group_ops.py#L96) and [here](https://github.com/apache/spark/blob/cfd78393e76f454503e7cf5416f6d56f1efffd0a/python/pyspark/sql/pandas/map_ops.py#L64)). So that doesn't really seem like a canonical use of mixin, especially when base core `DataFrame` is not designed for extensiblity. \r\n\r\n> Ah you mean API usages like:\r\n>     \r\n>    df.pandas.mapInPandas(...)\r\n\r\nThat's one possible approach though not the one I was thinking about. I assumed (though I am not sure, as the amount of code moved, excluding docs, message and some static stuff is negligible, and  tightly coupled with `DataFrame` anyway) that the point is maintainability.\r\n\r\nSo possible approach is either direct \r\n\r\n        def __init__(self, ...):\r\n            ...\r\n            self._pandasMapOpsMixin = PandasMapOpsMixin(self)\r\n            ...\r\n\r\n        def mapInPandas(self, udf):\r\n            return self._pandasMapOpsMixin.mapInPandas(udf)\r\n\r\nor indirect (by overwriting `__geattr__`).\r\n\r\n\r\n",
+        "createdAt" : "2020-01-06T20:40:15Z",
+        "updatedAt" : "2020-01-07T13:30:30Z",
+        "lastEditedBy" : "981b170c-729a-429c-b115-0350ea50b32b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7993a72c-b15d-48d0-a2a3-79f24ce9b028",
+        "parentId" : "1c4202d9-a371-4536-beab-b7548c98922f",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Yeah, \r\n\r\n```python\r\n    def __init__(self, ...):\r\n        ...\r\n        self._pandasMapOpsMixin = PandasMapOpsMixin(self)\r\n        ...\r\n\r\n    def mapInPandas(self, udf):\r\n        return self._pandasMapOpsMixin.mapInPandas(udf)\r\n```\r\n\r\nThis one, the `DataFrame` or `SparkSession` have to expose the method themselves in their own classes. So, if you want to add some new pandas APIs, then it should be added into `PandasMapOpsMixin` and then also `DataFrame`. Using `__getattr__` looks to me overkill and a bit odd.\r\n\r\nThe point I wanted to say is, the current `DataFrame` with mixin approaches is closer to the Scala side's `Dataset` since it does not expose such APIs.\r\n\r\nAlso, I believe what I am doing is what self type trait is supposed to be doing. It's coupled to specific type and other types cannot implement this trait.",
+        "createdAt" : "2020-01-07T01:18:09Z",
+        "updatedAt" : "2020-01-07T13:30:30Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "aae9661b-5755-4060-b1db-56bd962dbbce",
+        "parentId" : "1c4202d9-a371-4536-beab-b7548c98922f",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "I meant:\r\n\r\n\r\n```python\r\nclass PandasMapOps(object):\r\n    def mapInPandas(self, ...):\r\n        ...\r\n        return ...\r\n\r\n    # other Pandas <> PySpark APIs\r\n```\r\n\r\n\r\n```python\r\nclass DataFrame(object):\r\n    def __init__(self, ...):\r\n        ...\r\n        self.pandas_map_ops = PandasMapOps(self)\r\n\r\n    # other DataFrame APIs equivalent to Scala side.\r\n\r\n    def mapInPandas(self, ...):\r\n        return pandas_map_ops.mapInPandas(...)\r\n```\r\n\r\nvs\r\n\r\n\r\n```python\r\nclass PandasMapOpsMixin(object):\r\n    def mapInPandas(self, ...):\r\n        ...\r\n        return ...\r\n\r\n    # other Pandas <> PySpark APIs\r\n```\r\n\r\n```python\r\nclass DataFrame(PandasMapOpsMixin):\r\n\r\n    # other DataFrame APIs equivalent to Scala side.\r\n\r\n```\r\n\r\nI thought the latter is better.\r\n",
+        "createdAt" : "2020-01-07T01:50:34Z",
+        "updatedAt" : "2020-01-07T13:30:30Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "df527aee-c97f-4ced-bd69-6a36acf5dfe1",
+        "parentId" : "1c4202d9-a371-4536-beab-b7548c98922f",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I think both are fine. It's internal so we can change it later. To save the effort, let's keep what it is in this PR, i.e. the second option.",
+        "createdAt" : "2020-01-07T05:17:35Z",
+        "updatedAt" : "2020-01-07T13:30:30Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "01808eec-5406-4f41-a530-b7fd8abcdea9",
+        "parentId" : "1c4202d9-a371-4536-beab-b7548c98922f",
+        "authorId" : "981b170c-729a-429c-b115-0350ea50b32b",
+        "body" : "@cloud-fan \r\n\r\n> I think both are fine. It's internal so we can change it later.\r\n\r\nIt is hardly internal, considering that as mixed classes are \"public\" (as much as it is meaningful to say about access control in Python) and, in contrast to other changes proposed here, all shifted non-static methods are part of external API. The impact so far is small though, if that's what you mean.\r\n\r\n@HyukjinKwon \r\n\r\n> Also, I believe what I am doing is what self type trait is supposed to be doing. It's coupled to specific type and other types cannot implement this trait.\r\n\r\nSuch patterns, or its closes Python equivalents (see for example Django mixins for class-based views) typically indicate two things:\r\n\r\n- Potential for inheritance, which is clearly not the case, given both Spark API and design of the `DataFrame` class.\r\n- Non-obligatory character, which once again is not the case.\r\n\r\nSo I guess the question I am trying to ask is - \"what future planned changes justify such move\" - as for now it seems mostly obsolete, and less effort path, given implied time pressure, would be to keep things as-is.",
+        "createdAt" : "2020-01-07T13:39:33Z",
+        "updatedAt" : "2020-01-07T13:39:33Z",
+        "lastEditedBy" : "981b170c-729a-429c-b115-0350ea50b32b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1df57abb-ddfe-445d-ab28-f3336ac4ad3d",
+        "parentId" : "1c4202d9-a371-4536-beab-b7548c98922f",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "> It is hardly internal, considering that as mixed classes are \"public\" (as much as it is meaningful to say about access control in Python) and, in contrast to other changes proposed here, all shifted non-static methods are part of external API. The impact so far is small though, if that's what you mean.\r\n\r\nEither way the same APIs are exposed in the same class. It will be also easily able to switch to each other with minimised change - I actually roughly already tested.\r\n\r\n",
+        "createdAt" : "2020-01-07T13:53:54Z",
+        "updatedAt" : "2020-01-07T13:57:20Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ef2edf2f-3040-4ded-b986-9fb75ad39345",
+        "parentId" : "1c4202d9-a371-4536-beab-b7548c98922f",
+        "authorId" : "981b170c-729a-429c-b115-0350ea50b32b",
+        "body" : "> Either way the same APIs are exposed in the same class. It's also easily switch to each other with minimised change.\r\n\r\nWhile it is true, it is not equivalent from perspective of type checkers. And since a lot of related discussions circles around typing, it might be something to consider. \r\n\r\nNonetheless, I can take a hint.",
+        "createdAt" : "2020-01-07T14:02:24Z",
+        "updatedAt" : "2020-01-07T14:02:24Z",
+        "lastEditedBy" : "981b170c-729a-429c-b115-0350ea50b32b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "22098ae9-3650-478d-94fa-c64d326676d9",
+        "parentId" : "1c4202d9-a371-4536-beab-b7548c98922f",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "What I am trying to do is basically separate pandas-related APIs, and Scala-equivalent APIs.\r\n\r\nSo, if you want to make some changes in pandas-related APIs,  you make changes in `PandasMapOpsMixin`.\r\nIf you need to make some changes in Scala-equivalent APIs, you make changes at `DataFrame`.\r\nBoth are completely separate in the current way. Given the suggestion, it will mix up.",
+        "createdAt" : "2020-01-07T14:14:49Z",
+        "updatedAt" : "2020-01-07T14:20:08Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "65cec6e2-910c-440e-b4a6-539edddc6a58",
+        "parentId" : "1c4202d9-a371-4536-beab-b7548c98922f",
+        "authorId" : "0c812942-02cb-4975-9748-394d1387affa",
+        "body" : "+1 on @HyukjinKwon 's suggestion.",
+        "createdAt" : "2020-01-07T16:52:37Z",
+        "updatedAt" : "2020-01-07T16:52:37Z",
+        "lastEditedBy" : "0c812942-02cb-4975-9748-394d1387affa",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c63c271d95e7864b69ca477c51e4e2d22b7d9029",
+    "line" : 25,
+    "diffHunk" : "@@ -1,1 +48,52 @@\n\nclass DataFrame(PandasMapOpsMixin, PandasConversionMixin):\n    \"\"\"A distributed collection of data grouped into named columns.\n"
+  },
+  {
+    "id" : "44d30cf8-0e77-4797-aaf1-4feb2d92c389",
+    "prId" : 27109,
+    "prUrl" : "https://github.com/apache/spark/pull/27109#pullrequestreview-339612546",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e8d6c026-f538-4173-8a68-92205463a00c",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "nit: Is it possible to move these `Pandas compatibility` too?",
+        "createdAt" : "2020-01-08T01:58:14Z",
+        "updatedAt" : "2020-01-08T01:58:14Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "17150c9e-dcdf-43cb-bda6-ace8425d0eea",
+        "parentId" : "e8d6c026-f538-4173-8a68-92205463a00c",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Actually .. I would like to deprecate and remove those away. I don't think we will add such compatibilities anymore in Spark itself because there are so many differences.\r\n\r\nLet me take an action separately for the three APIs after this PR.",
+        "createdAt" : "2020-01-08T02:03:33Z",
+        "updatedAt" : "2020-01-08T02:03:33Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c63c271d95e7864b69ca477c51e4e2d22b7d9029",
+    "line" : 221,
+    "diffHunk" : "@@ -1,1 +2137,2141 @@\n    ##########################################################################################\n    # Pandas compatibility\n    ##########################################################################################\n"
   }
 ]
