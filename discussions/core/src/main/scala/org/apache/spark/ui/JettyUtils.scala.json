@@ -42,5 +42,60 @@
     "commit" : "b34c0a5f1d18581ab71d38ac023a79fcc7378583",
     "line" : 20,
     "diffHunk" : "@@ -1,1 +408,412 @@    }\n    // SPARK-33611: use method `URI.create` to avoid percent-encoding twice on the query string.\n    URI.create(uri.toString() + queryString).normalize()\n  }\n"
+  },
+  {
+    "id" : "1c256c4b-16e4-40a7-b5f8-2428b65ec279",
+    "prId" : 29271,
+    "prUrl" : "https://github.com/apache/spark/pull/29271#pullrequestreview-459355688",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9b1c4381-96ed-442c-bffe-5d562dcc4c71",
+        "parentId" : null,
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "Can we try to use the same approach in `createProxyURI`? Looks like we can try to create a method to share in  `createRedirectURI` and `createProxyURI`.\r\n```\r\n    val rewrittenURI = URI.create(uri.toString())\r\n    if (query != null) {\r\n      return new URI(\r\n          rewrittenURI.getScheme(),\r\n          rewrittenURI.getAuthority(),\r\n          rewrittenURI.getPath(),\r\n          query,\r\n          rewrittenURI.getFragment()\r\n        ).normalize()\r\n    }\r\n```",
+        "createdAt" : "2020-07-30T18:29:26Z",
+        "updatedAt" : "2020-07-31T08:38:11Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9da7ea0c-734a-4596-8e8a-03de1b5e017c",
+        "parentId" : "9b1c4381-96ed-442c-bffe-5d562dcc4c71",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "I tried but it doesn't do the decoding with URI.toString\r\n```\r\nscala> new URI(\"https://g.com/ctx%281%29?a%5B0%5D=b\").normalize().toString\r\nres28: String = https://g.com/ctx%281%29?a%5B0%5D=b\r\n```",
+        "createdAt" : "2020-07-31T08:35:20Z",
+        "updatedAt" : "2020-07-31T08:38:11Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "eefd9316-48e1-480e-bd56-9f4bc4eebf4a",
+        "parentId" : "9b1c4381-96ed-442c-bffe-5d562dcc4c71",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "We can build a URI and call get `getPath` and `getQuery`, and then build a new URI string from the decode result. ```\r\nscala> new URI(\"https://g.com/ctx%281%29?a%5B0%5D=b\").getPath\r\nres31: String = /ctx(1)\r\n\r\nscala> new URI(\"https://g.com/ctx%281%29?a%5B0%5D=b\").getQuery\r\nres33: String = a[0]=b\r\n```\r\nBut it seems equivalent of the current code.",
+        "createdAt" : "2020-07-31T08:37:32Z",
+        "updatedAt" : "2020-07-31T08:38:11Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a9eff167-506d-4d0e-af49-17d3aa7e9fb1",
+        "parentId" : "9b1c4381-96ed-442c-bffe-5d562dcc4c71",
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "> I tried but it doesn't do the decoding with URI.toString\r\n\r\nURI.toString doesn't do the decoding. It will encode characters if necessary. For example,\r\n\r\n```\r\nscala> val uri = new java.net.URI(null, null, \"foo bar\", \"foo bar\", null).toString\r\nuri: String = foo%20bar?foo%20bar\r\n```\r\n\r\nAnyway, this doesn't matter. I tried to consolidate these two method but it didn't look better.",
+        "createdAt" : "2020-07-31T17:52:48Z",
+        "updatedAt" : "2020-07-31T17:52:53Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ef6cb87d6b786fba8a56f92b7caf3d191eb6ab09",
+    "line" : 43,
+    "diffHunk" : "@@ -1,1 +457,461 @@    }\n    val authority = s\"$redirectServer:$port\"\n    val queryEncoding = if (request.getQueryEncoding != null) {\n      request.getQueryEncoding\n    } else {"
   }
 ]

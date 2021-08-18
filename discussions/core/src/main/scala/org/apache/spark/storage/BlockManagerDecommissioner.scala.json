@@ -350,5 +350,324 @@
     "commit" : "b50eea895a084c04784399faaf74f2b822405e84",
     "line" : 47,
     "diffHunk" : "@@ -1,1 +105,109 @@                } catch {\n                  case e: IOException =>\n                    // If a block got deleted before netty opened the file handle, then trying to\n                    // load the blocks now will fail. This is most likely to occur if we start\n                    // migrating blocks and then the shuffle TTL cleaner kicks in. However this"
+  },
+  {
+    "id" : "f20c3a86-d934-48cf-9f94-77cff642beaa",
+    "prId" : 29211,
+    "prUrl" : "https://github.com/apache/spark/pull/29211#pullrequestreview-454565060",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6ca0ae05-f05a-48ad-8c32-e732330a7a1b",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Thanks for changing this to 'stopping'. \"will not refresh migrations\" was not clear. :-)",
+        "createdAt" : "2020-07-24T00:05:08Z",
+        "updatedAt" : "2020-08-05T18:39:14Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e81c3fc2d0b8c28cd0aedf08a7ea1e86a153ae49",
+    "line" : 83,
+    "diffHunk" : "@@ -1,1 +170,174 @@        } catch {\n          case e: InterruptedException =>\n            logInfo(\"Interrupted during RDD migration, stopping\")\n            stoppedRDD = true\n          case NonFatal(e) =>"
+  },
+  {
+    "id" : "526aea4d-3bb6-4a64-8718-80ce01d7f75e",
+    "prId" : 29211,
+    "prUrl" : "https://github.com/apache/spark/pull/29211#pullrequestreview-455125334",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "cf4d0818-c2c9-4a4b-8e3c-749ee7f89aea",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Help me understand the difference b/w `stopped` and `stoppedRDD || stoppedShuffle` ? \r\n\r\nCan we replace `stopped` here with `stoppedShuffle` ? Why is `stoppedShuffle` not being checked in this loop ?\r\n",
+        "createdAt" : "2020-07-24T17:53:33Z",
+        "updatedAt" : "2020-08-05T18:39:14Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8ca6af48-0ff8-4078-9948-5fa62281265f",
+        "parentId" : "cf4d0818-c2c9-4a4b-8e3c-749ee7f89aea",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "This is the loop for migrating RDDs, it doesn't matter if the shuffles have encountered an error or were not enabled.",
+        "createdAt" : "2020-07-24T18:43:17Z",
+        "updatedAt" : "2020-08-05T18:39:14Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "61bc2635-e016-4e27-904d-417e3da57350",
+        "parentId" : "cf4d0818-c2c9-4a4b-8e3c-749ee7f89aea",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "stopped == we've stopped all migrations (e.g. Spark is shutting down)\r\nstoppedRDD == we've stopped RDD migrations\r\nstoppedShuffle == we've stopped Shuffle migrations",
+        "createdAt" : "2020-07-24T18:44:14Z",
+        "updatedAt" : "2020-08-05T18:39:14Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "739f0af7-a106-4411-8e34-8671a34e1988",
+        "parentId" : "cf4d0818-c2c9-4a4b-8e3c-749ee7f89aea",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "No, we cannot replace stopped with stoppedShuffle.",
+        "createdAt" : "2020-07-24T18:45:43Z",
+        "updatedAt" : "2020-08-05T18:39:14Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "00a7b1e6-a999-4124-aac3-fcab0df8d8fb",
+        "parentId" : "cf4d0818-c2c9-4a4b-8e3c-749ee7f89aea",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Oh okay, stupid me: This is in the run loop of RDD migration :-P. Obviously you cannot use stoppedShuffle here.",
+        "createdAt" : "2020-07-24T19:12:22Z",
+        "updatedAt" : "2020-08-05T18:39:14Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e81c3fc2d0b8c28cd0aedf08a7ea1e86a153ae49",
+    "line" : 61,
+    "diffHunk" : "@@ -1,1 +151,155 @@    override def run(): Unit = {\n      assert(conf.get(config.STORAGE_DECOMMISSION_RDD_BLOCKS_ENABLED))\n      while (!stopped && !stoppedRDD && !Thread.interrupted()) {\n        logInfo(\"Iterating on migrating from the block manager.\")\n        // Validate we have peers to migrate to."
+  },
+  {
+    "id" : "911801ce-7c29-4747-8a88-11321bdbe91e",
+    "prId" : 29211,
+    "prUrl" : "https://github.com/apache/spark/pull/29211#pullrequestreview-459580765",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b048709a-091d-4834-8c09-27e9b2ef99c3",
+        "parentId" : null,
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "This must be `Math.max`.\r\n\r\nAs I understand in `CoarseGrainedExecutorBackend` the `lastTaskRunningTime` increases with about 1000ms in every iteration, let's assume exactly 1000ms. So if the RDD migration finished at 500ms (let's count in the example from 0 here) but shuffle files to be migrated are still left and they will be finished only in the next round (let's assume in 1500ms) then we we never shutdown the executor: as in the current round `blocksMigrated` is false and in all the following ones `migrationTime` will be less than `lastTaskRunningTime`, so this condition will be never satisfied:\r\n\r\nhttps://github.com/apache/spark/blob/484f8e216d5727e516488aedbdb41b1f63569701/core/src/main/scala/org/apache/spark/executor/CoarseGrainedExecutorBackend.scala#L305\r\n\r\n",
+        "createdAt" : "2020-07-24T20:04:37Z",
+        "updatedAt" : "2020-08-05T18:39:14Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "10eea8e0-e152-47f2-885f-c3348a58198a",
+        "parentId" : "b048709a-091d-4834-8c09-27e9b2ef99c3",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "I was thinking a bit more on this part. \r\n\r\nThe intention of `lastRDDMigrationTime`, `lastShuffleMigrationTime` and `lastTaskRunningTime` is to notify the driver **only once** about the exit of this executor. \r\n\r\nMy first thought was to improve this by expressing this intention directly with a simple flag in the `shutdownThread`(like `exitTriggered` which can be used as a stopping condition instead of the `while (true)` ) and remove all the three time variables and change `lastMigrationInfo` to return just a boolean and rename it for its new role (for example to `isFinished` or just simply to `finished`). \r\n\r\nThen I went a bit further and checked the `exitExecutor` method and I think even the flag is not necessarily needed:\r\nhttps://github.com/apache/spark/blob/484f8e216d5727e516488aedbdb41b1f63569701/core/src/main/scala/org/apache/spark/executor/CoarseGrainedExecutorBackend.scala#L267\r\n\r\nStill I like to have a stopping condition in the while loop so please consider to use the flag instead of the times. \r\n      ",
+        "createdAt" : "2020-07-25T12:43:56Z",
+        "updatedAt" : "2020-08-05T18:39:14Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fb7132a1-1710-4690-8d33-2a0bc9e27c1e",
+        "parentId" : "b048709a-091d-4834-8c09-27e9b2ef99c3",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "@holdenk @agrawaldevesh what do you think?",
+        "createdAt" : "2020-07-25T13:16:12Z",
+        "updatedAt" : "2020-08-05T18:39:14Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bc9f5a44-8f9c-44c5-8b76-b4a350066b89",
+        "parentId" : "b048709a-091d-4834-8c09-27e9b2ef99c3",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "I agree with you @attilapiros. On both the counts:\r\n- Converting this into a level trigger vs an edge trigger: ie the flag goes on and remains on when it is time to exit.\r\n- Having consistency b/w the termination condition of the thread above and the computation of the boolean variable in this method. Having a helper method would help with this and also improve longer term maintainability.\r\n\r\nIMHO, this is great feedback and will improve this PR. Thank you.",
+        "createdAt" : "2020-07-25T17:17:10Z",
+        "updatedAt" : "2020-08-05T18:39:14Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c6dfdba9-481e-4e7f-95b3-0f02b938b7e8",
+        "parentId" : "b048709a-091d-4834-8c09-27e9b2ef99c3",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "So it only increases if there is a task running. We don’t want it to shutdown or consider the blocks migrated if there is a task migrated.\r\nUnfortunately this flag can come and go depending on the tasks running on the executor which is why it’s structured the way it is.",
+        "createdAt" : "2020-07-25T17:21:02Z",
+        "updatedAt" : "2020-08-05T18:39:14Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f4273913-0c7e-43cc-9c58-2a09c1748c7f",
+        "parentId" : "b048709a-091d-4834-8c09-27e9b2ef99c3",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "Now I am starting to get this part. Can we try to simplify this? :)\r\n\r\nOn a decommissioned executor there will be no new tasks started, right? (Theoretically one task could be started as the scheduler does not processed the `DecommissionExecutor` message but let's take this corner case out as we can have this handled with some sleep).\r\n\r\nSo when `executor.numRunningTasks` will be 0 it stays 0. As I remember caching is part of task running so no new cached blocks will be created when numRunningTasks=0.\r\n\r\nSo would it work if we first wait to reach numRunningTasks==0 in a sleep check loop and then we would check for the migration finished flag without using the time part of `lastMigrationInfo`?\r\n\r\n",
+        "createdAt" : "2020-07-31T13:58:01Z",
+        "updatedAt" : "2020-08-05T18:39:14Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a81c02d4-48ca-4b58-a21c-4d6d6f534839",
+        "parentId" : "b048709a-091d-4834-8c09-27e9b2ef99c3",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "So we don’t reject tasks sent to us and an executor can start decommissioning without the driver knowing yet so it is possible (although unlikely) to get a new task after we’ve started decommissioning.",
+        "createdAt" : "2020-07-31T17:59:19Z",
+        "updatedAt" : "2020-08-05T18:39:14Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e4b70835-e417-44a5-a36b-11096d9be5f3",
+        "parentId" : "b048709a-091d-4834-8c09-27e9b2ef99c3",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "Yes, I know this. That is what I meant by\r\n\r\n>  (Theoretically one task could be started as the scheduler does not processed the DecommissionExecutor message but let's take this corner case out as we can have this handled with some sleep).\r\n\r\nSo I think with some waiting (which I would avoid if I could) the probability of this unlikely case can be decreased more.\r\n\r\nBut let's assume even that very unlikely case happens then we are losing one cached RDD from the current stage which will be re-submitted. The advantage on the other hand a more simple code which can be fixed/improved by more developers.\r\n\r\n**Other idea**: leave this logic as it is but refactor the `shutdownThread` into a separate class to make it unittestable (all its dependencies would be mockable, even the time its uses would be a Clock and a ManualClock in the test).\r\n\r\nWhat do you think?",
+        "createdAt" : "2020-07-31T18:23:52Z",
+        "updatedAt" : "2020-08-05T18:39:14Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0ef3f25b-52ee-4cca-84d8-1b002392c416",
+        "parentId" : "b048709a-091d-4834-8c09-27e9b2ef99c3",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Oh sorry I missed that part. So currently the block manager doesn't know if there are any running tasks, and I'm not sure it's better to expose that into the block manager.\r\n\r\nI'd rather not unit test the shutdownThread, realistically I think it's better suited to the integration style testing that we do. I don't mind moving it into a separate class/file though.\r\n\r\nIt seems like your advocating for either a solution with more edge cases or less information hiding which is why I'm hesitating to pursue either of these paths. The time stamp is certainly a bit complicated, but I'm not convinced it's complicated enough to throw it out and throw away good data for the user. What about if we documented how the timestamps are used a bit more would that be enough?",
+        "createdAt" : "2020-07-31T18:39:51Z",
+        "updatedAt" : "2020-08-05T18:39:14Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "774c9c93-3a30-4232-aa40-12deb18dea8c",
+        "parentId" : "b048709a-091d-4834-8c09-27e9b2ef99c3",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "Just a little misunderstanding remained:\r\n> So currently the block manager doesn't know if there are any running tasks, and I'm not sure it's better to expose that into the block manager.\r\n\r\nI do not think that is needed: I would implement the simplified solution within the shutdown thread.\r\n\r\nI advise some improved robustness by a more testable or easier provable code (of which easier to argue about) to make it more suppartable/extendable. \r\n\r\nI am sorry but regarding this code part your reviewer(s) (at least me myself) failed at first :( that is an indication we should do something. Yes we can try to improve the documentation first. \r\n\r\n@agrawaldevesh: what is your opinion/idea?\r\n\r\n",
+        "createdAt" : "2020-07-31T19:08:55Z",
+        "updatedAt" : "2020-08-05T18:39:14Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e5fb3fab-5d10-4bd6-9a14-d911b6470bd8",
+        "parentId" : "b048709a-091d-4834-8c09-27e9b2ef99c3",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Ok I'm not sure how we'd implement this in the shutdown thread, maybe that's why I'm concerned about the proposal. In your mind, information from the block manager decommissioner would we expose to allow this logic to move to the shutdown thread?",
+        "createdAt" : "2020-07-31T19:14:36Z",
+        "updatedAt" : "2020-08-05T18:39:14Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8a879de6-ecca-433f-adbd-07041739f53e",
+        "parentId" : "b048709a-091d-4834-8c09-27e9b2ef99c3",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Also by \"failed at first\" what are you referring to? That the decommission call would block on the RPC thread or some other bug?",
+        "createdAt" : "2020-07-31T19:17:16Z",
+        "updatedAt" : "2020-08-05T18:39:14Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c2053516-c22d-4759-8bff-2aefc00d9c1c",
+        "parentId" : "b048709a-091d-4834-8c09-27e9b2ef99c3",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "On Monday I can open a PR about what I had in my mind (that is my last day before a two-three weeks long computerless period). \r\n\r\nRegarding failed at first: I am referring to my mistake. To the fact I misunderstand your intentions regarding the code. So I was completely wrong here:\r\nhttps://github.com/apache/spark/pull/29211#discussion_r460263043\r\n\r\n",
+        "createdAt" : "2020-07-31T19:26:21Z",
+        "updatedAt" : "2020-08-05T18:39:14Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "16267b72-35b2-41a9-9d28-357c884b2180",
+        "parentId" : "b048709a-091d-4834-8c09-27e9b2ef99c3",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "PR against your branch",
+        "createdAt" : "2020-07-31T19:32:24Z",
+        "updatedAt" : "2020-08-05T18:39:14Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f477bfff-7f71-4113-b6e6-a3f4950961fc",
+        "parentId" : "b048709a-091d-4834-8c09-27e9b2ef99c3",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "> @agrawaldevesh: what is your opinion/idea?\r\n\r\nI confess that even I am finding the logic in the lastMigrationInfo a bit hard to follow. And as far as I can see, this logic is the key to getting the shutdown thread to exit cleanly. If the information returned by lastMigrationInfo is wrong then the shutdown thread may exit prematurely or never. Both of which should be avoided, particularly because the shutdown thread has no timeout on the amount of time it can hang around. \r\n\r\nThis complexity is intrinsic. The logic is indeed complex but I think what we can add some more documentation here, perhaps explaining the intent of the code using a couple of examples ? Even better would be to please add a unit test for this. I think it should be easy to unit test just the lastMigrationInfo. This is just testing that the function is behaving as expected by stubbing out other parts. This test would also help with providing the necessary guardrails as we change this function in the future. I expect this function to change as we production harden the cache/shuffle block migration in the near term.",
+        "createdAt" : "2020-07-31T21:44:54Z",
+        "updatedAt" : "2020-08-05T18:39:14Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9a3850e4-3ebe-4ea2-adde-850b71bc93d5",
+        "parentId" : "b048709a-091d-4834-8c09-27e9b2ef99c3",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Yeah I’m down to unit test this function, makes sense to me and it’s fairly standalone.\r\n\r\nI’ll work on the documentation over the weekend.",
+        "createdAt" : "2020-07-31T21:54:18Z",
+        "updatedAt" : "2020-08-05T18:39:14Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4e756369-167f-4bec-b1d0-ee3a16509fbb",
+        "parentId" : "b048709a-091d-4834-8c09-27e9b2ef99c3",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "https://github.com/holdenk/spark/pull/7 :)",
+        "createdAt" : "2020-08-01T12:17:19Z",
+        "updatedAt" : "2020-08-05T18:39:14Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ba71c8e5-c85e-4f36-90e0-5cf66ef69862",
+        "parentId" : "b048709a-091d-4834-8c09-27e9b2ef99c3",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "So the approach in that PR re-opens the race condition were preventing here. I would really rather not do that.\r\n\r\nI’d also like us to make progress here though, so we can temporarily accept the race condition and file a JIRA and revisit it later as a stand-alone item if y’all are not comfortable with any of the ways to avoid the race.",
+        "createdAt" : "2020-08-01T14:14:01Z",
+        "updatedAt" : "2020-08-05T18:39:14Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e81c3fc2d0b8c28cd0aedf08a7ea1e86a153ae49",
+    "line" : 196,
+    "diffHunk" : "@@ -1,1 +383,387 @@      // Chose the min of the active times. See the function description for more information.\n      val lastMigrationTime = if (!stoppedRDD && !stoppedShuffle) {\n        Math.min(lastRDDMigrationTime, lastShuffleMigrationTime)\n      } else if (!stoppedShuffle) {\n        lastShuffleMigrationTime"
+  },
+  {
+    "id" : "624d4e4c-f56f-442e-b4f1-203ee212654f",
+    "prId" : 29211,
+    "prUrl" : "https://github.com/apache/spark/pull/29211#pullrequestreview-460494405",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "833f8366-2b76-4f8c-87f6-6f78f191b4cd",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Thanks for the doc !",
+        "createdAt" : "2020-08-04T06:18:02Z",
+        "updatedAt" : "2020-08-05T18:39:14Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e81c3fc2d0b8c28cd0aedf08a7ea1e86a153ae49",
+    "line" : 181,
+    "diffHunk" : "@@ -1,1 +368,372 @@  }\n\n  /*\n   *  Returns the last migration time and a boolean for if all blocks have been migrated.\n   *  The last migration time is calculated to be the minimum of the last migration of any"
   }
 ]

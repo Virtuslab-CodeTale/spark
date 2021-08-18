@@ -42,5 +42,225 @@
     "commit" : "6ae55d4030e42030658618327eb3924f60f752e4",
     "line" : 14,
     "diffHunk" : "@@ -1,1 +1144,1148 @@  }\n\n  testQuietly(\"limit on empty batch should not cause state store error\") {\n    // The source only produces two batches, the first batch is empty and the second batch has data.\n    val source = new Source {"
+  },
+  {
+    "id" : "a4c99f57-07b2-41bc-83dd-733f46fd4882",
+    "prId" : 29256,
+    "prUrl" : "https://github.com/apache/spark/pull/29256#pullrequestreview-481543238",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6bcbeb15-a57b-4a04-9603-e52b58fd3720",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "The behavior is a bit confusing to me actually. What result would we expect if there's another batch `(3, 3, 4, 5)`? \r\n(I'm not asking which values Spark are providing. I'm asking which values are \"reasonable\" and \"clear\".)",
+        "createdAt" : "2020-07-31T08:57:53Z",
+        "updatedAt" : "2020-08-07T10:49:40Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d81eeecb-9015-46bd-b697-2aae21a9910f",
+        "parentId" : "6bcbeb15-a57b-4a04-9603-e52b58fd3720",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "if there's another batch `(3, 3, 4, 5)`, the result becomes `1,2,3,4,5`, which looks reasonable in complete mode. ",
+        "createdAt" : "2020-07-31T09:25:32Z",
+        "updatedAt" : "2020-08-07T10:49:40Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "25c80be3-b3ce-4752-880d-be04354d331d",
+        "parentId" : "6bcbeb15-a57b-4a04-9603-e52b58fd3720",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "```\r\nWhat result would we expect if there's another batch (3, 3, 4, 5)?\r\n```\r\nIt should be `1,2,3,4,5`.\r\nI only add one batch here just want to show the distinct in complete can pass the analyzer. Because without this change, we'll get an exception of `Complete output mode not supported when there are no streaming aggregations on streaming DataFrames/Datasets;`.\r\nLet me add this in the test, maybe it's more clear to explain the behavior of `distinct` for multiple batches. The distinct operation should both take effect within a single batch and cross multi-batches.\r\n\r\nIs this make sense to you?\r\n```\r\ntestStream(distinct, Complete)(\r\n    AddData(inputData, 1, 2, 3, 3, 4),\r\n    CheckAnswer(Row(1), Row(2), Row(3), Row(4)),\r\n    AddData(inputData, 3, 3, 4, 5),\r\n    CheckAnswer(Row(1), Row(2), Row(3), Row(4), Row(5))\r\n)\r\n```",
+        "createdAt" : "2020-07-31T09:31:19Z",
+        "updatedAt" : "2020-08-07T10:49:40Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8101e426-d701-49f5-aa55-75c75551a9bb",
+        "parentId" : "6bcbeb15-a57b-4a04-9603-e52b58fd3720",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "If we define the behavior of `distinct` like this, then `dropDuplicates` is no longer alias of `distinct`. `dropDuplicates` ensures the row is produced \"only once\" regardless of the output mode. (Like the stream-stream join does.)\r\n\r\nWhich one is incorrect? Is dropDuplicates a special operator which isn't bound to aggregation (hence result table doesn't apply here) while distinct is known to be alias to dropDuplicates but is bound to aggregation?",
+        "createdAt" : "2020-08-01T08:34:42Z",
+        "updatedAt" : "2020-08-07T10:49:40Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "74519c8a-6b38-4df3-bfe4-3bb532509b4f",
+        "parentId" : "6bcbeb15-a57b-4a04-9603-e52b58fd3720",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "This is the reason I don't like complete mode - for me it has been very confusing, and force me to think which operators support this mode. Not all stateful operators support the mode.\r\n\r\nIf we miss to restrict the operators which don't work with complete mode, we'll end up with losing all outputs in previous batches, especially we now clearly require sink to truncate the old output for complete mode.",
+        "createdAt" : "2020-08-01T08:45:00Z",
+        "updatedAt" : "2020-08-07T10:49:40Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bb196390-2361-4f29-a87b-67a602e1caa9",
+        "parentId" : "6bcbeb15-a57b-4a04-9603-e52b58fd3720",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "Note, `dropDuplicates is an alias of distinct`, this refers to the DataSet API dropDuplicates is an alias of distinct. What we are fixing here is the SQL distinct. The Dataset APIs do not keep the same with SQL ones, I think that's known issues(e.g SQL union vs Dataset.union). It's a good discussion of the compatibility between Dataset and SQL API, but I think it should be another topic and we can fix it in other PR if necessary.",
+        "createdAt" : "2020-08-07T10:49:37Z",
+        "updatedAt" : "2020-08-07T10:49:40Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5a23b6c5-86c4-4377-9f32-6c3b39ea46b8",
+        "parentId" : "6bcbeb15-a57b-4a04-9603-e52b58fd3720",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Yea I agree. It's better to make DataFrame and SQL APIs consistent, but it's already an issue and we should not block this PR.",
+        "createdAt" : "2020-08-07T16:17:30Z",
+        "updatedAt" : "2020-08-07T16:17:30Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "260e67d0-f032-4c39-ae02-456f6056901d",
+        "parentId" : "6bcbeb15-a57b-4a04-9603-e52b58fd3720",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "I'd be more puzzled we differentiate the behavior of streaming query via DF vs SQL. (I never use SQL for SS query though.) Do we think end users can make correct assumption on differentiating twos? Otherwise do we have any guide or note on the doc?\r\n\r\nAfter the fix, end users have to infer union & distinct triggers grouping aggregation and hence result table, even without explicit group by. I agree this patch fixes the thing which didn't work, but brings confusion on reasoning about \"implicit behavior\" which depends on the implementation details for Spark. Probably we should make it clear \"grouped aggregation\" includes implicit aggregation in the guide doc.\r\n\r\nAnd I'm wondering whether we track a list of \"known issues\" and any plan to fix them. The problems on update/complete mode are already pointed out during couple of Spark 3.0.0 related issues, and I don't see any plan on addressing it. I even proposed to replace complete mode with viable alternatives but brought the debates and no productive discussion happened. I don't think being conservative means we live with known problems. ",
+        "createdAt" : "2020-08-13T02:47:56Z",
+        "updatedAt" : "2020-08-13T02:47:57Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "95a1dedc-548a-406b-a966-5081a66ecab1",
+        "parentId" : "6bcbeb15-a57b-4a04-9603-e52b58fd3720",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I think the most valuable part of this patch is to improve the error message from `java.util.NoSuchElementException: None.get` to requesting watermark. Supporting complete mode doesn't really matter. If you think it's confusing, feel free to open a PR to ban it.\r\n\r\nI agree that there are still problems around the output mode, but this PR itself is nothing wrong. `Distinct` is planned as `Aggregate` and we must treat it as `Aggregate` in the streaming checker.",
+        "createdAt" : "2020-08-13T03:14:24Z",
+        "updatedAt" : "2020-08-13T03:14:24Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "94229b9c-bcc3-42e0-a5b7-a44f386ee411",
+        "parentId" : "6bcbeb15-a57b-4a04-9603-e52b58fd3720",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "http://spark.apache.org/docs/latest/structured-streaming-programming-guide.html#unsupported-operations\r\n\r\nIt has been clear on the structured streaming guide doc - `distinct` is unsupported. I'm not sure this patch also enables the case from DataFrame API. If it fixes the DF case, worth to update the doc. If not, this will be another case of \"known inconsistency\".\r\n\r\nSo I think we have been trying to restrict the operations which don't make sense or error prone in streaming Datasets (unbounded input) - that has been working with DataFrame API (I think that's the reason we have \"specific\" methods like union which doesn't work like SQL-like union and dropDuplicates which ignores output mode), and is broken with allowing SQL statements in streaming Datasets.\r\n\r\n@tdas @zsxwing @jose-torres @brkyvz Would like to hear your thought about this as well, as probably I'm missing something here about the purpose/concept.",
+        "createdAt" : "2020-08-18T06:12:45Z",
+        "updatedAt" : "2020-08-18T06:14:34Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9066af65-0eeb-401e-bfa7-f2a8ea38fbc1",
+        "parentId" : "6bcbeb15-a57b-4a04-9603-e52b58fd3720",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Are you suggesting to ban `Distinct` in SS completely? I think it's fine too, as long as we don't give confusing error messages.",
+        "createdAt" : "2020-08-18T06:20:40Z",
+        "updatedAt" : "2020-08-18T06:20:40Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2658ad2d-c15e-4462-910a-f6a1e1ac44dc",
+        "parentId" : "6bcbeb15-a57b-4a04-9603-e52b58fd3720",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "What I am suggesting is that waiting and hearing the operations we have been restricted on SS with the reasons, and if the reasons make sense then ban them even with SQL statements. Not only distinct.",
+        "createdAt" : "2020-08-18T06:34:27Z",
+        "updatedAt" : "2020-08-18T06:34:27Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "193512f9-7276-472b-b2c8-2714a89697c0",
+        "parentId" : "6bcbeb15-a57b-4a04-9603-e52b58fd3720",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "As an alternative I added some note on SS guide doc. #29461\r\n\r\nI'm not sure it is enough to let us free to not complained by improper usages, so I just marked the PR as draft. I think it's better to collect the voices on this.\r\n",
+        "createdAt" : "2020-08-18T07:07:59Z",
+        "updatedAt" : "2020-08-18T07:07:59Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "25952398-a9bb-4fc2-8dcb-40b2c8f506de",
+        "parentId" : "6bcbeb15-a57b-4a04-9603-e52b58fd3720",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "Agree to have notes on doc and comments. \r\nThis fix is only for SQL DISTINCT clause. `It has been clear on the structured streaming guide doc - distinct is unsupported.` This is also referred to the Dataset API `distinct`, not the SQL DISTINCT clause.",
+        "createdAt" : "2020-08-18T07:23:59Z",
+        "updatedAt" : "2020-08-18T07:23:59Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6d5e5008-a9f6-413f-b4e5-770e98e67291",
+        "parentId" : "6bcbeb15-a57b-4a04-9603-e52b58fd3720",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "Also, the different behavior between SQL UNION and Dataset.union I mentioned [here](https://github.com/apache/spark/pull/29256#discussion_r466966080) is not only for Streaming. The Dataset.union is equivalent to `UNION ALL` in SQL, and SQL UNION hasn't corresponded API in Dataset yet.",
+        "createdAt" : "2020-08-18T07:28:55Z",
+        "updatedAt" : "2020-08-18T07:28:55Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "aa874211-6566-4f49-acae-1987925efb4c",
+        "parentId" : "6bcbeb15-a57b-4a04-9603-e52b58fd3720",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "I think the right way is unifying the behavior of SQL distinct and Dataset.dropDuplicates(). That is to say, the logic node of `Distinct` should be replaced to `Deduplicate` in streaming. It should easily work if we did it at the beginning. But now we need more work to finish the behavior unification. Because the fix will also change the current state store format, so the fix depends on state store versioning.",
+        "createdAt" : "2020-08-18T07:38:37Z",
+        "updatedAt" : "2020-08-18T07:38:37Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b52ce920-cefa-4172-a9ee-310a3fd4d3b6",
+        "parentId" : "6bcbeb15-a57b-4a04-9603-e52b58fd3720",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "> It has been clear on the structured streaming guide doc - distinct is unsupported. This is also referred to the Dataset API distinct, not the SQL DISTINCT clause.\r\n\r\nAre you sure that can be interpreted as same for end users? Is there any mention of Dataset API vs SQL clause in the statement?\r\n\r\n> Also, the different behavior between SQL UNION and Dataset.union I mentioned here is not only for Streaming. The Dataset.union is equivalent to UNION ALL in SQL, and SQL UNION hasn't corresponded API in Dataset yet.\r\n\r\nThat's clearly described in the doc. The thing is that SQL UNION cannot be done in streaming, as according to the doc, SQL UNION is Dataset.union + distinct but distinct is not supported. So this is another one being enabled as side effects. You can't do that with Dataset API.",
+        "createdAt" : "2020-08-18T07:41:56Z",
+        "updatedAt" : "2020-08-18T07:41:56Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0ef633cb-806e-4938-81f9-b3789b1a2549",
+        "parentId" : "6bcbeb15-a57b-4a04-9603-e52b58fd3720",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "```\r\nAre you sure that can be interpreted as same for end users? Is there any mention of Dataset API vs SQL clause in the statement?\r\n```\r\nLet me clarify more. I'm not sure so I agree we should have more documents. What I'm suggesting is this document actually is not Streaming specific, it's the inconsistency between SQL and Dataset API.\r\nFor the structured streaming guide doc, I think the `distinct` it only refers to Dataset.distinct, not the SQL DISTINCT clause.\r\n\r\n```\r\nThat's clearly described in the doc. The thing is that SQL UNION cannot be done in streaming, as according to the doc, SQL UNION is Dataset.union + distinct but distinct is not supported.\r\n```\r\nYep, so I think we are on the same page. That's not clear enough right? The best way is to directly tell the end user SQL union not support in Streaming, because it's relay on distinct. The root cause still the inconsistency between SQL and Dataset.\r\n\r\n```\r\n So this is another one being enabled as side effects. You can't do that with Dataset API.\r\n```\r\nThat's why my suggestion is making the distinct and drop duplicates have the same behavior.",
+        "createdAt" : "2020-08-18T07:57:59Z",
+        "updatedAt" : "2020-08-18T07:57:59Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4be580ba-e3ed-4c52-a52f-fdcd44a6fba0",
+        "parentId" : "6bcbeb15-a57b-4a04-9603-e52b58fd3720",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Sorry I was really busy with handling stuffs in my plate.\r\n\r\nI'm less concerned about the difference between SQL distinct vs Dataset API distinct for append/update mode. There's still difference between twos about when the output is available, but the output is available only once for both side.\r\n(It would be better to guide about the effects for the SQL statement applied on streaming dataset. I'll turn #29461 to be 'ready to review'.)\r\n\r\nWhat I'm concerned about is the complete mode, but I'd admit my concern for the complete mode is not limited to this PR. I'll try to make it be correct in other place, instead of this PR.",
+        "createdAt" : "2020-09-03T06:57:41Z",
+        "updatedAt" : "2020-09-03T06:57:41Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "658f30a89ce55d9ced13a55148f24e6506b4a862",
+    "line" : 44,
+    "diffHunk" : "@@ -1,1 +1137,1141 @@      testStream(distinct, Complete)(\n        AddData(inputData, 1, 2, 3, 3, 4),\n        CheckAnswer(Row(1), Row(2), Row(3), Row(4))\n      )\n    }"
   }
 ]

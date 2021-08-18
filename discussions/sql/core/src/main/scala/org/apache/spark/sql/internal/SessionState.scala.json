@@ -1,0 +1,68 @@
+[
+  {
+    "id" : "53a3903c-a0d2-4101-93c4-c9cab965268a",
+    "prId" : 29224,
+    "prUrl" : "https://github.com/apache/spark/pull/29224#pullrequestreview-468296445",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "73df4e1e-7d43-44ab-a763-5986466c3c25",
+        "parentId" : null,
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "SessionState is a critical concept/class in Spark SQL. Adding `queryStagePrepRules` into SessionState looks weird to me. WDYT?\r\n\r\ncc @hvanhovell ",
+        "createdAt" : "2020-08-17T03:00:42Z",
+        "updatedAt" : "2020-08-17T03:00:42Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9b64fc4b-d558-4933-b733-c7f7f6904831",
+        "parentId" : "73df4e1e-7d43-44ab-a763-5986466c3c25",
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "Preferably both `columnarRules` and `queryStagePrepRules` should be passed directly to the thing that is using them. This is not entirely easy because of how we deal with post-planning rules in `QueryExecution`. It would be great if someone could move those into the builder.",
+        "createdAt" : "2020-08-17T08:15:50Z",
+        "updatedAt" : "2020-08-17T08:16:03Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "084dc359-7764-44b0-8bca-3d7af3866d91",
+        "parentId" : "73df4e1e-7d43-44ab-a763-5986466c3c25",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "It's very hard. The extension rules are injected in the `BaseSessionStateBuilder`, and we need to carry it in `SessionState` to propagate it further. The custom `columnarRules` and `queryStagePrepRules` are no different from custom analyzer/optimizer/planner rules.",
+        "createdAt" : "2020-08-17T08:55:34Z",
+        "updatedAt" : "2020-08-17T08:55:34Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "559a98f8-e969-45db-9004-c3a29ed4bf17",
+        "parentId" : "73df4e1e-7d43-44ab-a763-5986466c3c25",
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "It is just refactoring right (famous last words)? You pull out the rules from query execution, put them in the session state builder, and manipulate them there.",
+        "createdAt" : "2020-08-17T08:59:20Z",
+        "updatedAt" : "2020-08-17T08:59:20Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ed29bd22-a1f6-4989-a2da-3db2fac76cd9",
+        "parentId" : "73df4e1e-7d43-44ab-a763-5986466c3c25",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Maybe I missed something. The session state builder is used to build `SessionState`. `SparkSession` or `QueryExecition` doesn't hold session state builder instance anymore.\r\n\r\nAre you suggesting we create something like `Analyzer`, `Optimizer`, etc. to wrap the post-planning rules in `BaseSessionStateBuilder`, so that we just pass that wrapper around?",
+        "createdAt" : "2020-08-17T09:12:49Z",
+        "updatedAt" : "2020-08-17T09:13:10Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "182d4f93e20a359ea42620eaf054b3d74c1ab746",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +76,80 @@    createClone: (SparkSession, SessionState) => SessionState,\n    val columnarRules: Seq[ColumnarRule],\n    val queryStagePrepRules: Seq[Rule[SparkPlan]]) {\n\n  // The following fields are lazy to avoid creating the Hive client when creating SessionState."
+  }
+]

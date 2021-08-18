@@ -900,5 +900,137 @@
     "commit" : "e29626fc0e96f151c30d090ed34e5ac46e61aa11",
     "line" : 29,
     "diffHunk" : "@@ -1,1 +232,236 @@        result = createQueryStages(currentPhysicalPlan)\n      }\n\n      // Run the final plan when there's no more unfinished stages.\n      currentPhysicalPlan = applyPhysicalRules("
+  },
+  {
+    "id" : "18a9bd65-d026-4c40-b502-6f2002a91bfa",
+    "prId" : 29262,
+    "prUrl" : "https://github.com/apache/spark/pull/29262#pullrequestreview-456026577",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5556c411-f244-4431-a9b7-6efae3f34955",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "it's important to hide the exchange nodes from the stage optimizer rules, as that's the assumption of these rules.\r\n\r\nThen we don't need https://github.com/apache/spark/pull/29134/files#diff-a30c7a6fcdcdd13e57135fd04d05f3b7R115",
+        "createdAt" : "2020-07-27T18:21:07Z",
+        "updatedAt" : "2020-07-29T14:36:07Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "50175d75fe8bb0121d2f77f49a909212651c1035",
+    "line" : 26,
+    "diffHunk" : "@@ -1,1 +381,385 @@\n  private def newQueryStage(e: Exchange): QueryStageExec = {\n    val optimizedPlan = applyPhysicalRules(e.child, queryStageOptimizerRules)\n    val queryStage = e match {\n      case s: ShuffleExchangeLike =>"
+  },
+  {
+    "id" : "b71c1874-dc19-46bf-b484-82cd682e3ff2",
+    "prId" : 29262,
+    "prUrl" : "https://github.com/apache/spark/pull/29262#pullrequestreview-456804136",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5fa3fbab-4304-4685-b359-dc7cbbac1e5f",
+        "parentId" : null,
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "this should be able to stay ShuffleExchangeExec or be consistent and change braodcast below to be BroadcastExchangeLike",
+        "createdAt" : "2020-07-28T16:25:24Z",
+        "updatedAt" : "2020-07-29T14:36:07Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "50175d75fe8bb0121d2f77f49a909212651c1035",
+    "line" : 32,
+    "diffHunk" : "@@ -1,1 +383,387 @@    val optimizedPlan = applyPhysicalRules(e.child, queryStageOptimizerRules)\n    val queryStage = e match {\n      case s: ShuffleExchangeLike =>\n        val newShuffle = applyPhysicalRules(\n          s.withNewChildren(Seq(optimizedPlan)), postStageCreationRules)"
+  },
+  {
+    "id" : "1dbc8a14-dd45-4565-bfda-d529730a2a6f",
+    "prId" : 29262,
+    "prUrl" : "https://github.com/apache/spark/pull/29262#pullrequestreview-457585413",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2ed91aca-55db-4469-bf2e-e015b6b516b3",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Do we need to make sure `newShuffle` is still `ShuffleExchangeLike`? Seems custom rules possibly break it?",
+        "createdAt" : "2020-07-29T00:41:35Z",
+        "updatedAt" : "2020-07-29T14:36:07Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6286b4aa-57d6-4818-890d-1a89a2cc7cd4",
+        "parentId" : "2ed91aca-55db-4469-bf2e-e015b6b516b3",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "added a check",
+        "createdAt" : "2020-07-29T14:34:43Z",
+        "updatedAt" : "2020-07-29T14:36:07Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "50175d75fe8bb0121d2f77f49a909212651c1035",
+    "line" : 39,
+    "diffHunk" : "@@ -1,1 +390,394 @@            \"Custom columnar rules cannot transform shuffle node to something else.\")\n        }\n        ShuffleQueryStageExec(currentStageId, newShuffle)\n      case b: BroadcastExchangeLike =>\n        val newBroadcast = applyPhysicalRules("
+  },
+  {
+    "id" : "45a9977d-8860-433d-a100-25f075997be0",
+    "prId" : 29224,
+    "prUrl" : "https://github.com/apache/spark/pull/29224#pullrequestreview-468138593",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6a3e3fbd-6d2c-40d5-891f-adbbcceb9e88",
+        "parentId" : null,
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "It sounds like this function should be moved out of the physical node `AdaptiveSparkPlanExec`? cc @maryannxue @cloud-fan ",
+        "createdAt" : "2020-08-17T02:58:15Z",
+        "updatedAt" : "2020-08-17T02:58:36Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "182d4f93e20a359ea42620eaf054b3d74c1ab746",
+    "line" : 2,
+    "diffHunk" : "@@ -1,1 +89,93 @@  // plan should reach a final status of query stages (i.e., no more addition or removal of\n  // Exchange nodes) after running these rules.\n  private def queryStagePreparationRules: Seq[Rule[SparkPlan]] = Seq(\n    ensureRequirements\n  ) ++ context.session.sessionState.queryStagePrepRules"
+  },
+  {
+    "id" : "b02d23e0-5586-49f1-8497-28dba0bb8567",
+    "prId" : 29224,
+    "prUrl" : "https://github.com/apache/spark/pull/29224#pullrequestreview-468282783",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c562e26d-eec1-4ae8-ab0e-702e0377d99b",
+        "parentId" : null,
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "Should we do this after ensure requirements? The `queryStagePrepRules` might break requirements.",
+        "createdAt" : "2020-08-17T08:03:41Z",
+        "updatedAt" : "2020-08-17T08:03:41Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2552ae74-1138-457c-b044-edccbf9892cb",
+        "parentId" : "c562e26d-eec1-4ae8-ab0e-702e0377d99b",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "The custom rules may need to see exchange nodes as well. We can do validation at the end to make sure exchange requirements are still required.",
+        "createdAt" : "2020-08-17T08:52:51Z",
+        "updatedAt" : "2020-08-17T08:52:51Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "182d4f93e20a359ea42620eaf054b3d74c1ab746",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +91,95 @@  private def queryStagePreparationRules: Seq[Rule[SparkPlan]] = Seq(\n    ensureRequirements\n  ) ++ context.session.sessionState.queryStagePrepRules\n\n  // A list of physical optimizer rules to be applied to a new stage before its execution. These"
   }
 ]

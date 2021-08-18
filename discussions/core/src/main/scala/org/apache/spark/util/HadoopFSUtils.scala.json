@@ -515,5 +515,115 @@
     "commit" : "2d8e64d72a014ed5067be5772f8b2db9129ce2f2",
     "line" : 201,
     "diffHunk" : "@@ -1,1 +199,203 @@      isRootPath: Boolean,\n      filterFun: Option[String => Boolean],\n      parallelismThreshold: Int,\n      parallelismMax: Int): Seq[FileStatus] = {\n"
+  },
+  {
+    "id" : "26c3c05b-afae-45bd-80cf-34df3f88d219",
+    "prId" : 29179,
+    "prUrl" : "https://github.com/apache/spark/pull/29179#pullrequestreview-454529662",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "966e70eb-ce91-49d8-89b3-69f8f40fb928",
+        "parentId" : null,
+        "authorId" : "224991ce-ad69-410b-8143-bf394b6b5c59",
+        "body" : "this is already optimised for in S3A with WiP on overlapping page fetch with returning current results, ABFS could do the same. Looking at the main filesystems, it's only local FS and the azure stores which don't override it",
+        "createdAt" : "2020-07-22T17:53:18Z",
+        "updatedAt" : "2020-08-18T17:51:49Z",
+        "lastEditedBy" : "224991ce-ad69-410b-8143-bf394b6b5c59",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c9a9081b-ebc4-4708-98fe-39afc7a65ad5",
+        "parentId" : "966e70eb-ce91-49d8-89b3-69f8f40fb928",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Makes sense. So maybe exposing this as a util function + trait + sample allowing people to selictively override parts would be better then yeah?",
+        "createdAt" : "2020-07-23T22:09:59Z",
+        "updatedAt" : "2020-08-18T17:51:49Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b416c0017f7f1c3c662433cc7d63922e9b2b2427",
+    "line" : 141,
+    "diffHunk" : "@@ -1,1 +139,143 @@        // FileNotFoundException which is better handled by doing the lookups manually below.\n        case (_: DistributedFileSystem | _: ViewFileSystem) if !ignoreLocality =>\n          val remoteIter = fs.listLocatedStatus(path)\n          new Iterator[LocatedFileStatus]() {\n            def next(): LocatedFileStatus = remoteIter.next"
+  },
+  {
+    "id" : "61dff598-ab02-47e7-8597-c1a599fbcbb6",
+    "prId" : 29179,
+    "prUrl" : "https://github.com/apache/spark/pull/29179#pullrequestreview-453548861",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "90cccec8-f24e-4380-a3c4-b20120a139ac",
+        "parentId" : null,
+        "authorId" : "224991ce-ad69-410b-8143-bf394b6b5c59",
+        "body" : "yeah. getFileStatus is the expensive one; list calls more efficient as you can get lower latency as well as >1 response back",
+        "createdAt" : "2020-07-22T17:54:47Z",
+        "updatedAt" : "2020-08-18T17:51:49Z",
+        "lastEditedBy" : "224991ce-ad69-410b-8143-bf394b6b5c59",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b416c0017f7f1c3c662433cc7d63922e9b2b2427",
+    "line" : 248,
+    "diffHunk" : "@@ -1,1 +246,250 @@      // NOTE:\n      //\n      // - Although S3/S3A/S3N file system can be quite slow for remote file metadata\n      //   operations, calling `getFileBlockLocations` does no harm here since these file system\n      //   implementations don't actually issue RPC for this method."
+  },
+  {
+    "id" : "770fbc87-81b9-43d8-be8e-4956fcc52a87",
+    "prId" : 29179,
+    "prUrl" : "https://github.com/apache/spark/pull/29179#pullrequestreview-454529133",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "66718ea2-c55a-4971-bafe-a13658347505",
+        "parentId" : null,
+        "authorId" : "224991ce-ad69-410b-8143-bf394b6b5c59",
+        "body" : "referencing this in the code means it may not work on installations without hadoop-hdfs on the classpath, which may include HD/I as well as spark standalone",
+        "createdAt" : "2020-07-22T18:04:44Z",
+        "updatedAt" : "2020-08-18T17:51:49Z",
+        "lastEditedBy" : "224991ce-ad69-410b-8143-bf394b6b5c59",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6bc6a3f3-ca02-43de-901c-6d96ae983abe",
+        "parentId" : "66718ea2-c55a-4971-bafe-a13658347505",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "So I think we've already got this in the SQL side. All the Spark standalone deployments I know of ship with a hadoop in the class path, and the no-hadoop distro is really just for situations where the user has their own hadoop on the class path.",
+        "createdAt" : "2020-07-23T22:08:54Z",
+        "updatedAt" : "2020-08-18T17:51:49Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b416c0017f7f1c3c662433cc7d63922e9b2b2427",
+    "line" : 29,
+    "diffHunk" : "@@ -1,1 +27,31 @@import org.apache.hadoop.fs._\nimport org.apache.hadoop.fs.viewfs.ViewFileSystem\nimport org.apache.hadoop.hdfs.DistributedFileSystem\nimport org.apache.hadoop.mapred.JobConf\nimport org.apache.hadoop.mapreduce.JobContext"
+  },
+  {
+    "id" : "07a45753-4913-480c-8635-aa1dac18b262",
+    "prId" : 29179,
+    "prUrl" : "https://github.com/apache/spark/pull/29179#pullrequestreview-453548861",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ee95f60c-b5fa-45c6-ba83-47ecb6aace2e",
+        "parentId" : null,
+        "authorId" : "224991ce-ad69-410b-8143-bf394b6b5c59",
+        "body" : "be interesting to include the stats on how long the listing took (overall, #of files) so you could easily get some aggregate values to look @ when tuning performance here/in the FS",
+        "createdAt" : "2020-07-22T18:06:14Z",
+        "updatedAt" : "2020-08-18T17:51:49Z",
+        "lastEditedBy" : "224991ce-ad69-410b-8143-bf394b6b5c59",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b416c0017f7f1c3c662433cc7d63922e9b2b2427",
+    "line" : 96,
+    "diffHunk" : "@@ -1,1 +94,98 @@              parallelismThreshold = Int.MaxValue,\n              maxParallelism = 0)\n            (path, leafFiles)\n          }.iterator\n        }.collect() // TODO(holden): should we use local itr here?"
   }
 ]

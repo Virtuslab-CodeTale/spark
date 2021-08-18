@@ -1,0 +1,68 @@
+[
+  {
+    "id" : "e797e06e-6311-48a8-b3a2-e5a8f1ec43ef",
+    "prId" : 29229,
+    "prUrl" : "https://github.com/apache/spark/pull/29229#pullrequestreview-455265124",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "757cab66-987b-4274-8460-a49e34fee975",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "There was a bit of modification when this file was ported from Python 3 because `heapq` has to be able to compile with Python 2 as well. The diffs made are:\r\n\r\n```diff\r\n< def merge(iterables, key=None, reverse=False):\r\n---\r\n> def merge(*iterables, key=None, reverse=False):\r\n216c218,219\r\n<                 h_append([next(it), order * direction, it])\r\n---\r\n>                 next = it.__next__\r\n>                 h_append([next(), order * direction, next])\r\n223c226\r\n<                     value, order, it = s = h[0]\r\n---\r\n>                     value, order, next = s = h[0]\r\n225c228\r\n<                     s[0] = next(it)           # raises StopIteration when exhausted\r\n---\r\n>                     s[0] = next()           # raises StopIteration when exhausted\r\n231c234\r\n<             value, order, it = h[0]\r\n---\r\n>             value, order, next = h[0]\r\n233,234c236\r\n<             for value in it:\r\n<                 yield value\r\n---\r\n>             yield from next.__self__\r\n239,240c241,243\r\n<             value = next(it)\r\n<             h_append([key(value), order * direction, value, it])\r\n---\r\n>             next = it.__next__\r\n>             value = next()\r\n>             h_append([key(value), order * direction, value, next])\r\n247c250\r\n<                 key_value, order, value, it = s = h[0]\r\n---\r\n>                 key_value, order, value, next = s = h[0]\r\n249c252\r\n<                 value = next(it)\r\n---\r\n>                 value = next()\r\n256c259\r\n<         key_value, order, value, it = h[0]\r\n---\r\n>         key_value, order, value, next = h[0]\r\n258,259c261\r\n<         for value in it:\r\n<             yield value\r\n---\r\n>         yield from next.__self__\r\n```\r\n\r\nThese differences don't look affecting any behaviours.\r\n\r\nI think it was ported from Python 3.5: https://github.com/python/cpython/blob/3.5/Lib/heapq.py",
+        "createdAt" : "2020-07-25T06:17:02Z",
+        "updatedAt" : "2020-07-27T08:52:59Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "007c2a7ecc09f4c72c78668b56902fc08b5324ef",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +499,503 @@            chunks.append(iter(current_chunk))\n\n        return heapq.merge(*chunks, key=key, reverse=reverse)\n\n"
+  },
+  {
+    "id" : "da6df73c-8311-45b8-a653-e988aee24e44",
+    "prId" : 29229,
+    "prUrl" : "https://github.com/apache/spark/pull/29229#pullrequestreview-455266024",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "bb692185-3421-4dcd-825c-3b1743ebb3d2",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "nit: put it with other python built-in imports above?",
+        "createdAt" : "2020-07-25T06:35:33Z",
+        "updatedAt" : "2020-07-27T08:52:59Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "007c2a7ecc09f4c72c78668b56902fc08b5324ef",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +26,30 @@import sys\n\nimport heapq\nfrom pyspark.serializers import BatchedSerializer, PickleSerializer, FlattenedValuesSerializer, \\\n    CompressedSerializer, AutoBatchedSerializer"
+  },
+  {
+    "id" : "13a6e63e-85a8-4a2f-854f-77dbc482029b",
+    "prId" : 29229,
+    "prUrl" : "https://github.com/apache/spark/pull/29229#pullrequestreview-455474086",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5a181e1b-049c-40bd-834f-7aa0c11d17c8",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "I missed one place here which caused the test failure. I double checked this is the last one I missed.",
+        "createdAt" : "2020-07-27T05:08:21Z",
+        "updatedAt" : "2020-07-27T08:52:59Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "007c2a7ecc09f4c72c78668b56902fc08b5324ef",
+    "line" : 23,
+    "diffHunk" : "@@ -1,1 +797,801 @@        if self._sorted:\n            # all the partitions are already sorted\n            sorted_items = heapq.merge(*disk_items, key=operator.itemgetter(0))\n\n        else:"
+  }
+]

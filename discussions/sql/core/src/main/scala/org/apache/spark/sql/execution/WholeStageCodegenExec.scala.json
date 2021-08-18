@@ -1,0 +1,200 @@
+[
+  {
+    "id" : "158f94e2-feb4-4de5-8888-1ff9edb326bd",
+    "prId" : 29277,
+    "prUrl" : "https://github.com/apache/spark/pull/29277#pullrequestreview-457193373",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4c7c6d78-174e-400c-ac31-89309d0933db",
+        "parentId" : null,
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "codegen children of `ShuffledHashJoinExec` separately same as `SortMergeJoinExec`.",
+        "createdAt" : "2020-07-29T05:05:41Z",
+        "updatedAt" : "2020-07-30T17:47:17Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ac64864363891c4c942d374f227c01bd60254fce",
+    "line" : 21,
+    "diffHunk" : "@@ -1,1 +905,909 @@        j.withNewChildren(j.children.map(\n          child => InputAdapter(insertWholeStageCodegen(child))))\n      case j: ShuffledHashJoinExec =>\n        // The children of ShuffledHashJoin should do codegen separately.\n        j.withNewChildren(j.children.map("
+  },
+  {
+    "id" : "fba80e07-4644-4c29-8b1c-9bf7e05d4738",
+    "prId" : 29277,
+    "prUrl" : "https://github.com/apache/spark/pull/29277#pullrequestreview-458018149",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "356748b8-a144-4332-8ffa-bb0ba2c494ab",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "This and `SortMergeJoin`. I actually re-think about it and then figure out, because codegen related code rarely changes recently. It would be nice to add more comments here to explain it.",
+        "createdAt" : "2020-07-30T01:44:24Z",
+        "updatedAt" : "2020-07-30T17:47:17Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "491d5aba-ab4c-4196-aab2-1fc235143fdc",
+        "parentId" : "356748b8-a144-4332-8ffa-bb0ba2c494ab",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@viirya - sure, wondering what kind of wording you are expecting here? does it look better with:\r\n\r\n```\r\n// The children of ShuffledHashJoin should do codegen separately,\r\n// because codegen for ShuffledHashJoin depends on more than one row\r\n// from the build side input.\r\n```\r\n\r\n```\r\n// The children of SortMergeJoin should do codegen separately,\r\n// because codegen for SortMergeJoin depends on more than one row\r\n// from the buffer side input.\r\n```",
+        "createdAt" : "2020-07-30T01:50:57Z",
+        "updatedAt" : "2020-07-30T17:47:17Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ac64864363891c4c942d374f227c01bd60254fce",
+    "line" : 22,
+    "diffHunk" : "@@ -1,1 +906,910 @@          child => InputAdapter(insertWholeStageCodegen(child))))\n      case j: ShuffledHashJoinExec =>\n        // The children of ShuffledHashJoin should do codegen separately.\n        j.withNewChildren(j.children.map(\n          child => InputAdapter(insertWholeStageCodegen(child))))"
+  },
+  {
+    "id" : "134e7eb9-9cbf-4bfd-a6d6-e5c8417e962e",
+    "prId" : 29277,
+    "prUrl" : "https://github.com/apache/spark/pull/29277#pullrequestreview-458947293",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f5e558ee-61b6-495e-bf91-e77473dd80b3",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "We can remove this now. ShuffledHashJoin now does codegen like BroadcastHashJoin.",
+        "createdAt" : "2020-07-30T16:08:22Z",
+        "updatedAt" : "2020-07-30T17:47:17Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "745035aa-7b0d-4811-85e7-aa2dddb57c27",
+        "parentId" : "f5e558ee-61b6-495e-bf91-e77473dd80b3",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@viirya - I don't think we can remove this. We have to do shuffled hash join codegen separately, as we have [a hardcoded dependency for build side input `input[1]` when building relation](https://github.com/apache/spark/pull/29277/files#diff-db4ffe4f0196a9d7cf1f04c350ee3381R90). This can go wrong if we have multiple shuffled hash join in one query.\r\n\r\nE.g.\r\n```\r\n  test(\"ShuffledHashJoin should be included in WholeStageCodegen\") {\r\n    withSQLConf(SQLConf.AUTO_BROADCASTJOIN_THRESHOLD.key -> \"30\",\r\n        SQLConf.SHUFFLE_PARTITIONS.key -> \"2\",\r\n        SQLConf.PREFER_SORTMERGEJOIN.key -> \"false\") {\r\n      val df1 = spark.range(5).select($\"id\".as(\"k1\"))\r\n      val df2 = spark.range(15).select($\"id\".as(\"k2\"))\r\n      val df3 = spark.range(6).select($\"id\".as(\"k3\"))\r\n      val twoJoinsDF = df1.join(df2, $\"k1\" === $\"k2\").join(df3, $\"k1\" === $\"k3\")\r\n    }\r\n  }\r\n```\r\n\r\nIf we don't codegen shuffled hash join children separately, we will get something like:\r\n\r\n```\r\n/* 018 */   public void init(int index, scala.collection.Iterator[] inputs) {\r\n/* 019 */     partitionIndex = index;\r\n/* 020 */     this.inputs = inputs;\r\n/* 021 */     inputadapter_input_0 = inputs[0];\r\n/* 022 */     shj_relation_0 = ((org.apache.spark.sql.execution.joins.ShuffledHashJoinExec) references[0] /* plan */).buildHashedRelation(inputs[1]);\r\n/* 023 */     shj_mutableStateArray_0[0] = new org.apache.spark.sql.catalyst.expressions.codegen.UnsafeRowWriter(2, 0);\r\n/* 024 */     shj_relation_1 = ((org.apache.spark.sql.execution.joins.ShuffledHashJoinExec) references[2] /* plan */).buildHashedRelation(inputs[1]);\r\n/* 025 */     shj_mutableStateArray_0[1] = new org.apache.spark.sql.catalyst.expressions.codegen.UnsafeRowWriter(3, 0);\r\n/* 026 */\r\n/* 027 */   }\r\n```\r\n\r\n`shj_relation_0` and `shj_relation_1` will try to build hash relation on same input (but shouldn't), as the `input[1]` is hardcoded there. On the other hand, I couldn't think of an alternative way not to hardcode `input[1]` here in codegen. Let me know if you have any better options. Thanks. I also updated `WholeStageCodegenSuite.scala` to have a unit test for this kind of multiple joins query.",
+        "createdAt" : "2020-07-30T17:44:46Z",
+        "updatedAt" : "2020-07-30T17:47:17Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9cabade7-4699-49a9-87ed-16c03173d533",
+        "parentId" : "f5e558ee-61b6-495e-bf91-e77473dd80b3",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Seems we only need to do it for the build side?",
+        "createdAt" : "2020-07-31T03:11:33Z",
+        "updatedAt" : "2020-07-31T03:11:33Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "49cec22b-f8c2-4508-9c6a-88c341803e93",
+        "parentId" : "f5e558ee-61b6-495e-bf91-e77473dd80b3",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Yea, that's true.",
+        "createdAt" : "2020-07-31T03:30:05Z",
+        "updatedAt" : "2020-07-31T03:30:05Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f64bdfb6-fef7-4e19-bff4-b4f3ff083a02",
+        "parentId" : "f5e558ee-61b6-495e-bf91-e77473dd80b3",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@cloud-fan, @viirya - if we only codegen separately for build side, we would still have the same problem as above for multiple SHJs right? Essentially we would fuse multiple stream sides codegen together in one codegen method, so we will have multiple build side initialized in init(), and naming collision as above. Let me know if it doesn't make sense, or I can create a counter example here.",
+        "createdAt" : "2020-07-31T04:10:07Z",
+        "updatedAt" : "2020-07-31T04:10:07Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dbab37c3-625b-43bb-891c-aeddbe13f1bd",
+        "parentId" : "f5e558ee-61b6-495e-bf91-e77473dd80b3",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "So here is the problematic query (same as above)\r\n\r\n```\r\n  test(\"ShuffledHashJoin should be included in WholeStageCodegen\") {\r\n    withSQLConf(SQLConf.AUTO_BROADCASTJOIN_THRESHOLD.key -> \"30\",\r\n        SQLConf.SHUFFLE_PARTITIONS.key -> \"2\",\r\n        SQLConf.PREFER_SORTMERGEJOIN.key -> \"false\") {\r\n      val df1 = spark.range(5).select($\"id\".as(\"k1\"))\r\n      val df2 = spark.range(15).select($\"id\".as(\"k2\"))\r\n      val df3 = spark.range(6).select($\"id\".as(\"k3\"))\r\n      val twoJoinsDF = df1.join(df2, $\"k1\" === $\"k2\").join(df3, $\"k1\" === $\"k3\")\r\n    }\r\n  }\r\n```\r\n\r\nif we only codegen separately build side:\r\n\r\n```\r\ncase j: ShuffledHashJoinExec =>\r\n        // The children of ShuffledHashJoin should do codegen separately.\r\n        val newChildren = j.buildSide match {\r\n          case BuildLeft =>\r\n            val buildChild = InputAdapter(insertWholeStageCodegen(j.left))\r\n            val streamChild = insertInputAdapter(j.right)\r\n            Seq(buildChild, streamChild)\r\n          case BuildRight =>\r\n            val buildChild = InputAdapter(insertWholeStageCodegen(j.right))\r\n            val streamChild = insertInputAdapter(j.left)\r\n            Seq(streamChild, buildChild)\r\n        }\r\n        j.withNewChildren(newChildren)\r\n```\r\n\r\ngenerated code where `shj_relation_0` and  `shj_relation_1` both are building relation on `input[1]`, but shouldn't be:\r\n\r\n```\r\n== Subtree 4 / 4 (maxMethodCodeSize:190; maxConstantPoolSize:129(0.20% used); numInnerClasses:0) ==\r\n*(4) ShuffledHashJoin [k1#2L], [k3#10L], Inner, BuildRight\r\n:- *(4) ShuffledHashJoin [k1#2L], [k2#6L], Inner, BuildLeft\r\n:  :- Exchange hashpartitioning(k1#2L, 2), true, [id=#111]\r\n:  :  +- *(2) Project [id#0L AS k1#2L]\r\n:  :     +- *(2) Range (0, 5, step=1, splits=2)\r\n:  +- Exchange hashpartitioning(k2#6L, 2), true, [id=#114]\r\n:     +- *(3) Project [id#4L AS k2#6L]\r\n:        +- *(3) Range (0, 15, step=1, splits=2)\r\n+- Exchange hashpartitioning(k3#10L, 2), true, [id=#108]\r\n   +- *(1) Project [id#8L AS k3#10L]\r\n      +- *(1) Range (0, 6, step=1, splits=2)\r\n\r\nGenerated code:\r\n/* 001 */ public Object generate(Object[] references) {\r\n/* 002 */   return new GeneratedIteratorForCodegenStage4(references);\r\n/* 003 */ }\r\n/* 004 */\r\n/* 005 */ // codegenStageId=4\r\n/* 006 */ final class GeneratedIteratorForCodegenStage4 extends org.apache.spark.sql.execution.BufferedRowIterator {\r\n/* 007 */   private Object[] references;\r\n/* 008 */   private scala.collection.Iterator[] inputs;\r\n/* 009 */   private scala.collection.Iterator inputadapter_input_0;\r\n/* 010 */   private org.apache.spark.sql.execution.joins.HashedRelation shj_relation_0;\r\n/* 011 */   private org.apache.spark.sql.execution.joins.HashedRelation shj_relation_1;\r\n/* 012 */   private org.apache.spark.sql.catalyst.expressions.codegen.UnsafeRowWriter[] shj_mutableStateArray_0 = new org.apache.spark.sql.catalyst.expressions.codegen.UnsafeRowWriter[2];\r\n/* 013 */\r\n/* 014 */   public GeneratedIteratorForCodegenStage4(Object[] references) {\r\n/* 015 */     this.references = references;\r\n/* 016 */   }\r\n/* 017 */\r\n/* 018 */   public void init(int index, scala.collection.Iterator[] inputs) {\r\n/* 019 */     partitionIndex = index;\r\n/* 020 */     this.inputs = inputs;\r\n/* 021 */     inputadapter_input_0 = inputs[0];\r\n/* 022 */     shj_relation_0 = ((org.apache.spark.sql.execution.joins.ShuffledHashJoinExec) references[0] /* plan */).buildHashedRelation(inputs[1]);\r\n/* 023 */     shj_mutableStateArray_0[0] = new org.apache.spark.sql.catalyst.expressions.codegen.UnsafeRowWriter(2, 0);\r\n/* 024 */     shj_relation_1 = ((org.apache.spark.sql.execution.joins.ShuffledHashJoinExec) references[2] /* plan */).buildHashedRelation(inputs[1]);\r\n/* 025 */     shj_mutableStateArray_0[1] = new org.apache.spark.sql.catalyst.expressions.codegen.UnsafeRowWriter(3, 0);\r\n/* 026 */\r\n/* 027 */   }\r\n/* 028 */\r\n/* 029 */   private void shj_doConsume_0(InternalRow inputadapter_row_0, long shj_expr_0_0) throws java.io.IOException {\r\n/* 030 */     // generate join key for stream side\r\n/* 031 */\r\n/* 032 */     // find matches from HashRelation\r\n/* 033 */     scala.collection.Iterator shj_matches_0 = false ?\r\n/* 034 */     null : (scala.collection.Iterator)shj_relation_0.get(shj_expr_0_0);\r\n/* 035 */     if (shj_matches_0 != null) {\r\n/* 036 */       while (shj_matches_0.hasNext()) {\r\n/* 037 */         UnsafeRow shj_matched_0 = (UnsafeRow) shj_matches_0.next();\r\n/* 038 */         {\r\n/* 039 */           ((org.apache.spark.sql.execution.metric.SQLMetric) references[1] /* numOutputRows */).add(1);\r\n/* 040 */\r\n/* 041 */           long shj_value_1 = shj_matched_0.getLong(0);\r\n/* 042 */\r\n/* 043 */           // generate join key for stream side\r\n/* 044 */\r\n/* 045 */           // find matches from HashRelation\r\n/* 046 */           scala.collection.Iterator shj_matches_1 = false ?\r\n/* 047 */           null : (scala.collection.Iterator)shj_relation_1.get(shj_value_1);\r\n/* 048 */           if (shj_matches_1 != null) {\r\n/* 049 */             while (shj_matches_1.hasNext()) {\r\n/* 050 */               UnsafeRow shj_matched_1 = (UnsafeRow) shj_matches_1.next();\r\n/* 051 */               {\r\n/* 052 */                 ((org.apache.spark.sql.execution.metric.SQLMetric) references[3] /* numOutputRows */).add(1);\r\n/* 053 */\r\n/* 054 */                 long shj_value_5 = shj_matched_1.getLong(0);\r\n/* 055 */                 shj_mutableStateArray_0[1].reset();\r\n/* 056 */\r\n/* 057 */                 shj_mutableStateArray_0[1].write(0, shj_value_1);\r\n/* 058 */\r\n/* 059 */                 shj_mutableStateArray_0[1].write(1, shj_expr_0_0);\r\n/* 060 */\r\n/* 061 */                 shj_mutableStateArray_0[1].write(2, shj_value_5);\r\n/* 062 */                 append((shj_mutableStateArray_0[1].getRow()).copy());\r\n/* 063 */\r\n/* 064 */               }\r\n/* 065 */             }\r\n/* 066 */           }\r\n/* 067 */\r\n/* 068 */         }\r\n/* 069 */       }\r\n/* 070 */     }\r\n/* 071 */\r\n/* 072 */   }\r\n/* 073 */\r\n/* 074 */   protected void processNext() throws java.io.IOException {\r\n/* 075 */     while ( inputadapter_input_0.hasNext()) {\r\n/* 076 */       InternalRow inputadapter_row_0 = (InternalRow) inputadapter_input_0.next();\r\n/* 077 */\r\n/* 078 */       long inputadapter_value_0 = inputadapter_row_0.getLong(0);\r\n/* 079 */\r\n/* 080 */       shj_doConsume_0(inputadapter_row_0, inputadapter_value_0);\r\n/* 081 */       if (shouldStop()) return;\r\n/* 082 */     }\r\n/* 083 */   }\r\n/* 084 */\r\n/* 085 */ }\r\n```",
+        "createdAt" : "2020-07-31T04:51:23Z",
+        "updatedAt" : "2020-07-31T04:51:23Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "69731e50-a298-4962-b4fc-66314a0f7744",
+        "parentId" : "f5e558ee-61b6-495e-bf91-e77473dd80b3",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Makes sense to me. It's possible to make the input index dynamic, so one join node can use `input[0]` and the other can use `input[1]`. But I don't have a good idea about how to do it now. Let's leave it for future work.",
+        "createdAt" : "2020-07-31T05:40:48Z",
+        "updatedAt" : "2020-07-31T05:40:48Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c55207f1-a6f3-4e4c-91c9-930c9cb4055d",
+        "parentId" : "f5e558ee-61b6-495e-bf91-e77473dd80b3",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@cloud-fan - sounds good, non-trivial for me now as well. Will try to resolve it in the future. Thanks.",
+        "createdAt" : "2020-07-31T05:47:48Z",
+        "updatedAt" : "2020-07-31T05:47:48Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a969b5dd-b8a5-43c6-8519-90acfb5ea942",
+        "parentId" : "f5e558ee-61b6-495e-bf91-e77473dd80b3",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "And there are more problems if we have many shuffle hash join stay together. We need to accumulate the `CodegenSupport.inputRDDs`, but `WholeStageCodegenExec` only supports up to 2 input RDDs for now.",
+        "createdAt" : "2020-07-31T05:49:33Z",
+        "updatedAt" : "2020-07-31T05:49:34Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "326451df-6517-4d23-a642-f8698d84707f",
+        "parentId" : "f5e558ee-61b6-495e-bf91-e77473dd80b3",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "> We need to accumulate the CodegenSupport.inputRDDs, but WholeStageCodegenExec only supports up to 2 input RDDs for now.\r\n\r\nYes. Agreed. `SortMergeJoinExec` took the decision to do codegen for children separately, it's just simpler without getting into these limitations.",
+        "createdAt" : "2020-07-31T05:51:08Z",
+        "updatedAt" : "2020-07-31T05:51:53Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dc80b153-2cd2-4b88-94bc-ca6efaf011bc",
+        "parentId" : "f5e558ee-61b6-495e-bf91-e77473dd80b3",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "<del>Once we only codegen separately for build side, we should not build hash relation using `inputs[1]` anymore. It will work similarly like `BroadcastHashJoin`, we just build hash relation using `buildPlan`. And `ShuffledHashJoinExec` has only one input RDD now, like `BroadcastHashJoin`'s `inputRDDs`.</del>",
+        "createdAt" : "2020-07-31T06:24:17Z",
+        "updatedAt" : "2020-07-31T06:37:38Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c76359bb-802a-47e6-9b39-74cb8a31774c",
+        "parentId" : "f5e558ee-61b6-495e-bf91-e77473dd80b3",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Hm, it still has some problems. Will think about it if I have more time.",
+        "createdAt" : "2020-07-31T06:37:59Z",
+        "updatedAt" : "2020-07-31T06:37:59Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ac64864363891c4c942d374f227c01bd60254fce",
+    "line" : 23,
+    "diffHunk" : "@@ -1,1 +907,911 @@      case j: ShuffledHashJoinExec =>\n        // The children of ShuffledHashJoin should do codegen separately.\n        j.withNewChildren(j.children.map(\n          child => InputAdapter(insertWholeStageCodegen(child))))\n      case p => p.withNewChildren(p.children.map(insertInputAdapter))"
+  }
+]

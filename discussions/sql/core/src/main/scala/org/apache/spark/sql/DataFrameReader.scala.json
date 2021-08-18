@@ -361,5 +361,71 @@
     "commit" : "e1decd4c7921f58446a46081b339d308d36529cc",
     "line" : 14,
     "diffHunk" : "@@ -1,1 +232,236 @@    // force invocation of `load(...varargs...)`\n    if (sparkSession.sessionState.conf.legacyPathOptionBehavior) {\n      option(\"path\", path).load(Seq.empty: _*)\n    } else {\n      load(Seq(path): _*)"
+  },
+  {
+    "id" : "c7172fb2-0a2b-4211-ad04-1f04660452a9",
+    "prId" : 29191,
+    "prUrl" : "https://github.com/apache/spark/pull/29191#pullrequestreview-453872464",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1a82afef-ed4b-4c3f-8051-1ec16dcafa60",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "shall we call `extraOptions.toMap` here? to be case-preserving\r\n\r\n`params` is used to create `new JDBCOptions(url, table, params)`, and `JDBCOptions.asProperties` needs to be case-preserving.",
+        "createdAt" : "2020-07-23T05:35:12Z",
+        "updatedAt" : "2020-07-23T06:10:34Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5087d781-e18a-4be2-9a11-e2be76701aac",
+        "parentId" : "1a82afef-ed4b-4c3f-8051-1ec16dcafa60",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "and to guarantee `connectionProperties` overrides `extraOptions`, we may also need to do `map1.filterKeys... ++ map2`",
+        "createdAt" : "2020-07-23T05:36:56Z",
+        "updatedAt" : "2020-07-23T06:10:34Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d82db875-dcac-49e3-96dd-de88083eeefc",
+        "parentId" : "1a82afef-ed4b-4c3f-8051-1ec16dcafa60",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "`extraOptions ++ connectionProperties.asScala` will guarantee that `connectionProoperties` overrides the `extraOption`. We added `CaseInsensitiveMap.++` operation for that~\r\n\r\nAlso, `new JDBCOptions(url, table, params)` works like the following. The passed `params: CaseInsensitiveMap` guarantees that JDBC_URL and JDBC_TABLE_NAME override `parameters`.\r\n```scala\r\n  def this(url: String, table: String, parameters: Map[String, String]) = {\r\n    this(CaseInsensitiveMap(parameters ++ Map(\r\n      JDBCOptions.JDBC_URL -> url,\r\n      JDBCOptions.JDBC_TABLE_NAME -> table)))\r\n  }\r\n```\r\n\r\nThe above code is for your logic.",
+        "createdAt" : "2020-07-23T05:45:47Z",
+        "updatedAt" : "2020-07-23T06:10:34Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dcf4b21c-412a-471b-837d-f8fd2b8766e0",
+        "parentId" : "1a82afef-ed4b-4c3f-8051-1ec16dcafa60",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "I'll add a test case for this.",
+        "createdAt" : "2020-07-23T06:08:41Z",
+        "updatedAt" : "2020-07-23T06:10:34Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c267ba30-393c-423e-9046-c263fd16970e",
+        "parentId" : "1a82afef-ed4b-4c3f-8051-1ec16dcafa60",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "ah got it, thanks!",
+        "createdAt" : "2020-07-23T06:52:10Z",
+        "updatedAt" : "2020-07-23T06:52:10Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "81ac6c614c16e8d3c43ff14888216a797df04275",
+    "line" : 65,
+    "diffHunk" : "@@ -1,1 +380,384 @@    assertNoSpecifiedSchema(\"jdbc\")\n    // connectionProperties should override settings in extraOptions.\n    val params = extraOptions ++ connectionProperties.asScala\n    val options = new JDBCOptions(url, table, params)\n    val parts: Array[Partition] = predicates.zipWithIndex.map { case (part, i) =>"
   }
 ]
