@@ -64,5 +64,38 @@
     "commit" : "a458128a4089a381ca2c9a7339cfd99e635c66e8",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +206,210 @@      checkAnswer(spark.table(\"v\"), Row(Row(\"a\", 1)) :: Nil)\n\n      spark.sql(\"ALTER VIEW v AS SELECT STRUCT('a' AS `c`, 1 AS b) q1\")\n      val df = spark.table(\"v\")\n      assert(\"q1\".equals(df.schema.fields(0).name))"
+  },
+  {
+    "id" : "ce3251af-8f89-4410-9866-31538045eb11",
+    "prId" : 31133,
+    "prUrl" : "https://github.com/apache/spark/pull/31133#pullrequestreview-566035682",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2b1d9e5e-053d-4a3b-91cd-7bb6030c6dbb",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Just a question because it's a little counter-intuitive. Is there a reason why we start with `col2` and add `col1` later? Usually, I thought we start with `col1` and add `col2` later.",
+        "createdAt" : "2021-01-11T22:17:40Z",
+        "updatedAt" : "2021-02-05T07:01:10Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "296f6a0d-70b5-45b0-aaf6-deacca943502",
+        "parentId" : "2b1d9e5e-053d-4a3b-91cd-7bb6030c6dbb",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "Yes, regarding schema evolution rules you can add a field to an arbitrary position, see the first example here:\r\nhttps://docs.oracle.com/database/nosql-12.1.3.0/GettingStartedGuide/schemaevolution.html\r\n \r\nMy intention with this example and field naming was to illustrate the worst case (the column mismatch error) and emphasize its root cause. And even by adding new fields at the end one just decrease the scope of the problem as there will be still wrong values (null) for the new fields. \r\n\r\nMoreover when an existing field is removed the column mismatch usually cannot be avoided, example:\r\n\r\n```\r\nsql(\"\"\"\r\n  CREATE TABLE t PARTITIONED BY (ds string)\r\n  ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.avro.AvroSerDe'\r\n  WITH SERDEPROPERTIES ('avro.schema.literal'='\r\n  {\r\n    \"namespace\": \"test\",\r\n    \"name\": \"some_schema\",\r\n    \"type\": \"record\",\r\n    \"fields\": [\r\n      {\r\n        \"name\": \"col1\",\r\n        \"type\": \"string\",\r\n        \"default\": \"col1_default\"\r\n      },\r\n      {\r\n        \"name\": \"col2\",\r\n        \"type\": \"string\"\r\n      }\r\n    ]\r\n  }')\r\n  STORED AS\r\n  INPUTFORMAT 'org.apache.hadoop.hive.ql.io.avro.AvroContainerInputFormat'\r\n  OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.avro.AvroContainerOutputFormat'\r\n\"\"\")\r\n\r\nsql(\"\"\"\r\n  INSERT INTO t partition (ds='1981-01-07') VALUES ('col1_value', 'col2_value')\r\n\"\"\")\r\n\r\nsql(\"\"\"\r\n  ALTER TABLE t SET SERDEPROPERTIES ('avro.schema.literal'='\r\n  {\r\n    \"namespace\": \"test\",\r\n    \"name\": \"some_schema\",\r\n    \"type\": \"record\",\r\n    \"fields\": [\r\n      {\r\n        \"name\": \"col2\",\r\n        \"type\": \"string\"\r\n      }\r\n    ]\r\n  }')\r\n\"\"\")\r\n\r\nsql(\"\"\"\r\n  INSERT INTO t partition (ds='1983-04-27') VALUES ('col2_value')\r\n\"\"\")\r\n\r\nsql(\"\"\"\r\n  select * from t\r\n\"\"\").show()\r\n```\r\n\r\nWithout this PR:\r\n```\r\n+------------+----------+\r\n|        col2|        ds|\r\n+------------+----------+\r\n|col1_default|1981-01-07|\r\n|  col2_value|1983-04-27|\r\n+------------+----------+\r\n```\r\n\r\nWith the fix:\r\n```\r\n+----------+----------+\r\n|      col2|        ds|\r\n+----------+----------+\r\n|col2_value|1981-01-07|\r\n|col2_value|1983-04-27|\r\n+----------+----------+\r\n```\r\n\r\n\r\n",
+        "createdAt" : "2021-01-12T08:32:01Z",
+        "updatedAt" : "2021-02-05T07:01:10Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "20dc1676da8514708a139f8e4ac66c3034ed7b5e",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +1894,1898 @@          |  \"fields\": [\n          |    {\n          |      \"name\": \"col2\",\n          |      \"type\": \"string\"\n          |    }"
   }
 ]

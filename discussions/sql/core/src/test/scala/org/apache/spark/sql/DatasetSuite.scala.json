@@ -328,5 +328,71 @@
     "commit" : "ac7460b0431e7012f17c3ac293226bb4f428bd15",
     "line" : 22,
     "diffHunk" : "@@ -1,1 +2017,2021 @@    checkAnswer(piped, Row(\"0\") :: Row(\"1\") :: Row(\"2\") :: Row(\"3\") :: Nil)\n\n    val piped2 = nums.pipe(\"wc -l\", (l, printFunc) => printFunc(l.toString)).toDF.collect()\n    assert(piped2.size == 2)\n    assert(piped2(0).getString(0).trim == \"2\")"
+  },
+  {
+    "id" : "3aab1f30-8f7d-42ae-8b05-092b97fd7723",
+    "prId" : 31132,
+    "prUrl" : "https://github.com/apache/spark/pull/31132#pullrequestreview-565859950",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c9c3aa3f-5537-47f6-8438-3e06acdcafdb",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Can't you create an array such as: \r\n\r\n```scala\r\nscala> lit(Array.empty[Int])\r\nres0: org.apache.spark.sql.Column = []\r\n```\r\n\r\n? Matching `java.lang.Object` to `NullType` is counterintuative.",
+        "createdAt" : "2021-01-11T14:16:49Z",
+        "updatedAt" : "2021-01-13T01:27:25Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "28a4e72c-6c14-409d-a04b-31c28e00edf9",
+        "parentId" : "c9c3aa3f-5537-47f6-8438-3e06acdcafdb",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "The problem is `Literal.create(Array()).dataType` is also `ArrayType(NullType)`. `lit` just lost the `ClassTag`.",
+        "createdAt" : "2021-01-11T14:24:45Z",
+        "updatedAt" : "2021-01-13T01:27:25Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4c1e983d-cd04-4ac1-95c9-b1e61ef8236e",
+        "parentId" : "c9c3aa3f-5537-47f6-8438-3e06acdcafdb",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "BTW `HiveInspectors.javaTypeToDataType` also has this pattern `case c: Class[_] if c == classOf[java.lang.Object] => NullType`.",
+        "createdAt" : "2021-01-11T14:30:42Z",
+        "updatedAt" : "2021-01-13T01:27:25Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a60fef47-ab30-47ba-9e85-7b3435f71744",
+        "parentId" : "c9c3aa3f-5537-47f6-8438-3e06acdcafdb",
+        "authorId" : "e1bdd418-d9b9-4129-91a0-0865740d24d2",
+        "body" : "@ulysses-you - does `spark.range(1).select(typedLit(Array()))` get you the result you're looking for?  Per the docs, \"The difference between the typedLit function and lit is that this function can handle parameterized scala types e.g.: List, Seq and Map.\"  `lit` isn't normally used for collections.",
+        "createdAt" : "2021-01-11T15:55:21Z",
+        "updatedAt" : "2021-01-13T01:27:25Z",
+        "lastEditedBy" : "e1bdd418-d9b9-4129-91a0-0865740d24d2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "33ece29c-4baf-4cdc-9cf9-b9ead4322f77",
+        "parentId" : "c9c3aa3f-5537-47f6-8438-3e06acdcafdb",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "Yes the right way is using `typedLit`. I just consider the issue is easy to resolve so maybe we can support it directly.",
+        "createdAt" : "2021-01-12T01:05:14Z",
+        "updatedAt" : "2021-01-13T01:27:25Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3298e09fbd061ca8578dbe3434c4aafae889195f",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +1986,1990 @@  test(\"SPARK-34072: Fix empty array failed in functions.lit()\") {\n    checkAnswer(\n      spark.range(1).select(lit(Array())),\n      Row(Array())\n    )"
   }
 ]

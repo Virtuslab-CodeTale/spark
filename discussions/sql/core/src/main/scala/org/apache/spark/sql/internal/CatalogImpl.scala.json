@@ -75,5 +75,192 @@
     "commit" : "357c69f888ed4f27ea8db3b78d79d123b4dac019",
     "line" : 18,
     "diffHunk" : "@@ -1,1 +522,526 @@   * If this table is cached as an InMemoryRelation, re-cache the table and its dependents lazily.\n   *\n   * In addition, refreshing a table also clear all caches that have reference to the table\n   * in a cascading manner. This is to prevent incorrect result from the otherwise staled caches.\n   *"
+  },
+  {
+    "id" : "8dfdad40-460d-4977-ab6d-a68bcffa786b",
+    "prId" : 31136,
+    "prUrl" : "https://github.com/apache/spark/pull/31136#pullrequestreview-566816000",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3a1fa58b-665c-4a59-897e-0e37b8572412",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "If there is table or view not found error, does it mean we skip uncaching the temp view?",
+        "createdAt" : "2021-01-13T00:05:42Z",
+        "updatedAt" : "2021-01-13T00:05:42Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c5dbb9bd-c547-4d26-9d42-813fde2ec9e4",
+        "parentId" : "3a1fa58b-665c-4a59-897e-0e37b8572412",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "This is a good question. I think currently this won't happen because:\r\n1. when dropping a table or permanent view, we'll drop all the caches with reference on it in a cascading fashion, so when we are dropping the caches themselves, they are already invalidated.\r\n2. On the other hand, we currently store temp view as analyzed logical plans so they won't be analyzed again upon retrieving, which means we won't run into the error you mentioned. Although, this also means the plans themselves could become stale and potentially generate incorrect result. #31107 proposes to change this, following similar changes done by #30567, so the behavior of temporary view as well as cache is more aligned to that of permanent view.",
+        "createdAt" : "2021-01-13T00:51:50Z",
+        "updatedAt" : "2021-01-13T00:52:21Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "712b0799626e4c30760c90e1ea1b15216e2d28f8",
+    "line" : 11,
+    "diffHunk" : "@@ -1,1 +402,406 @@          sparkSession, plan.analyzed, cascade = false)\n      } catch {\n        case NonFatal(_) => // ignore\n      }\n      sessionCatalog.dropTempView(viewName)"
+  },
+  {
+    "id" : "9d9d9fca-8631-4a2f-88be-533c1f10d8da",
+    "prId" : 31136,
+    "prUrl" : "https://github.com/apache/spark/pull/31136#pullrequestreview-567209911",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "18d6b2b0-718c-4541-afdc-51b6f44c744e",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "is it safer to not add this try-catch? if there are failures, then the uncache fails and we should not swallow the exception?",
+        "createdAt" : "2021-01-13T07:51:15Z",
+        "updatedAt" : "2021-01-13T07:51:16Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "aad0cc40-e2cd-480b-aa05-f1ee71828734",
+        "parentId" : "18d6b2b0-718c-4541-afdc-51b6f44c744e",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "This is also discussed above. Suppose we have:\r\n```sql\r\nCREATE TEMPORARY VIEW v1 AS SELECT * FROM v2\r\n```\r\na Spark user can drop v2 first followed by v1. In this case the `uncacheQuery` will fail because `v2` is already gone. Consequently, the view will not be dropped. This seems to be a quite common scenario. \r\n\r\nAlso this is [following the `DropTableCommand`](https://github.com/apache/spark/blob/master/sql/core/src/main/scala/org/apache/spark/sql/execution/command/ddl.scala#L239), which swallows any non-fatal exception and proceed to drop the view.",
+        "createdAt" : "2021-01-13T08:22:03Z",
+        "updatedAt" : "2021-01-13T08:22:24Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ce065171-00b6-4d8d-b3f9-3bac253931bf",
+        "parentId" : "18d6b2b0-718c-4541-afdc-51b6f44c744e",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "thanks for the explanation!",
+        "createdAt" : "2021-01-13T13:17:13Z",
+        "updatedAt" : "2021-01-13T13:17:13Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "712b0799626e4c30760c90e1ea1b15216e2d28f8",
+    "line" : 27,
+    "diffHunk" : "@@ -1,1 +423,427 @@          sparkSession, plan.analyzed, cascade = false)\n      } catch {\n        case NonFatal(_) => // ignore\n      }\n      sessionCatalog.dropGlobalTempView(viewName)"
+  },
+  {
+    "id" : "66a4dca1-0615-4e0e-86d0-c00480c4d9dc",
+    "prId" : 31107,
+    "prUrl" : "https://github.com/apache/spark/pull/31107#pullrequestreview-571481286",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a1263dae-8785-4984-b1c0-f01f779dab3f",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Why cascade behavior should be depending on if there is view text?",
+        "createdAt" : "2021-01-19T08:25:36Z",
+        "updatedAt" : "2021-01-19T19:56:05Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cc23931e-7016-4cc4-828f-46c453b47357",
+        "parentId" : "a1263dae-8785-4984-b1c0-f01f779dab3f",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "<del>We should not un-cache cache entries dependent on the view, isn't? This is original behavior.</del>\r\n\r\nShouldn't we uncache dependent cache entries for all cases?",
+        "createdAt" : "2021-01-19T08:27:30Z",
+        "updatedAt" : "2021-01-19T19:56:05Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6f6d108d-e3b7-4da2-9ef6-91fb996ff721",
+        "parentId" : "a1263dae-8785-4984-b1c0-f01f779dab3f",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "The cascade behavior is from https://github.com/apache/spark/pull/21594\r\n\r\nAfter #30567 , SQL temp view should have the same semantic of permanent view, so should do cascade uncache.",
+        "createdAt" : "2021-01-19T08:48:48Z",
+        "updatedAt" : "2021-01-19T19:56:05Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ccb7054b-9ae5-4cca-bb48-2a0a2cf77e97",
+        "parentId" : "a1263dae-8785-4984-b1c0-f01f779dab3f",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Yeah, I see we should do cascade uncache. The modified question is, why cascade uncache depends on if it has view text? For a view without view text, we don't do cascade uncache?",
+        "createdAt" : "2021-01-19T08:52:16Z",
+        "updatedAt" : "2021-01-19T19:56:05Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "486cec6c-0f9c-40c1-8cf3-dca0a976f8d8",
+        "parentId" : "a1263dae-8785-4984-b1c0-f01f779dab3f",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "A view without view text is dataframe temp views, or legacy SQL temp views. We shouldn't change their behavior and keep the non-cascade uncache.",
+        "createdAt" : "2021-01-19T09:51:07Z",
+        "updatedAt" : "2021-01-19T19:56:05Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "380eb8e5-284b-4c1f-8585-5a101e2ce657",
+        "parentId" : "a1263dae-8785-4984-b1c0-f01f779dab3f",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Yeah those are the two scenarios there will be no view text and hence the old behavior, which means users could still get bad results if the view go stale. Since the legacy SQL temp view is turned off in default, I don't see a big concern there. For views created with dataset API, I'm not sure there is a way to generate view text.",
+        "createdAt" : "2021-01-19T17:15:26Z",
+        "updatedAt" : "2021-01-19T19:56:05Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "417321f3-39f5-41cf-af65-c35aede495d5",
+        "parentId" : "a1263dae-8785-4984-b1c0-f01f779dab3f",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Hmm, so this is not for technical reason but to keep behavior unchanged, is it correct?",
+        "createdAt" : "2021-01-19T17:18:00Z",
+        "updatedAt" : "2021-01-19T19:56:05Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "233b8ae6-2596-4c3d-954e-9592221ea660",
+        "parentId" : "a1263dae-8785-4984-b1c0-f01f779dab3f",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "If so, can we add a few comment for that reason? ",
+        "createdAt" : "2021-01-19T17:19:12Z",
+        "updatedAt" : "2021-01-19T19:56:05Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9a274555-5069-48f4-83d6-693d493d6a73",
+        "parentId" : "a1263dae-8785-4984-b1c0-f01f779dab3f",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Yes we still keep the existing behavior for the above scenarios which this PR doesn't touch. Technically we could switch them to all use cascade uncache but that is a broader behavior change and should be discussed separately.\r\n\r\nSure I can add some comments.",
+        "createdAt" : "2021-01-19T17:29:52Z",
+        "updatedAt" : "2021-01-19T19:56:05Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "40ef4b12ae328493c4a5ae5fd8274a7f839050de",
+    "line" : 53,
+    "diffHunk" : "@@ -1,1 +430,434 @@      val plan = sparkSession.sessionState.executePlan(viewDef)\n      sparkSession.sharedState.cacheManager.uncacheQuery(\n        sparkSession, plan.analyzed, cascade = viewText.isDefined)\n    } catch {\n      case NonFatal(_) => // ignore"
   }
 ]

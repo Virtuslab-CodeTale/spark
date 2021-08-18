@@ -20,5 +20,214 @@
     "commit" : "00fb5fb18644f4f3843349c7d66a3649a9a47649",
     "line" : 27,
     "diffHunk" : "@@ -1,1 +42,46 @@\n      val queryWithDistribution = if (distribution.nonEmpty) {\n        val finalNumPartitions = if (numPartitions > 0) {\n          numPartitions\n        } else {"
+  },
+  {
+    "id" : "9573bafc-554e-488b-8838-e6fe60c1bd4b",
+    "prId" : 31083,
+    "prUrl" : "https://github.com/apache/spark/pull/31083#pullrequestreview-564169021",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "24bec66d-f1a6-4741-a800-6a320cd5fa50",
+        "parentId" : null,
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "just curious why other transforms are not supported yet",
+        "createdAt" : "2021-01-08T00:03:16Z",
+        "updatedAt" : "2021-01-25T20:45:29Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6368800a-6e82-49eb-a9d0-f20b76a8b3ab",
+        "parentId" : "24bec66d-f1a6-4741-a800-6a320cd5fa50",
+        "authorId" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "body" : "We cannot map other transforms to valid Catalyst expressions as Spark is not capable of resolving data source transforms. We need a function catalog for that.",
+        "createdAt" : "2021-01-08T10:50:12Z",
+        "updatedAt" : "2021-01-25T20:45:29Z",
+        "lastEditedBy" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5aa31c93e212576caa0b0d6986dfd20bf971310f",
+    "line" : 88,
+    "diffHunk" : "@@ -1,1 +86,90 @@        val catalystChild = toCatalyst(child, query, resolver)\n        SortOrder(catalystChild, toCatalyst(direction), toCatalyst(nullOrdering), Seq.empty)\n      case IdentityTransform(ref) =>\n        resolve(ref)\n      case ref: FieldReference =>"
+  },
+  {
+    "id" : "20170273-241f-4619-81ee-671499e378a9",
+    "prId" : 31083,
+    "prUrl" : "https://github.com/apache/spark/pull/31083#pullrequestreview-564594923",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a5cbb1b2-2386-4450-8f29-69738c924a19",
+        "parentId" : null,
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Just for my understanding, is it possible that in certain situations the repartition and/or sort can be avoided? for instance the input data to write is already in the correct shape.",
+        "createdAt" : "2021-01-08T01:52:21Z",
+        "updatedAt" : "2021-01-25T20:45:29Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "62c2cb99-0bec-4d2c-8592-c9bb3b8c5861",
+        "parentId" : "a5cbb1b2-2386-4450-8f29-69738c924a19",
+        "authorId" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "body" : "The idea of doing this in the optimizer is that Spark will be smart enough to remove redundant sorts and repartitions. For example, I've extended `EliminateSorts` to cover more cases in PR #29089.\r\n\r\nAlso, `checkWriteRequirements` is written in a way that ensures there are only one shuffle and sort node. We can successfully dedup either local or global sorts now.\r\n\r\nThe situation with repartition nodes is worse. Specifically, `CollapseRepartition` runs in the operator optimization batch before we construct writes and it does not cover cases when there are filters or projections in between. That's why tests for duplicating repartition nodes are ignored for now.",
+        "createdAt" : "2021-01-08T10:47:29Z",
+        "updatedAt" : "2021-01-25T20:45:29Z",
+        "lastEditedBy" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fbe7ac19-e75e-48e1-b71c-2cc931e5249c",
+        "parentId" : "a5cbb1b2-2386-4450-8f29-69738c924a19",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Thanks @aokolnychyi ! this is very helpful. I guess #30093 , which introduces a physical rule `RemoveRedundantSorts`, is also useful here. Not sure if the `CollapseRepartition` issue can be handled in a similar approach.",
+        "createdAt" : "2021-01-08T18:22:34Z",
+        "updatedAt" : "2021-01-25T20:45:29Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "abd6dd5d-ea25-4826-ba92-934923574914",
+        "parentId" : "a5cbb1b2-2386-4450-8f29-69738c924a19",
+        "authorId" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "body" : "Yeah, I've outlined a few options we have in [this](https://github.com/apache/spark/pull/31083#discussion_r553880583) comment. Let me know what you think, @sunchao.",
+        "createdAt" : "2021-01-08T21:31:09Z",
+        "updatedAt" : "2021-01-25T20:45:29Z",
+        "lastEditedBy" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d2d7d430-444b-404e-9efd-74dde4ad1c09",
+        "parentId" : "a5cbb1b2-2386-4450-8f29-69738c924a19",
+        "authorId" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "body" : "cc @dongjoon-hyun @rdblue @viirya @cloud-fan @HyukjinKwon as well",
+        "createdAt" : "2021-01-08T21:31:51Z",
+        "updatedAt" : "2021-01-25T20:45:29Z",
+        "lastEditedBy" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5aa31c93e212576caa0b0d6986dfd20bf971310f",
+    "line" : 49,
+    "diffHunk" : "@@ -1,1 +47,51 @@        // for OrderedDistribution and generic expressions for ClusteredDistribution\n        // this allows RepartitionByExpression to pick either range or hash partitioning\n        RepartitionByExpression(distribution, query, numShufflePartitions)\n      } else {\n        query"
+  },
+  {
+    "id" : "32c4cd02-b8ea-4b39-b142-9e8156e8b657",
+    "prId" : 31083,
+    "prUrl" : "https://github.com/apache/spark/pull/31083#pullrequestreview-566720237",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "fabda40a-3265-4ec0-b38a-1d5050c203cf",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "This looks like a limitation for data sources; for DSv1 they could inject any arbitrary operations, including calling repartition method Dataset provides. Most repartition methods have a parameter \"numPartitions\". Same for repartitionByRange methods.",
+        "createdAt" : "2021-01-11T20:29:22Z",
+        "updatedAt" : "2021-01-25T20:45:29Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d1043a06-ce68-458d-8f2b-58be79d3f92a",
+        "parentId" : "fabda40a-3265-4ec0-b38a-1d5050c203cf",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "For example, I have a data source written as DSv1 which provides ability to read the state store in streaming query and rewrite it. While the number of partitions in state store is determined by the number of shuffles in streaming query, the value is not guaranteed to be same across applications. \r\n\r\nFurthermore, the data source supports rescale which should repartition to arbitrary number of partitions. It would be weird if I have to say \"You should change the Spark configuration to set the target number of partitions.\"",
+        "createdAt" : "2021-01-11T20:37:38Z",
+        "updatedAt" : "2021-01-25T20:45:29Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c1bfc292-eeb8-42c8-a62b-2a6588c75e79",
+        "parentId" : "fabda40a-3265-4ec0-b38a-1d5050c203cf",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "I have a commit to address this (https://github.com/HeartSaVioR/spark/commit/485c56b4d557d6102ac53d71881c24499714906d), but you deserve the full credit of this PR and I wouldn't like to take a part of your credit.\r\n\r\nThat said, I prefer to handle this in follow-up JIRA issue (I'll submit a new PR once this PR is merged), but I'm also OK to address this altogether in this PR (I'll submit a new PR to your repo) if we prefer it.\r\n",
+        "createdAt" : "2021-01-11T22:48:57Z",
+        "updatedAt" : "2021-01-25T20:45:29Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0cee5bdc-84fe-4bcc-8a1e-bb95f80f50b5",
+        "parentId" : "fabda40a-3265-4ec0-b38a-1d5050c203cf",
+        "authorId" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "body" : "@HeartSaVioR, I think it is going to be useful for some data sources. I did not want to cover this in first PRs as there was no consensus on the [dev list](https://lists.apache.org/thread.html/d8bb72fc9b4be8acc3f49367bfc99cbf029194a58333eba69df49717@%3Cdev.spark.apache.org%3E) around controlling the number of tasks. That's why I added this topic to non-goals of the design doc.\r\n\r\nI think one point to think about is who should control the parallelism. I guess the parallelism should depend on incoming data volume in most cases (except when the number of requested partitions is static, like probably in the case mentioned above). Without having statistics about the number of incoming records or their shape, it will be hard for a data source to determine the right number of partitions.\r\n\r\nThat being said, I think making that number optional like in your change can be a reasonable starting point. However, I'd like us to think about how this will look like in the future. Should Spark report stats about the incoming batch so that data sources can make a better estimate? How will that API look like?\r\n\r\n",
+        "createdAt" : "2021-01-12T11:41:00Z",
+        "updatedAt" : "2021-01-25T20:45:29Z",
+        "lastEditedBy" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4161b8f1-3520-42ab-881f-8b2a847491f6",
+        "parentId" : "fabda40a-3265-4ec0-b38a-1d5050c203cf",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I agree with @aokolnychyi that it should be Spark to decide these physical details (like numShufflePartitions), for better performance. It's an ill-pattern to let the data source to decide it.\r\n\r\nBTW why do we use `conf.numShufflePartitions` here? We can use `None` so that AQE can decide the number of partitions, which is even better.",
+        "createdAt" : "2021-01-12T12:47:04Z",
+        "updatedAt" : "2021-01-25T20:45:29Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a19113c7-7979-41f6-a6ac-bd673583e260",
+        "parentId" : "fabda40a-3265-4ec0-b38a-1d5050c203cf",
+        "authorId" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "body" : "I guess I missed the change from @viirya that made it optional, @cloud-fan. I can switch to that. ",
+        "createdAt" : "2021-01-12T16:04:11Z",
+        "updatedAt" : "2021-01-25T20:45:29Z",
+        "lastEditedBy" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "43c6bbe5-e40e-4b06-90fc-005c702c4319",
+        "parentId" : "fabda40a-3265-4ec0-b38a-1d5050c203cf",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "My concern is mostly the \"static partitions\" as I provided as an example like state data source. That's not a matter of whether it's ill-pattern or not, because for the case the ability of restricting the number of partitions is not optional but \"required\" - the data should be partitioned exactly the same with Spark partitions the rows for hash shuffle, and a partition shouldn't be written concurrently. I don't think end users should do the repartition manually in their queries to not break a thing.\r\n\r\nThat is easily achievable in DSv1 (I have an implementation based on DSv1 and want to migrate to DSv2) as Spark provides DataFrame to the data source on write. While I don't expect such flexibility for DSv2 (the behavior seems too open), I'm not sure the case is something we'd like to define as \"not supported on DSv2 and have to live with DSv1\".",
+        "createdAt" : "2021-01-12T20:06:35Z",
+        "updatedAt" : "2021-01-25T20:45:29Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a0cf719b-acfa-4452-8f01-d6dd7725996c",
+        "parentId" : "fabda40a-3265-4ec0-b38a-1d5050c203cf",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Even without the static partitioning, there might be something more to think of - data source may know about the physical information of the actual storage which may be some points on optimizing writes, or on opposite way, throttle on parallelism to not doing effective DDOS by ourselves. I guess it's beyond of the scope on this PR, but just wanted to bring this as a food for thought.",
+        "createdAt" : "2021-01-12T20:51:00Z",
+        "updatedAt" : "2021-01-25T20:45:29Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e8d74021-90db-4fb9-9633-551c50c99f68",
+        "parentId" : "fabda40a-3265-4ec0-b38a-1d5050c203cf",
+        "authorId" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "body" : "I knew this would require discussion so I propose to do this in a follow-up like @HeartSaVioR suggested. \r\n\r\nI don’t feel strongly about this point and it would be great to accommodate all use cases to drive the adoption of DS V2. However, we should be really careful and I think we should continue to discuss. \r\n\r\nI still believe the parallelism should depend on data volume in a general case. That’s why it is going to be useful only if Spark propagates stats about the incoming batch. ",
+        "createdAt" : "2021-01-12T21:35:21Z",
+        "updatedAt" : "2021-01-25T20:45:29Z",
+        "lastEditedBy" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5aa31c93e212576caa0b0d6986dfd20bf971310f",
+    "line" : 45,
+    "diffHunk" : "@@ -1,1 +43,47 @@\n      val queryWithDistribution = if (distribution.nonEmpty) {\n        val numShufflePartitions = conf.numShufflePartitions\n        // the conversion to catalyst expressions above produces SortOrder expressions\n        // for OrderedDistribution and generic expressions for ClusteredDistribution"
   }
 ]

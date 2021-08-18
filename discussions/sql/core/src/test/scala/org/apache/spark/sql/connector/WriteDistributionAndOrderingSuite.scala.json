@@ -64,5 +64,148 @@
     "commit" : "e7f167fb0103d7e62127421cf5ad2a594d5f4337",
     "line" : 174,
     "diffHunk" : "@@ -1,1 +545,549 @@      writeCommand: String): Unit = {\n\n    if (writeCommand.startsWith(microBatchPrefix)) {\n      checkStreamingWriteRequirements(\n        tableDistribution,"
+  },
+  {
+    "id" : "d5ea2029-ad48-4aad-aca6-45d6d6aad2b4",
+    "prId" : 31083,
+    "prUrl" : "https://github.com/apache/spark/pull/31083#pullrequestreview-576410980",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2b6f9303-f43b-44e1-9e98-eda487e9c357",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Could we please have same sort of tests in streaming query and see whether all functionalities work with Structured Streaming as well? Repartition may work, but analyzer/optimizer may deny sorting with misunderstanding that the sort should happen globally (across micro-batches) whereas it shouldn't (just need to be per micro-batch).\r\n\r\nNo need to consider continuous mode - it doesn't support repartition. Though still probably might worth to check whether Spark will throw the right error on that.",
+        "createdAt" : "2021-01-11T22:57:40Z",
+        "updatedAt" : "2021-01-25T20:45:29Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "335f73c2-47ec-4308-a654-9348ed0f0cf6",
+        "parentId" : "2b6f9303-f43b-44e1-9e98-eda487e9c357",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "I see the PR is already huge enough - it would be OK if we can deal with follow-up issue. Just need to make sure both are addressed in same release (3.2.0 probably).",
+        "createdAt" : "2021-01-12T08:01:40Z",
+        "updatedAt" : "2021-01-25T20:45:29Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f92e910d-d403-46ab-bc8b-d45d3808525f",
+        "parentId" : "2b6f9303-f43b-44e1-9e98-eda487e9c357",
+        "authorId" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "body" : "Unfortunately, bringing this logic to streaming plans would require more effort. That's why there are no tests for that yet. The main problem is the absence of dedicated logical plans (SPARK-27484?) and that we construct `StreamingWrite` right away.\r\n\r\nRight now, `MicroBatchExecution` creates `WriteToMicroBatchDataSource` which is replaced with `WriteToDataSourceV2` in `runBatch`. `StreamingWrite` is constructed while generating the logical plan in `createStreamingWrite`. It is then wrapped into `MicroBatchWrite` that implements `BatchWrite`.\r\n\r\nLocally, I had a prototype that introduces the following plans:\r\n\r\n- `AppendDataToMicroBatchDataSource`\r\n- `OverwriteDataInMicroBatchDataSource`\r\n- `UpdateDataInMicroBatchDataSource`\r\n\r\nThen `MicroBatchExecution` creates an appropriate logical plan node and we handle those nodes in `V2Writes` next to batch nodes. ",
+        "createdAt" : "2021-01-12T12:15:50Z",
+        "updatedAt" : "2021-01-25T20:45:29Z",
+        "lastEditedBy" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d16ea580-184d-4ff7-80ef-f035e6ebee9f",
+        "parentId" : "2b6f9303-f43b-44e1-9e98-eda487e9c357",
+        "authorId" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "body" : "I need more feedback from folks who work on Structured Streaming to see whether this is aligned with their thoughts.",
+        "createdAt" : "2021-01-12T12:18:02Z",
+        "updatedAt" : "2021-01-25T20:45:29Z",
+        "lastEditedBy" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4278de1e-3653-4757-8036-b9e92a9559a5",
+        "parentId" : "2b6f9303-f43b-44e1-9e98-eda487e9c357",
+        "authorId" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "body" : "@sunchao, will separate plans for streaming make it easier to invalidate the cache for streaming writes?",
+        "createdAt" : "2021-01-12T12:35:19Z",
+        "updatedAt" : "2021-01-25T20:45:29Z",
+        "lastEditedBy" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "db0596c2-01ce-4d90-9352-3a8bc5dfceb4",
+        "parentId" : "2b6f9303-f43b-44e1-9e98-eda487e9c357",
+        "authorId" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "body" : "cc @HeartSaVioR @dongjoon-hyun @rdblue @viirya @cloud-fan @HyukjinKwon",
+        "createdAt" : "2021-01-12T12:36:31Z",
+        "updatedAt" : "2021-01-25T20:45:29Z",
+        "lastEditedBy" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "18d71892-64ae-48e2-b8f4-6ed3d0b03d59",
+        "parentId" : "2b6f9303-f43b-44e1-9e98-eda487e9c357",
+        "authorId" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "body" : "Having separate plans will enable  more analyzer rules to be run on steaming nodes. For example, we can start checking table capabilities. ",
+        "createdAt" : "2021-01-12T12:41:53Z",
+        "updatedAt" : "2021-01-25T20:45:29Z",
+        "lastEditedBy" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "44f597e3-f997-47b9-abf7-abae55f5c078",
+        "parentId" : "2b6f9303-f43b-44e1-9e98-eda487e9c357",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "I think SPARK-27484 is something we should deal with. I tried it before and it didn't go well as considering DSv1 and continuous mode weren't so trivial. If I remember correctly on the difficulty of the issue, Sink (DSv1) requires DataFrame which is ready for write - I'm not sure that is something we can include on the logical/physical plan, or even able to inject it later.\r\n\r\nBut honestly I'm not an expert of Catalyst and that might be a root cause of the difficulty. Probably I'd try it again in near future but it would be also nice if someone is interested on this and try it out in parallel.",
+        "createdAt" : "2021-01-12T20:55:49Z",
+        "updatedAt" : "2021-01-25T20:45:29Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3accd948-1eb5-4d8b-abcb-150fdb465654",
+        "parentId" : "2b6f9303-f43b-44e1-9e98-eda487e9c357",
+        "authorId" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "body" : "@HeartSaVioR, I can share what I had if people think having those plans is reasonable.",
+        "createdAt" : "2021-01-12T21:05:02Z",
+        "updatedAt" : "2021-01-25T20:45:29Z",
+        "lastEditedBy" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9337300e-26cc-4dc2-8753-56c8b4ac3880",
+        "parentId" : "2b6f9303-f43b-44e1-9e98-eda487e9c357",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "OK we'd probably like to also cc. to those people as well for major SS changes or something needs discussion on SS\r\n@tdas @zsxwing @jose-torres @brkyvz @xuanyuanking ",
+        "createdAt" : "2021-01-12T21:16:19Z",
+        "updatedAt" : "2021-01-25T20:45:29Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3f0b74eb-38c5-4fda-9cdf-6cee76fcc6f9",
+        "parentId" : "2b6f9303-f43b-44e1-9e98-eda487e9c357",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "One thing I can tell is that SS doesn't officially support upsert on sink side - it's either \"append\" or \"truncate and append\". \r\n\r\nUpdate mode simply leverages append and defers data source to deal with the upsert without telling which columns are used as (composite) key. That's not quite right but that's just where we are at.\r\n\r\nI've initiated discussion around semantic mismatch on output mode in SS and write behavior on sink in dev mailing list, but didn't get enough love on that. http://apache-spark-developers-list.1001551.n3.nabble.com/Output-mode-in-Structured-Streaming-and-DSv1-sink-DSv2-table-td30216.html#a30239",
+        "createdAt" : "2021-01-12T21:33:05Z",
+        "updatedAt" : "2021-01-25T20:45:29Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a405f88d-6576-4b7e-bf06-9e8a5928c93d",
+        "parentId" : "2b6f9303-f43b-44e1-9e98-eda487e9c357",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "Sorry for the late, just notice this and thanks for pinging me @HeartSaVioR \r\n+1 for having the streaming writing logical plans. Now we mix the analysis logic with stream write API code. It's harmful to further extension indeed. I'll have a try for SPARK-27484.",
+        "createdAt" : "2021-01-26T14:37:37Z",
+        "updatedAt" : "2021-01-26T14:37:37Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5aa31c93e212576caa0b0d6986dfd20bf971310f",
+    "line" : 41,
+    "diffHunk" : "@@ -1,1 +39,43 @@import org.apache.spark.sql.util.QueryExecutionListener\n\nclass WriteDistributionAndOrderingSuite\n  extends QueryTest with SharedSparkSession with BeforeAndAfter with AdaptiveSparkPlanHelper {\n"
   }
 ]

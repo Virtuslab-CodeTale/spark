@@ -75,5 +75,181 @@
     "commit" : "8610b8e5924eba64394607ae80bcb0db89da5741",
     "line" : 10,
     "diffHunk" : "@@ -1,1 +438,442 @@      AlterTableExec(table.catalog, table.identifier, changes) :: Nil\n\n    // TODO: v2 `UNSET TBLPROPERTIES` should respect the ifExists flag.\n    case AlterTableUnsetProperties(table: ResolvedTable, keys, _) =>\n      val changes = keys.map(key => TableChange.removeProperty(key))"
+  },
+  {
+    "id" : "7269f02a-e62f-4327-9232-d708499877dc",
+    "prId" : 31172,
+    "prUrl" : "https://github.com/apache/spark/pull/31172#pullrequestreview-567685350",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "10225651-fcee-429d-a598-1ce9346921c7",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Is this correct? This looks wrong to me because we don't recache if the original table is not cached from the beginning. The new code looks like caching always.\r\n\r\ncc @sunchao ",
+        "createdAt" : "2021-01-13T21:13:40Z",
+        "updatedAt" : "2021-01-13T21:13:40Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c4bc3859-d250-4100-a1e6-c7f9abac82eb",
+        "parentId" : "10225651-fcee-429d-a598-1ce9346921c7",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Please see `if (cache.isDefined) {` condition, @MaxGekk .",
+        "createdAt" : "2021-01-13T21:14:20Z",
+        "updatedAt" : "2021-01-13T21:14:20Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b530345a-c189-4045-a09e-7cf263a66742",
+        "parentId" : "10225651-fcee-429d-a598-1ce9346921c7",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "> This looks wrong to me because we don't recache if the original table is not cached \r\n\r\nThis does the same. If something wasn't in the cache, it will not appear there.",
+        "createdAt" : "2021-01-13T21:31:21Z",
+        "updatedAt" : "2021-01-13T21:31:21Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "848392d6-7fc2-46d3-a930-22663856a095",
+        "parentId" : "10225651-fcee-429d-a598-1ce9346921c7",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "Let's imagine, we have cached Table1, and cached View1 which uses Table1.\r\n1. Current implementation: remove Table1 and View1, and add Table1 back. View1 will be uncached forever.\r\n2. Proposed: clear cached data of Table1 and View1, and keep them cached, so, next action will fill the cache for both Table1 and View1. ",
+        "createdAt" : "2021-01-13T21:36:20Z",
+        "updatedAt" : "2021-01-13T21:36:20Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bb021e7a-d95c-44df-bd01-197da592f546",
+        "parentId" : "10225651-fcee-429d-a598-1ce9346921c7",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Yes I'm +1 on the change. We should change the PR description & JIRA title to properly reflect this though (currently it looks like a refactoring). We should also document this in SQL migration guide.\r\n\r\nAlso cc @cloud-fan @gatorsmile for opinions on this.",
+        "createdAt" : "2021-01-13T21:40:09Z",
+        "updatedAt" : "2021-01-13T21:42:05Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "806a400a-e414-468a-a024-1fbbc3348b11",
+        "parentId" : "10225651-fcee-429d-a598-1ce9346921c7",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "It was a refactoring till your test failed ;-)",
+        "createdAt" : "2021-01-13T21:42:13Z",
+        "updatedAt" : "2021-01-13T21:42:14Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "438e99e4-469d-4491-88fd-0dec008cb658",
+        "parentId" : "10225651-fcee-429d-a598-1ce9346921c7",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Ah, got it. I was confused at `recacheTable`. Thanks.",
+        "createdAt" : "2021-01-13T21:52:05Z",
+        "updatedAt" : "2021-01-13T21:52:05Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f4415ebe42443ce4127aebf4f83cf3f93ec531b2",
+    "line" : 33,
+    "diffHunk" : "@@ -1,1 +161,165 @@\n    case RefreshTable(r: ResolvedTable) =>\n      RefreshTableExec(r.catalog, r.identifier, recacheTable(r)) :: Nil\n\n    case ReplaceTable(catalog, ident, schema, parts, props, orCreate) =>"
+  },
+  {
+    "id" : "9acda95b-aaa0-48f4-a446-375ff8218e8c",
+    "prId" : 31172,
+    "prUrl" : "https://github.com/apache/spark/pull/31172#pullrequestreview-568242677",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "bbc5e9bf-8cca-48e1-a281-331195695d92",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "This seems the main point of this change. And as other comments, this looks like a behavior change or an inconsistent behavior to v1.\r\n\r\n> Reduce the number of calls to the Cache Manager when need to recache a table. Before the changes, invalidateCache() invokes the Cache Manager 3 times: lookupCachedData(), uncacheQuery() and cacheQuery().\r\n\r\nHmm, does this stand for the reason of this change? If we don't consider the behavior change part, `recacheByPlan` is actually more complicated than other three calls `lookupCachedData`, `uncacheQuery` and `cacheQuery`.\r\n\r\n",
+        "createdAt" : "2021-01-14T06:56:37Z",
+        "updatedAt" : "2021-01-14T06:56:38Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ec47dab2-9cf8-45a0-ae46-2a688720f431",
+        "parentId" : "bbc5e9bf-8cca-48e1-a281-331195695d92",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "I also think should be considered as a behavior change. Even though query result remains the same, it now lazily caches data which changes query execution time and memory/storage consumption. Because this, we should make a similar change for v1 as well.\r\n\r\nAnd please update the PR description to make it more clear (e.g., user-facing change).",
+        "createdAt" : "2021-01-14T07:21:08Z",
+        "updatedAt" : "2021-01-14T07:21:08Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "835c5e1e-a703-43b8-a82c-39ded7b5a380",
+        "parentId" : "bbc5e9bf-8cca-48e1-a281-331195695d92",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "> this looks like a behavior change ...\r\n\r\nFrom correctness point of view, there are no behavior change.\r\n\r\n> an inconsistent behavior to v1\r\n\r\nLet's look at the command affected in this PR:\r\n- v1 `ALTER TABLE .. DROP PARTITION` does not do re-caching in v3.0, and has a bug, see https://github.com/apache/spark/pull/31006\r\n- v1 `ALTER TABLE .. ADD PARTITION` does not do re-caching too, and has a correctness bug in 3.0. See the fix https://github.com/apache/spark/pull/31116\r\n- v1 `ALTER TABLE .. RENAME PARTITION` also has correctness bug in 3.0: https://github.com/apache/spark/pull/31060\r\n\r\nCould you, please, explain what do you mean by \"inconsistent\" behavior to v1? Inconsistent to recent fixes?\r\n\r\n> does this stand for the reason of this change?\r\n\r\nNot main reason but one of the reasons.\r\n\r\n> recacheByPlan is actually more complicated than other three calls\r\n\r\nThis is arguable. I do believe it is simpler more efficient.\r\n",
+        "createdAt" : "2021-01-14T07:24:35Z",
+        "updatedAt" : "2021-01-14T07:24:36Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5cebc525-73b3-47ff-af8f-77aef49927f3",
+        "parentId" : "bbc5e9bf-8cca-48e1-a281-331195695d92",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "> ... we should make a similar change for v1 as well.\r\n\r\nI agree. We should change cache refreshing in v1 command either by introducing new function for that or modifying `CatalogImpl.refreshTable()`: https://github.com/apache/spark/blob/62d82b5b270c2eea27ba026e66b7d6598bbaa0a6/sql/core/src/main/scala/org/apache/spark/sql/internal/CatalogImpl.scala#L538-L558\r\nwhich can be used for v1 as well as for v2 tables/views (potentially but I am not sure that it works for v2 tables for now).",
+        "createdAt" : "2021-01-14T07:39:25Z",
+        "updatedAt" : "2021-01-14T07:39:25Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "891f5ebc-84dc-447f-b9d1-1b8980dba8de",
+        "parentId" : "bbc5e9bf-8cca-48e1-a281-331195695d92",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Doesn't this only change for v2 behavior: https://github.com/apache/spark/pull/31172#discussion_r557031365? Based on https://github.com/apache/spark/pull/31172#discussion_r557030832, if we just uncache dependent caches for v1, isn't inconsistent to v1?\r\n\r\n> This is arguable. I do believe it is simpler more efficient.\r\n\r\nIf someone creates a method in cache manager to include three calls? :) I don't think the number of calls here is the point .\r\n\r\nBTW, I think recaching dependent caches is the most important point of this change, but the PR description doesn't explicitly mention it. This should be clear in the description.\r\n\r\nWhen I'm writing the comment, I saw you update the title and it looks more precise. That's good, but please update the description too.\r\n",
+        "createdAt" : "2021-01-14T07:57:38Z",
+        "updatedAt" : "2021-01-14T07:57:38Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4e6f8fef-5089-4578-b94a-13ab939721cb",
+        "parentId" : "bbc5e9bf-8cca-48e1-a281-331195695d92",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "> If someone creates a method in cache manager to include three calls? :) I don't think the number of calls here is the point .\r\n\r\nThose 2 back-to-back calls:\r\n```scala\r\n    val cache = session.sharedState.cacheManager.lookupCachedData(v2Relation)\r\n    session.sharedState.cacheManager.uncacheQuery(session, v2Relation, cascade = true)\r\n```\r\nlead to unnecessary traversals over cache. In total 3 calls performs more work in the cache, I do believe. \r\n\r\n> That's good, but please update the description too.\r\n\r\nI have updated it. Please, review it.",
+        "createdAt" : "2021-01-14T08:29:48Z",
+        "updatedAt" : "2021-01-14T08:29:48Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e6ee5380-4983-49e2-87f4-1dfc42de1b4a",
+        "parentId" : "bbc5e9bf-8cca-48e1-a281-331195695d92",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "yea let's update v1 tables as well (with another PR). It's weird if my query gets uncached because someone else refreshes a table.",
+        "createdAt" : "2021-01-14T13:43:05Z",
+        "updatedAt" : "2021-01-14T13:43:06Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f4415ebe42443ce4127aebf4f83cf3f93ec531b2",
+    "line" : 7,
+    "diffHunk" : "@@ -1,1 +64,68 @@    val v2Relation = DataSourceV2Relation.create(r.table, Some(r.catalog), Some(r.identifier))\n    session.sharedState.cacheManager.recacheByPlan(session, v2Relation)\n  }\n\n  // Invalidates the cache associated with the given table. If the invalidated cache matches the"
   }
 ]

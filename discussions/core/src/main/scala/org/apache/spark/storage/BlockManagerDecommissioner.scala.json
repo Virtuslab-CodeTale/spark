@@ -1,0 +1,255 @@
+[
+  {
+    "id" : "eddc59b1-ab17-4164-a883-9830839f69f9",
+    "prId" : 31102,
+    "prUrl" : "https://github.com/apache/spark/pull/31102#pullrequestreview-566858258",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f6b18b23-3695-40ad-a654-733adff798c9",
+        "parentId" : null,
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Can you explain why you no longer check if the thread is interrupted.",
+        "createdAt" : "2021-01-11T21:26:30Z",
+        "updatedAt" : "2021-03-23T02:08:10Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "21e43069-a7d6-48f6-902f-7472efb89311",
+        "parentId" : "f6b18b23-3695-40ad-a654-733adff798c9",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "When we call `stopMigratingShuffleBlocks` explicitly, it always sets to `keepRunning` to `false` first before shutting down the thread pool(which would interrupt the threads). That means, `keepRunning=false` always comes first before `Thread.isInterrupted = true`. So checking `keepRunning` only should be enough.\r\n\r\n\r\nFor `InterruptedException` comes from the inner block of `while`, it should be caught by `catch` block and set to `keepRunning` to `false`. And checking `keepRunning` only also works in this case. Although, IIUC, I think we currently don't have a way to interrupt the thread from the inner block.\r\n\r\n",
+        "createdAt" : "2021-01-12T14:51:51Z",
+        "updatedAt" : "2021-03-23T02:08:10Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a7f69ae0-78e2-42be-9cbc-13e37005bc19",
+        "parentId" : "f6b18b23-3695-40ad-a654-733adff798c9",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "What about in the case where the JVM is shutting down?",
+        "createdAt" : "2021-01-12T17:46:01Z",
+        "updatedAt" : "2021-03-23T02:08:10Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bd59ca3e-7a0c-4374-9eaf-3e95337b2ee4",
+        "parentId" : "f6b18b23-3695-40ad-a654-733adff798c9",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "JVM shutting down would trigger the shutdown hook to call `exeutor.stop()`, which calls `BlockManagerDecommissioner.stop()` explicitly. So it's still valid.",
+        "createdAt" : "2021-01-13T02:54:51Z",
+        "updatedAt" : "2021-03-23T02:08:10Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "88a205ec8af63f744fdbee8b4e61cb718d3ec207",
+    "line" : 61,
+    "diffHunk" : "@@ -1,1 +97,101 @@      logInfo(s\"Starting shuffle block migration thread for $peer\")\n      // Once a block fails to transfer to an executor stop trying to transfer more blocks\n      while (keepRunning) {\n        try {\n          val (shuffleBlockInfo, retryCount) = nextShuffleBlockToMigrate()"
+  },
+  {
+    "id" : "7a287c15-a869-4aa0-8678-1e36b10c56b9",
+    "prId" : 31102,
+    "prUrl" : "https://github.com/apache/spark/pull/31102#pullrequestreview-566522443",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9cc56842-1016-43f9-8f94-fc0b4f8c0f61",
+        "parentId" : null,
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "I don't understand what this refactoring gives us.",
+        "createdAt" : "2021-01-11T22:15:58Z",
+        "updatedAt" : "2021-03-23T02:08:10Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cd58accb-2075-4d43-96a0-521f9eb0acc0",
+        "parentId" : "9cc56842-1016-43f9-8f94-fc0b4f8c0f61",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "IIUC,  it's decorated with `lazy` because we won't initiate it when rdd migration disabled. However, it isn't implemented correctly as we always access it in `stop()`, which breaks our expectation (I think). This refactor fixes the problem.",
+        "createdAt" : "2021-01-12T15:06:03Z",
+        "updatedAt" : "2021-03-23T02:08:10Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1e8e23aa-73c2-4cb6-b589-d2f09e2ccb49",
+        "parentId" : "9cc56842-1016-43f9-8f94-fc0b4f8c0f61",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Makes sense.",
+        "createdAt" : "2021-01-12T17:48:18Z",
+        "updatedAt" : "2021-03-23T02:08:10Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "88a205ec8af63f744fdbee8b4e61cb718d3ec207",
+    "line" : 188,
+    "diffHunk" : "@@ -1,1 +185,189 @@    mutable.HashMap[BlockManagerId, ShuffleMigrationRunnable]()\n\n  private val rddBlockMigrationExecutor =\n    if (conf.get(config.STORAGE_DECOMMISSION_RDD_BLOCKS_ENABLED)) {\n      Some(ThreadUtils.newDaemonSingleThreadExecutor(\"block-manager-decommission-rdd\"))"
+  },
+  {
+    "id" : "95f6ff46-3a9b-48f2-83e9-af1121b0b74a",
+    "prId" : 31102,
+    "prUrl" : "https://github.com/apache/spark/pull/31102#pullrequestreview-566366984",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7c03e538-0f2e-44db-840b-81524be9dc04",
+        "parentId" : null,
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Similar concerns above around not checking thread interruptions.",
+        "createdAt" : "2021-01-11T22:16:33Z",
+        "updatedAt" : "2021-03-23T02:08:10Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8750d559-8580-4bf9-b395-3201c592f0ff",
+        "parentId" : "7c03e538-0f2e-44db-840b-81524be9dc04",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "The reason is similarly to https://github.com/apache/spark/pull/31102/files#r555829938. We alwaysys set `stopped` to false before shutting down the thread poll, which interrupts this thread.",
+        "createdAt" : "2021-01-12T15:09:10Z",
+        "updatedAt" : "2021-03-23T02:08:10Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "88a205ec8af63f744fdbee8b4e61cb718d3ec207",
+    "line" : 206,
+    "diffHunk" : "@@ -1,1 +195,199 @@    override def run(): Unit = {\n      logInfo(\"Attempting to migrate all RDD blocks\")\n      while (!stopped && !stoppedRDD) {\n        // Validate if we have peers to migrate to. Otherwise, give up migration.\n        if (bm.getPeers(false).isEmpty) {"
+  },
+  {
+    "id" : "6d23ae93-5371-46b9-b43c-ced9194e0439",
+    "prId" : 31102,
+    "prUrl" : "https://github.com/apache/spark/pull/31102#pullrequestreview-566368049",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "dee1c830-17bb-4cb8-8945-d880ce8c256d",
+        "parentId" : null,
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Why switching from lazy val to option?",
+        "createdAt" : "2021-01-11T22:17:20Z",
+        "updatedAt" : "2021-03-23T02:08:10Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "62192455-81a6-4f11-b506-a9df2cc2f677",
+        "parentId" : "dee1c830-17bb-4cb8-8945-d880ce8c256d",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Same reason of https://github.com/apache/spark/pull/31102/files#r555840826: to aoivd initiating the thread pool when it's unncessary.",
+        "createdAt" : "2021-01-12T15:10:14Z",
+        "updatedAt" : "2021-03-23T02:08:10Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "88a205ec8af63f744fdbee8b4e61cb718d3ec207",
+    "line" : 252,
+    "diffHunk" : "@@ -1,1 +222,226 @@  }\n\n  private val shuffleBlockMigrationRefreshExecutor =\n    if (conf.get(config.STORAGE_DECOMMISSION_SHUFFLE_BLOCKS_ENABLED)) {\n      Some(ThreadUtils.newDaemonSingleThreadExecutor(\"block-manager-decommission-shuffle\"))"
+  },
+  {
+    "id" : "1d77175b-e99b-4e94-8d61-61e235b6867e",
+    "prId" : 31102,
+    "prUrl" : "https://github.com/apache/spark/pull/31102#pullrequestreview-565751430",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "77f0c16e-ba34-4d5e-86c0-e1b97152e895",
+        "parentId" : null,
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Same concern for thread interruption",
+        "createdAt" : "2021-01-11T22:17:40Z",
+        "updatedAt" : "2021-03-23T02:08:10Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "88a205ec8af63f744fdbee8b4e61cb718d3ec207",
+    "line" : 264,
+    "diffHunk" : "@@ -1,1 +232,236 @@    override def run(): Unit = {\n      logInfo(\"Attempting to migrate all shuffle blocks\")\n      while (!stopped && !stoppedShuffle) {\n        try {\n          val startTime = System.nanoTime()"
+  },
+  {
+    "id" : "e1dd36b3-20ad-45ad-a99a-1e255837a275",
+    "prId" : 31102,
+    "prUrl" : "https://github.com/apache/spark/pull/31102#pullrequestreview-566523089",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f1d64e57-7799-4bde-9281-dbb74c13e637",
+        "parentId" : null,
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "...?",
+        "createdAt" : "2021-01-11T22:18:18Z",
+        "updatedAt" : "2021-03-23T02:08:10Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "207a5914-ec33-4386-aad5-a3fc120ef372",
+        "parentId" : "f1d64e57-7799-4bde-9281-dbb74c13e637",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Ah, this intends to keep the same code pattern inside `ShuffleMigrationRunnable`.  In `ShuffleMigrationRunnable`, we has:\r\n\r\n```scala\r\ncase _: InterruptedException if !keepRunning =>\r\n   logInfo(\"Stop shuffle block migration\")\r\n```\r\n\r\nThis help reduces the misleading error message to users when the block migration is stopped intentionally.",
+        "createdAt" : "2021-01-12T15:15:25Z",
+        "updatedAt" : "2021-03-23T02:08:10Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0cbd004f-1675-4382-bf87-ca4027a15581",
+        "parentId" : "f1d64e57-7799-4bde-9281-dbb74c13e637",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Ok so the point of checking the keepRunning flag is to only log when it isn't a Spark commanded shutdown, gotcha.",
+        "createdAt" : "2021-01-12T17:49:06Z",
+        "updatedAt" : "2021-03-23T02:08:10Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "88a205ec8af63f744fdbee8b4e61cb718d3ec207",
+    "line" : 279,
+    "diffHunk" : "@@ -1,1 +241,245 @@          Thread.sleep(sleepInterval)\n        } catch {\n          case _: InterruptedException if stopped =>\n            logInfo(\"Stop refreshing migratable shuffle blocks.\")\n          case NonFatal(e) =>"
+  },
+  {
+    "id" : "8a57e780-b60e-466a-9f73-5b61ba657895",
+    "prId" : 31102,
+    "prUrl" : "https://github.com/apache/spark/pull/31102#pullrequestreview-569306069",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a38e5d2b-7efd-4158-9c3d-e3e279e42f34",
+        "parentId" : null,
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "There are a few more places where offload is used in the `BlockManagerSuite`:\r\n- https://github.com/apache/spark/blob/d562aaf4ff350b66aef354ca4493c60e75d2b04b/core/src/test/scala/org/apache/spark/storage/BlockManagerSuite.scala#L1895\r\n- https://github.com/apache/spark/blob/d562aaf4ff350b66aef354ca4493c60e75d2b04b/core/src/test/scala/org/apache/spark/storage/BlockManagerSuite.scala#L1913\r\n- https://github.com/apache/spark/blob/d562aaf4ff350b66aef354ca4493c60e75d2b04b/core/src/test/scala/org/apache/spark/storage/BlockManagerSuite.scala#L1929\r\n\r\n- https://github.com/apache/spark/blob/d562aaf4ff350b66aef354ca4493c60e75d2b04b/core/src/test/scala/org/apache/spark/storage/BlockManagerSuite.scala#L1931",
+        "createdAt" : "2021-01-15T14:28:38Z",
+        "updatedAt" : "2021-03-23T02:08:10Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "88a205ec8af63f744fdbee8b4e61cb718d3ec207",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +34,38 @@/**\n * Class to handle block manager decommissioning retries.\n * It creates a Thread to retry migrating all RDD cache and Shuffle blocks\n */\nprivate[storage] class BlockManagerDecommissioner("
+  }
+]

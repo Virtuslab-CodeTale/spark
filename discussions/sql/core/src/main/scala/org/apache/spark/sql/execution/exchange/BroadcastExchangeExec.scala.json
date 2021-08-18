@@ -97,5 +97,148 @@
     "commit" : "a1ee451155074e2c3c0e534d908eaa24aa38093d",
     "line" : 6,
     "diffHunk" : "@@ -1,1 +143,147 @@              throw new SparkException(\n                s\"Cannot broadcast the table that is larger than\" +\n                  s\" ${MAX_BROADCAST_TABLE_BYTES >> 30}GB: ${dataSize >> 30} GB\")\n            }\n"
+  },
+  {
+    "id" : "15e6f691-956e-4b78-bd5b-c766a4f314a0",
+    "prId" : 31119,
+    "prUrl" : "https://github.com/apache/spark/pull/31119#pullrequestreview-570157158",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c0f646ad-a63c-4382-b3f5-02b4dea8b139",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "After a second thought, I think this is risky. It's possible that in a non-STS environment, users set job group id manually, and run some long-running jobs. If we capture the job group id here in broadcast exchange, when the broadcast timeout, it will cancel the whole job group which may kill the user's other long-running jobs unexpectedly.\r\n\r\nI think we need to revisit the STS's SQL statement canceling feature. We should use SQL execution ID to find out all the jobs of a SQL query, and assign a unique job group id to them.",
+        "createdAt" : "2021-01-15T07:19:10Z",
+        "updatedAt" : "2021-01-15T07:19:10Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fb3aa87c-0604-4368-985d-7fd568a65e3b",
+        "parentId" : "c0f646ad-a63c-4382-b3f5-02b4dea8b139",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "@LantaoJin what do you think?",
+        "createdAt" : "2021-01-15T07:19:28Z",
+        "updatedAt" : "2021-01-15T07:19:28Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "04350035-e3f7-4948-9936-8d09c2fac869",
+        "parentId" : "c0f646ad-a63c-4382-b3f5-02b4dea8b139",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "@cloud-fan yes, the case you said is a problem in current implementation. I will give a new PR. Revert this first?",
+        "createdAt" : "2021-01-15T08:05:55Z",
+        "updatedAt" : "2021-01-15T08:05:55Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f1155704-2cba-4db4-894b-7f8a8d7c5252",
+        "parentId" : "c0f646ad-a63c-4382-b3f5-02b4dea8b139",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "Job group id is still a basic API which used to cancel the a group of jobs (depends on custom business). In a non-STS environment, users can set job group id manually, and run some long-running jobs. In some cases, such as a custom exception, user want to cancel all jobs with the same job group. And broadcast timeout shouldn't use job group Id to can broadcast job.",
+        "createdAt" : "2021-01-15T08:31:07Z",
+        "updatedAt" : "2021-01-15T08:31:07Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "66ee87ae-9b77-4b2c-9d51-4ded88bebe1e",
+        "parentId" : "c0f646ad-a63c-4382-b3f5-02b4dea8b139",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Let me revert this first. Please let me know when you have a new fix, thanks!",
+        "createdAt" : "2021-01-15T13:36:23Z",
+        "updatedAt" : "2021-01-15T13:36:33Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ded89999-82a8-465a-9961-d58a6578dcf4",
+        "parentId" : "c0f646ad-a63c-4382-b3f5-02b4dea8b139",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "How about exposing a conf to users and let them determine whether to inherit the global jobGroupId for the internally generated jobs or not",
+        "createdAt" : "2021-01-18T02:00:27Z",
+        "updatedAt" : "2021-01-18T02:00:27Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4a94d19d-c285-4b46-a851-bd1d03023286",
+        "parentId" : "c0f646ad-a63c-4382-b3f5-02b4dea8b139",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "> How about exposing a conf to users and let them determine whether to inherit the global jobGroupId for the internally generated jobs or not\r\n\r\nCould you explain more? Does it need users to modify their exist applications?",
+        "createdAt" : "2021-01-18T02:09:53Z",
+        "updatedAt" : "2021-01-18T02:09:53Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3f6e6658-69b4-4898-9fdd-3c6f49044d13",
+        "parentId" : "c0f646ad-a63c-4382-b3f5-02b4dea8b139",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "W/ a conf(maybe named `spark.jobGroubID.inherited`) to decide whether the `runId` is re-generated or inherited from the former specified one. Users may develop applications like ThriftServer in C/S architecture as a server-like spark program.",
+        "createdAt" : "2021-01-18T02:19:36Z",
+        "updatedAt" : "2021-01-18T02:19:37Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "08bb7127-ffe3-437b-b37a-af3c9ce586c4",
+        "parentId" : "c0f646ad-a63c-4382-b3f5-02b4dea8b139",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "Sorry, I don't get the point. If a user set `spark.jobGroubID.inherited` to true and set a custom jobGroupId to a UUID value, when the broadcast timeout, what's behavior?",
+        "createdAt" : "2021-01-18T02:35:15Z",
+        "updatedAt" : "2021-01-18T02:35:15Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "774e064d-6758-42c8-bfa3-c2dd62f4efd1",
+        "parentId" : "c0f646ad-a63c-4382-b3f5-02b4dea8b139",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "Do you mean this?\r\n```scala\r\n  override val runId: UUID =\r\n    if (SQLConf.get.getConf(spark.jobGroubID.inherited)) {\r\n       UUID.randomUUID\r\n    } else {\r\n      UUID.fromString(sparkContext.getLocalProperty(SparkContext.SPARK_JOB_GROUP_ID))\r\n    }\r\n```",
+        "createdAt" : "2021-01-18T02:39:23Z",
+        "updatedAt" : "2021-01-18T02:39:23Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f4aebd2e-e8f3-466d-b3ac-10271c19820a",
+        "parentId" : "c0f646ad-a63c-4382-b3f5-02b4dea8b139",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "yea, something like this",
+        "createdAt" : "2021-01-18T02:46:54Z",
+        "updatedAt" : "2021-01-18T02:46:54Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ef5814eb-956e-45a9-8187-ed57de4a418f",
+        "parentId" : "c0f646ad-a63c-4382-b3f5-02b4dea8b139",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "Ok, I know. To be transparent to users, how about add a new thread local property `SparkContext.SPARK_RESERVED_JOB_GROUP_ID` or `SPARK_THRIFTSERVER_JOB_GROUP_ID` to separate it.\r\n```\r\ndiff --git a/core/src/main/scala/org/apache/spark/SparkContext.scala b/core/src/main/scala/org/apache/spark/SparkContext.scala\r\nindex f6e8a5694d..cc3efed713 100644\r\n--- a/core/src/main/scala/org/apache/spark/SparkContext.scala\r\n+++ b/core/src/main/scala/org/apache/spark/SparkContext.scala\r\n@@ -760,9 +760,13 @@ class SparkContext(config: SparkConf) extends Logging {\r\n    * may respond to Thread.interrupt() by marking nodes as dead.\r\n    */\r\n   def setJobGroup(groupId: String,\r\n-      description: String, interruptOnCancel: Boolean = false): Unit = {\r\n+      description: String, interruptOnCancel: Boolean = false, reserved: Boolean = false): Unit = {\r\n     setLocalProperty(SparkContext.SPARK_JOB_DESCRIPTION, description)\r\n-    setLocalProperty(SparkContext.SPARK_JOB_GROUP_ID, groupId)\r\n+    if (reserved) {\r\n+      setLocalProperty(SparkContext.SPARK_RESERVED_JOB_GROUP_ID, groupId)\r\n+    } else {\r\n+      setLocalProperty(SparkContext.SPARK_JOB_GROUP_ID, groupId)\r\n+    }\r\n     // Note: Specifying interruptOnCancel in setJobGroup (rather than cancelJobGroup) avoids\r\n     // changing several public APIs and allows Spark cancellations outside of the cancelJobGroup\r\n     // APIs to also take advantage of this property (e.g., internal job failures or canceling from\r\n@@ -2760,6 +2764,7 @@ object SparkContext extends Logging {\r\n\r\n   private[spark] val SPARK_JOB_DESCRIPTION = \"spark.job.description\"\r\n   private[spark] val SPARK_JOB_GROUP_ID = \"spark.jobGroup.id\"\r\n+  private[spark] val SPARK_RESERVED_JOB_GROUP_ID = \"spark.reservedJobGroup.id\"\r\n   private[spark] val SPARK_JOB_INTERRUPT_ON_CANCEL = \"spark.job.interruptOnCancel\"\r\n   private[spark] val SPARK_SCHEDULER_POOL = \"spark.scheduler.pool\"\r\n   private[spark] val RDD_SCOPE_KEY = \"spark.rdd.scope\r\ndiff --git a/sql/core/src/main/scala/org/apache/spark/sql/execution/exchange/BroadcastExchangeExec.scala b/sql/core/src/main/scala/org/apache/spark/sql/execution/exchange/BroadcastExchangeExec.scala\r\nindex c322d5eef5..25abb4f2d3 100644\r\n--- a/sql/core/src/main/scala/org/apache/spark/sql/execution/exchange/BroadcastExchangeExec.scala\r\n+++ b/sql/core/src/main/scala/org/apache/spark/sql/execution/exchange/BroadcastExchangeExec.scala\r\n@@ -76,7 +76,8 @@ case class BroadcastExchangeExec(\r\n\r\n   // Cancelling a SQL statement from Spark ThriftServer needs to cancel\r\n   // its related broadcast sub-jobs. So set the run id to job group id if exists.\r\n-  override val runId: UUID = Option(sparkContext.getLocalProperty(SparkContext.SPARK_JOB_GROUP_ID))\r\n+  override val runId: UUID =\r\n+    Option(sparkContext.getLocalProperty(SparkContext.SPARK_RESERVED_JOB_GROUP_ID))\r\n       .map(UUID.fromString).getOrElse(UUID.randomUUID)\r\n\r\n   override lazy val metrics = Map(\r\ndiff --git a/sql/hive-thriftserver/src/main/scala/org/apache/spark/sql/hive/thriftserver/SparkExecuteStatementOperation.scala b/sql/hive-thriftserver/src/main/scala/org/apache/spark/sql/hive/thriftserver/SparkExecuteStatementOperation.scala\r\nindex 8ca0ab91a7..4db50e8d00 100644\r\n--- a/sql/hive-thriftserver/src/main/scala/org/apache/spark/sql/hive/thriftserver/SparkExecuteStatementOperation.scala\r\n+++ b/sql/hive-thriftserver/src/main/scala/org/apache/spark/sql/hive/thriftserver/SparkExecuteStatementOperation.scala\r\n@@ -286,7 +286,7 @@ private[hive] class SparkExecuteStatementOperation(\r\n         parentSession.getSessionState.getConf.setClassLoader(executionHiveClassLoader)\r\n       }\r\n\r\n-      sqlContext.sparkContext.setJobGroup(statementId, substitutorStatement, forceCancel)\r\n+      sqlContext.sparkContext.setJobGroup(statementId, substitutorStatement, forceCancel, true)\r\n       result = sqlContext.sql(statement)\r\n       logDebug(result.queryExecution.toString())\r\n       HiveThriftServer2.eventManager.onStatementParsed(statementId,\r\n```",
+        "createdAt" : "2021-01-18T03:58:48Z",
+        "updatedAt" : "2021-01-18T03:58:48Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b3f1453925dd8ba0bbb43b9f3d0b701e7c6f9507",
+    "line" : 16,
+    "diffHunk" : "@@ -1,1 +77,81 @@  // Cancelling a SQL statement from Spark ThriftServer needs to cancel\n  // its related broadcast sub-jobs. So set the run id to job group id if exists.\n  override val runId: UUID = Option(sparkContext.getLocalProperty(SparkContext.SPARK_JOB_GROUP_ID))\n      .map(UUID.fromString).getOrElse(UUID.randomUUID)\n"
   }
 ]

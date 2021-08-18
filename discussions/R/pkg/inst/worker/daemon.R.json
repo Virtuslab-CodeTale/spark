@@ -1,0 +1,24 @@
+[
+  {
+    "id" : "995293e3-44c4-488f-b68c-d5658ecf57e5",
+    "prId" : 31162,
+    "prUrl" : "https://github.com/apache/spark/pull/31162#pullrequestreview-569449539",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "61926de6-9ff8-4ead-bd03-1ef91464137d",
+        "parentId" : null,
+        "authorId" : "363b0980-061e-4268-a6b1-8d344cf0887e",
+        "body" : "To give you a sense of the cost of this, consider\r\n```\r\n> microbenchmark(NULL, times = 999999)\r\nUnit: nanoseconds\r\n expr min lq     mean median uq   max  neval\r\n NULL   2  4 4.607765      4  5 11552 999999\r\n```\r\nso on my 2018 MacBook Pro 2.2 GHz 6-Core Intel Core i7, R evaluates NULL in 4 nanoseconds.\r\n```\r\n> Sys.setenv(x=\"NULL\")\r\n> microbenchmark(eval(parse(text = Sys.getenv(\"x\"))), times=99999)\r\nUnit: microseconds\r\n                                expr    min    lq     mean median      uq      max neval\r\n eval(parse(text = Sys.getenv(\"x\"))) 33.854 35.82 40.15034 37.479 39.4475 7219.072 99999\r\n```\r\nIt takes 40 microseconds to unpack the environment variable and evaluate it.\r\n\r\nFor comparison, consider\r\n\r\n - the 6 milliseconds we use loading worker.R at every fork (we could load it once and then invoke it as a function thus saving 6 milliseconds off of every fork).\r\n - the time applications save by moving their initialization here. For example, our application takes 5 seconds to load its libraries",
+        "createdAt" : "2021-01-15T17:17:25Z",
+        "updatedAt" : "2021-02-13T00:30:53Z",
+        "lastEditedBy" : "363b0980-061e-4268-a6b1-8d344cf0887e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "43f30c68017b349b2b776314714c93d05cb12a01",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +35,39 @@# Application-specific daemon initialization. Typical use is loading libraries.\neval(parse(text = Sys.getenv(\"SPARKR_DAEMON_INIT\")))\n\n# Waits indefinitely for a socket connection by default.\nselectTimeout <- NULL"
+  }
+]
