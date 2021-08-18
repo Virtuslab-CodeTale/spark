@@ -75,5 +75,170 @@
     "commit" : "29c489ad5f753aaa3551489655073c9f6fc7b0c6",
     "line" : 13,
     "diffHunk" : "@@ -1,1 +1265,1269 @@    val rawTable = getRawTable(db, table)\n    val catalogTable = restoreTableMetadata(rawTable)\n    val timeZoneId = CaseInsensitiveMap(catalogTable.storage.properties).getOrElse(\n      DateTimeUtils.TIMEZONE_OPTION, defaultTimeZoneId)\n"
+  },
+  {
+    "id" : "9839aeec-0adb-423a-8fcb-36aebb3b3193",
+    "prId" : 28938,
+    "prUrl" : "https://github.com/apache/spark/pull/28938#pullrequestreview-440512667",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "aa3d5efa-ba9c-41e8-9d92-45d94e691d9b",
+        "parentId" : null,
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "Do we need a global lock for these method since they use all database ?",
+        "createdAt" : "2020-07-01T00:46:11Z",
+        "updatedAt" : "2020-10-22T11:05:53Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "195af038-cb9a-43e3-8caf-d2ff6a5d290c",
+        "parentId" : "aa3d5efa-ba9c-41e8-9d92-45d94e691d9b",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "I think we don't need a global lock for `listDatabases`. There are two reasons. First is it is just a read operation, no critical problems except getting dirty databases list. Second, the underlay store of HiveMetastore such as MYSQL has locks itself.",
+        "createdAt" : "2020-07-01T02:51:59Z",
+        "updatedAt" : "2020-10-22T11:05:53Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e1ae2e7a552a0f29366fadb820095d34ad28de0e",
+    "line" : 97,
+    "diffHunk" : "@@ -1,1 +247,251 @@  }\n\n  override def listDatabases(): Seq[String] = withClient() {\n    client.listDatabases(\"*\")\n  }"
+  },
+  {
+    "id" : "542046ba-2671-4b98-8711-5cd1da94b52c",
+    "prId" : 28938,
+    "prUrl" : "https://github.com/apache/spark/pull/28938#pullrequestreview-514418562",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8959d2b2-47c6-48be-91c5-fd8bde87639f",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Can we use a fixed number of lock objects? e.g. `hash(db_name) % num_lock_objs`",
+        "createdAt" : "2020-10-22T07:08:19Z",
+        "updatedAt" : "2020-10-22T11:05:53Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e1ae2e7a552a0f29366fadb820095d34ad28de0e",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +82,86 @@\n  // Locks used to synchronized read or write operations per database\n  private val clientLocks = new ConcurrentHashMap[String, ReadWriteLock]()\n\n  /**"
+  },
+  {
+    "id" : "a1e52414-61d7-4021-a9d2-1c97947f96aa",
+    "prId" : 28938,
+    "prUrl" : "https://github.com/apache/spark/pull/28938#pullrequestreview-514527987",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "335189ca-3a96-465b-b1d0-44dcc8509f35",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "can you refer to some hive documents? I'm not sure it's safe to assume that we can lock on the database-level. I thought the hive client itself is not thread-safe.",
+        "createdAt" : "2020-10-22T07:09:53Z",
+        "updatedAt" : "2020-10-22T11:05:53Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "94ce14a2-9216-4e62-87ee-04eeedfd0566",
+        "parentId" : "335189ca-3a96-465b-b1d0-44dcc8509f35",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "@cloud-fan The hive client is not thread-safe. But it's thread local.\r\n1. If there are two threads are creating two tables in the same database. For example, thread-1 is creating db1.table1 and thread-2 is creating db1.table2. This db-level lock in `withClient` will block one thread until the other one finished.\r\n2. If there are two threads are creating two tables in the different database. For example, thread-1 is creating db1.table1 and thread-2 is creating db2.table2.  There operations could be executed concurrently since the hive clients are thread-local. The client in thread-1 is not the same instance with the client in thread-2:\r\n```scala\r\n  private def client: Hive = {\r\n    // get the Hive and set to thread local\r\n    val c = Hive.get(conf)\r\n    Hive.set(c)\r\n    c\r\n  }\r\n```\r\n\r\nBecause `Hive.get(conf)` will get a Hive client instance for each thread.\r\n```java\r\n  private static Hive getInternal(HiveConf c, boolean needsRefresh, boolean isFastCheck,\r\n      boolean doRegisterAllFns) throws HiveException {\r\n    Hive db = hiveDB.get();\r\n    if (db == null || !db.isCurrentUserOwner() || needsRefresh\r\n        || (c != null && db.metaStoreClient != null && !isCompatible(db, c, isFastCheck))) {\r\n      db = create(c, false, db, doRegisterAllFns);\r\n    }\r\n    if (c != null) {\r\n      db.conf = c;\r\n    }\r\n    return db;\r\n  }\r\n```\r\n```scala\r\n  public static void set(Hive hive) {\r\n    hiveDB.set(hive);\r\n  }\r\n```\r\nand\r\n```java\r\nprivate static ThreadLocal<Hive> hiveDB = new ThreadLocal<Hive>() {\r\n```",
+        "createdAt" : "2020-10-22T07:55:49Z",
+        "updatedAt" : "2020-10-22T11:05:53Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f5ebe28e-cf83-4fd5-8b54-683d9b496ef8",
+        "parentId" : "335189ca-3a96-465b-b1d0-44dcc8509f35",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Interesting. If it's thread-local, then `HiveExternalCatalog.client` should be thread-safe? Or these hive clients that in different threads still share something?",
+        "createdAt" : "2020-10-22T09:03:07Z",
+        "updatedAt" : "2020-10-22T11:05:53Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1451f88e-c4e4-4055-96c5-ef48b1eaf178",
+        "parentId" : "335189ca-3a96-465b-b1d0-44dcc8509f35",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "You are right, you remind me to check the diff between our code and spark3 again. We changed many objects in `HiveExternalCatalog.client` non-shared. For example,\r\nIn spark3\r\n```scala\r\n  val state: SessionState = ...\r\n\r\n  override val userName = UserGroupInformation.getCurrentUser.getShortUserName\r\n```\r\nand our code\r\n```scala\r\n  // get the state from thread-local\r\n  def state: SessionState = ...\r\n\r\n  // This should be def instead of val. Since it may be invoked in different ugi\r\n  // in thrift server, we need re-evaluate it every time it is invoked, and internally\r\n  // it obtains the user name via the current ugi.\r\n  private def userName = conf.getUser\r\n```\r\n\r\nEm, let me remark it to WIP.",
+        "createdAt" : "2020-10-22T09:19:12Z",
+        "updatedAt" : "2020-10-22T11:05:53Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "eddd13b4-e03a-44c6-af8f-dffdeedaaec6",
+        "parentId" : "335189ca-3a96-465b-b1d0-44dcc8509f35",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "We use the spark thrift server only, so the `HiveExternalCatalog.client.state` always thread-local. But for the open source spark, it may be a little bit tricky to change.",
+        "createdAt" : "2020-10-22T09:23:27Z",
+        "updatedAt" : "2020-10-22T11:05:53Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e1ae2e7a552a0f29366fadb820095d34ad28de0e",
+    "line" : 31,
+    "diffHunk" : "@@ -1,1 +107,111 @@   * @param writeLock to specify it is a write lock.\n   */\n  private def withClient[T](db: String = \"\", writeLock: Boolean = false) (body: => T): T = {\n    val clientLock = clientLocks.computeIfAbsent(db, (_: String) => new ReentrantReadWriteLock())\n    try {"
+  },
+  {
+    "id" : "b9eb02ee-86ba-44cb-8c93-ad05251bab45",
+    "prId" : 28882,
+    "prUrl" : "https://github.com/apache/spark/pull/28882#pullrequestreview-443850586",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "35731202-6524-4d0f-b00e-617b0fe28099",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I'm a bit worried about string comparison. Are you sure the path string is always equal to the URI string? Shall we do normalization before comparing?",
+        "createdAt" : "2020-06-30T15:07:32Z",
+        "updatedAt" : "2020-07-02T22:35:28Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9e4de305-8a6e-43f2-9b03-35858022fd9f",
+        "parentId" : "35731202-6524-4d0f-b00e-617b0fe28099",
+        "authorId" : "919368dc-8bac-4d8f-9fa6-be962263fc1e",
+        "body" : "We  normalization URI as  `toString => CatalogUtils.URIToString(_)` may be better ?\r\n\r\n",
+        "createdAt" : "2020-06-30T23:20:52Z",
+        "updatedAt" : "2020-07-02T22:35:28Z",
+        "lastEditedBy" : "919368dc-8bac-4d8f-9fa6-be962263fc1e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6ec19070-b3e8-4b9f-a40c-24caa2d8cdee",
+        "parentId" : "35731202-6524-4d0f-b00e-617b0fe28099",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "to be safe, can we compare the URI? we can convert path string to URI with `CatalogUtils.stringToURI`.",
+        "createdAt" : "2020-07-07T12:42:10Z",
+        "updatedAt" : "2020-07-07T12:42:11Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "1496c669745bd6c135011ea0dabd768e31016e45",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +547,551 @@  private def getLocationFromStorageProps(table: CatalogTable): Option[String] = {\n    val storageLoc = table.storage.locationUri.map(CatalogUtils.URIToString(_))\n    val storageProp = CaseInsensitiveMap(table.storage.properties).get(\"path\")\n    // storageProp == None is hive table\n    if (storageLoc.equals(storageProp) || storageProp == None) {"
   }
 ]

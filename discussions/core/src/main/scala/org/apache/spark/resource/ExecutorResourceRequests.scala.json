@@ -1,0 +1,68 @@
+[
+  {
+    "id" : "8a247806-967a-4a39-bfe3-2eb301fe7ebf",
+    "prId" : 28972,
+    "prUrl" : "https://github.com/apache/spark/pull/28972#pullrequestreview-443872044",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "948d78a9-e06e-4259-a50e-761b0e3fc7dc",
+        "parentId" : null,
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "should document how this interacts with. spark.memory.offHeap.enabled and I think we want to enforce that here. Or at least warn them. Right now you have this working on yarn even if its disabled, where as before it would return 0 for this size if it was disabled.  \r\n\r\n\r\n",
+        "createdAt" : "2020-07-06T15:53:07Z",
+        "updatedAt" : "2020-07-23T21:54:32Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2caf1d00-55f0-4edd-847b-f5de691a83c5",
+        "parentId" : "948d78a9-e06e-4259-a50e-761b0e3fc7dc",
+        "authorId" : "cf8c9534-0cf3-4aad-8ead-54c363cfa86e",
+        "body" : "I have this line of code to only set offHeapMemory when `spark.memory.offHeap.enabled` is `true`:\r\n```\r\n    if (conf.get(MEMORY_OFFHEAP_ENABLED)) {\r\n      // Explicitly add suffix b as default unit of offHeapMemory is Mib\r\n      ereqs.offHeapMemory(conf.get(MEMORY_OFFHEAP_SIZE).toString + \"b\")\r\n    }\r\n```\r\nIs this enough? if its disabled, the method won't be called, the default value should be 0.",
+        "createdAt" : "2020-07-06T16:23:34Z",
+        "updatedAt" : "2020-07-23T21:54:32Z",
+        "lastEditedBy" : "cf8c9534-0cf3-4aad-8ead-54c363cfa86e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ddc9377f-782e-4a12-9d20-7a04d1b18527",
+        "parentId" : "948d78a9-e06e-4259-a50e-761b0e3fc7dc",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "that is only in the getDefaultExecutorResources function, which creates the default profile from the standard set of configs.  If the user creates a new ResourceProfile and called this function directly to set off heap memory, there is nothing checking the config MEMORY_OFFHEAP_ENABLED and on the yarn side your change doesn't check ti either, it just picks up whatever value is set here.",
+        "createdAt" : "2020-07-06T17:08:22Z",
+        "updatedAt" : "2020-07-23T21:54:32Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cea9e3db-f5ea-4ac5-886d-ed985e21cf46",
+        "parentId" : "948d78a9-e06e-4259-a50e-761b0e3fc7dc",
+        "authorId" : "cf8c9534-0cf3-4aad-8ead-54c363cfa86e",
+        "body" : "When it's disabled, I should always return 0, and log warning when user try to set this value. Is my understanding right? BTW, do you know how to access sparkConf here?",
+        "createdAt" : "2020-07-07T01:36:58Z",
+        "updatedAt" : "2020-07-23T21:54:32Z",
+        "lastEditedBy" : "cf8c9534-0cf3-4aad-8ead-54c363cfa86e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9ea0df0d-695f-44cb-89ee-4d531aa2cd21",
+        "parentId" : "948d78a9-e06e-4259-a50e-761b0e3fc7dc",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "Ah good point, the only way to access SparkConf is for user to pass it in, which we don't want to do here.\r\nSo I think we should treat this like the config does now. First document this function that says you can set this but it requires MEMORY_OFFHEAP_ENABLED for it to be used, then allow user to set it even if MEMORY_OFFHEAP_ENABLED is false. Then in Yarn allocator before we set offHeapMem = execReq.amount we check MEMORY_OFFHEAP_ENABLED similar to what executorOffHeapMemorySizeAsMb does now.\r\n\r\n\r\n",
+        "createdAt" : "2020-07-07T13:08:44Z",
+        "updatedAt" : "2020-07-23T21:54:32Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e25dafbac32534eaa998b00da98d4e90114a2c64",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +56,60 @@\n  /**\n   * Specify off heap memory. The value specified will be converted to MiB.\n   * This value only take effect when MEMORY_OFFHEAP_ENABLED is true.\n   *"
+  }
+]

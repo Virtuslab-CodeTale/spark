@@ -1065,5 +1065,104 @@
     "commit" : "6e422ff503d03191d47d44d6659fe9a6027a4fd9",
     "line" : 7,
     "diffHunk" : "@@ -1,1 +2034,2038 @@   * Create a Float Literal expression.\n   */\n  override def visitFloatLiteral(ctx: FloatLiteralContext): Literal = {\n    val rawStrippedQualifier = ctx.getText.substring(0, ctx.getText.length - 1)\n    numericLiteral(ctx, rawStrippedQualifier,"
+  },
+  {
+    "id" : "a33fde68-e5c7-471f-86be-c9912cca8a21",
+    "prId" : 28935,
+    "prUrl" : "https://github.com/apache/spark/pull/28935#pullrequestreview-438885052",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "90487e31-1e43-4d08-b8a9-cbf48550ae7d",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "We can just reuse `NullType`. We should forbid creating table with null type completely, including `spark.catalog.createTable`.",
+        "createdAt" : "2020-06-29T04:53:29Z",
+        "updatedAt" : "2020-06-30T01:45:25Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3fa76cfaf7aaca5c5d2ca8ad2743bdefae208b61",
+    "line" : 13,
+    "diffHunk" : "@@ -1,1 +2213,2217 @@        DecimalType(precision.getText.toInt, scale.getText.toInt)\n      case (\"interval\", Nil) => CalendarIntervalType\n      case (\"void\", Nil) => HiveVoidType\n      case (dt, params) =>\n        val dtStr = if (params.nonEmpty) s\"$dt(${params.mkString(\",\")})\" else dt"
+  },
+  {
+    "id" : "b3279b34-a8ac-4557-94e1-94d50a76cfd7",
+    "prId" : 28935,
+    "prUrl" : "https://github.com/apache/spark/pull/28935#pullrequestreview-440486121",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "27400703-1d4c-4699-86a5-4c2ced96d9c6",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I don't get it why we need `HiveVoidType`. What happens if we just parse `void` to `NullType`?",
+        "createdAt" : "2020-06-30T07:01:11Z",
+        "updatedAt" : "2020-06-30T07:01:11Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8fd7ccc7-5915-4af1-9e28-e97f553600c9",
+        "parentId" : "27400703-1d4c-4699-86a5-4c2ced96d9c6",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "Because that could indicate VOID is a Hive type, the handle processing is more unified. Or, we can just use the PR #28833 ",
+        "createdAt" : "2020-06-30T08:23:15Z",
+        "updatedAt" : "2020-06-30T08:23:15Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "08d394fe-31df-43bc-b6de-b5ad56e6235d",
+        "parentId" : "27400703-1d4c-4699-86a5-4c2ced96d9c6",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "For example,  below function will point the failure is due to the legacy hive void type. If we mix VOID and NULL, I am not sure it would be better than separation.\r\n```scala\r\n  def failVoidType(dt: DataType): Unit = {\r\n    if (HiveVoidType.containsVoidType(dt)) {\r\n      throw new AnalysisException(\r\n        \"Cannot create tables with Hive VOID type.\")\r\n    }\r\n  }\r\n```",
+        "createdAt" : "2020-06-30T09:35:01Z",
+        "updatedAt" : "2020-06-30T09:35:01Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5e2c11ab-1400-4e44-b345-83b7736207b9",
+        "parentId" : "27400703-1d4c-4699-86a5-4c2ced96d9c6",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "VOID and NULL are indeed the same type. We can just check null type and fail with error message: `Cannot create tables with VOID type`",
+        "createdAt" : "2020-06-30T15:13:59Z",
+        "updatedAt" : "2020-06-30T15:13:59Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cc3c0595-ce3c-4a25-8a9d-dd8c46ce95cc",
+        "parentId" : "27400703-1d4c-4699-86a5-4c2ced96d9c6",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "The point is consistency: The VOID type in SQL statement should be the same as `NullType` specified by Scala API in `spark.catalog.createTable`.",
+        "createdAt" : "2020-06-30T15:18:26Z",
+        "updatedAt" : "2020-06-30T15:18:26Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "eb3383be-0613-4d3f-a1f5-465d41cbbff8",
+        "parentId" : "27400703-1d4c-4699-86a5-4c2ced96d9c6",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "@cloud-fan , ok. I will follow your suggestion to fix it in #28833 , since this PR is a refator with new type `HiveVoidType`. Now we don't need it.",
+        "createdAt" : "2020-07-01T01:18:23Z",
+        "updatedAt" : "2020-07-01T01:18:23Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3fa76cfaf7aaca5c5d2ca8ad2743bdefae208b61",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +2185,2189 @@   */\n  private def visitSparkDataType(ctx: DataTypeContext): DataType = {\n    HiveVoidType.replaceVoidType(HiveStringType.replaceCharType(typedVisit(ctx)))\n  }\n"
   }
 ]

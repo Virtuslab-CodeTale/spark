@@ -1,0 +1,134 @@
+[
+  {
+    "id" : "fcde5911-90b2-4634-a704-02e9f695e7ab",
+    "prId" : 28967,
+    "prUrl" : "https://github.com/apache/spark/pull/28967#pullrequestreview-441828072",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6bfbf996-fc63-4dd2-a9af-7ec842b530c3",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "The first constructed File uses the un-interned paths, so it may also hit the issue commented above?",
+        "createdAt" : "2020-07-02T14:21:52Z",
+        "updatedAt" : "2020-07-02T14:21:57Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a1db0936-298e-4307-838c-35b0115391a9",
+        "parentId" : "6bfbf996-fc63-4dd2-a9af-7ec842b530c3",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "Thanks for checking this but I believe no it does not hit the same issue. \r\nAs the first `File` instance is on the heap and will be garbage collected as was this string in the old solution if the replace take has some effect:\r\n\r\nhttps://github.com/apache/spark/blob/7fda184f0fc39613fb68e912c189c54b93c638e6/common/network-shuffle/src/main/java/org/apache/spark/network/shuffle/ExecutorDiskUtils.java#L68\r\n\r\nOr even the replace result string when it ended with the `separatorChar ` and transformed further:\r\n\r\nhttps://github.com/apache/spark/blob/7fda184f0fc39613fb68e912c189c54b93c638e6/common/network-shuffle/src/main/java/org/apache/spark/network/shuffle/ExecutorDiskUtils.java#L70\r\n",
+        "createdAt" : "2020-07-02T14:46:15Z",
+        "updatedAt" : "2020-07-02T14:49:23Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cd28139c-752f-4ece-864c-4204593914b7",
+        "parentId" : "6bfbf996-fc63-4dd2-a9af-7ec842b530c3",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "make sense",
+        "createdAt" : "2020-07-02T15:59:31Z",
+        "updatedAt" : "2020-07-02T15:59:31Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e7657cd33d3f3544e0b12e81f2742be0e6b5073e",
+    "line" : 66,
+    "diffHunk" : "@@ -1,1 +40,44 @@    // So we are creating a File just to get the normalized path back to intern it.\n    // Finally a new File is built and returned with this interned normalized path.\n    final String normalizedInternedPath = new File(notNormalizedPath).getPath().intern();\n    return new File(normalizedInternedPath);\n  }"
+  },
+  {
+    "id" : "eb2ffc62-2c1d-43e0-8e92-767ae592f2b4",
+    "prId" : 28967,
+    "prUrl" : "https://github.com/apache/spark/pull/28967#pullrequestreview-442858713",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "64bb5b36-a7ac-4937-b3d3-e269f7c3209c",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "I guess we don't need to create new File object, as the path should have been normalized:\r\n\r\nhttps://github.com/openjdk/jdk/blob/9a9add8825a040565051a09010b29b099c2e7d49/jdk/src/share/classes/java/io/File.java#L275-L281\r\n\r\n(Even without looking into implementation, I don't expect JDK to throw out normalized path while there's a cost to compute.)\r\n\r\nso the code is probably the same as below, which can avoid another trial of normalization:\r\n\r\n```\r\nFile file = new File(notNormalizedPath);\r\nfile.getPath().intern();\r\nreturn file;\r\n```",
+        "createdAt" : "2020-07-06T07:38:21Z",
+        "updatedAt" : "2020-07-06T07:38:21Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e7f9737b-1fe8-459d-a730-61d340a70506",
+        "parentId" : "64bb5b36-a7ac-4937-b3d3-e269f7c3209c",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "But that'd be tiny compared to the improvement in this PR - so if we don't want to make assumption for the JDK behavior, it sounds OK to keep it as it is.",
+        "createdAt" : "2020-07-06T07:51:07Z",
+        "updatedAt" : "2020-07-06T07:51:07Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e55a7573-9ab8-4af4-ad0c-eadbc599165b",
+        "parentId" : "64bb5b36-a7ac-4937-b3d3-e269f7c3209c",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "I am sorry but this is not how interning a String works. The `intern()` method gives back a new reference  to a String from the constant pool when the String not already interned. So the `this` cannot be re-referenced as there could be several places which refers to that. This example makes it clear:\r\n\r\n```java\r\npublic class InternExample {\r\n    public static void main(String args[]) {\r\n        String s1 = new String(\"hello\");\r\n        String s2 = \"hello\";\r\n        String s3 = s1.intern(); //returns string from pool, now it will be same as s2   \r\n        System.out.println(s1 == s2); //false because reference is different  \r\n        System.out.println(s2 == s3); //true because reference is same  \r\n    }\r\n}\r\n```\r\n\r\nYou can run it here: https://www.javatpoint.com/java-string-intern.\r\n\r\n",
+        "createdAt" : "2020-07-06T07:52:55Z",
+        "updatedAt" : "2020-07-06T07:52:55Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "25fcfd00-92e6-4f7a-bcb4-7002c6afd78d",
+        "parentId" : "64bb5b36-a7ac-4937-b3d3-e269f7c3209c",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Ah yes you're right. My bad I was confused a bit. Thanks for correcting me! So we had to do the double-normalization check, but second one would be just string seek.",
+        "createdAt" : "2020-07-06T08:07:53Z",
+        "updatedAt" : "2020-07-06T08:07:54Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e7657cd33d3f3544e0b12e81f2742be0e6b5073e",
+    "line" : 66,
+    "diffHunk" : "@@ -1,1 +40,44 @@    // So we are creating a File just to get the normalized path back to intern it.\n    // Finally a new File is built and returned with this interned normalized path.\n    final String normalizedInternedPath = new File(notNormalizedPath).getPath().intern();\n    return new File(normalizedInternedPath);\n  }"
+  },
+  {
+    "id" : "a0ca9a4a-0c3a-4163-92f5-b3f7a7f1c8e7",
+    "prId" : 28940,
+    "prUrl" : "https://github.com/apache/spark/pull/28940#pullrequestreview-440287610",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "78d4cf50-0feb-477e-a036-0bdd5e63534b",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Thank you for your first contribution, @pan3793 .\r\n- If we start to touch `src/main`, this is not a test-only PR. So, could you remove `[TEST]` from the PR title?\r\n- In addition to that, instead of `Fix ExternalShuffleBlockResolverSuite ...`, you had better emphasize your contribution on the main code like `ExecutorDiskUtils`. For example, something like `Support Windows OS in ExecutorDiskUtils` will be more proper.",
+        "createdAt" : "2020-06-30T17:58:11Z",
+        "updatedAt" : "2020-07-01T04:46:45Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "43af7f4e-9558-46fd-8048-4953708e830e",
+        "parentId" : "78d4cf50-0feb-477e-a036-0bdd5e63534b",
+        "authorId" : "031289b4-137a-4567-9185-75ac4065cf22",
+        "body" : "Thanks for your guidance, the PR title has been changed.",
+        "createdAt" : "2020-06-30T18:38:49Z",
+        "updatedAt" : "2020-07-01T04:46:45Z",
+        "lastEditedBy" : "031289b4-137a-4567-9185-75ac4065cf22",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a80bd6c8a5d93187cf06f941c2a9d296a7b6ca61",
+    "line" : 10,
+    "diffHunk" : "@@ -1,1 +29,33 @@public class ExecutorDiskUtils {\n\n  private static final Pattern MULTIPLE_SEPARATORS;\n  static {\n    if (SystemUtils.IS_OS_WINDOWS) {"
+  }
+]

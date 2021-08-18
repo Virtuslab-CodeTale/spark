@@ -1,0 +1,123 @@
+[
+  {
+    "id" : "51a6cde5-035a-4a92-92dd-c690f87a379a",
+    "prId" : 28885,
+    "prUrl" : "https://github.com/apache/spark/pull/28885#pullrequestreview-687226585",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "58375f5b-7dfc-4b3b-bf5a-ff6571d63875",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Maybe we should explain why we reuse exchange and subquery in this single rule\r\n```\r\nNote that the Spark plan is a mutually recursive data structure:\r\n  SparkPlan -> Expr -> Subquery -> SparkPlan -> Expr -> Subquery -> ...\r\n\r\nTherefore, in this rule, we recursively rewrite the exchanges and subqueries in a bottom-up way, in one go.\r\n```",
+        "createdAt" : "2021-06-18T07:38:00Z",
+        "updatedAt" : "2021-06-18T07:38:00Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7d0a44b8-7803-4c5a-9505-f37501928497",
+        "parentId" : "58375f5b-7dfc-4b3b-bf5a-ff6571d63875",
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "Ok, added the explanation in https://github.com/apache/spark/pull/28885/commits/7187ebd2e053570d92017100dba4a0738fa2f014",
+        "createdAt" : "2021-06-18T09:41:36Z",
+        "updatedAt" : "2021-06-18T09:41:36Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7187ebd2e053570d92017100dba4a0738fa2f014",
+    "line" : 28,
+    "diffHunk" : "@@ -1,1 +26,30 @@/**\n * Find out duplicated exchanges and subqueries in the whole spark plan including subqueries, then\n * use the same exchange or subquery for all the references.\n *\n * Note that the Spark plan is a mutually recursive data structure:"
+  },
+  {
+    "id" : "32d83de1-2635-483f-843a-e8246bb1bade",
+    "prId" : 28885,
+    "prUrl" : "https://github.com/apache/spark/pull/28885#pullrequestreview-689371374",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "eea94fe2-b960-474c-bc64-c9803306cf22",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "AQE has a totally different way to reuse exchange/subquery. It has a query-global map to store created exchange/subquery (see `AdaptiveExecutionContext`), and AQE executes leaf subqueries first. This is exactly the same as what this rule is doing for exchange/subquery reuse.",
+        "createdAt" : "2021-06-21T04:50:32Z",
+        "updatedAt" : "2021-06-21T04:50:32Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "699e1e9b-3b00-4856-a5eb-ea9fb637639e",
+        "parentId" : "eea94fe2-b960-474c-bc64-c9803306cf22",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "One followup we can do is to leverage the new `ReuseMap` in `AdaptiveExecutionContext`",
+        "createdAt" : "2021-06-21T04:51:59Z",
+        "updatedAt" : "2021-06-21T04:51:59Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "38c1076e-722c-4b25-9d8c-0b8776772a3d",
+        "parentId" : "eea94fe2-b960-474c-bc64-c9803306cf22",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Actually, the AQE way may be better: just use the canonicalized plan as the key, instead of calling `sameResult`.",
+        "createdAt" : "2021-06-21T04:56:28Z",
+        "updatedAt" : "2021-06-21T04:56:28Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7a95ad7e-ef3b-449e-81ba-c43bd84e0bf9",
+        "parentId" : "eea94fe2-b960-474c-bc64-c9803306cf22",
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "`ReuseMap` has changed since the first version of this PR.\r\nUnfortunately, I rebased the PR already so only some discussion remained: https://github.com/apache/spark/pull/28885#discussion_r455692637 (about reverting 2nd to 3rd).\r\n\r\nThe 1st version used a simple `Map[<canonicalized plan>, <plan>]` as `AdaptiveExecutionContext` does.\r\nThe 2nd version was `Map[<schema>, (<first plan with this schema>, Map[<canonicalized plan>, <plan>])]` with lazy initialization of the inner map to avoid canonicalization if there are no matching schemas but still provide quick lookup by canonicalized plans.\r\nThis 3rd version reverted to the original `Map[<schema>, ArrayBuffer[<plan>]]` idea that `ReuseExchange` and `ReuseSubquery` had used.\r\n\r\nI can open a follow-up PR to improve `ReuseMap` to 2nd version if required, but I'm not sure that the improvement would be visible with TPCDS or real life queries.\r\n\r\nIf we want to consolidate reuse map logic then I think we should also take into account that `ReuseAdaptiveSubquery` uses a concurrent, lock-free `TrieMap` map implementation which is not required by this non-AQE rule.",
+        "createdAt" : "2021-06-21T07:37:37Z",
+        "updatedAt" : "2021-06-21T12:01:53Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7499298d-67a4-4925-adb6-0b15951bd097",
+        "parentId" : "eea94fe2-b960-474c-bc64-c9803306cf22",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Yea non-AQE doesn't need thread safety, but I feel it's still better to unify the major idea:\r\n1. `Map[<canonicalized plan>, <plan>]`\r\n2. `Map[<schema>, ArrayBuffer[<plan>]]`\r\n\r\nI agree it's not a big deal for perf, but code consistency is also important. `Map[<canonicalized plan>, <plan>]` looks better as it's simpler, we can remove `ReuseMap`.",
+        "createdAt" : "2021-06-21T10:30:45Z",
+        "updatedAt" : "2021-06-21T10:30:58Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ff252739-e0f1-4f65-8b91-b847231fbe21",
+        "parentId" : "eea94fe2-b960-474c-bc64-c9803306cf22",
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "Ok, I can file a follow-up PR today or tomorrow.",
+        "createdAt" : "2021-06-21T11:22:12Z",
+        "updatedAt" : "2021-06-21T11:22:32Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "15292cc2-e23a-4dff-9fe4-baea8e165775",
+        "parentId" : "eea94fe2-b960-474c-bc64-c9803306cf22",
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "I've opened the follow-up PR here: https://github.com/apache/spark/pull/33021",
+        "createdAt" : "2021-06-22T11:13:21Z",
+        "updatedAt" : "2021-06-22T11:13:21Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7187ebd2e053570d92017100dba4a0738fa2f014",
+    "line" : 35,
+    "diffHunk" : "@@ -1,1 +33,37 @@ * in one go.\n */\ncase object ReuseExchangeAndSubquery extends Rule[SparkPlan] {\n\n  def apply(plan: SparkPlan): SparkPlan = {"
+  }
+]

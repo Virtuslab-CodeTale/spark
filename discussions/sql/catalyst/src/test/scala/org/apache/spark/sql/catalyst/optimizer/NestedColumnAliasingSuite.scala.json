@@ -64,5 +64,181 @@
     "commit" : "a7194092ebc3a9ca97daba29fda0fcc0ec099cf4",
     "line" : 13,
     "diffHunk" : "@@ -1,1 +337,341 @@    val query = companies\n      .generate(Explode('employers.getField(\"company\")), outputNames = Seq(\"company\"))\n      .select('company.getField(\"name\"), 'company.getField(\"address\"))\n      .analyze\n    val optimized = Optimize.execute(query)"
+  },
+  {
+    "id" : "4dc1bb63-2f34-4595-992e-fff5cc3f42d6",
+    "prId" : 28898,
+    "prUrl" : "https://github.com/apache/spark/pull/28898#pullrequestreview-437975941",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d0ec04b6-0285-4a39-b8fa-1281ff4d9e9d",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "If there is only one query, we don't need to name it as `query1`, `optimized1`...",
+        "createdAt" : "2020-06-26T02:27:13Z",
+        "updatedAt" : "2020-07-24T06:11:32Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a0b8d070f027460dd1e5fdbd7dc35d0440450b0a",
+    "line" : 41,
+    "diffHunk" : "@@ -1,1 +519,523 @@    val optimized1 = Optimize.execute(query1)\n    val aliases1 = collectGeneratedAliases(optimized1)\n    val expected1 = contact\n      .select($\"name.first\", $\"address\", $\"id\", $\"name.first\".as(aliases1(1)))\n      .window(Seq(winExpr.as(\"window\")), Seq($\"address\"), Seq($\"id\".asc))"
+  },
+  {
+    "id" : "3393b075-03f2-46cc-8ec7-8f4ea20f0860",
+    "prId" : 28898,
+    "prUrl" : "https://github.com/apache/spark/pull/28898#pullrequestreview-440383698",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "05aa9677-2843-4923-a18c-a8a0e13468ba",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Could you add some tests for the other combinations, e.g., Filter + Limit, Filter + Sort, ...?",
+        "createdAt" : "2020-06-30T08:06:34Z",
+        "updatedAt" : "2020-07-24T06:11:32Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "46e6c7fb-b5a3-4728-8c17-a847a4da4b90",
+        "parentId" : "05aa9677-2843-4923-a18c-a8a0e13468ba",
+        "authorId" : "e2104308-ae70-4ecf-9798-03460fcd8763",
+        "body" : "Done",
+        "createdAt" : "2020-06-30T21:03:14Z",
+        "updatedAt" : "2020-07-24T06:11:32Z",
+        "lastEditedBy" : "e2104308-ae70-4ecf-9798-03460fcd8763",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a0b8d070f027460dd1e5fdbd7dc35d0440450b0a",
+    "line" : 37,
+    "diffHunk" : "@@ -1,1 +515,519 @@    val winExpr = windowExpr(RowNumber(), spec)\n    val query1 = contact.select($\"name.first\", winExpr.as('window))\n      .where($\"window\" === 1 && $\"name.first\" === \"a\")\n      .analyze\n    val optimized1 = Optimize.execute(query1)"
+  },
+  {
+    "id" : "289da146-ec16-43ae-80fd-46c8a024da63",
+    "prId" : 28898,
+    "prUrl" : "https://github.com/apache/spark/pull/28898#pullrequestreview-453013139",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "40648c3f-d1ad-4f8f-ac65-7cda4861d4d2",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Shall we move this test case into `test(\"Nested field pruning for Window\")`.",
+        "createdAt" : "2020-07-22T05:35:15Z",
+        "updatedAt" : "2020-07-24T06:11:32Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "54c1b1e3-41a0-4c4f-9445-33bce608806e",
+        "parentId" : "40648c3f-d1ad-4f8f-ac65-7cda4861d4d2",
+        "authorId" : "e2104308-ae70-4ecf-9798-03460fcd8763",
+        "body" : "This is to test Filter->Window combination, so I think it fits more with the test description. The `test(\"Nested field pruning for Window\")` is to test for `Windows` operators alone. ",
+        "createdAt" : "2020-07-22T05:39:43Z",
+        "updatedAt" : "2020-07-24T06:11:32Z",
+        "lastEditedBy" : "e2104308-ae70-4ecf-9798-03460fcd8763",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f2a96af3-026c-4ded-917c-3189c6300b0d",
+        "parentId" : "40648c3f-d1ad-4f8f-ac65-7cda4861d4d2",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "This is the same. This PR doesn't support `Filter` in general. This PR only supports `Filter` when the child is `Window`. So, it's more natural the `Window` test case have this.",
+        "createdAt" : "2020-07-22T05:53:01Z",
+        "updatedAt" : "2020-07-24T06:11:32Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a0b8d070f027460dd1e5fdbd7dc35d0440450b0a",
+    "line" : 48,
+    "diffHunk" : "@@ -1,1 +526,530 @@      .select($\"first\", $\"window\")\n      .analyze\n    comparePlans(optimized1, expected1)\n\n    val query2 = contact.sortBy($\"name.first\".asc)"
+  },
+  {
+    "id" : "b532f87b-8bf6-442a-9dc4-601416da44aa",
+    "prId" : 28898,
+    "prUrl" : "https://github.com/apache/spark/pull/28898#pullrequestreview-453008421",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ce0743f3-e3bf-4429-b391-e2ab503123d9",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Shall we move this test case into `test(\"Nested field pruning for Sort\")`?",
+        "createdAt" : "2020-07-22T05:35:39Z",
+        "updatedAt" : "2020-07-24T06:11:32Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8d78b85d-26f3-4196-8566-8578881bcfa7",
+        "parentId" : "ce0743f3-e3bf-4429-b391-e2ab503123d9",
+        "authorId" : "e2104308-ae70-4ecf-9798-03460fcd8763",
+        "body" : "This is to test Filter->Sort combination, so I think it fits more with the test description. The `test(\"Nested field pruning for Sort\")` is to test for `Sort` operators alone. ",
+        "createdAt" : "2020-07-22T05:40:08Z",
+        "updatedAt" : "2020-07-24T06:11:32Z",
+        "lastEditedBy" : "e2104308-ae70-4ecf-9798-03460fcd8763",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a0b8d070f027460dd1e5fdbd7dc35d0440450b0a",
+    "line" : 63,
+    "diffHunk" : "@@ -1,1 +541,545 @@      .select($\"${aliases2(0)}\".as(\"first\"))\n      .analyze\n    comparePlans(optimized2, expected2)\n\n    val query3 = contact.distribute($\"name.first\")(100)"
+  },
+  {
+    "id" : "7abb80a2-347f-46f7-b5db-d89e961e5ddf",
+    "prId" : 28898,
+    "prUrl" : "https://github.com/apache/spark/pull/28898#pullrequestreview-453012589",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1e6df5cc-f604-47d6-9f3d-12c6723d068e",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Shall we merge this line 578 to 597 into `test(\"Pushing a single nested field projection\")`?",
+        "createdAt" : "2020-07-22T05:39:35Z",
+        "updatedAt" : "2020-07-24T06:11:32Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5578359c-4372-4258-b556-a1ca755bd2a4",
+        "parentId" : "1e6df5cc-f604-47d6-9f3d-12c6723d068e",
+        "authorId" : "e2104308-ae70-4ecf-9798-03460fcd8763",
+        "body" : "This is a test the combination of `Filter-> Sample/GlobalLimit/LocalLimit/Repartition`, so that's why it's under this test name -- to test for the combination of `Filter` and other children that can be pushed through. ",
+        "createdAt" : "2020-07-22T05:42:52Z",
+        "updatedAt" : "2020-07-24T06:11:32Z",
+        "lastEditedBy" : "e2104308-ae70-4ecf-9798-03460fcd8763",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7fd87fd0-af7c-46a6-9bb1-e14cb6e81ca0",
+        "parentId" : "1e6df5cc-f604-47d6-9f3d-12c6723d068e",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "I know that but this PR doesn't support `Filter` completely. I believe we had better collect these simple test case addition there.",
+        "createdAt" : "2020-07-22T05:51:29Z",
+        "updatedAt" : "2020-07-24T06:11:32Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a0b8d070f027460dd1e5fdbd7dc35d0440450b0a",
+    "line" : 117,
+    "diffHunk" : "@@ -1,1 +595,599 @@      (plan: LogicalPlan) => Sample(0.0, 0.6, false, 11L, plan)).foreach {  base =>\n        runTest(base)\n      }\n  }\n"
   }
 ]

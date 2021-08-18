@@ -647,5 +647,115 @@
     "commit" : "d352dbcdecfbdab08607c2416748e7650294fa42",
     "line" : 10,
     "diffHunk" : "@@ -1,1 +155,159 @@    val aliasSub = nestedFieldReferences.asInstanceOf[Seq[ExtractValue]]\n      .filter(!_.references.subsetOf(exclusiveAttrSet))\n      .groupBy(_.references.head.canonicalized.asInstanceOf[Attribute])\n      .flatMap { case (attr, nestedFields: Seq[ExtractValue]) =>\n        // Remove redundant `ExtractValue`s if they share the same parent nest field."
+  },
+  {
+    "id" : "f5861962-8ead-4827-b371-e6de2464f7c6",
+    "prId" : 28898,
+    "prUrl" : "https://github.com/apache/spark/pull/28898#pullrequestreview-438139491",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "907a5f26-a597-4f4b-b8f9-67af62eaf562",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "I think we better leave a few comment explaining this case.",
+        "createdAt" : "2020-06-26T02:25:23Z",
+        "updatedAt" : "2020-07-24T06:11:32Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e8a77ac3-801e-4919-a3c2-433ca16b5640",
+        "parentId" : "907a5f26-a597-4f4b-b8f9-67af62eaf562",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "+1",
+        "createdAt" : "2020-06-26T09:12:44Z",
+        "updatedAt" : "2020-07-24T06:11:32Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a0b8d070f027460dd1e5fdbd7dc35d0440450b0a",
+    "line" : 10,
+    "diffHunk" : "@@ -1,1 +38,42 @@     * the optimizer can hit an infinite loop during the [[PushDownPredicates]] rule.\n     */\n    case Project(projectList, Filter(condition, child))\n        if SQLConf.get.nestedSchemaPruningEnabled && canProjectPushThrough(child) =>\n      val exprCandidatesToPrune = projectList ++ Seq(condition) ++ child.expressions"
+  },
+  {
+    "id" : "b4283f65-71ff-4978-be66-0ecfab380bd7",
+    "prId" : 28898,
+    "prUrl" : "https://github.com/apache/spark/pull/28898#pullrequestreview-438742296",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7c7628b3-bbe4-47c7-95dd-f63203f71600",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "How about rephrasing it like tihs?\r\n```\r\n    /**\r\n     * This pattern is needed to support [[Filter]] plan cases like\r\n     * [[Project]]->[[Filter]]->listed plan in `canProjectPushThrough` (e.g., [[Window]]).\r\n     * The reason why we don't simply add [[Filter]] in `canProjectPushThrough` is that\r\n     * the optimizer can hit an infinite loop during the [[PushDownPredicates]] rule.\r\n     */\r\n```",
+        "createdAt" : "2020-06-27T08:42:40Z",
+        "updatedAt" : "2020-07-24T06:11:32Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "aeba5982-cc89-4fa1-8280-573c70676e79",
+        "parentId" : "7c7628b3-bbe4-47c7-95dd-f63203f71600",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "btw, do you know why the optimizer can hit the issue? I think its better to check the root cause for future activities if possible.",
+        "createdAt" : "2020-06-27T10:06:15Z",
+        "updatedAt" : "2020-07-24T06:11:32Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5607df78-f9a3-4304-94a0-b416d239c9d8",
+        "parentId" : "7c7628b3-bbe4-47c7-95dd-f63203f71600",
+        "authorId" : "e2104308-ae70-4ecf-9798-03460fcd8763",
+        "body" : "I don't know exactly why it's broken, but here is a simple query that can reproduce this issue: \r\n`select name.last from contacts where name.first='Jane'`\r\nThe error message is like: \r\n```\r\n20/06/27 21:17:41 WARN internal.BaseSessionStateBuilder$$anon$2: Max iterations (100) reached for batch Operator Optimization before Inferring Filters, please set 'spark.sql.optimizer.maxIterations' to a larger value.\r\n20/06/27 21:17:41 WARN internal.BaseSessionStateBuilder$$anon$2: Max iterations (100) reached for batch Operator Optimization after Inferring Filters, please set 'spark.sql.optimizer.maxIterations' to a larger value.\r\n```",
+        "createdAt" : "2020-06-28T04:22:16Z",
+        "updatedAt" : "2020-07-24T06:11:32Z",
+        "lastEditedBy" : "e2104308-ae70-4ecf-9798-03460fcd8763",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a0b8d070f027460dd1e5fdbd7dc35d0440450b0a",
+    "line" : 9,
+    "diffHunk" : "@@ -1,1 +37,41 @@     * The reason why we don't simply add [[Filter]] in `canProjectPushThrough` is that\n     * the optimizer can hit an infinite loop during the [[PushDownPredicates]] rule.\n     */\n    case Project(projectList, Filter(condition, child))\n        if SQLConf.get.nestedSchemaPruningEnabled && canProjectPushThrough(child) =>"
+  },
+  {
+    "id" : "3ffd55b0-1eae-495b-b1a0-2230fb759a56",
+    "prId" : 28898,
+    "prUrl" : "https://github.com/apache/spark/pull/28898#pullrequestreview-453023583",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e5267aa8-e2a4-4d1c-8178-970a52c75f9b",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "BTW, it's logically a little weird to me because the second pattern looks narrower than the first pattern. In Scala, we usually use specific patterns first. I'm saying that `case Project(projectList, Filter(condition, child))` is more specific than the previous pattern `case Project(projectList, child)`. Can we switch this case (line 48) and the previous case (line 34). Or, does it break something? If switching two patterns breaks something, it might be worth to mention.",
+        "createdAt" : "2020-07-22T05:47:47Z",
+        "updatedAt" : "2020-07-24T06:11:32Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1ac1cdc1-76a0-49cd-9f5b-e88dd62538eb",
+        "parentId" : "e5267aa8-e2a4-4d1c-8178-970a52c75f9b",
+        "authorId" : "e2104308-ae70-4ecf-9798-03460fcd8763",
+        "body" : "I just changed the order. I don't think it will break anything because those two clauses are mutually exclusive. ",
+        "createdAt" : "2020-07-22T06:19:13Z",
+        "updatedAt" : "2020-07-24T06:11:32Z",
+        "lastEditedBy" : "e2104308-ae70-4ecf-9798-03460fcd8763",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a0b8d070f027460dd1e5fdbd7dc35d0440450b0a",
+    "line" : 10,
+    "diffHunk" : "@@ -1,1 +38,42 @@     * the optimizer can hit an infinite loop during the [[PushDownPredicates]] rule.\n     */\n    case Project(projectList, Filter(condition, child))\n        if SQLConf.get.nestedSchemaPruningEnabled && canProjectPushThrough(child) =>\n      val exprCandidatesToPrune = projectList ++ Seq(condition) ++ child.expressions"
   }
 ]

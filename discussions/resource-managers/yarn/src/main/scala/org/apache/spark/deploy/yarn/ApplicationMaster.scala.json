@@ -1,0 +1,178 @@
+[
+  {
+    "id" : "c1e2c1e6-5498-4522-aafe-8d8cd2e47f5a",
+    "prId" : 28880,
+    "prUrl" : "https://github.com/apache/spark/pull/28880#pullrequestreview-438858016",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8d7ba072-feda-44a9-9518-83cd65d3f5ff",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Hi, @rajatahujaatinmobi . While reviewing this PR, I noticed that SPARK-29465 is a previous one for this issue.",
+        "createdAt" : "2020-06-21T23:54:51Z",
+        "updatedAt" : "2020-06-30T18:48:48Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a6e64aa9-24d9-4e2b-a36c-4484dea80347",
+        "parentId" : "8d7ba072-feda-44a9-9518-83cd65d3f5ff",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "yes, please see the discussions there, I think a range of ports would be much better. A single port set on a multi-tenant yarn cluster could easily end up with conflicts. What requirements do you have from Knox, a certain range or ports?\r\nNormally on yarn I would expect you to use the resource manager web ui proxy on a secure cluster so you wouldn't be accessing the UI directly.",
+        "createdAt" : "2020-06-22T13:00:50Z",
+        "updatedAt" : "2020-06-30T18:48:48Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f55dab1e-10f3-4a7a-bc03-d86315a32cf9",
+        "parentId" : "8d7ba072-feda-44a9-9518-83cd65d3f5ff",
+        "authorId" : "a3a6d1c3-2f95-4c62-9477-bd8e53e9aea2",
+        "body" : "Correct me if I am wrong\r\n\r\nAs per the discussions that UI port is always get assigned in the range based on spark.port.maxRetries. So we can always mention the starting port and afterward, it will try to start service based in between (starting port, starting port +spark.port.maxRetries). So we are including the range implicitly. \r\n\r\nCopying the comment\r\n``other port types were spawned in the range (port_mentioned to port_mentioned+spark.port.maxRetries) except the UI port which started on random port.``\r\n\r\nWe have a Knox proxy that accesses UI via RM link. And Knox proxy has a certain range of ports that it can access on the cluster which is (18000-18159). Unless we start web UI on that range, we can not access the UI. and we can achieve above the range if we set the following properties\r\nspark.ui.port=18000\r\nspark.port.maxRetries=159\r\n\r\nHence setting up a spark.ui.port as starting port is enough instead of setting up a random port number in the range. \r\n\r\n ",
+        "createdAt" : "2020-06-22T22:30:25Z",
+        "updatedAt" : "2020-06-30T18:48:48Z",
+        "lastEditedBy" : "a3a6d1c3-2f95-4c62-9477-bd8e53e9aea2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4a4f3a2a-0f42-47b4-ae2f-c76c5a10319f",
+        "parentId" : "8d7ba072-feda-44a9-9518-83cd65d3f5ff",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "yea, I think yet Spark could utilize the combination of `spark.ui.port` and `spark.port.maxRetries` to perform \"range port\".\r\n\r\nWhat else the  \"range port\" do you refer to? @tgravescs ",
+        "createdAt" : "2020-06-23T02:57:53Z",
+        "updatedAt" : "2020-06-30T18:48:48Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b33036e1-2497-4733-b674-64e52c2d0438",
+        "parentId" : "8d7ba072-feda-44a9-9518-83cd65d3f5ff",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "ah yes you are correct you can get range that way. the ports originally wouldn't do the retries or at least we didn't allow configuring maxRetries.",
+        "createdAt" : "2020-06-23T13:31:03Z",
+        "updatedAt" : "2020-06-30T18:48:48Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f76a4695-a80d-4057-b5bb-42d445f424f0",
+        "parentId" : "8d7ba072-feda-44a9-9518-83cd65d3f5ff",
+        "authorId" : "a3a6d1c3-2f95-4c62-9477-bd8e53e9aea2",
+        "body" : "I blocked a set of Port range from 18000 to 18050 and configure web or to start at 18008 but it eventually Started at 18051 \r\n\r\n**Properties Set: spark.ui.port=18018  spark.port.maxRetries=60**\r\nSuccessful Case:\r\n20/06/23 22:18:43 WARN util.Utils: Service 'SparkUI' could not bind on port 18018. Attempting port 18019.\r\n20/06/23 22:18:43 WARN util.Utils: Service 'SparkUI' could not bind on port 18019. Attempting port 18020.\r\n20/06/23 22:18:43 WARN util.Utils: Service 'SparkUI' could not bind on port 18020. Attempting port 18021.\r\n20/06/23 22:18:43 WARN util.Utils: Service 'SparkUI' could not bind on port 18021. Attempting port 18022.\r\n20/06/23 22:18:43 WARN util.Utils: Service 'SparkUI' could not bind on port 18022. Attempting port 18023.\r\n20/06/23 22:18:43 WARN util.Utils: Service 'SparkUI' could not bind on port 18023. Attempting port 18024.\r\n20/06/23 22:18:43 WARN util.Utils: Service 'SparkUI' could not bind on port 18024. Attempting port 18025.\r\n20/06/23 22:18:43 WARN util.Utils: Service 'SparkUI' could not bind on port 18025. Attempting port 18026.\r\n20/06/23 22:18:43 WARN util.Utils: Service 'SparkUI' could not bind on port 18026. Attempting port 18027.\r\n20/06/23 22:18:43 WARN util.Utils: Service 'SparkUI' could not bind on port 18027. Attempting port 18028.\r\n20/06/23 22:18:43 WARN util.Utils: Service 'SparkUI' could not bind on port 18028. Attempting port 18029.\r\n20/06/23 22:18:43 WARN util.Utils: Service 'SparkUI' could not bind on port 18029. Attempting port 18030.\r\n20/06/23 22:18:43 WARN util.Utils: Service 'SparkUI' could not bind on port 18030. Attempting port 18031.\r\n20/06/23 22:18:43 WARN util.Utils: Service 'SparkUI' could not bind on port 18031. Attempting port 18032.\r\n20/06/23 22:18:43 WARN util.Utils: Service 'SparkUI' could not bind on port 18032. Attempting port 18033.\r\n20/06/23 22:18:43 WARN util.Utils: Service 'SparkUI' could not bind on port 18033. Attempting port 18034.\r\n20/06/23 22:18:43 WARN util.Utils: Service 'SparkUI' could not bind on port 18034. Attempting port 18035.\r\n20/06/23 22:18:43 WARN util.Utils: Service 'SparkUI' could not bind on port 18035. Attempting port 18036.\r\n20/06/23 22:18:43 WARN util.Utils: Service 'SparkUI' could not bind on port 18036. Attempting port 18037.\r\n20/06/23 22:18:43 WARN util.Utils: Service 'SparkUI' could not bind on port 18037. Attempting port 18038.\r\n20/06/23 22:18:43 WARN util.Utils: Service 'SparkUI' could not bind on port 18038. Attempting port 18039.\r\n20/06/23 22:18:43 WARN util.Utils: Service 'SparkUI' could not bind on port 18039. Attempting port 18040.\r\n20/06/23 22:18:43 WARN util.Utils: Service 'SparkUI' could not bind on port 18040. Attempting port 18041.\r\n20/06/23 22:18:43 WARN util.Utils: Service 'SparkUI' could not bind on port 18041. Attempting port 18042.\r\n20/06/23 22:18:43 WARN util.Utils: Service 'SparkUI' could not bind on port 18042. Attempting port 18043.\r\n20/06/23 22:18:43 WARN util.Utils: Service 'SparkUI' could not bind on port 18043. Attempting port 18044.\r\n20/06/23 22:18:43 WARN util.Utils: Service 'SparkUI' could not bind on port 18044. Attempting port 18045.\r\n20/06/23 22:18:44 WARN util.Utils: Service 'SparkUI' could not bind on port 18045. Attempting port 18046.\r\n20/06/23 22:18:44 WARN util.Utils: Service 'SparkUI' could not bind on port 18046. Attempting port 18047.\r\n20/06/23 22:18:44 WARN util.Utils: Service 'SparkUI' could not bind on port 18047. Attempting port 18048.\r\n20/06/23 22:18:44 WARN util.Utils: Service 'SparkUI' could not bind on port 18048. Attempting port 18049.\r\n20/06/23 22:18:44 WARN util.Utils: Service 'SparkUI' could not bind on port 18049. Attempting port 18050.\r\n20/06/23 22:18:44 WARN util.Utils: Service 'SparkUI' could not bind on port 18050. Attempting port 18051.\r\n20/06/23 22:18:44 INFO server.AbstractConnector: Started ServerConnector@6f330eb9{HTTP/1.1,[http/1.1]}{0.0.0.0:18051}\r\n20/06/23 22:18:44 INFO util.Utils: Successfully started service 'SparkUI' on port 18051.\r\nAnd  Job succeeded** \r\n\r\nFailure Case \r\n**Properties Set: spark.ui.port=18018  spark.port.maxRetries=6**\r\n\r\n20/06/23 22:16:15 WARN util.Utils: Service 'SparkUI' could not bind on port 18018. Attempting port 18019.\r\n20/06/23 22:16:15 WARN util.Utils: Service 'SparkUI' could not bind on port 18019. Attempting port 18020.\r\n20/06/23 22:16:15 WARN util.Utils: Service 'SparkUI' could not bind on port 18020. Attempting port 18021.\r\n20/06/23 22:16:15 WARN util.Utils: Service 'SparkUI' could not bind on port 18021. Attempting port 18022.\r\n20/06/23 22:16:15 WARN util.Utils: Service 'SparkUI' could not bind on port 18022. Attempting port 18023.\r\n20/06/23 22:16:15 WARN util.Utils: Service 'SparkUI' could not bind on port 18023. Attempting port 18024.\r\n**20/06/23 22:16:15 ERROR ui.SparkUI: Failed to bind SparkUI\r\njava.net.BindException: Address already in use: Service 'SparkUI' failed after 6 retries (starting from 18018)! Consider explicitly setting the appropriate port for the service 'SparkUI' (for example spark.ui.port for SparkUI) to an available port or increasing spark.port.maxRetries.\r\n\tat sun.nio.ch.Net.bind0(Native Method)\r\nJob Failed ...**\r\n\r\n@tgravescs @Ngone51 ",
+        "createdAt" : "2020-06-23T22:57:34Z",
+        "updatedAt" : "2020-06-30T18:48:48Z",
+        "lastEditedBy" : "a3a6d1c3-2f95-4c62-9477-bd8e53e9aea2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "daa64ff3-d61c-4fdd-8035-8ecc60986d77",
+        "parentId" : "8d7ba072-feda-44a9-9518-83cd65d3f5ff",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "I don't get your point here. For the successful case, I only see the port range is 18018 ~ 18078 and the port 18051 is valid. Where are those ports 18000, 18050, 18008?",
+        "createdAt" : "2020-06-24T03:14:42Z",
+        "updatedAt" : "2020-06-30T18:48:48Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a82631e3-7724-4f05-9f8e-e03c7a1fdeef",
+        "parentId" : "8d7ba072-feda-44a9-9518-83cd65d3f5ff",
+        "authorId" : "a3a6d1c3-2f95-4c62-9477-bd8e53e9aea2",
+        "body" : "I blocked ports from **18000 to 18050 s**o now spark.ui.port can not get port b/w that range. But in Spark properties, I mentioned  **spark.ui.port as 18018 and spark.port.maxRetries=60** so now spark service will start trying from 18018 port until **18018 + 60** in an increment way but ports are blocked until 18050 so spark.ui.port will pick up **18051** port. @Ngone51 ",
+        "createdAt" : "2020-06-24T04:10:18Z",
+        "updatedAt" : "2020-06-30T18:48:48Z",
+        "lastEditedBy" : "a3a6d1c3-2f95-4c62-9477-bd8e53e9aea2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b21a676a-756c-4aca-b2a5-c84df57f302a",
+        "parentId" : "8d7ba072-feda-44a9-9518-83cd65d3f5ff",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "I see. This is what we expected, right?",
+        "createdAt" : "2020-06-24T05:48:31Z",
+        "updatedAt" : "2020-06-30T18:48:48Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "090fcac7-4dcd-4e0a-8bdb-f6223e35e9f5",
+        "parentId" : "8d7ba072-feda-44a9-9518-83cd65d3f5ff",
+        "authorId" : "a3a6d1c3-2f95-4c62-9477-bd8e53e9aea2",
+        "body" : "Yes, that's expected. So I think we are good to go unless someone else has any other doubts.\r\n@Ngone51 @tgravescs ",
+        "createdAt" : "2020-06-24T11:24:14Z",
+        "updatedAt" : "2020-06-30T18:48:48Z",
+        "lastEditedBy" : "a3a6d1c3-2f95-4c62-9477-bd8e53e9aea2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e75972ac-d448-480e-b47e-c0e196a250f5",
+        "parentId" : "8d7ba072-feda-44a9-9518-83cd65d3f5ff",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "thanks for testing that, please update the comment like my below comment requests.",
+        "createdAt" : "2020-06-24T13:42:47Z",
+        "updatedAt" : "2020-06-30T18:48:48Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ddbae599-2ee0-410f-afef-9cd3ad6fc603",
+        "parentId" : "8d7ba072-feda-44a9-9518-83cd65d3f5ff",
+        "authorId" : "a3a6d1c3-2f95-4c62-9477-bd8e53e9aea2",
+        "body" : "@tgravescs I have done that. Can we proceed further?",
+        "createdAt" : "2020-06-29T02:57:07Z",
+        "updatedAt" : "2020-06-30T18:48:48Z",
+        "lastEditedBy" : "a3a6d1c3-2f95-4c62-9477-bd8e53e9aea2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "1896905d42ee71709fa0da0a80d84fe3eb026c6e",
+    "line" : 13,
+    "diffHunk" : "@@ -1,1 +218,222 @@        if (System.getProperty(UI_PORT.key) == null) {\n          System.setProperty(UI_PORT.key, \"0\")\n        }\n\n        // Set the master and deploy mode property to match the requested mode."
+  },
+  {
+    "id" : "b3f6c40c-95e6-4405-b1b6-94ab74d04bc3",
+    "prId" : 28880,
+    "prUrl" : "https://github.com/apache/spark/pull/28880#pullrequestreview-438670675",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d4536baf-0ba1-4471-9870-b0e441a8b6d4",
+        "parentId" : null,
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "lets update the comment to say if explicitly set, it acts as a port range based on spark.port.maxRetries so make sure that is sufficiently large for your setup to avoid port conflicts.\r\n",
+        "createdAt" : "2020-06-23T13:44:30Z",
+        "updatedAt" : "2020-06-30T18:48:48Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6d5736ce-ff11-4e32-97f7-63fa2974b2ba",
+        "parentId" : "d4536baf-0ba1-4471-9870-b0e441a8b6d4",
+        "authorId" : "a3a6d1c3-2f95-4c62-9477-bd8e53e9aea2",
+        "body" : "@tgravescs Updated my comment. If that looks okay, can we merge this request ? And I would like to backport this change until spark 2.4 ",
+        "createdAt" : "2020-06-27T04:10:53Z",
+        "updatedAt" : "2020-06-30T18:48:48Z",
+        "lastEditedBy" : "a3a6d1c3-2f95-4c62-9477-bd8e53e9aea2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "1896905d42ee71709fa0da0a80d84fe3eb026c6e",
+    "line" : 8,
+    "diffHunk" : "@@ -1,1 +213,217 @@      val attemptID = if (isClusterMode) {\n        // Set the web ui port to be ephemeral for yarn if not set explicitly\n        // so we don't conflict with other spark processes running on the same box\n        // If set explicitly, Web UI will attempt to run on UI_PORT and try\n        // incrementally until UI_PORT + `spark.port.maxRetries`"
+  }
+]
