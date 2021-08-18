@@ -1,0 +1,123 @@
+[
+  {
+    "id" : "3edb88e7-2dca-479a-9a2f-631b09f575a9",
+    "prId" : 28541,
+    "prUrl" : "https://github.com/apache/spark/pull/28541#pullrequestreview-438737976",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a85e02a6-f191-4f27-87ad-43e68665f328",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "This doesn't look like a general optimization to me, but depends on the specific runtime environment.",
+        "createdAt" : "2020-05-15T13:01:38Z",
+        "updatedAt" : "2020-05-15T13:01:51Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7b4b0439-3c78-48c3-8623-533ca104974f",
+        "parentId" : "a85e02a6-f191-4f27-87ad-43e68665f328",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "+1 for @Ngone51 's comment.",
+        "createdAt" : "2020-06-27T17:27:37Z",
+        "updatedAt" : "2020-06-27T17:27:38Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "33273801-8d21-4fee-b2e3-d5a44d7f0f55",
+        "parentId" : "a85e02a6-f191-4f27-87ad-43e68665f328",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> This doesn't look like a general optimization to me, but depends on the specific runtime environment.\r\n\r\nYeah, only optimize some special case",
+        "createdAt" : "2020-06-28T02:36:14Z",
+        "updatedAt" : "2020-06-28T02:36:14Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "be4eb476fd1db763c02ca906b2833fbeaa70a513",
+    "line" : 20,
+    "diffHunk" : "@@ -1,1 +112,116 @@    // memory to give it (we always let each task get at least 1 / (2 * numActiveTasks)).\n    // TODO: simplify this to limit each task to its own slot\n    while (waitTimes < 3) {\n      val numActiveTasks = memoryForTask.keys.size\n      val curMem = memoryForTask(taskAttemptId)"
+  },
+  {
+    "id" : "87f0b017-238a-4af2-83d6-12b702064d70",
+    "prId" : 28541,
+    "prUrl" : "https://github.com/apache/spark/pull/28541#pullrequestreview-414053650",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "aac270a1-816a-4cb0-8a98-c3319af60ea6",
+        "parentId" : null,
+        "authorId" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "body" : "This simply means the task has already got assigned the amount of memory that is above average, I don't see why it's still required to wait for more memory here. If your executor memory is not sufficient to support so many tasks, either increase your executor memory or reduce the slots per executor.",
+        "createdAt" : "2020-05-19T00:30:15Z",
+        "updatedAt" : "2020-05-19T00:30:15Z",
+        "lastEditedBy" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2cb710fe-c8df-4688-84bf-717024d7e380",
+        "parentId" : "aac270a1-816a-4cb0-8a98-c3319af60ea6",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> I don't see why it's still required to wait for more memory here. If your executor memory is not sufficient to support so many tasks, either increase your executor memory or reduce the slots per executor.\r\n\r\nSometimes required 0 then cause Task throw OOM, in this case always task is heavy, re-compute cost a lot. \r\n\r\nFor normal Spark job, we can change config to increase memory or change slot, but for long running Spark such as Thrift server, we can't always restart it. ",
+        "createdAt" : "2020-05-19T01:50:33Z",
+        "updatedAt" : "2020-05-19T01:50:33Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0ed5365c-fe05-4a63-aead-5d81a61bd31b",
+        "parentId" : "aac270a1-816a-4cb0-8a98-c3319af60ea6",
+        "authorId" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "body" : "That's exactly what I mean, the executor is oversubscribed by tasks. The task OOM because the executor memory is not enough, the choice here is either to launch worker node with more memory, or change the value of `spark.task.cpus` to allow less tasks run in parallel. ",
+        "createdAt" : "2020-05-19T02:03:22Z",
+        "updatedAt" : "2020-05-19T02:03:22Z",
+        "lastEditedBy" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a2971359-abaa-4c6c-8d60-bc05e2ce196c",
+        "parentId" : "aac270a1-816a-4cb0-8a98-c3319af60ea6",
+        "authorId" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "body" : "Or, if one specific pattern of tasks take significantly more memory than other tasks, maybe you should tune the tasks themselves, instead of modifying the Spark internal for a specific case.",
+        "createdAt" : "2020-05-19T02:07:48Z",
+        "updatedAt" : "2020-05-19T02:07:48Z",
+        "lastEditedBy" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0c9d2288-4dd6-4f45-9102-1e2b3dc1443c",
+        "parentId" : "aac270a1-816a-4cb0-8a98-c3319af60ea6",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> That's exactly what I mean, the executor is oversubscribed by tasks. The task OOM because the executor memory is not enough, the choice here is either to launch worker node with more memory, or change the value of `spark.task.cpus` to allow less tasks run in parallel.\r\n\r\nIn our case, spark.task.cpus is default value, but core per executor is 4. Active Task not use too much memory decrease the limit of task which use more memory.  So want heavy task wait a little for other task release.  A little corner case ",
+        "createdAt" : "2020-05-19T02:08:03Z",
+        "updatedAt" : "2020-05-19T02:08:03Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ac4ceef5-c12a-40a8-a100-4d0ba683516e",
+        "parentId" : "aac270a1-816a-4cb0-8a98-c3319af60ea6",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> Or, if one specific pattern of tasks take significantly more memory than other tasks, maybe you should tune the tasks themselves, instead of modifying the Spark internal for a specific case.\r\n\r\nyea, ad-hoc query sort with big key, spill 20G +. only run that query will success, run with other sql with high concurrency , failed.\r\n\r\n",
+        "createdAt" : "2020-05-19T02:12:07Z",
+        "updatedAt" : "2020-05-19T02:12:08Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "be4eb476fd1db763c02ca906b2833fbeaa70a513",
+    "line" : 28,
+    "diffHunk" : "@@ -1,1 +141,145 @@        logInfo(s\"TID $taskAttemptId waiting for at least 1/2N of $poolName pool to be free\")\n        lock.wait()\n      } else if (toGrant == 0 && memoryFree > 0) {\n        logInfo(s\"TID $taskAttemptId acquired 0 bytes memory,\" +\n          s\"wait for other task finish and adjust the ceiling\")"
+  }
+]

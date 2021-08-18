@@ -757,5 +757,302 @@
     "commit" : "a0b8d070f027460dd1e5fdbd7dc35d0440450b0a",
     "line" : 10,
     "diffHunk" : "@@ -1,1 +38,42 @@     * the optimizer can hit an infinite loop during the [[PushDownPredicates]] rule.\n     */\n    case Project(projectList, Filter(condition, child))\n        if SQLConf.get.nestedSchemaPruningEnabled && canProjectPushThrough(child) =>\n      val exprCandidatesToPrune = projectList ++ Seq(condition) ++ child.expressions"
+  },
+  {
+    "id" : "cafdb55e-8efb-4c3b-8cad-92ea66ad6b61",
+    "prId" : 28560,
+    "prUrl" : "https://github.com/apache/spark/pull/28560#pullrequestreview-413200738",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "594582a3-2f55-4e13-8005-eb9467703dd5",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Some change here is shared with #28556. ",
+        "createdAt" : "2020-05-17T21:34:33Z",
+        "updatedAt" : "2020-05-22T00:38:55Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b2e56d55fe1dda39a47ba654e2b60a81fea7e492",
+    "line" : 38,
+    "diffHunk" : "@@ -1,1 +86,90 @@        nestedFieldToAlias(f).toAttribute\n    }\n  }\n\n  /**"
+  },
+  {
+    "id" : "6dc83665-a67c-48c4-8fda-1a01537e56c4",
+    "prId" : 28560,
+    "prUrl" : "https://github.com/apache/spark/pull/28560#pullrequestreview-427819556",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b0b9f52c-8152-49f7-a48a-19bb4aeefd32",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Are the current entries all the case we can support for nested column pruning? How about `FlatMapGroupsInPandas`?",
+        "createdAt" : "2020-05-18T02:26:29Z",
+        "updatedAt" : "2020-05-22T00:38:55Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8793c57e-7471-4352-961f-9767ba63ba33",
+        "parentId" : "b0b9f52c-8152-49f7-a48a-19bb4aeefd32",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "I think FlatMapGroupsInPandas is also supported.\r\n\r\nAs you see, we do `transformExpressions` to replace `ExtractValue` in operator's expressions. So if the operator follows SparkSQL's operators, it should be fine.\r\n\r\nThis patch adds the change needed for general nested column pruning for the kind of operators which can prune nested column. Ideally we only need to add it in `canPruneOn`, and add test for it.\r\n\r\nCurrently I think nested column pruning test cases are all in Scala, no Python. I will think about how to add test.",
+        "createdAt" : "2020-05-18T02:38:29Z",
+        "updatedAt" : "2020-05-22T00:38:55Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cc2eb1bb-7eba-4f2b-a9bb-9196bddb8949",
+        "parentId" : "b0b9f52c-8152-49f7-a48a-19bb4aeefd32",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "> Currently I think nested column pruning test cases are all in Scala, no Python. I will think about how to add test.\r\n\r\nOkay, thanks for the check. Yea, having tests for Python cases looks nice.",
+        "createdAt" : "2020-05-18T02:40:33Z",
+        "updatedAt" : "2020-05-22T00:38:55Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ea99b950-0ba6-4256-a747-2b1846aed01c",
+        "parentId" : "b0b9f52c-8152-49f7-a48a-19bb4aeefd32",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "cc: @HyukjinKwon ",
+        "createdAt" : "2020-05-18T02:47:43Z",
+        "updatedAt" : "2020-05-22T00:38:55Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a3c9d08d-502a-4129-9bfe-fa8a24b98091",
+        "parentId" : "b0b9f52c-8152-49f7-a48a-19bb4aeefd32",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "I think I was wrong. Re-checking `FlatMapGroupsInPandas`'s Python API, it looks like\r\n\r\n```python\r\ndf.groupby(\"id\").apply(udf).show()\r\n```\r\n\r\nSo basically the python udf takes no nested column selection but a full columns of DataFrame. It doesn't do nested column pruning.\r\n\r\n`MapInPandas` is also the same.",
+        "createdAt" : "2020-05-18T06:21:20Z",
+        "updatedAt" : "2020-05-22T00:38:55Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b25bd7e3-ff48-417f-8525-5bd2436a8b08",
+        "parentId" : "b0b9f52c-8152-49f7-a48a-19bb4aeefd32",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Sorry I just checked this. Yes, I think ^ is correct.",
+        "createdAt" : "2020-06-10T08:18:28Z",
+        "updatedAt" : "2020-06-10T08:18:29Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b2e56d55fe1dda39a47ba654e2b60a81fea7e492",
+    "line" : 46,
+    "diffHunk" : "@@ -1,1 +94,98 @@    case _: Aggregate => true\n    case _: Expand => true\n    case _ => false\n  }\n"
+  },
+  {
+    "id" : "603411b6-7b48-439e-820b-064c7d85ac2d",
+    "prId" : 28560,
+    "prUrl" : "https://github.com/apache/spark/pull/28560#pullrequestreview-416567849",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f65f12f3-a190-47f9-93b0-8c6da3d13135",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "This case only matches `Aggregate` and `Expand` now?",
+        "createdAt" : "2020-05-21T13:49:43Z",
+        "updatedAt" : "2020-05-22T00:38:55Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3e47e4e3-8ca6-4704-95aa-a1075f067737",
+        "parentId" : "f65f12f3-a190-47f9-93b0-8c6da3d13135",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Yea, `canPruneOn` decides what operator will be pruned on.\r\n\r\n",
+        "createdAt" : "2020-05-21T23:20:03Z",
+        "updatedAt" : "2020-05-22T00:38:55Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a8112ae4-3351-438a-8b20-dc652a23566c",
+        "parentId" : "f65f12f3-a190-47f9-93b0-8c6da3d13135",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Ah, I see. Thanks for the check. If so, it might be better to explicitly filiter them here for readablity like `case other if canPruneOn(plan)`, or leave some comments about that. Both is okay to me.",
+        "createdAt" : "2020-05-21T23:35:59Z",
+        "updatedAt" : "2020-05-22T00:38:55Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3adc8684-b09f-40c1-a726-dfefd49ef9be",
+        "parentId" : "f65f12f3-a190-47f9-93b0-8c6da3d13135",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Let me leave some comments, running `canPruneOn` twice seems redundant.",
+        "createdAt" : "2020-05-21T23:59:49Z",
+        "updatedAt" : "2020-05-22T00:38:55Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b2e56d55fe1dda39a47ba654e2b60a81fea7e492",
+    "line" : 20,
+    "diffHunk" : "@@ -1,1 +57,61 @@\n    // The operators reaching here was already guarded by `canPruneOn`.\n    case other =>\n      replaceChildrenWithAliases(other, nestedFieldToAlias, attrToAliases)\n  }"
+  },
+  {
+    "id" : "97a902d0-cfd9-4ba0-abb2-9373b7457b2f",
+    "prId" : 28560,
+    "prUrl" : "https://github.com/apache/spark/pull/28560#pullrequestreview-427851260",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "79950352-01ac-426e-bcb3-a3c8705bc2c8",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "What about removing this method and call `NestedColumnAliasing.replaceChildrenWithAliases` directly above?",
+        "createdAt" : "2020-06-10T08:55:45Z",
+        "updatedAt" : "2020-06-10T08:55:45Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b2e56d55fe1dda39a47ba654e2b60a81fea7e492",
+    "line" : 51,
+    "diffHunk" : "@@ -1,1 +224,228 @@\n  private def pruneGenerate(\n      g: Generate,\n      nestedFieldToAlias: Map[ExtractValue, Alias],\n      attrToAliases: Map[ExprId, Seq[Alias]]): LogicalPlan = {"
+  },
+  {
+    "id" : "1910bc02-8d19-42c9-9a0a-cf14140d8b29",
+    "prId" : 28556,
+    "prUrl" : "https://github.com/apache/spark/pull/28556#pullrequestreview-415972912",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7b3c82c5-8781-44d7-b695-1315d6b8dc0c",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "nit: Could you update the title like `Nested column aliasing for RepartitionByExpression/Join`?",
+        "createdAt" : "2020-05-18T01:55:53Z",
+        "updatedAt" : "2020-06-10T21:42:46Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "566dbbbf-ab6e-4772-b332-093511ced200",
+        "parentId" : "7b3c82c5-8781-44d7-b695-1315d6b8dc0c",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Btw, joins update the nullability of input attributes (outer join cases), but does this logic work correctly? Either way, I think we need some tests for the case. It seems the current PR only has tests for inner join cases?",
+        "createdAt" : "2020-05-18T02:00:19Z",
+        "updatedAt" : "2020-06-10T21:42:46Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c528300c-08ca-4157-9c74-4a646c26ac58",
+        "parentId" : "7b3c82c5-8781-44d7-b695-1315d6b8dc0c",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Yea, I will add more tests for join, like outer join.\r\n\r\nThe nested column pruning here is for a Project on top of Join (or others). We just replace original complex output with nested pruned fields. IIUC, although joins update nullability, for null outputs, those nested pruned fields should be null too, because the nullability is determined by join semantics.\r\n\r\nI will add more tests to verify it.",
+        "createdAt" : "2020-05-18T02:48:03Z",
+        "updatedAt" : "2020-06-10T21:42:46Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "837e9aee-0312-4725-858e-ae86e7910dd8",
+        "parentId" : "7b3c82c5-8781-44d7-b695-1315d6b8dc0c",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Added some tests for outer join.",
+        "createdAt" : "2020-05-21T08:35:59Z",
+        "updatedAt" : "2020-06-10T21:42:46Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ce5d8dcc8b5cc61d66bad619638606716b3f44bf",
+    "line" : 42,
+    "diffHunk" : "@@ -1,1 +108,112 @@    case _: Sample => true\n    case _: RepartitionByExpression => true\n    case _: Join => true\n    case _ => false\n  }"
+  },
+  {
+    "id" : "6810d417-25e3-4cd5-a962-461e70835469",
+    "prId" : 28556,
+    "prUrl" : "https://github.com/apache/spark/pull/28556#pullrequestreview-429879278",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d95fc1d9-1c5d-407a-9b80-8e0b983ac893",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "No big deal but I would rename `plan` to `p` to avoid shadowing the `plan` argument. At least my IDE complains on that.",
+        "createdAt" : "2020-06-12T07:07:19Z",
+        "updatedAt" : "2020-06-12T07:07:28Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f5c04da1-314b-49e1-8fa0-8dd2b4cff7bf",
+        "parentId" : "d95fc1d9-1c5d-407a-9b80-8e0b983ac893",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "I will change it in other PR. Thanks.",
+        "createdAt" : "2020-06-12T16:27:16Z",
+        "updatedAt" : "2020-06-12T16:27:16Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ce5d8dcc8b5cc61d66bad619638606716b3f44bf",
+    "line" : 8,
+    "diffHunk" : "@@ -1,1 +38,42 @@      getAliasSubMap(exprCandidatesToPrune, child.producedAttributes.toSeq)\n\n    case plan if SQLConf.get.nestedSchemaPruningEnabled && canPruneOn(plan) =>\n      val exprCandidatesToPrune = plan.expressions\n      getAliasSubMap(exprCandidatesToPrune, plan.producedAttributes.toSeq)"
+  },
+  {
+    "id" : "d4907c69-f419-45e3-98cd-06b008f667dd",
+    "prId" : 28556,
+    "prUrl" : "https://github.com/apache/spark/pull/28556#pullrequestreview-429534293",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e358892a-873f-42cc-b6dc-1da4d1c644ad",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "@viirya, just to clarify, you added `producedAttributes` here just to be safe but not related to the current changes (?). Seems `Join` and `RepartitionByExpression` have an empty `producedAttributes`.",
+        "createdAt" : "2020-06-12T07:39:23Z",
+        "updatedAt" : "2020-06-12T07:39:23Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "aa8d3f5a-f45d-4a49-b985-04aafc45426c",
+        "parentId" : "e358892a-873f-42cc-b6dc-1da4d1c644ad",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Okay, if it's going to output, it shouldn't be pruned anyway.",
+        "createdAt" : "2020-06-12T07:52:46Z",
+        "updatedAt" : "2020-06-12T07:52:46Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ce5d8dcc8b5cc61d66bad619638606716b3f44bf",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +36,40 @@        if SQLConf.get.nestedSchemaPruningEnabled && canProjectPushThrough(child) =>\n      val exprCandidatesToPrune = projectList ++ child.expressions\n      getAliasSubMap(exprCandidatesToPrune, child.producedAttributes.toSeq)\n\n    case plan if SQLConf.get.nestedSchemaPruningEnabled && canPruneOn(plan) =>"
   }
 ]

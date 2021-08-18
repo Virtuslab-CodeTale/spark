@@ -42,5 +42,115 @@
     "commit" : "b42ce1dde86069a74ebbda44a1729cde39c2672d",
     "line" : 50,
     "diffHunk" : "@@ -1,1 +1248,1252 @@  }\n\n  test(\"inner join: rewrite filter predicates to conjunctive normal form\") {\n    val x = testRelation.subquery('x)\n    val y = testRelation.subquery('y)"
+  },
+  {
+    "id" : "64d81315-0567-42ef-a5dd-0863b4f4a269",
+    "prId" : 28575,
+    "prUrl" : "https://github.com/apache/spark/pull/28575#pullrequestreview-421509283",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "228d29da-e711-42e5-9636-7f3abc9b4a6e",
+        "parentId" : null,
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "Match the `PostgreSQL`'s plan:\r\n```\r\npostgres=# explain select x.* from x join y on (x.b = y.b and ( (x.a > 3 and x.a < 13 and y.c <= 5) or (y.a > 2 and y.c < 1) ));\r\n                                       QUERY PLAN\r\n-----------------------------------------------------------------------------------------\r\n Merge Join  (cost=207.30..402.86 rows=1927 width=16)\r\n   Merge Cond: (y.b = x.b)\r\n   Join Filter: (((x.a > 3) AND (x.a < 13) AND (y.c <= 5)) OR ((y.a > 2) AND (y.c < 1)))\r\n   ->  Sort  (cost=78.41..80.30 rows=754 width=12)\r\n         Sort Key: y.b\r\n         ->  Seq Scan on y  (cost=0.00..42.38 rows=754 width=12)\r\n               Filter: ((c <= 5) OR ((a > 2) AND (c < 1)))\r\n   ->  Sort  (cost=128.89..133.52 rows=1850 width=16)\r\n         Sort Key: x.b\r\n         ->  Seq Scan on x  (cost=0.00..28.50 rows=1850 width=16)\r\n(10 rows)\r\n```",
+        "createdAt" : "2020-05-31T16:30:30Z",
+        "updatedAt" : "2020-06-03T10:41:12Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e8f24714d90ef7a2fbcd2458463d91c05e28ebbf",
+    "line" : 153,
+    "diffHunk" : "@@ -1,1 +1358,1362 @@      || ((\"y.a\".attr > 2) && (\"y.c\".attr < 1))))).analyze\n\n    comparePlans(optimized, correctAnswer)\n  }\n"
+  },
+  {
+    "id" : "30dd7271-04e0-493a-9ebd-cb2f8dd66e6e",
+    "prId" : 28575,
+    "prUrl" : "https://github.com/apache/spark/pull/28575#pullrequestreview-421509586",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c0be3020-159e-4586-8709-2a2d55ea2608",
+        "parentId" : null,
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "Match the `PostgreSQL`'s plan:\r\n```\r\npostgres=# explain select x.* from x right join y on (x.b = y.b and ( (x.a > 3 and y.a > 13 ) or (x.a > 1 and y.a > 11) ));\r\n                                QUERY PLAN\r\n---------------------------------------------------------------------------\r\n Merge Left Join  (cost=218.07..465.05 rows=1996 width=16)\r\n   Merge Cond: (y.b = x.b)\r\n   Join Filter: (((x.a > 3) AND (y.a > 13)) OR ((x.a > 1) AND (y.a > 11)))\r\n   ->  Sort  (cost=128.89..133.52 rows=1850 width=8)\r\n         Sort Key: y.b\r\n         ->  Seq Scan on y  (cost=0.00..28.50 rows=1850 width=8)\r\n   ->  Sort  (cost=89.18..91.75 rows=1028 width=16)\r\n         Sort Key: x.b\r\n         ->  Seq Scan on x  (cost=0.00..37.75 rows=1028 width=16)\r\n               Filter: ((a > 3) OR (a > 1))\r\n(10 rows)\r\n```",
+        "createdAt" : "2020-05-31T16:35:12Z",
+        "updatedAt" : "2020-06-03T10:41:12Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e8f24714d90ef7a2fbcd2458463d91c05e28ebbf",
+    "line" : 133,
+    "diffHunk" : "@@ -1,1 +1338,1342 @@        .analyze\n\n    comparePlans(optimized, correctAnswer)\n  }\n"
+  },
+  {
+    "id" : "ea6ea0bb-65eb-44c0-8d1f-f65dd55025ef",
+    "prId" : 28575,
+    "prUrl" : "https://github.com/apache/spark/pull/28575#pullrequestreview-421509694",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3072027d-b0ca-4a57-97cb-829b4ae3b242",
+        "parentId" : null,
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "Match the `PostgreSQL`'s plan:\r\n```\r\npostgres=# explain select x.* from x left join y on (x.b = y.b and ( (x.a > 3 and y.a > 13 ) or (x.a > 1 and y.a > 11) ));\r\n                                QUERY PLAN\r\n---------------------------------------------------------------------------\r\n Merge Left Join  (cost=218.07..465.05 rows=1996 width=16)\r\n   Merge Cond: (x.b = y.b)\r\n   Join Filter: (((x.a > 3) AND (y.a > 13)) OR ((x.a > 1) AND (y.a > 11)))\r\n   ->  Sort  (cost=128.89..133.52 rows=1850 width=16)\r\n         Sort Key: x.b\r\n         ->  Seq Scan on x  (cost=0.00..28.50 rows=1850 width=16)\r\n   ->  Sort  (cost=89.18..91.75 rows=1028 width=8)\r\n         Sort Key: y.b\r\n         ->  Seq Scan on y  (cost=0.00..37.75 rows=1028 width=8)\r\n               Filter: ((a > 13) OR (a > 11))\r\n(10 rows)\r\n```",
+        "createdAt" : "2020-05-31T16:36:36Z",
+        "updatedAt" : "2020-06-03T10:41:12Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e8f24714d90ef7a2fbcd2458463d91c05e28ebbf",
+    "line" : 113,
+    "diffHunk" : "@@ -1,1 +1318,1322 @@        .analyze\n\n    comparePlans(optimized, correctAnswer)\n  }\n"
+  },
+  {
+    "id" : "20c45f14-e0b0-4f82-b0da-1dea138ebd0e",
+    "prId" : 28575,
+    "prUrl" : "https://github.com/apache/spark/pull/28575#pullrequestreview-421511618",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "bde4dbd6-1e5e-4a74-af82-175cba0dc0ca",
+        "parentId" : null,
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "Match the `PostgreSQL`'s plan:\r\n```\r\npostgres=# explain select x.* from x join y on ((x.b = y.b) and Not((x.a > 3) and (x.a < 2 or (y.a > 13)) or (x.a > 1) and (y.a > 11)));\r\n                                          QUERY PLAN\r\n-----------------------------------------------------------------------------------------------\r\n Merge Join  (cost=218.07..484.71 rows=3874 width=16)\r\n   Merge Cond: (x.b = y.b)\r\n   Join Filter: (((x.a <= 1) OR (y.a <= 11)) AND ((x.a <= 3) OR ((x.a >= 2) AND (y.a <= 13))))\r\n   ->  Sort  (cost=89.18..91.75 rows=1028 width=16)\r\n         Sort Key: x.b\r\n         ->  Seq Scan on x  (cost=0.00..37.75 rows=1028 width=16)\r\n               Filter: ((a <= 3) OR (a >= 2))\r\n   ->  Sort  (cost=128.89..133.52 rows=1850 width=8)\r\n         Sort Key: y.b\r\n         ->  Seq Scan on y  (cost=0.00..28.50 rows=1850 width=8)\r\n(10 rows)\r\n```",
+        "createdAt" : "2020-05-31T17:05:07Z",
+        "updatedAt" : "2020-06-03T10:41:12Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e8f24714d90ef7a2fbcd2458463d91c05e28ebbf",
+    "line" : 93,
+    "diffHunk" : "@@ -1,1 +1298,1302 @@        && ((\"x.a\".attr <= 1) || (\"y.a\".attr <= 11))))\n        .analyze\n    comparePlans(optimized, correctAnswer)\n  }\n"
+  },
+  {
+    "id" : "3cb39673-b598-4340-8f06-24fbc96ba93c",
+    "prId" : 28575,
+    "prUrl" : "https://github.com/apache/spark/pull/28575#pullrequestreview-421511726",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9663c5fb-26a8-4ee6-bf1c-cfd1e79d92db",
+        "parentId" : null,
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "Match the `PostgreSQL`'s plan:\r\n```\r\npostgres=# explain select x.* from x join y on (x.b = y.b and ( (x.a > 3 and y.a > 13 ) or (x.a > 1 and y.a > 11) ));\r\n                                QUERY PLAN\r\n---------------------------------------------------------------------------\r\n Merge Join  (cost=178.36..315.60 rows=3593 width=16)\r\n   Merge Cond: (x.b = y.b)\r\n   Join Filter: (((x.a > 3) AND (y.a > 13)) OR ((x.a > 1) AND (y.a > 11)))\r\n   ->  Sort  (cost=89.18..91.75 rows=1028 width=16)\r\n         Sort Key: x.b\r\n         ->  Seq Scan on x  (cost=0.00..37.75 rows=1028 width=16)\r\n               Filter: ((a > 3) OR (a > 1))\r\n   ->  Sort  (cost=89.18..91.75 rows=1028 width=8)\r\n         Sort Key: y.b\r\n         ->  Seq Scan on y  (cost=0.00..37.75 rows=1028 width=8)\r\n               Filter: ((a > 13) OR (a > 11))\r\n(11 rows)\r\n```",
+        "createdAt" : "2020-05-31T17:07:01Z",
+        "updatedAt" : "2020-06-03T10:41:12Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e8f24714d90ef7a2fbcd2458463d91c05e28ebbf",
+    "line" : 72,
+    "diffHunk" : "@@ -1,1 +1277,1281 @@        .analyze\n\n    comparePlans(optimized, correctAnswer)\n  }\n"
   }
 ]

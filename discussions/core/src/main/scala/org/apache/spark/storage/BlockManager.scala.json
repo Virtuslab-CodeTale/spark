@@ -581,5 +581,104 @@
     "commit" : "8494bdd94285c7cc5a41e151da920710be7f4671",
     "line" : 74,
     "diffHunk" : "@@ -1,1 +673,677 @@        return migratableResolver.putShuffleBlockAsStream(blockId, serializerManager)\n      } catch {\n        case e: ClassCastException => throw new SparkException(\n          s\"Unexpected shuffle block ${blockId} with unsupported shuffle \" +\n          s\"resolver ${shuffleManager.shuffleBlockResolver}\")"
+  },
+  {
+    "id" : "2caecf74-fa52-42cd-bcf6-2c7a44c1b243",
+    "prId" : 28482,
+    "prUrl" : "https://github.com/apache/spark/pull/28482#pullrequestreview-412051156",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f20c7c79-ac8d-4fa9-b4bd-2237eef3e695",
+        "parentId" : null,
+        "authorId" : "ad4cb313-47b2-4cfa-9c1f-0a3596794a67",
+        "body" : "Can this explicit catching of InterruptedException `case e: InterruptedException =>` be removed? InterruptException will not be caught by `case NonFatal(t)` here so it will automatically be thrown back?",
+        "createdAt" : "2020-05-14T17:51:13Z",
+        "updatedAt" : "2020-05-14T17:51:14Z",
+        "lastEditedBy" : "ad4cb313-47b2-4cfa-9c1f-0a3596794a67",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5ab207b6-79af-417c-a3a6-7ef602af3e67",
+        "parentId" : "f20c7c79-ac8d-4fa9-b4bd-2237eef3e695",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "That's probably ok",
+        "createdAt" : "2020-05-14T17:54:07Z",
+        "updatedAt" : "2020-05-14T17:54:07Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3b3a81db43ffaa0312b5bd110a68fb6fda349794",
+    "line" : 193,
+    "diffHunk" : "@@ -1,1 +1923,1927 @@              decommissionRddCacheBlocks()\n            } catch {\n              case e: InterruptedException =>\n                logInfo(\"Interrupted during migration, re-throwing\")\n                throw e"
+  },
+  {
+    "id" : "65dad189-9884-400c-8dc8-8e2638a3013a",
+    "prId" : 28482,
+    "prUrl" : "https://github.com/apache/spark/pull/28482#pullrequestreview-412062586",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b520c71a-b915-452e-8b56-531b462931f4",
+        "parentId" : null,
+        "authorId" : "ad4cb313-47b2-4cfa-9c1f-0a3596794a67",
+        "body" : "When the thread is Interrupted, the InterruptedException is caught and stopped is set to true and while loop will exit. So do we need to add `!Thread.interrupted()` explicitly? Or is this just for being more defensive here?",
+        "createdAt" : "2020-05-14T17:52:35Z",
+        "updatedAt" : "2020-05-14T17:52:58Z",
+        "lastEditedBy" : "ad4cb313-47b2-4cfa-9c1f-0a3596794a67",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4ff6486b-cdc3-4fb9-bec4-e7d6d3277c12",
+        "parentId" : "b520c71a-b915-452e-8b56-531b462931f4",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "This is incase one of our sub functions is capturing the thread interruption (either now or in the future).",
+        "createdAt" : "2020-05-14T17:53:16Z",
+        "updatedAt" : "2020-05-14T17:53:16Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7bbceb90-333f-469b-96f1-cd60f73b46cf",
+        "parentId" : "b520c71a-b915-452e-8b56-531b462931f4",
+        "authorId" : "ad4cb313-47b2-4cfa-9c1f-0a3596794a67",
+        "body" : "got it.",
+        "createdAt" : "2020-05-14T18:08:57Z",
+        "updatedAt" : "2020-05-14T18:08:57Z",
+        "lastEditedBy" : "ad4cb313-47b2-4cfa-9c1f-0a3596794a67",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3b3a81db43ffaa0312b5bd110a68fb6fda349794",
+    "line" : 187,
+    "diffHunk" : "@@ -1,1 +1917,1921 @@          while (blockManagerDecommissioning &&\n            !stopped &&\n            !Thread.interrupted() &&\n            failures < 20) {\n            logDebug(\"Attempting to replicate all cached RDD blocks\")"
+  },
+  {
+    "id" : "303b4635-663f-4652-bb0c-6a561b47baf8",
+    "prId" : 28482,
+    "prUrl" : "https://github.com/apache/spark/pull/28482#pullrequestreview-412062312",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "117d4509-b4ce-404d-8237-f2a6da939671",
+        "parentId" : null,
+        "authorId" : "ad4cb313-47b2-4cfa-9c1f-0a3596794a67",
+        "body" : "InterruptedException is not part of `NonFatal(e)`, so won't that be thrown away anyway without this change also?",
+        "createdAt" : "2020-05-14T18:08:33Z",
+        "updatedAt" : "2020-05-14T18:08:33Z",
+        "lastEditedBy" : "ad4cb313-47b2-4cfa-9c1f-0a3596794a67",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3b3a81db43ffaa0312b5bd110a68fb6fda349794",
+    "line" : 89,
+    "diffHunk" : "@@ -1,1 +1655,1659 @@      } catch {\n        // Rethrow interrupt exception\n        case e: InterruptedException =>\n          throw e\n        // Everything else we may retry"
   }
 ]

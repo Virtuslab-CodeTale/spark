@@ -86,5 +86,93 @@
     "commit" : "f7f803034ae1ffa713b7015f214d63412e101389",
     "line" : 16,
     "diffHunk" : "@@ -1,1 +531,535 @@    val ret = new JArrayList[String]\n\n    def insideBracketedComment: Boolean = bracketedCommentLevel > 0\n    def insideComment: Boolean = insideSimpleComment || insideBracketedComment\n    def statementBegin(index: Int): Boolean = includingStatement || (!insideComment &&"
+  },
+  {
+    "id" : "82f98a26-a195-46ba-a6a5-f7ea2abb8cfa",
+    "prId" : 28499,
+    "prUrl" : "https://github.com/apache/spark/pull/28499#pullrequestreview-409756251",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d81a1647-9783-419b-9f17-17a77fbaa0d3",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Printing this stacktrace via logger (with `ERROR` levels) is not enough for your usecase? I feel that printing to a shell is a bit verbose.",
+        "createdAt" : "2020-05-12T06:35:03Z",
+        "updatedAt" : "2020-05-12T12:18:20Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "99d02a03-90b5-4cc7-af86-377bebf8e2bb",
+        "parentId" : "d81a1647-9783-419b-9f17-17a77fbaa0d3",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "For AnalysisException, we won't get the stacktrace via logger. It's in the `DEBUG` level",
+        "createdAt" : "2020-05-12T06:42:00Z",
+        "updatedAt" : "2020-05-12T12:18:20Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5bb1bd03-43c4-4086-8e91-54516f831403",
+        "parentId" : "d81a1647-9783-419b-9f17-17a77fbaa0d3",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "FYI, https://github.com/apache/spark/blob/1fac06c4307c8c7a5a48a50952d48ee5b9ebccb2/sql/hive-thriftserver/src/main/scala/org/apache/spark/sql/hive/thriftserver/SparkSQLDriver.scala#L71",
+        "createdAt" : "2020-05-12T06:43:00Z",
+        "updatedAt" : "2020-05-12T12:18:20Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "66609c23-fa29-4935-83d7-a437c9666622",
+        "parentId" : "d81a1647-9783-419b-9f17-17a77fbaa0d3",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "Or do you mean just use `logError`?",
+        "createdAt" : "2020-05-12T06:45:05Z",
+        "updatedAt" : "2020-05-12T12:18:20Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ebaa7002-fa9c-411f-954a-cf3176583a0d",
+        "parentId" : "d81a1647-9783-419b-9f17-17a77fbaa0d3",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Ah, I see. But, I'm still not sure that end users want to see stacktraces of analysis exceptions for debugging use.... Could we add a new internal config to turn on/off this error info in a server-side?",
+        "createdAt" : "2020-05-12T06:51:08Z",
+        "updatedAt" : "2020-05-12T12:18:20Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fd075a23-0583-4c58-930d-f009d86928ab",
+        "parentId" : "d81a1647-9783-419b-9f17-17a77fbaa0d3",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "Just for clarification, although this class is under the `thriftserver` package, but it has nothing to do with the `thriftserver` and there is no such `client/server` thing here. It is only a single `spark-sql` shell process. \r\n\r\nFor the config thing,  maybe we just need `sessionState.getIsSilent` and just like\r\n\r\n```scala\r\ncase e: AnalysisException => e.cause match {\r\n                case Some(_) if !sessionState.getIsSilent =>\r\n                  err.println(\r\n                    s\"\"\"Error in query: ${e.getMessage}\r\n                       |${org.apache.hadoop.util.StringUtils.stringifyException(e)}\r\n                     \"\"\".stripMargin)\r\n             case ....\r\n```",
+        "createdAt" : "2020-05-12T07:05:05Z",
+        "updatedAt" : "2020-05-12T12:18:20Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "368bd41d-c68b-4cd6-b5be-c764c699fe4b",
+        "parentId" : "d81a1647-9783-419b-9f17-17a77fbaa0d3",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Yea, I personally think the proposed one above looks better than that in the current PR.",
+        "createdAt" : "2020-05-12T07:09:37Z",
+        "updatedAt" : "2020-05-12T12:18:20Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6fcd4d2fe5f1b63640b1a2ca8c1efda5453c9d77",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +387,391 @@                    s\"\"\"Error in query: ${e.getMessage}\n                       |${org.apache.hadoop.util.StringUtils.stringifyException(e)}\n                     \"\"\".stripMargin)\n                // For analysis exceptions in silent mode or simple ones that only related to the\n                // query itself, such as `NoSuchDatabaseException`, only the error is printed out"
   }
 ]

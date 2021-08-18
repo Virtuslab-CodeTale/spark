@@ -2660,5 +2660,203 @@
     "commit" : "f29a62ac985c6714f0cd6ff5bdd919b2fce89723",
     "line" : 33,
     "diffHunk" : "@@ -1,1 +2868,2872 @@            val dataType = udf.children(i).dataType\n            if (dataType.existsRecursively(_.isInstanceOf[UserDefinedType[_]])) {\n              // for UDT, we use `CatalystTypeConverters`\n              None\n            } else {"
+  },
+  {
+    "id" : "55944dda-84a9-476a-be43-1e53208fef17",
+    "prId" : 28490,
+    "prUrl" : "https://github.com/apache/spark/pull/28490#pullrequestreview-479435342",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "eaac8b6d-232c-4856-955b-582356645869",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "nit: move the original comment `// SPARK-25942: ....` above this line.",
+        "createdAt" : "2020-08-31T15:16:43Z",
+        "updatedAt" : "2020-09-02T04:42:25Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "07c10372-217b-4cca-b8c7-4ecbb54b5aaf",
+        "parentId" : "eaac8b6d-232c-4856-955b-582356645869",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> nit: move the original comment `// [SPARK-25942](https://issues.apache.org/jira/browse/SPARK-25942): ....` above this line.\r\n\r\nDone",
+        "createdAt" : "2020-08-31T15:33:30Z",
+        "updatedAt" : "2020-09-02T04:42:25Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c67a4d71-5098-405b-a518-b3f33a309b34",
+        "parentId" : "eaac8b6d-232c-4856-955b-582356645869",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "The comment is lost?",
+        "createdAt" : "2020-09-01T04:48:57Z",
+        "updatedAt" : "2020-09-02T04:42:25Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "67e72791-62a9-4b24-b776-4d9a37483b9e",
+        "parentId" : "eaac8b6d-232c-4856-955b-582356645869",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> The comment is lost?\r\n\r\nOh make a mistake, add back",
+        "createdAt" : "2020-09-01T06:31:14Z",
+        "updatedAt" : "2020-09-02T04:42:25Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e6fb91fc8124c60e27899846b675853c22537791",
+    "line" : 82,
+    "diffHunk" : "@@ -1,1 +1457,1461 @@      // unnecessary alias of GetStructField here.\n      case a: Aggregate =>\n        val planForResolve = a.child match {\n          // SPARK-25942: Resolves aggregate expressions with `AppendColumns`'s children, instead of\n          // `AppendColumns`, because `AppendColumns`'s serializer might produce conflict attribute"
+  },
+  {
+    "id" : "f0b31bb6-67ff-45f4-bf51-8a09d019f779",
+    "prId" : 28490,
+    "prUrl" : "https://github.com/apache/spark/pull/28490#pullrequestreview-479297205",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d4b4e3ab-db85-4913-82ba-102b48223c8d",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I'd expect something simpler\r\n```\r\n// If `trimAlias` is true, trim Aliases over non-top-level GetStructField.\r\ndef resolveExpressionTopDown(..., trimAlias: Boolean = false, isTopLevel: Boolean = true) = {\r\n  ...\r\n  result match {\r\n    case Alias(s: GetStructField, _) if trimAlias && !isTopLevel => s\r\n    case _ => result\r\n  }\r\n  ...\r\n  case _ => e.mapChildren(resolveExpressionTopDown(_, q, trimAlias, isTopLevel = false))\r\n}\r\n```\r\n\r\nand here\r\n```\r\nval resolvedGroupingExprs = a.groupingExpressions\r\n  .map(resolveExpressionTopDown(_, planForResolve, trimAlias = true))\r\n  .map {\r\n    // trim Alias over top-level GetStructField\r\n    case Alias(s: GetStructField, _) => s\r\n    case other => other\r\n  }\r\n\r\nval resolvedAggExprs = a.aggregateExpressions\r\n  .map(resolveExpressionTopDown(_, planForResolve, trimAlias = true))\r\n```",
+        "createdAt" : "2020-08-31T17:04:10Z",
+        "updatedAt" : "2020-09-02T04:42:25Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3df480a7-28be-4fce-8f2a-4b82ffcb2ebc",
+        "parentId" : "d4b4e3ab-db85-4913-82ba-102b48223c8d",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "Updated",
+        "createdAt" : "2020-09-01T01:40:14Z",
+        "updatedAt" : "2020-09-02T04:42:25Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e6fb91fc8124c60e27899846b675853c22537791",
+    "line" : 96,
+    "diffHunk" : "@@ -1,1 +1471,1475 @@        val resolvedAggExprs = a.aggregateExpressions\n          .map(resolveExpressionTopDown(_, planForResolve, trimAlias = true))\n            .map(_.asInstanceOf[NamedExpression])\n\n        a.copy(resolvedGroupingExprs, resolvedAggExprs, a.child)"
+  },
+  {
+    "id" : "86f1896f-195a-42ba-9cc1-e90c77ebbcd0",
+    "prId" : 28490,
+    "prUrl" : "https://github.com/apache/spark/pull/28490#pullrequestreview-479413416",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0471c255-0395-4eef-a5dc-a8d4850b6972",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "let's add comments to explain what the new parameters do",
+        "createdAt" : "2020-09-01T04:50:21Z",
+        "updatedAt" : "2020-09-02T04:42:25Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2bde3c11-429b-4c94-a07d-b4fa5bd2c39d",
+        "parentId" : "0471c255-0395-4eef-a5dc-a8d4850b6972",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> let's add comments to explain what the new parameters do\r\n\r\nDone",
+        "createdAt" : "2020-09-01T05:38:24Z",
+        "updatedAt" : "2020-09-02T04:42:25Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e6fb91fc8124c60e27899846b675853c22537791",
+    "line" : 24,
+    "diffHunk" : "@@ -1,1 +1335,1339 @@     * @return resolved Expression.\n     */\n    private def resolveExpressionTopDown(\n        e: Expression,\n        q: LogicalPlan,"
+  },
+  {
+    "id" : "6ebe9305-d58b-4400-a9a2-1300191ef356",
+    "prId" : 28490,
+    "prUrl" : "https://github.com/apache/spark/pull/28490#pullrequestreview-480474524",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "fb207baf-aec5-4744-bed0-0e97b61e22f1",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "We need a high-level comment to explain why we trim alias here, e.g.\r\n```\r\n// SPARK-31670: ...\r\n```",
+        "createdAt" : "2020-09-02T04:15:13Z",
+        "updatedAt" : "2020-09-02T04:42:25Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "86c6768c-f932-43df-8cfe-bb443e8c861d",
+        "parentId" : "fb207baf-aec5-4744-bed0-0e97b61e22f1",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> We need a high-level comment to explain why we trim alias here, e.g.\r\n> \r\n> ```\r\n> // [SPARK-31670](https://issues.apache.org/jira/browse/SPARK-31670): ...\r\n> ```\r\n\r\nDone",
+        "createdAt" : "2020-09-02T04:25:59Z",
+        "updatedAt" : "2020-09-02T04:42:25Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e6fb91fc8124c60e27899846b675853c22537791",
+    "line" : 81,
+    "diffHunk" : "@@ -1,1 +1456,1460 @@      // groupByExpressions in `ResolveGroupingAnalytics.constructAggregateExprs()`, we trim\n      // unnecessary alias of GetStructField here.\n      case a: Aggregate =>\n        val planForResolve = a.child match {\n          // SPARK-25942: Resolves aggregate expressions with `AppendColumns`'s children, instead of"
+  },
+  {
+    "id" : "95395f1d-1df8-4358-95a1-2d8e4d9b76b2",
+    "prId" : 28490,
+    "prUrl" : "https://github.com/apache/spark/pull/28490#pullrequestreview-524804191",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8476d19d-9bfd-4d5d-aa7e-f878e0535553",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "In the comment, SPARK-31607 seems to be a typo of SPARK-31670 because SPARK-31607 is `Improve the perf of CTESubstitution`.",
+        "createdAt" : "2020-11-05T23:57:55Z",
+        "updatedAt" : "2020-11-05T23:57:56Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3aed0b61-dc50-44ba-af22-7cdcacbfdec7",
+        "parentId" : "8476d19d-9bfd-4d5d-aa7e-f878e0535553",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> In the comment, [SPARK-31607](https://issues.apache.org/jira/browse/SPARK-31607) seems to be a typo of [SPARK-31670](https://issues.apache.org/jira/browse/SPARK-31670) because [SPARK-31607](https://issues.apache.org/jira/browse/SPARK-31607) is `Improve the perf of CTESubstitution`.\r\n\r\nYea，sorry for my mistake",
+        "createdAt" : "2020-11-06T01:27:15Z",
+        "updatedAt" : "2020-11-06T01:27:16Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "12c2d2b5-f997-4d95-9891-267d3e61956f",
+        "parentId" : "8476d19d-9bfd-4d5d-aa7e-f878e0535553",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Never mind~, @AngersZhuuuu . :)",
+        "createdAt" : "2020-11-06T01:53:28Z",
+        "updatedAt" : "2020-11-06T01:53:28Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e6fb91fc8124c60e27899846b675853c22537791",
+    "line" : 76,
+    "diffHunk" : "@@ -1,1 +1451,1455 @@      case plan if containsDeserializer(plan.expressions) => plan\n\n      // SPARK-31607: Resolve Struct field in groupByExpressions and aggregateExpressions\n      // with CUBE/ROLLUP will be wrapped with alias like Alias(GetStructField, name) with\n      // different ExprId. This cause aggregateExpressions can't be replaced by expanded"
   }
 ]

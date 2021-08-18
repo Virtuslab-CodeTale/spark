@@ -317,5 +317,181 @@
     "commit" : "b7cbc8bea2064449174fc2e2c9664e97ee12da20",
     "line" : 24,
     "diffHunk" : "@@ -1,1 +254,258 @@            throw new IllegalArgumentException(s\"Too many pattern letters: ${style.head}\")\n          }\n          if (bugInStandAloneForm && (patternPart.contains(\"LLL\") || patternPart.contains(\"qqq\"))) {\n            throw new IllegalArgumentException(\"Java 8 has a bug to support stand-alone \" +\n              \"form (3 or more 'L' or 'q' in the pattern string). Please use 'M' or 'Q' instead, \" +"
+  },
+  {
+    "id" : "d547347f-424e-4764-907c-cd528677952e",
+    "prId" : 28576,
+    "prUrl" : "https://github.com/apache/spark/pull/28576#pullrequestreview-414131191",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5618664e-0ccb-4cf1-8e67-0e266f64104f",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "when the field value exceeds the valid range, the JDK throws `DateTimeException`, and we should catch it too. `DateTimeParseException` extends `DateTimeException`",
+        "createdAt" : "2020-05-19T06:18:41Z",
+        "updatedAt" : "2020-05-21T12:48:25Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "161223b5de92064a4cc3672702e09f868bd68870",
+    "line" : 78,
+    "diffHunk" : "@@ -1,1 +108,112 @@  protected def checkDiffResult[T](\n      s: String, legacyParseFunc: String => T): PartialFunction[Throwable, T] = {\n    case e: DateTimeException if SQLConf.get.legacyTimeParserPolicy == EXCEPTION =>\n      try {\n        legacyParseFunc(s)"
+  },
+  {
+    "id" : "93b66731-667c-46c9-9744-ebd5b6c986a9",
+    "prId" : 28576,
+    "prUrl" : "https://github.com/apache/spark/pull/28576#pullrequestreview-415455689",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "faf6a007-84c2-46e2-9f05-c4e41329d4f9",
+        "parentId" : null,
+        "authorId" : "a80e0991-f7b1-415a-8d2e-ab615cc6ef4a",
+        "body" : "Are we also going to error out if they specify the day but not the month? Really, the only formats that make sense are the ones where a full prefix is given in the y-m-d h-m-s sequence, and all others are likely to be a case where they made a mistake (e.g. asked for \"mm\" twice where they meant MM).",
+        "createdAt" : "2020-05-19T15:41:08Z",
+        "updatedAt" : "2020-05-21T12:48:25Z",
+        "lastEditedBy" : "a80e0991-f7b1-415a-8d2e-ab615cc6ef4a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c3c1f5aa-a3e9-44a0-8b57-4c7739c63178",
+        "parentId" : "faf6a007-84c2-46e2-9f05-c4e41329d4f9",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "January should be fine? It accepts any DAY_OF_MONTH.",
+        "createdAt" : "2020-05-20T03:53:22Z",
+        "updatedAt" : "2020-05-21T12:48:25Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "22b60ebb-5b92-4b27-9385-381ab53ebd5d",
+        "parentId" : "faf6a007-84c2-46e2-9f05-c4e41329d4f9",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "> asked for \"mm\" twice where they meant MM\r\n\r\nThis will error out unless the 2 mm parse to the same value, e.g. `mm mm yyyy` with value `10 10 1990`.",
+        "createdAt" : "2020-05-20T03:54:26Z",
+        "updatedAt" : "2020-05-21T12:48:25Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2cd7dfd4-d149-4844-a606-9c3e9d6f65f1",
+        "parentId" : "faf6a007-84c2-46e2-9f05-c4e41329d4f9",
+        "authorId" : "a80e0991-f7b1-415a-8d2e-ab615cc6ef4a",
+        "body" : "I'm saying it works (i.e., it accepts all valid values) but it's nonsensical; it'll never return the complete timestamp that people intended.\r\n\r\nThat said, I can see cases where people want to parse contiguous ranges (e.g. just a time, or just a month, or just a month + day) and then extract the parsed components using `EXTRACT` / `date_part`, or just to format them differently.\r\n\r\nSo I guess the most permissive but still safe thing here would be to forbid missing \"year\" only if someone also requests \"day\" and \"month\", because that's the situation where \"year\" affects the valid range of \"day\". But if they don't request year *and* they don't request month, then month would default to 1 and there would be no impact on the valid range of days, it would always go up to 32. I.e.:\r\n\r\n`\"yyyy MM dd\"` -> OK\r\n`\"MM dd\"` -> fail, need year to know valid range of `dd`\r\n`\"MM\"` -> OK\r\n`\"dd\"` -> OK\r\n`\"hh:mm:ss\"` -> OK\r\n`\"MM dd hh:mm:ss\"` -> fail, need year to know valid range of `dd`",
+        "createdAt" : "2020-05-20T08:37:06Z",
+        "updatedAt" : "2020-05-21T12:48:25Z",
+        "lastEditedBy" : "a80e0991-f7b1-415a-8d2e-ab615cc6ef4a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e4133b56-de4a-48f8-9d74-e75b27a3ad14",
+        "parentId" : "faf6a007-84c2-46e2-9f05-c4e41329d4f9",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "ah this looks better!\r\n\r\nI'm wondering if we still need the legacy config though. It's very hard to hit the missing year exception, and if it happens it's very likely to be a data error. Users should fix the data or change the pattern and provide the default year.",
+        "createdAt" : "2020-05-20T08:53:23Z",
+        "updatedAt" : "2020-05-21T12:48:25Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e3cbdd56-d248-4392-844e-d7fd93b331a0",
+        "parentId" : "faf6a007-84c2-46e2-9f05-c4e41329d4f9",
+        "authorId" : "a80e0991-f7b1-415a-8d2e-ab615cc6ef4a",
+        "body" : "I guess we could even allow the default year, and if people hit Feb 29 then they'll get an error at runtime. No need for a legacy config in that case...",
+        "createdAt" : "2020-05-20T08:57:58Z",
+        "updatedAt" : "2020-05-21T12:48:25Z",
+        "lastEditedBy" : "a80e0991-f7b1-415a-8d2e-ab615cc6ef4a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c89a9007-b945-46fd-8a39-c0a9e8f11806",
+        "parentId" : "faf6a007-84c2-46e2-9f05-c4e41329d4f9",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "ok so we should go back to the first version, which just uses 1970 as the default value and fails for invalid dates at runtime 😂",
+        "createdAt" : "2020-05-20T09:28:32Z",
+        "updatedAt" : "2020-05-21T12:48:25Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2ac692e2-4739-4b3d-88da-9aefb375c234",
+        "parentId" : "faf6a007-84c2-46e2-9f05-c4e41329d4f9",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "BTW the current framework just returns null if the parser fails. Shall we treat this case specially and throw an error that fails the query?",
+        "createdAt" : "2020-05-20T09:29:55Z",
+        "updatedAt" : "2020-05-21T12:48:25Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ff5c78fe-5db0-43a3-bd1e-1a3763d705bf",
+        "parentId" : "faf6a007-84c2-46e2-9f05-c4e41329d4f9",
+        "authorId" : "a80e0991-f7b1-415a-8d2e-ab615cc6ef4a",
+        "body" : "Error out in ANSI mode only, I'd say, just like with all other parse failures (which should fail in ANSI mode -- I hope they already do).\r\n\r\nFWIW, going back to the first version is not a shame now that we know it's the right thing to do. :) Maybe we can leave some comments in the code to explain the reasoning why we don't error out if things are missing.",
+        "createdAt" : "2020-05-20T10:04:47Z",
+        "updatedAt" : "2020-05-21T12:48:25Z",
+        "lastEditedBy" : "a80e0991-f7b1-415a-8d2e-ab615cc6ef4a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "365bdb88-b0c2-4b9e-a2f6-e672dceda54b",
+        "parentId" : "faf6a007-84c2-46e2-9f05-c4e41329d4f9",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "unfortunately datetime functions don't respect the ANSI flag at all. Maybe we should keep everything the same as Spark 2.4 (return null when parsing Feb 29 because 1970-02-29 is invalid), and implement ANSI behavior in Spark 3.1?",
+        "createdAt" : "2020-05-20T12:47:46Z",
+        "updatedAt" : "2020-05-21T12:48:25Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bfd71575-3dd5-4eea-b8be-936002a12339",
+        "parentId" : "faf6a007-84c2-46e2-9f05-c4e41329d4f9",
+        "authorId" : "a80e0991-f7b1-415a-8d2e-ab615cc6ef4a",
+        "body" : "Yikes! It seems terrible that we have to do that later, because then it can break existing workloads. Launching the ANSI behavior was our chance to do the right thing here. If we can still fix this in 3.0 then that would of course be preferable, but that seems like a stretch...",
+        "createdAt" : "2020-05-20T15:27:45Z",
+        "updatedAt" : "2020-05-21T12:48:25Z",
+        "lastEditedBy" : "a80e0991-f7b1-415a-8d2e-ab615cc6ef4a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "161223b5de92064a4cc3672702e09f868bd68870",
+    "line" : 30,
+    "diffHunk" : "@@ -1,1 +49,53 @@    // To be compatible with Spark 2.4, we pick 1970 as the default value of year.\n    val year = getOrDefault(accessor, ChronoField.YEAR, 1970)\n    val month = getOrDefault(accessor, ChronoField.MONTH_OF_YEAR, 1)\n    val day = getOrDefault(accessor, ChronoField.DAY_OF_MONTH, 1)\n    LocalDate.of(year, month, day)"
+  },
+  {
+    "id" : "d6fb7665-1ac1-4a8e-a1d9-76b848edd807",
+    "prId" : 28576,
+    "prUrl" : "https://github.com/apache/spark/pull/28576#pullrequestreview-416689519",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9d8fbd0a-ee1d-41de-972b-de3298824786",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "nit: I would follow the naming of `getOrElse` though ..",
+        "createdAt" : "2020-05-22T07:00:19Z",
+        "updatedAt" : "2020-05-22T07:09:39Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "161223b5de92064a4cc3672702e09f868bd68870",
+    "line" : 13,
+    "diffHunk" : "@@ -1,1 +32,36 @@\ntrait DateTimeFormatterHelper {\n  private def getOrDefault(accessor: TemporalAccessor, field: ChronoField, default: Int): Int = {\n    if (accessor.isSupported(field)) {\n      accessor.get(field)"
   }
 ]
