@@ -636,5 +636,247 @@
     "commit" : "3adbaa51500d5812661348236e17708f845d83c1",
     "line" : 11,
     "diffHunk" : "@@ -1,1 +1736,1740 @@  def getValueFromVector(vector: String, dataType: DataType, rowId: String): String = {\n    dataType match {\n      case udt: UserDefinedType[_] => getValueFromVector(vector, udt.sqlType, rowId)\n      case _ => if (dataType.isInstanceOf[StructType]) {\n        // `ColumnVector.getStruct` is different from `InternalRow.getStruct`, it only takes an"
+  },
+  {
+    "id" : "1d55bee4-dd9d-4418-89c4-c4f279bb9a12",
+    "prId" : 29975,
+    "prUrl" : "https://github.com/apache/spark/pull/29975#pullrequestreview-505816500",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "eebbc683-33b9-4237-867d-dc88c7335ebb",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Is this change needed to support subexpr elimination in `ProjectExec`? What I'm interested in is that why we didn't need this change when supporting it in `HashAggregateExec`.",
+        "createdAt" : "2020-10-09T13:00:36Z",
+        "updatedAt" : "2020-10-12T01:42:10Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "40705efa-3f4b-43be-85c9-d6e57156a920",
+        "parentId" : "eebbc683-33b9-4237-867d-dc88c7335ebb",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Yes, this is needed. `ProjectExec` doesn't require all its child's outputs to be evaluated in advance. Instead it only early evaluates the outputs used more than twice (deferring evaluation). So we need to extract these variables used by subexpressions and evaluate them before subexpressions. In `HashAggregateExec` we don't need to consider that. The simplest way is to evaluate all child's outputs, of course.",
+        "createdAt" : "2020-10-09T16:16:18Z",
+        "updatedAt" : "2020-10-12T01:42:10Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2414bb041f47c00de28428014372ab6c55435e56",
+    "line" : 11,
+    "diffHunk" : "@@ -1,1 +97,101 @@  codes: Seq[String],\n  states: Map[Expression, SubExprEliminationState],\n  exprCodesNeedEvaluate: Seq[ExprCode])\n\n/**"
+  },
+  {
+    "id" : "1c151bfc-de5e-416e-88d2-0f5e51023d8d",
+    "prId" : 29975,
+    "prUrl" : "https://github.com/apache/spark/pull/29975#pullrequestreview-506246032",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "74db5bf8-b218-45a0-ba5f-23e21f921e9f",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "> ProjectExec doesn't require all its child's outputs to be evaluated in advance. Instead it only early evaluates the outputs used more than twice (deferring evaluation). So we need to extract these variables used by subexpressions and evaluate them before subexpressions\r\n\r\nCould you leave some comments here?",
+        "createdAt" : "2020-10-11T23:38:54Z",
+        "updatedAt" : "2020-10-12T01:42:10Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1813c522-1aa3-4491-9318-f46992f954c2",
+        "parentId" : "74db5bf8-b218-45a0-ba5f-23e21f921e9f",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Ok.",
+        "createdAt" : "2020-10-12T01:39:19Z",
+        "updatedAt" : "2020-10-12T01:42:10Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2414bb041f47c00de28428014372ab6c55435e56",
+    "line" : 36,
+    "diffHunk" : "@@ -1,1 +1065,1069 @@    // evaluate the outputs used more than twice. So we need to extract these variables used by\n    // subexpressions and evaluate them before subexpressions.\n    val (inputVarsForAllFuncs, exprCodesNeedEvaluate) = commonExprs.map { expr =>\n      val (inputVars, exprCodes) = getLocalInputVariableValues(this, expr.head)\n      (inputVars.toSeq, exprCodes.toSeq)"
+  },
+  {
+    "id" : "e7475b00-d031-4a0c-9045-9f558c281008",
+    "prId" : 29975,
+    "prUrl" : "https://github.com/apache/spark/pull/29975#pullrequestreview-506245952",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2b34e31d-a4b9-4407-bfd0-804fe5dffcbc",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Could you describe what's the second value of the returned value in the code comment above?",
+        "createdAt" : "2020-10-11T23:58:08Z",
+        "updatedAt" : "2020-10-12T01:42:10Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8a3c9864-5bee-43a8-a883-65d63893c691",
+        "parentId" : "2b34e31d-a4b9-4407-bfd0-804fe5dffcbc",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Sure.",
+        "createdAt" : "2020-10-12T01:38:56Z",
+        "updatedAt" : "2020-10-12T01:42:10Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2414bb041f47c00de28428014372ab6c55435e56",
+    "line" : 71,
+    "diffHunk" : "@@ -1,1 +1754,1758 @@   * evaluating subexpressions.\n   */\n  def getLocalInputVariableValues(\n      ctx: CodegenContext,\n      expr: Expression,"
+  },
+  {
+    "id" : "82d4de1a-2244-4922-920d-9421312c9ced",
+    "prId" : 29975,
+    "prUrl" : "https://github.com/apache/spark/pull/29975#pullrequestreview-506251568",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "60c524dd-23f6-4b51-9ea3-3678b738838c",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "`Set` instead of `Seq` here?",
+        "createdAt" : "2020-10-12T00:15:03Z",
+        "updatedAt" : "2020-10-12T01:42:10Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "010f26e0-bc93-45ba-b262-c4a43c57b99c",
+        "parentId" : "60c524dd-23f6-4b51-9ea3-3678b738838c",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "They are already `Set`. You mean using `Seq`?",
+        "createdAt" : "2020-10-12T01:23:38Z",
+        "updatedAt" : "2020-10-12T01:42:10Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0167fde7-aa0d-46f1-8c52-3a7bc19a59c0",
+        "parentId" : "60c524dd-23f6-4b51-9ea3-3678b738838c",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Yea, my bad. Yes.",
+        "createdAt" : "2020-10-12T02:05:48Z",
+        "updatedAt" : "2020-10-12T02:05:49Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2414bb041f47c00de28428014372ab6c55435e56",
+    "line" : 105,
+    "diffHunk" : "@@ -1,1 +1796,1800 @@    }\n\n    (argSet.toSet, exprCodesNeedEvaluate.toSet)\n  }\n"
+  },
+  {
+    "id" : "87ed5cb1-f50e-49e5-848d-28a677956dae",
+    "prId" : 29975,
+    "prUrl" : "https://github.com/apache/spark/pull/29975#pullrequestreview-506245936",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f00dd2d3-69b7-4d2a-8b6a-1d78e82241d1",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "just a suggestion: `exprCodesNeedEvaluate` -> `exprCodesForEarlyEvals`? ",
+        "createdAt" : "2020-10-12T00:16:08Z",
+        "updatedAt" : "2020-10-12T01:42:10Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "19c774e9-fe5c-4c75-89a8-98dc37e2df6a",
+        "parentId" : "f00dd2d3-69b7-4d2a-8b6a-1d78e82241d1",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "`exprCodesForEarlyEvals` sounds confusing. They are not for early evaluating something but needed for evaluating subexpressions.",
+        "createdAt" : "2020-10-12T01:38:50Z",
+        "updatedAt" : "2020-10-12T01:42:10Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2414bb041f47c00de28428014372ab6c55435e56",
+    "line" : 11,
+    "diffHunk" : "@@ -1,1 +97,101 @@  codes: Seq[String],\n  states: Map[Expression, SubExprEliminationState],\n  exprCodesNeedEvaluate: Seq[ExprCode])\n\n/**"
+  },
+  {
+    "id" : "b60fda92-83df-4a2d-bcf4-3eb3015605fb",
+    "prId" : 29975,
+    "prUrl" : "https://github.com/apache/spark/pull/29975#pullrequestreview-506307941",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "db100498-7ef0-44ac-a38a-35413cb7f6e2",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "We need this copy? A unnecessary copy can happen if `exprCodesNeedEvaluate` already has the same entry?",
+        "createdAt" : "2020-10-12T00:24:40Z",
+        "updatedAt" : "2020-10-12T01:42:10Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "aead602f-ef8f-4543-99f8-0fd57c4cb344",
+        "parentId" : "db100498-7ef0-44ac-a38a-35413cb7f6e2",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Copying `exprCode` because we need the unevaluated `code` in `exprCode`, but we also need to empty `code` of `exprCode`. We need copied code so we can evaluate them before evaluating subexpressions. We need to empty `code` of `exprCode` so we don't re-evaluate the code.",
+        "createdAt" : "2020-10-12T01:26:14Z",
+        "updatedAt" : "2020-10-12T01:42:10Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bc6244fe-33d0-478b-930d-afb833df3582",
+        "parentId" : "db100498-7ef0-44ac-a38a-35413cb7f6e2",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "> We need to empty code of exprCode so we don't re-evaluate the code.\r\n\r\nAFAIK when we empty the code, we also do a copy, right?",
+        "createdAt" : "2020-10-12T05:45:53Z",
+        "updatedAt" : "2020-10-12T05:45:53Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4d6bcf18-746f-4384-834a-36f9630a458c",
+        "parentId" : "db100498-7ef0-44ac-a38a-35413cb7f6e2",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "`exprCode.code = EmptyBlock`, do you mean this?",
+        "createdAt" : "2020-10-12T05:48:11Z",
+        "updatedAt" : "2020-10-12T05:48:11Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "28ba5872-f037-4104-9ba4-038f64af8851",
+        "parentId" : "db100498-7ef0-44ac-a38a-35413cb7f6e2",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Sorry I was wrong, the copy here is necessary.",
+        "createdAt" : "2020-10-12T05:49:33Z",
+        "updatedAt" : "2020-10-12T05:49:33Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2414bb041f47c00de28428014372ab6c55435e56",
+    "line" : 93,
+    "diffHunk" : "@@ -1,1 +1785,1789 @@          // If the referred variable is not evaluated yet.\n          if (exprCode.code != EmptyBlock) {\n            exprCodesNeedEvaluate += exprCode.copy()\n            exprCode.code = EmptyBlock\n          }"
   }
 ]

@@ -614,5 +614,104 @@
     "commit" : "89d329c11baa61a81a4361d3e870e1e2c0a67203",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +46,50 @@            // names and types must match, nullability must be compatible\n            inAttr.name == outAttr.name &&\n              DataType.equalsIgnoreCompatibleNullability(inAttr.dataType, outAttr.dataType) &&\n              (outAttr.nullable || !inAttr.nullable)\n        }"
+  },
+  {
+    "id" : "a1d49081-10f2-4b04-9577-88dfa80746c4",
+    "prId" : 29880,
+    "prUrl" : "https://github.com/apache/spark/pull/29880#pullrequestreview-506328587",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4a8135f4-95e0-4df9-a150-093d77ada207",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "is it possible that the column name is qualified like `catalog_name.ns1.tbl1.col`? Does Hive support qualified column names in `DESCRIBE`?",
+        "createdAt" : "2020-09-29T13:32:02Z",
+        "updatedAt" : "2020-10-06T19:46:53Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "467581ea-68a9-41c9-b9eb-825fc425e1c8",
+        "parentId" : "4a8135f4-95e0-4df9-a150-093d77ada207",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "A simple idea is to put an `UnresolvedAttribute` here, and analyzer can do the work for us.",
+        "createdAt" : "2020-09-29T13:55:34Z",
+        "updatedAt" : "2020-10-06T19:46:53Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b3c4ef05-8914-4083-bb9c-19bf2f7cdc2b",
+        "parentId" : "4a8135f4-95e0-4df9-a150-093d77ada207",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "> Does Hive support qualified column names in `DESCRIBE`?\r\n\r\nHive [doesn't support qualified name](https://cwiki.apache.org/confluence/display/Hive/LanguageManual+DDL#LanguageManualDDL-Describe) for column names. For example:\r\n\r\n```\r\nDESCRIBE hivesampletable default.hivesampletable.clientid\r\n\r\njava.sql.SQLException: Error while processing statement: FAILED: Execution Error, return code 1 from org.apache.hadoop.hive.ql.exec.DDLTask. cannot find field default from [0:clientid, 1:querytime, 2:market, 3:deviceplatform, 4:devicemake, 5:devicemodel, 6:state, 7:country, 8:querydwelltime, 9:sessionid, 10:sessionpagevieworder]\r\n```\r\n\r\n\r\n",
+        "createdAt" : "2020-10-02T21:00:44Z",
+        "updatedAt" : "2020-10-06T19:46:53Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7ca66d1b-264d-4499-8a68-c0728c8fd5a4",
+        "parentId" : "4a8135f4-95e0-4df9-a150-093d77ada207",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "> A simple idea is to put an `UnresolvedAttribute` here, and analyzer can do the work for us.\r\n\r\nSince we need to have the relation resolved first, we need to match like the following in the analyzer:\r\n```scala\r\ncase DescribeColumn(r: ResolvedTable, u: UnresolvedAttribute, _) =>\r\n...\r\n```\r\nIs that what you had in mind?",
+        "createdAt" : "2020-10-02T21:50:41Z",
+        "updatedAt" : "2020-10-06T19:46:53Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5ac68fbf-79e3-4478-ba4c-725fbd86f65c",
+        "parentId" : "4a8135f4-95e0-4df9-a150-093d77ada207",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "If Hive doesn't support it, it's OK to follow Hive here. Let's make sure that other commands only allow column name without qualifies too.",
+        "createdAt" : "2020-10-06T07:44:04Z",
+        "updatedAt" : "2020-10-06T19:46:53Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0ec2e2d3-3867-425c-945a-4fd5c84fd582",
+        "parentId" : "4a8135f4-95e0-4df9-a150-093d77ada207",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "Sure, will take a look.",
+        "createdAt" : "2020-10-06T19:43:10Z",
+        "updatedAt" : "2020-10-06T19:46:53Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "269cbc97-d381-4807-acf0-1218c7ea2248",
+        "parentId" : "4a8135f4-95e0-4df9-a150-093d77ada207",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "> is it possible that the column name is qualified like `catalog_name.ns1.tbl1.col`? Does Hive support qualified column names in `DESCRIBE`?\r\n\r\n@cloud-fan actually I didn't respond to your first question. Yes, Spark allows qualifying the column name (same in 2.4):\r\n```\r\nscala> sql(\"CREATE TABLE t (id bigint) USING csv\")\r\nscala> sql(\"describe t spark_catalog.default.t.id\").show\r\n+---------+----------+\r\n|info_name|info_value|\r\n+---------+----------+\r\n| col_name|        id|\r\n|data_type|    bigint|\r\n|  comment|      NULL|\r\n+---------+----------+\r\n```\r\n, whereas Hive does not support. I guess we cannot change the behavior at this point?\r\n",
+        "createdAt" : "2020-10-08T21:11:06Z",
+        "updatedAt" : "2020-10-08T21:11:06Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7d75ddf3-ce6f-4ee4-bed7-db4b9407c4b2",
+        "parentId" : "4a8135f4-95e0-4df9-a150-093d77ada207",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Yea we can't break it. When we add v2 `DecribeColumExec` later, we may want to change `Seq[String]` to `Attribute` here, so that we can unify the column resolution logic for v1 and  v2 commands.",
+        "createdAt" : "2020-10-12T06:39:02Z",
+        "updatedAt" : "2020-10-12T06:39:03Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "97a4deb99439fb6f5903c44d3ca6b74bae1c2f78",
+    "line" : 22,
+    "diffHunk" : "@@ -1,1 +321,325 @@case class DescribeColumn(\n    relation: LogicalPlan,\n    colNameParts: Seq[String],\n    isExtended: Boolean) extends Command {\n  override def children: Seq[LogicalPlan] = Seq(relation)"
   }
 ]

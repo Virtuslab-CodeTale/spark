@@ -1,0 +1,112 @@
+[
+  {
+    "id" : "9b9a9cc6-401b-40ea-9bca-2ac98253ea09",
+    "prId" : 29906,
+    "prUrl" : "https://github.com/apache/spark/pull/29906#pullrequestreview-510864986",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5688fb49-fcf0-419d-bcf0-a6aac1da0561",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Looks like we no longer post `SparkListenerExecutorBlacklisted` after this change? So we'd break backward compatibility since `onExecutorBlacklisted` never receives it, right?",
+        "createdAt" : "2020-10-01T15:33:01Z",
+        "updatedAt" : "2020-10-28T13:50:33Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c1985555-4f12-4340-81dd-d870c22c1648",
+        "parentId" : "5688fb49-fcf0-419d-bcf0-a6aac1da0561",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "depends on what is looking for it. Nothing in spark is looking for it anymore. If others are listening for it and don't change then yes. This is a developer api though.  I kind of hated to have to post 2 separate messages which is why I removed it.\r\nDo you know of people actively relying on those listeners?\r\n\r\nThe only thing internal to Spark that it breaks is that older history servers don't see blacklisted on the new history files.  ",
+        "createdAt" : "2020-10-01T16:17:41Z",
+        "updatedAt" : "2020-10-28T13:50:33Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "788e2ee7-e16a-48c6-bcae-022295891d48",
+        "parentId" : "5688fb49-fcf0-419d-bcf0-a6aac1da0561",
+        "authorId" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "body" : "Can we provide a default listener implementation that delegates the event to the old method?",
+        "createdAt" : "2020-10-01T16:22:45Z",
+        "updatedAt" : "2020-10-28T13:50:33Z",
+        "lastEditedBy" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "54149f8c-d8e2-48f7-959c-79bffc348b8d",
+        "parentId" : "5688fb49-fcf0-419d-bcf0-a6aac1da0561",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Yeah, I'm talking about custom listeners. I don't exactly know how people rely on it but I guess it won't be used a lot.\r\n\r\n Maybe, we can just remove it for simplicity as `SparkListener` (developer API) and `SparkListenerInterface` ( private spark) don't guarantee the backward compatibility?\r\n",
+        "createdAt" : "2020-10-01T17:21:34Z",
+        "updatedAt" : "2020-10-28T13:50:33Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "94415518-3e00-414c-b32e-39bc4cd63421",
+        "parentId" : "5688fb49-fcf0-419d-bcf0-a6aac1da0561",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "so I left it in the listeners for 2 reasons. \r\n1)  SparkFirehoseListener is public, though I think that is mostly for testing purposes. Maybe this being public means SparkListenerExecutorExcluded is public so we should just make sure its sent.\r\n2) for backwards compatibility of the history server reading the old event logs containing those events.\r\n\r\nSo really the only thing I got rid of is what you pointed out here with us posting it on new applications. I'm fine either way if we think its going to break a bunch of people we can post 2 messages. I think I would rather do that then have the default listener delegate just in case something weird happens there. ",
+        "createdAt" : "2020-10-01T18:28:12Z",
+        "updatedAt" : "2020-10-28T13:50:33Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8be20440-0c40-4c62-943a-75890d928b4b",
+        "parentId" : "5688fb49-fcf0-419d-bcf0-a6aac1da0561",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "> 1. SparkFirehoseListener is public...\r\n\r\nI feel like this a historical problem... The only way to add a custom listener is by using `sc.addSparkListener(listener: SparkListenerInterface)`. And `SparkListenerInterface` is decorated by `private[spark]`. So, it's impossible to keep backward compatibility of `SparkFirehoseListener` when `SparkListenerInterface` changes APIs. Therefore, it's meaningless to say that `SparkFirehoseListener` is public without considering `SparkListenerInterface`. \r\nBTW, `SparkFirehoseListener` is actually a Java version of `SparkListener`. I think it should be developer API too but somehow we miss it.\r\n\r\n> 2. for backwards compatibility of the history server reading the old event logs containing those events.\r\n\r\nThis's a good point. Then, I think we can remove the interface `onExecutorBlacklisted(executorBlacklisted: SparkListenerExecutorBlacklisted)` but can't remove the event `SparkListenerExecutorBlacklisted`. And for history server, I think we can override `onOtherEvent` to handle old `SparkListenerExecutorBlacklisted` specifically in order to keep backward compatibility.\r\n\r\n> So really the only thing I got rid of is what you pointed out here with us posting it on new applications. I'm fine either way if we think its going to break a bunch of people we can post 2 messages. I think I would rather do that then have the default listener delegate just in case something weird happens there.\r\n\r\nMy original point is that it's meaningless to keep those APIs while we don't post `SparkListenerExecutorBlacklisted` anymore. We should either remove all things completely or still post old events with those APIs kept. I'm fine either way but just not stay in the middle. Though, I personally prefer to remove those APIs as mentioned above(Spark has no backward compatibility guarantee for the listener).",
+        "createdAt" : "2020-10-03T07:47:57Z",
+        "updatedAt" : "2020-10-28T13:50:33Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "caab3d35-ff52-49ca-8a9f-5759b7b192ce",
+        "parentId" : "5688fb49-fcf0-419d-bcf0-a6aac1da0561",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "sounds good, I'll move the handling to OnOtherEvent",
+        "createdAt" : "2020-10-07T13:51:06Z",
+        "updatedAt" : "2020-10-28T13:50:33Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "326613e9-f46a-44bb-b4dd-ec64c9fbc20f",
+        "parentId" : "5688fb49-fcf0-419d-bcf0-a6aac1da0561",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "* Both `SparkListener` and `SparkFirehoseListener` are exposed classes : extending `SparkListenerInterface` (we missed adding `DeveloperApi` to `SparkFirehoseListener`).\r\n  * `sc.addSparkListener()` should work fine for these user supplied subclasses.\r\n  * We will have subclasses depending on these callbacks in user codebases - including consuming existing blacklist events this way.\r\n* We can currently make forward compatible changes in `SparkListenerInterface`.\r\n\r\nThe issue we have here is a backwardly incompatible change - this is an issue for the exposed api.\r\nWhile we can make backwardly incompatible changes to `SparkListenerInterface` directly (like dropping callbacks), the exposed subclasses should continue to preserve behavior while we go through deprecation cycle.\r\nUntil we remove support, this will mean we also rewire the new events to call the old handler methods until we drop support in 4.0 (?).",
+        "createdAt" : "2020-10-16T16:20:06Z",
+        "updatedAt" : "2020-10-28T13:50:33Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ad19ad82-3628-4918-bf41-41f613c5bd8d",
+        "parentId" : "5688fb49-fcf0-419d-bcf0-a6aac1da0561",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "cc @gatorsmile ",
+        "createdAt" : "2020-10-17T01:59:33Z",
+        "updatedAt" : "2020-10-28T13:50:33Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b38dd66500cdd4a12f78cca1eeacf116f0ea5b4e",
+    "line" : 230,
+    "diffHunk" : "@@ -1,1 +228,232 @@        // post both to keep backwards compatibility\n        listenerBus.post(SparkListenerExecutorBlacklisted(now, exec, 1))\n        listenerBus.post(SparkListenerExecutorExcluded(now, exec, 1))\n        updateNextExpiryTime()\n        killExcludedExecutor(exec)"
+  }
+]

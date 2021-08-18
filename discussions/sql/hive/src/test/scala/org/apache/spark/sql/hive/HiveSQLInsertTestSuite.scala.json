@@ -31,5 +31,60 @@
     "commit" : "bafdbe2eab31b7db48def5be4c11c4f0b1190671",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +23,27 @@class HiveSQLInsertTestSuite extends SQLInsertTestSuite with TestHiveSingleton {\n\n  private val originalPartitionMode = spark.conf.getOption(\"hive.exec.dynamic.partition.mode\")\n\n  override protected def beforeAll(): Unit = {"
+  },
+  {
+    "id" : "f96e039a-86a5-4deb-8741-c52ee8268070",
+    "prId" : 29893,
+    "prUrl" : "https://github.com/apache/spark/pull/29893#pullrequestreview-555627560",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a7ae2854-92fa-4262-baed-f18ac3f7c7c6",
+        "parentId" : null,
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "We need to set ` spark.conf.set(\"hive.exec.dynamic.partition.mode\", \"nonstrict\")` before executing this suite; otherwise, `test(\"insert with column list - follow table output order + partitioned table\")` will fail. \r\n\r\nThe reason why it does not fail because some test cases [running before this suite] do not change the default value of `hive.exec.dynamic.partition.mode` back to `strict`. However, the order of test suite execution is not deterministic. ",
+        "createdAt" : "2020-12-17T18:20:19Z",
+        "updatedAt" : "2020-12-17T18:20:19Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "18c899ae-0952-42ee-8275-e31b4adbfaf5",
+        "parentId" : "a7ae2854-92fa-4262-baed-f18ac3f7c7c6",
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "How about something like\r\n\r\n```Scala\r\n  private var originalHiveDynamicPartitionMode: String = _\r\n\r\n  protected override def beforeAll(): Unit = {\r\n    originalHiveDynamicPartitionMode = spark.conf.get(\"hive.exec.dynamic.partition.mode\", \"strict\")\r\n    spark.conf.set(\"hive.exec.dynamic.partition.mode\", \"nonstrict\")\r\n    super.beforeAll()\r\n  }\r\n\r\n  protected override def afterAll(): Unit = {\r\n    try {\r\n      spark.conf.set(\"hive.exec.dynamic.partition.mode\", originalHiveDynamicPartitionMode)\r\n    } finally {\r\n      super.afterAll()\r\n    }\r\n  }\r\n```",
+        "createdAt" : "2020-12-17T18:25:53Z",
+        "updatedAt" : "2020-12-17T18:33:13Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "47883bf9-c14d-461f-9b3e-6545134c4ed5",
+        "parentId" : "a7ae2854-92fa-4262-baed-f18ac3f7c7c6",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Good catch! We can follow `HiveCharVarcharTestSuite` to set/restore this conf.",
+        "createdAt" : "2020-12-17T18:27:10Z",
+        "updatedAt" : "2020-12-17T18:27:10Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9b0184c0-1f07-4672-83a9-822ff5cd5c06",
+        "parentId" : "a7ae2854-92fa-4262-baed-f18ac3f7c7c6",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "I have submitted a followup, thanks",
+        "createdAt" : "2020-12-18T16:19:19Z",
+        "updatedAt" : "2020-12-18T16:19:30Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "17d056467751785664b6fd5c89c602f7c3e07e94",
+    "line" : 23,
+    "diffHunk" : "@@ -1,1 +21,25 @@import org.apache.spark.sql.hive.test.TestHiveSingleton\n\nclass HiveSQLInsertTestSuite extends SQLInsertTestSuite with TestHiveSingleton {\n  override def format: String = \"hive OPTIONS(fileFormat='parquet')\"\n}"
   }
 ]

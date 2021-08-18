@@ -20,5 +20,71 @@
     "commit" : "ecc9a4e69af4d22a5df51abec0eefd6887ff5beb",
     "line" : 52,
     "diffHunk" : "@@ -1,1 +174,178 @@      }.message\n      assert(m.contains(\"Failed table creation\"))\n      testCreateTableWithProperty(s\"$catalogName.new_table\")\n    }\n  }"
+  },
+  {
+    "id" : "ea4eb517-fa98-4b96-a49c-986d76842600",
+    "prId" : 29972,
+    "prUrl" : "https://github.com/apache/spark/pull/29972#pullrequestreview-506431324",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c76275ea-6472-49c1-aeb3-0f1a1bcc4da0",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "can we test the schema of the table right after creation?",
+        "createdAt" : "2020-10-12T09:05:41Z",
+        "updatedAt" : "2020-10-12T21:14:49Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8d0226b9e8fcee978c2d601054084a4c357692d5",
+    "line" : 76,
+    "diffHunk" : "@@ -1,1 +74,78 @@  test(\"SPARK-33034: ALTER TABLE ... update column nullability\") {\n    withTable(s\"$catalogName.alt_table\") {\n      sql(s\"CREATE TABLE $catalogName.alt_table (ID STRING NOT NULL) USING _\")\n      var t = spark.table(s\"$catalogName.alt_table\")\n      // nullable is true in the expecteSchema because Spark always sets nullable to true"
+  },
+  {
+    "id" : "e6af5d51-a8c3-4e4c-8562-93a84d14c7e0",
+    "prId" : 29972,
+    "prUrl" : "https://github.com/apache/spark/pull/29972#pullrequestreview-507964375",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ada40d5d-4d25-4751-a17f-48548c49935b",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I think we can change it in JDBC V2, as the table metadata is stored in the remote JDBC server directly. This can be done in a followup.",
+        "createdAt" : "2020-10-13T12:56:42Z",
+        "updatedAt" : "2020-10-13T12:56:43Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "984124ee-4087-4788-9d72-7f81b41a1767",
+        "parentId" : "ada40d5d-4d25-4751-a17f-48548c49935b",
+        "authorId" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "body" : "I did a couple of quick tests using V2 write API:\r\n```\r\nsql(\"INSERT INTO h2.test.people SELECT 'bob', null\")\r\n```\r\nand\r\n```\r\nsql(\"SELECT null AS ID, 'bob' AS NAME\").writeTo(\"h2.test.people\")\r\n```\r\nI got Exception from h2 jdbc driver:\r\n```\r\nCaused by: org.h2.jdbc.JdbcSQLException: NULL not allowed for column \"ID\"; SQL statement:\r\nINSERT INTO \"test\".\"people\" (\"NAME\",\"ID\") VALUES (?,?) [23502-195]\r\n\tat org.h2.message.DbException.getJdbcSQLException(DbException.java:345)\r\n```\r\nSo we are able to pass the null value for not null column `ID` to h2 and h2 blocks the insert.\r\n\r\nHowever, if I change the current code in `JDBCRDD.resolveTable` to make `alwaysNullable = false` to get the real nullable value, \r\n```\r\n  def resolveTable(options: JDBCOptions): StructType = {\r\n\r\n          ......\r\n\r\n          JdbcUtils.getSchema(rs, dialect, alwaysNullable = false)\r\n```\r\nFor insert, I got Exception from Spark\r\n```\r\nCannot write incompatible data to table 'test.people':\r\n- Cannot write nullable values to non-null column 'ID';\r\norg.apache.spark.sql.AnalysisException: Cannot write incompatible data to table 'test.people':\r\n- Cannot write nullable values to non-null column 'ID';\r\n\tat org.apache.spark.sql.catalyst.analysis.TableOutputResolver$.resolveOutputColumns(TableOutputResolver.scala:72)\r\n\tat org.apache.spark.sql.catalyst.analysis.Analyzer$ResolveOutputRelation$$anonfun$apply$31.applyOrElse(Analyzer.scala:3040)\r\n\tat org.apache.spark.sql.catalyst.analysis.Analyzer$ResolveOutputRelation$$anonfun$apply$31.applyOrElse(Analyzer.scala:3035)\r\n```\r\nSpark blocks the insert and we are not able to pass the null value for not null column ID to h2. Since the whole point of https://github.com/apache/spark/pull/18445 is to let the underlying database to decide how to process null for a not null column, I guess we will not change this `alwaysNullable` for JDBCV2?\r\n\r\n",
+        "createdAt" : "2020-10-13T18:04:18Z",
+        "updatedAt" : "2020-10-13T18:04:18Z",
+        "lastEditedBy" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a06ef395-8276-4d45-bb42-f29106cf239e",
+        "parentId" : "ada40d5d-4d25-4751-a17f-48548c49935b",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "This does expose a problem in Spark: most databases allow to write nullable data to non-nullable column, and fail at runtime if they see null values. I think Spark shouldn't block it at compile time. After all, nullability is more like a constraint, not data type itself.  cc @rdblue @dongjoon-hyun @viirya @maropu @MaxGekk ",
+        "createdAt" : "2020-10-14T03:13:37Z",
+        "updatedAt" : "2020-10-14T03:13:37Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8d0226b9e8fcee978c2d601054084a4c357692d5",
+    "line" : 79,
+    "diffHunk" : "@@ -1,1 +77,81 @@      var t = spark.table(s\"$catalogName.alt_table\")\n      // nullable is true in the expecteSchema because Spark always sets nullable to true\n      // regardless of the JDBC metadata https://github.com/apache/spark/pull/18445\n      var expectedSchema = new StructType().add(\"ID\", StringType, nullable = true)\n      assert(t.schema === expectedSchema)"
   }
 ]

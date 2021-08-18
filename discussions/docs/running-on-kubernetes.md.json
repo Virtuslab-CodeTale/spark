@@ -20,5 +20,60 @@
     "commit" : "d500290b6b0f63184215bc9375ddb9c1387c0fe6",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +1088,1092 @@  <td><code>\"3\"</code></td>\n  <td>\n   This sets the major Python version of the docker image used to run the driver and executor containers. Can be 3.\n  </td>\n  <td>2.4.0</td>"
+  },
+  {
+    "id" : "3a530603-6a6f-4f94-a8bb-33da6a4251ce",
+    "prId" : 29897,
+    "prUrl" : "https://github.com/apache/spark/pull/29897#pullrequestreview-499677590",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ffea49e1-5404-47c0-aca9-0c700ad3ea0d",
+        "parentId" : null,
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "Can you explain why it's useful for DA? Currently, this doesn't support DA yet. I think the use-case will be for people to use larger shuffle disks in Kube where larger local disks are not allowed.",
+        "createdAt" : "2020-09-29T19:52:57Z",
+        "updatedAt" : "2020-09-29T19:52:57Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fcef8afd-6111-4a31-8ca8-50973ee25e67",
+        "parentId" : "ffea49e1-5404-47c0-aca9-0c700ad3ea0d",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "@dbtsai . What do you mean by the following?\r\n>  Currently, this doesn't support DA yet. \r\n\r\nSince Apache Spark 3.0.0, dynamic allocation with K8s has been supported with shuffle data tracking. And, this feature is also developed for both additional large disk requirement and dynamic allocation scenario. For example, in case of dynamic allocation, the executor id increases monotonically and indefinitely, so users cannot prepare unlimited pre-populated PVCs. With this feature, the PVC is created and deleted dynamically with the same lifecycle with the executor pod.",
+        "createdAt" : "2020-09-30T06:51:37Z",
+        "updatedAt" : "2020-09-30T07:04:52Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5b6c8d75-f6bb-44d2-ba2c-93c0679fad57",
+        "parentId" : "ffea49e1-5404-47c0-aca9-0c700ad3ea0d",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "In short, I made the PVC(and PV) be created at every pod creation in `ExecutorPodsAllocator.scala`. Please see the original code. For example, if you kill some pod, new executor is going to be created with a new PVC.\r\n- https://github.com/apache/spark/pull/29846 [SPARK-32971][K8S] Support dynamic PVC creation/deletion for K8s executors\r\n\r\ncc @viirya ",
+        "createdAt" : "2020-09-30T07:03:17Z",
+        "updatedAt" : "2020-09-30T07:03:17Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1c64ba2c-9413-4091-bbdd-fb12f1662a07",
+        "parentId" : "ffea49e1-5404-47c0-aca9-0c700ad3ea0d",
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "Get you. Thanks!",
+        "createdAt" : "2020-09-30T17:53:30Z",
+        "updatedAt" : "2020-09-30T17:53:31Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6e9c1cf2ac7deb673e2c7ff496a2a2b4cc56727d",
+    "line" : 7,
+    "diffHunk" : "@@ -1,1 +310,314 @@The configuration properties for mounting volumes into the executor pods use prefix `spark.kubernetes.executor.` instead of `spark.kubernetes.driver.`.\n\nFor example, you can mount a dynamically-created persistent volume claim per executor by using `OnDemand` as a claim name and `storageClass` and `sizeLimit` options like the following. This is useful in case of [Dynamic Allocation](configuration.html#dynamic-allocation).\n```\nspark.kubernetes.executor.volumes.persistentVolumeClaim.data.options.claimName=OnDemand"
   }
 ]

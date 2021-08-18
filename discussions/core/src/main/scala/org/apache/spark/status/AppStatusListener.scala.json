@@ -108,5 +108,126 @@
     "commit" : "c21be1157c2fe74aec075e4662aec13d0b66597c",
     "line" : 6,
     "diffHunk" : "@@ -1,1 +690,694 @@\n      stage.executorSummary(event.taskInfo.executorId).peakExecutorMetrics\n        .compareAndUpdatePeakValues(event.taskExecutorMetrics)\n      // [SPARK-24415] Wait for all tasks to finish before removing stage from live list\n      val removeStage ="
+  },
+  {
+    "id" : "569b1562-0b12-423c-a566-890d78e8d357",
+    "prId" : 29906,
+    "prUrl" : "https://github.com/apache/spark/pull/29906#pullrequestreview-501482167",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7f02dc19-7543-4eaa-aec7-1c8781668877",
+        "parentId" : null,
+        "authorId" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "body" : "Is `setStageExclusionStatus` a better name? It reads more smoothly to me, but I'm not sure if it's less clear.",
+        "createdAt" : "2020-10-02T22:55:31Z",
+        "updatedAt" : "2020-10-28T13:50:33Z",
+        "lastEditedBy" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b38dd66500cdd4a12f78cca1eeacf116f0ea5b4e",
+    "line" : 68,
+    "diffHunk" : "@@ -1,1 +327,331 @@  }\n\n  private def setStageExcludedStatus(stage: LiveStage, now: Long, executorIds: String*): Unit = {\n    executorIds.foreach { executorId =>\n      val executorStageSummary = stage.executorSummary(executorId)"
+  },
+  {
+    "id" : "61d2bd6b-0710-4c8a-823c-e983fd1135af",
+    "prId" : 29906,
+    "prUrl" : "https://github.com/apache/spark/pull/29906#pullrequestreview-514734141",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "dd457964-6d92-418f-b54a-c8e57d3beb62",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Do we need to implement these deprecated methods for internal listeners? I assume they are only used for external listeners.",
+        "createdAt" : "2020-10-20T03:12:02Z",
+        "updatedAt" : "2020-10-28T13:50:33Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8bbf6176-c82b-489a-b348-aede9f5f707a",
+        "parentId" : "dd457964-6d92-418f-b54a-c8e57d3beb62",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "I left them to be completely backwards compatible. This way they are still written to event logs which means older history servers should work with newer files and if people have parsers for those it still works.  I don't think we say the event log if compatible in that way but this gives more compatibility.  \r\nI'm fine with removing them if everyone else thinks its ok.",
+        "createdAt" : "2020-10-20T13:54:55Z",
+        "updatedAt" : "2020-10-28T13:50:33Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "98537ff2-6871-4797-8916-6f97544b52f2",
+        "parentId" : "dd457964-6d92-418f-b54a-c8e57d3beb62",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "IIUC, this is for new HS(history server) + old App compatibility? When a new HS reads old blacklist events for the old App, it can thus call these deprecated methods.\r\n\r\nFor old HS + new App case, I think it's fine since we always post new and old blacklist events, and thus EventLoggingListers writes two blacklist events as well. Therefore, old HS can parse the old blocklist events and ignore the new one.\r\n\r\n\r\nI'm fine to leave them as they are. Maybe, add one more comment to explain why we still need it?\r\n\r\nAnother thought is, we can remove all those deprecated methods both in `AppStatusListener` and `EventLoggingListers` but keep compatibility by handling it in `onOtherEvent`. It's up to you. I'm fine either way.",
+        "createdAt" : "2020-10-22T03:10:19Z",
+        "updatedAt" : "2020-10-28T13:50:33Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e5665114-8ace-49e0-a3cf-d37e8157d001",
+        "parentId" : "dd457964-6d92-418f-b54a-c8e57d3beb62",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "yes its for new HS reading old app event log compatibility.\r\nI prefer to leave as is this way. I can add a comment.",
+        "createdAt" : "2020-10-22T13:37:13Z",
+        "updatedAt" : "2020-10-28T13:50:33Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b38dd66500cdd4a12f78cca1eeacf116f0ea5b4e",
+    "line" : 87,
+    "diffHunk" : "@@ -1,1 +345,349 @@  }\n\n  override def onNodeBlacklisted(event: SparkListenerNodeBlacklisted): Unit = {\n    updateNodeExcluded(event.hostId, true)\n  }"
+  },
+  {
+    "id" : "f0ef5425-e9f5-4a1a-9d8f-87e7c2784025",
+    "prId" : 29906,
+    "prUrl" : "https://github.com/apache/spark/pull/29906#pullrequestreview-515797245",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "33f34bfc-123a-4bda-9208-c63ddec913c9",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "I wonder this could lead to the metrics overcounted since we always post two blacklist events?",
+        "createdAt" : "2020-10-22T03:16:00Z",
+        "updatedAt" : "2020-10-28T13:50:33Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9ddae70f-3462-40e8-97bc-a333562a6264",
+        "parentId" : "33f34bfc-123a-4bda-9208-c63ddec913c9",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "thanks for catching this one, I missed it. I had checked this and most are fine due to using set and just setting status which would already be set, but I somehow missed this one. I'll fix ",
+        "createdAt" : "2020-10-22T13:26:10Z",
+        "updatedAt" : "2020-10-28T13:50:33Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fafab946-1f3c-456a-9ce5-aada38f2adc6",
+        "parentId" : "33f34bfc-123a-4bda-9208-c63ddec913c9",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "I updated this but I actually found a pre-existing bug where we weren't incrementing this when we excluded a node - which implicitly excludes the executors",
+        "createdAt" : "2020-10-23T15:51:16Z",
+        "updatedAt" : "2020-10-28T13:50:33Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b38dd66500cdd4a12f78cca1eeacf116f0ea5b4e",
+    "line" : 149,
+    "diffHunk" : "@@ -1,1 +402,406 @@      if (excluded) {\n        appStatusSource.foreach(_.BLACKLISTED_EXECUTORS.inc())\n        appStatusSource.foreach(_.EXCLUDED_EXECUTORS.inc())\n      } else {\n        appStatusSource.foreach(_.UNBLACKLISTED_EXECUTORS.inc())"
   }
 ]

@@ -1,0 +1,101 @@
+[
+  {
+    "id" : "db82cf03-f2bf-483c-9e16-71c09edc36a1",
+    "prId" : 29939,
+    "prUrl" : "https://github.com/apache/spark/pull/29939#pullrequestreview-504562407",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e9749447-539e-44ab-82ad-2bad28d14cce",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I'm a bit confused about this. There are 3 ways to use JDBC data source:\r\n1. use `DataFrameReader/Writer` API to access JDBC tables/queries directly.\r\n1. register as a table, and access the table.\r\n1. register as a catalog, and access tables inside the catalog.\r\n\r\n`spark.read.jdbc(url, \"h2.test.abc\", properties)` seems like a mix of 1 and 3. What's the use case you are targeting?\r\n",
+        "createdAt" : "2020-10-08T04:26:58Z",
+        "updatedAt" : "2020-10-08T04:26:59Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fb8ff73c-d796-4944-b630-b7eaff6113eb",
+        "parentId" : "e9749447-539e-44ab-82ad-2bad28d14cce",
+        "authorId" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "body" : "Thanks for taking a look at this. The reason I am doing this is because I saw other `DataFrameReader/Writer` APIs have added the support for DataSource V2 multiple catalogs, for example, `DataFrameWriter.insertInto` and `DataFrameWriter.saveAsTable`, so I thought all the `DataFrameReader/Writer` APIs need to support DataSource V2 multiple catalogs as well.",
+        "createdAt" : "2020-10-08T06:42:22Z",
+        "updatedAt" : "2020-10-08T06:42:22Z",
+        "lastEditedBy" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "47d9c339-7caf-4e69-936c-6b646bb8e65c",
+        "parentId" : "e9749447-539e-44ab-82ad-2bad28d14cce",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "We need to distinguish between APIs and shortcuts. For `DataFrameWriter`, it has 3 APIs: `save`, `insertInto` and `saveAsTable`. `parquet`, `json`, `jdbc`, etc. are shortcuts and eventually calls `save()`.\r\n\r\nFor `insertInto` and `saveAsTable`, they take Spark table name and should support multi catalogs. For `save`, it interacts with data source directly with options, and thus shouldn't support multi-catalog.\r\n\r\nFor this particular test, it looks confusing as the registered JDBC catalog should already have the url config, why do we need to specify it again in `spark.read.jdbc`?",
+        "createdAt" : "2020-10-08T06:57:21Z",
+        "updatedAt" : "2020-10-08T06:57:21Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "88c52bea-4516-4cfc-b4c1-2cdb36e35bb7",
+        "parentId" : "e9749447-539e-44ab-82ad-2bad28d14cce",
+        "authorId" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "body" : "It seems to me that these `jdbc` APIs take Spark table name and probably should support multi catalogs as well. Otherwise, we might want to say explicitly in the doc that the table names in these APIs can not be multi catalogs table names. \r\nI will close these two PRs.",
+        "createdAt" : "2020-10-08T07:31:00Z",
+        "updatedAt" : "2020-10-08T07:31:01Z",
+        "lastEditedBy" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c69cf0c1-f831-428c-a9d2-a0382c130a44",
+        "parentId" : "e9749447-539e-44ab-82ad-2bad28d14cce",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "In the doc of `spark.read.jdbc`: `@param table Name of the table in the external database.`\r\n\r\nThis is not a spark table name, but a table name in the remote JDBC server such as MySQL.",
+        "createdAt" : "2020-10-08T08:50:32Z",
+        "updatedAt" : "2020-10-08T08:50:32Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "135eb08a14dbee9fa5e9ae9b9748a0da43035710",
+    "line" : 9,
+    "diffHunk" : "@@ -1,1 +227,231 @@      sql(\"CREATE TABLE h2.test.abc USING _ AS SELECT * FROM h2.test.people\")\n      val properties = new Properties()\n      val df1 = spark.read.jdbc(url, \"h2.test.abc\", properties)\n      checkAnswer(df1, Seq(Row(\"fred\", 1), Row(\"mary\", 2)))\n"
+  },
+  {
+    "id" : "54923577-cc25-4edc-b25e-ff922cf973e7",
+    "prId" : 29885,
+    "prUrl" : "https://github.com/apache/spark/pull/29885#pullrequestreview-503396273",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "67a9d0d6-c716-4768-9788-3039a70c8ed9",
+        "parentId" : null,
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "Other tests above have in their title `DataFrameWriterV2` but this one `DataFrameWriter`. Do you suppose to test v1 mostly here?",
+        "createdAt" : "2020-10-06T19:25:19Z",
+        "updatedAt" : "2020-10-06T22:12:48Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1bd94f4a-803c-4a1e-ad1d-904666340686",
+        "parentId" : "67a9d0d6-c716-4768-9788-3039a70c8ed9",
+        "authorId" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "body" : "Other tests have titles `DataFrameWriterV2` because these are testing `DataFrameWriterV2` APIs such as `DataFrameWriterV2.create` or `DataFrameWriterV2.replace`. `jdbc` is a `DataFrameWriter` API.",
+        "createdAt" : "2020-10-06T22:12:40Z",
+        "updatedAt" : "2020-10-06T22:12:48Z",
+        "lastEditedBy" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9ff43135256f7c3ad3922f6772186634d69633a1",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +223,227 @@  }\n\n  test(\"DataFrameWriter: jdbc\") {\n    withTable(\"h2.test.abc\") {\n      sql(\"CREATE TABLE h2.test.abc USING _ AS SELECT * FROM h2.test.people\")"
+  }
+]

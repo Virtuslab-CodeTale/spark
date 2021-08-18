@@ -31,5 +31,137 @@
     "commit" : "63887f5f099ddf3ff790ba877849ec344ad7b2e8",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +83,87 @@\n      case g @ GetStructField(j @ JsonToStructs(schema: StructType, _, _, _), ordinal, _)\n          if schema.length > 1 && j.options.isEmpty =>\n        val prunedSchema = StructType(Seq(schema(ordinal)))\n        g.copy(child = j.copy(schema = prunedSchema), ordinal = 0)"
+  },
+  {
+    "id" : "36d28984-c0ec-4769-aad1-ab98f764ce2c",
+    "prId" : 29942,
+    "prUrl" : "https://github.com/apache/spark/pull/29942#pullrequestreview-501739196",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f4cb1e14-e1be-4224-9a18-cde8b1a14f73",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Is this related to this optimization? This looks more general to me.",
+        "createdAt" : "2020-10-05T01:05:10Z",
+        "updatedAt" : "2020-10-06T23:25:15Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "79e0fc38-ac84-4a31-bc51-5282a735728e",
+        "parentId" : "f4cb1e14-e1be-4224-9a18-cde8b1a14f73",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "`JsonToStructs`'s `nullable` is true. If the input json to `JsonToStructs` is null, we will get a null output. But `CreateNamedStruct`'s `nullable` is false, so here we need to keep nullability unchanged by wrapping them with a `If(IsNull...)`.",
+        "createdAt" : "2020-10-05T05:44:37Z",
+        "updatedAt" : "2020-10-06T23:25:15Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b62c3b38-2c12-448a-96b0-8f33cc876de1",
+        "parentId" : "f4cb1e14-e1be-4224-9a18-cde8b1a14f73",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Ah, ok. I see.",
+        "createdAt" : "2020-10-05T05:58:49Z",
+        "updatedAt" : "2020-10-06T23:25:15Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "73320e89f512b896ceee9eebe283046db3dda15a",
+    "line" : 39,
+    "diffHunk" : "@@ -1,1 +64,68 @@          }.toSeq\n\n          If(IsNull(fromJson.child), c.copy(children = nullFields), KnownNotNull(fromJson))\n        } else {\n          c"
+  },
+  {
+    "id" : "46972a4a-93eb-4552-8ed1-3c57201bb8e5",
+    "prId" : 29942,
+    "prUrl" : "https://github.com/apache/spark/pull/29942#pullrequestreview-501738688",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "87773e85-e22a-4632-9250-a5da81343b25",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Does this work correctly if multiple values refer to the same ordinal?\r\n```\r\nscala> sql(\"\"\"SELECT from_json('{\"a\":1, \"b\":0.8}', 'a INT, b DOUBLE') v\"\"\").createOrReplaceTempView(\"t\")\r\nscala> sql(\"select named_struct('a', t.v.a, 'a', t.v.a) from t\").explain(true)\r\n== Parsed Logical Plan ==\r\n'Project [unresolvedalias('named_struct(a, 't.v.a, a, 't.v.a), None)]\r\n+- 'UnresolvedRelation [t], [], false\r\n\r\n== Analyzed Logical Plan ==\r\nnamed_struct(a, v.a AS `a`, a, v.a AS `a`): struct<a:int,a:int>\r\nProject [named_struct(a, v#128.a, a, v#128.a) AS named_struct(a, v.a AS `a`, a, v.a AS `a`)#133]\r\n+- SubqueryAlias t\r\n   +- Project [from_json(StructField(a,IntegerType,true), StructField(b,DoubleType,true), {\"a\":1, \"b\":0.8}, Some(Asia/Tokyo)) AS v#128]\r\n      +- OneRowRelation\r\n\r\n== Optimized Logical Plan ==\r\nProject [[1,1] AS named_struct(a, v.a AS `a`, a, v.a AS `a`)#133]\r\n+- OneRowRelation\r\n\r\n== Physical Plan ==\r\n*(1) Project [[1,1] AS named_struct(a, v.a AS `a`, a, v.a AS `a`)#133]\r\n+- *(1) Scan OneRowRelation[]\r\n```",
+        "createdAt" : "2020-10-05T01:20:16Z",
+        "updatedAt" : "2020-10-06T23:25:15Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1c5f28df-0b4c-4719-a68e-b781bae49b52",
+        "parentId" : "87773e85-e22a-4632-9250-a5da81343b25",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Oh, this is kind of corner case. We cannot simplify this case. Added test case.",
+        "createdAt" : "2020-10-05T05:57:20Z",
+        "updatedAt" : "2020-10-06T23:25:15Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "73320e89f512b896ceee9eebe283046db3dda15a",
+    "line" : 23,
+    "diffHunk" : "@@ -1,1 +48,52 @@        val sameFieldName = c.names.zip(c.valExprs).forall {\n          case (name, valExpr: GetStructField) =>\n            name.toString == valExpr.childSchema(valExpr.ordinal).name\n          case _ => false\n        }"
+  },
+  {
+    "id" : "0dde03c2-e42a-4d46-96a1-cc1a922a3161",
+    "prId" : 29942,
+    "prUrl" : "https://github.com/apache/spark/pull/29942#pullrequestreview-503405565",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ceba0ae6-0696-474c-bf5b-259860e86673",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "~`c.names.map(_.toString).distinct.length` seems to ignore case-insensitive situation. Could you add a test case for column `A` and `a` in case-insensitive mode? If we don't need to consider that case because this is `Json`, could you add more explanation about that, please?~ Never mind. I misread it.",
+        "createdAt" : "2020-10-06T22:32:25Z",
+        "updatedAt" : "2020-10-06T23:25:15Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "73320e89f512b896ceee9eebe283046db3dda15a",
+    "line" : 29,
+    "diffHunk" : "@@ -1,1 +54,58 @@        // Although `CreateNamedStruct` allows duplicated field names, e.g. \"a int, a int\",\n        // `JsonToStructs` does not support parsing json with duplicated field names.\n        val duplicateFields = c.names.map(_.toString).distinct.length != c.names.length\n\n        // If we create struct from various fields of the same `JsonToStructs` and we don't"
+  },
+  {
+    "id" : "70d58a57-1e7e-444f-af92-cf10eacdb857",
+    "prId" : 29942,
+    "prUrl" : "https://github.com/apache/spark/pull/29942#pullrequestreview-503426537",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c91b5674-7d11-407b-80e0-2e424e597f8e",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "@viirya . It would be great if we describe `If(IsNull(json),  nullStruct, KnownNotNull(JsonToStructs(prunedSchema1, options, json, ..))` pattern here because technically it's a new optimized form but not a simplified one. The existing (1), (2), (3) of this AS-IS PR doesn't cover it.",
+        "createdAt" : "2020-10-06T23:04:29Z",
+        "updatedAt" : "2020-10-06T23:25:15Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8bae80e1-ec41-4774-a910-aefadf651ec5",
+        "parentId" : "c91b5674-7d11-407b-80e0-2e424e597f8e",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Ok, revised the comment here. Thanks.",
+        "createdAt" : "2020-10-06T23:25:19Z",
+        "updatedAt" : "2020-10-06T23:25:19Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "73320e89f512b896ceee9eebe283046db3dda15a",
+    "line" : 3,
+    "diffHunk" : "@@ -1,1 +28,32 @@ * The optimization includes:\n * 1. JsonToStructs(StructsToJson(child)) => child.\n * 2. Prune unnecessary columns from GetStructField/GetArrayStructFields + JsonToStructs.\n * 3. CreateNamedStruct(JsonToStructs(json).col1, JsonToStructs(json).col2, ...) =>\n *      If(IsNull(json), nullStruct, KnownNotNull(JsonToStructs(prunedSchema, ..., json)))"
   }
 ]
