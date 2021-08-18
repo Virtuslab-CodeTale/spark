@@ -1,0 +1,134 @@
+[
+  {
+    "id" : "f7fbcdd8-720c-4b2a-9d43-d073c3098cbc",
+    "prId" : 33451,
+    "prUrl" : "https://github.com/apache/spark/pull/33451#pullrequestreview-716204558",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d55c9938-e3d5-438e-b2e1-c62ce8a2dac1",
+        "parentId" : null,
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "To clarify, with this change, for all fetches after the first failure, we will diagnose (except if cause == disk) ?\r\nIf yes, the change proposed in `diagnoseCorruption` will be more useful.",
+        "createdAt" : "2021-07-26T19:35:30Z",
+        "updatedAt" : "2021-07-26T19:40:38Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c798dc9c-7359-47eb-84a9-2fd4e9712982",
+        "parentId" : "d55c9938-e3d5-438e-b2e1-c62ce8a2dac1",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "> To clarify, with this change, for all fetches after the first failure, we will diagnose (except if cause == disk) ?\r\n\r\nNo. We will only diagnose if a block is corrupted at second time (those blocks which can be found in corruptedBlocks). But there's an exception for the corruption from `BufferReleasingInputStream`. In the case of `BufferReleasingInputStream`, the data stream has been partially consumed by the downstream RDDs. So, we don't have a chance to retry. In this case, we'd diagnose anyway.\r\n\r\n\r\n(Previously, we'd diagnose when the block corrupted at first time. And we decide whether retry the block depends on the diagnosis result. But this way has a problem that it blocks the fetcher's thread so may introduce regression.\r\nNow, for the block corrupted at first time, we still always retry it (this remains the same behavior as now). If it corrupts again, then we'd diagnose it and throw fetch failure with the cause (if any).)",
+        "createdAt" : "2021-07-27T13:28:55Z",
+        "updatedAt" : "2021-07-27T14:11:06Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d54aa003-2f32-4a71-aa41-181504e44525",
+        "parentId" : "d55c9938-e3d5-438e-b2e1-c62ce8a2dac1",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "I phrased it poorly, thanks for clarifying and the added context around `BufferReleasingInputStream` - that is what I was trying to get to: \"To clarify, with this change, for all fetches after the first failure, we will diagnose and retry only if cause != disk\"",
+        "createdAt" : "2021-07-27T17:43:44Z",
+        "updatedAt" : "2021-07-27T17:44:26Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ca1b058b6ccac9178859c56e2f7dd05f4ff68900",
+    "line" : 73,
+    "diffHunk" : "@@ -1,1 +845,849 @@                if (!(checksumEnabled && corruptedBlocks.contains(blockId))) {\n                  buf.release()\n                }\n\n                if (blockId.isShuffleChunk) {"
+  },
+  {
+    "id" : "05006036-faf2-4533-988c-950faa09615c",
+    "prId" : 33451,
+    "prUrl" : "https://github.com/apache/spark/pull/33451#pullrequestreview-717092285",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d3c177ad-beb4-4bec-8945-bce792471c53",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "nit:\r\n```\r\nval bufIn = ...\r\nif (checksumEnabled) {\r\n  ...\r\n  checkedIn = ...\r\n  checkedIn\r\n} else {\r\n  bufIn\r\n}\r\n```",
+        "createdAt" : "2021-07-28T14:39:19Z",
+        "updatedAt" : "2021-07-28T14:39:20Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ca1b058b6ccac9178859c56e2f7dd05f4ff68900",
+    "line" : 59,
+    "diffHunk" : "@@ -1,1 +805,809 @@            } else {\n              bufIn\n            }\n          } catch {\n            // The exception could only be throwed by local shuffle block"
+  },
+  {
+    "id" : "5fc6160a-9c3c-4a65-9515-ac59d6d6ec3e",
+    "prId" : 33451,
+    "prUrl" : "https://github.com/apache/spark/pull/33451#pullrequestreview-717618233",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f698cd27-60ef-493d-aca8-ff1ec7b19470",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "why do we use ms in https://github.com/apache/spark/pull/33451/files#diff-8ada3fbd5ebaae4bc80daf73fab086971d1e8496f7e882e7510b1b15b389ff50R129 but ns here?",
+        "createdAt" : "2021-07-28T14:46:46Z",
+        "updatedAt" : "2021-07-28T14:46:46Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "898e5387-8819-495a-9b52-2a6b6a400679",
+        "parentId" : "f698cd27-60ef-493d-aca8-ff1ec7b19470",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Switched to ns there.",
+        "createdAt" : "2021-07-29T02:38:20Z",
+        "updatedAt" : "2021-07-29T02:38:20Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ca1b058b6ccac9178859c56e2f7dd05f4ff68900",
+    "line" : 148,
+    "diffHunk" : "@@ -1,1 +1036,1040 @@      blockId: BlockId): String = {\n    logInfo(\"Start corruption diagnosis.\")\n    val startTimeNs = System.nanoTime()\n    assert(blockId.isInstanceOf[ShuffleBlockId], s\"Expected ShuffleBlockId, but got $blockId\")\n    val shuffleBlock = blockId.asInstanceOf[ShuffleBlockId]"
+  },
+  {
+    "id" : "6151b4ea-e7fa-4ccd-8ba3-a96f52a7a762",
+    "prId" : 33451,
+    "prUrl" : "https://github.com/apache/spark/pull/33451#pullrequestreview-717775726",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1c9a8331-8d10-434c-baef-0a98fbaad32d",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I'm confused. If we only need millisecond precision, why do we calculate with nanosecond and convert to millisecond at the end? can't we use `System.currentTimeMillis`?",
+        "createdAt" : "2021-07-29T07:19:30Z",
+        "updatedAt" : "2021-07-29T07:19:30Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b56ffc32-841a-45cc-b738-218bd152b92d",
+        "parentId" : "1c9a8331-8d10-434c-baef-0a98fbaad32d",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "According to https://github.com/apache/spark/pull/23727, it's recommended to use `System.nanoTime()`. And Spark usually exposes the time as milliseconds so the conversion is used.",
+        "createdAt" : "2021-07-29T07:48:28Z",
+        "updatedAt" : "2021-07-29T07:48:28Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ca1b058b6ccac9178859c56e2f7dd05f4ff68900",
+    "line" : 165,
+    "diffHunk" : "@@ -1,1 +1053,1057 @@        cause = Cause.UNKNOWN_ISSUE\n    }\n    val duration = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNs)\n    val diagnosisResponse = cause match {\n      case Cause.UNSUPPORTED_CHECKSUM_ALGORITHM =>"
+  }
+]

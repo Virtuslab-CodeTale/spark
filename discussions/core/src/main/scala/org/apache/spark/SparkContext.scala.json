@@ -1,0 +1,123 @@
+[
+  {
+    "id" : "77ae7ec0-1c53-4df0-889d-78c1f8cd2cd8",
+    "prId" : 33457,
+    "prUrl" : "https://github.com/apache/spark/pull/33457#pullrequestreview-716870447",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1a99987b-05fa-4b25-b3f5-d97b84f9882b",
+        "parentId" : null,
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "btw, why do we need to attach all the handlers again? And there are so many \"attachAllHandler\" in the code changes.",
+        "createdAt" : "2021-07-27T12:34:15Z",
+        "updatedAt" : "2021-07-27T12:34:54Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "774d52b2-af84-493b-9541-a0019bc3581c",
+        "parentId" : "1a99987b-05fa-4b25-b3f5-d97b84f9882b",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> btw, why do we need to attach all the handlers again? And there are so many \"attachAllHandler\" in the code changes.\r\n\r\nThat me clarify the process.\r\nBefore this change. We add handlers to SparkUI but not start it when init SparkUI since we not start jetty server.\r\nThen it call `bind()`, in this method we start jetty server and attach all handler to server.\r\nthis cause a problem that when we call `bind()`, we expose all servlet API to user. But application not fully started yet.\r\nNow in this pr, I split the behavior of start jetty server and attach handlers to server.\r\nWe need to bind address(start jetty server) first before start AM since we need driver url address to bind with spark proxy server.\r\n\r\nThen after application fully started, we attach all handlers to server(means expose UI url to user).\r\n\r\n\r\nFor this comment https://github.com/apache/spark/pull/33457#issuecomment-886624148\r\nI add a initHandler to handle all request between  starting jetty server and  fully start application to show the hint message.\r\n",
+        "createdAt" : "2021-07-27T12:46:16Z",
+        "updatedAt" : "2021-07-27T12:46:17Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cf960bda-fdb6-47e2-96d8-059d398f6f20",
+        "parentId" : "1a99987b-05fa-4b25-b3f5-d97b84f9882b",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "> I split the behavior of start jetty server and attach handlers to server\r\n\r\nI add some logging and find that `attachHandler` is still called multiple times before `attachAllHandler`",
+        "createdAt" : "2021-07-27T13:37:09Z",
+        "updatedAt" : "2021-07-27T13:37:09Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2fd16ec9-92d2-4e6d-a34c-d2891bbac962",
+        "parentId" : "1a99987b-05fa-4b25-b3f5-d97b84f9882b",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> > I split the behavior of start jetty server and attach handlers to server\r\n> \r\n> I add some logging and find that `attachHandler` is still called multiple times before `attachAllHandler`\r\n\r\nYes, but when we call `attachHandler()` the `serverInfo` is none, so the handler is not attached to the server.\r\n",
+        "createdAt" : "2021-07-27T13:56:18Z",
+        "updatedAt" : "2021-07-27T13:56:18Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "05716be7-44bf-4df0-a12c-10bb18c1aa06",
+        "parentId" : "1a99987b-05fa-4b25-b3f5-d97b84f9882b",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "Is there a way to avoid calling `attachAllHandler` in so many places?",
+        "createdAt" : "2021-07-27T15:35:59Z",
+        "updatedAt" : "2021-07-27T15:35:59Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "26148544-974d-41f5-8b5a-7dc7cfa3af33",
+        "parentId" : "1a99987b-05fa-4b25-b3f5-d97b84f9882b",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> Is there a way to avoid calling `attachAllHandler` in so many places?\r\n\r\nAdd a new method call it `bindAndAttachAllHandler()` then replace other place to call this one? only call `bind()` and `attachAllHandler` in  SparkContext?",
+        "createdAt" : "2021-07-27T16:04:16Z",
+        "updatedAt" : "2021-07-27T16:04:17Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c6243036-a033-4bde-a2c3-9a1811c897a0",
+        "parentId" : "1a99987b-05fa-4b25-b3f5-d97b84f9882b",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "Will that work for history server and master/worker UI? If yes let's try to avoid changing them.",
+        "createdAt" : "2021-07-27T16:18:17Z",
+        "updatedAt" : "2021-07-27T16:18:17Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "18c38b9d-cd03-4b70-a850-ed37f9f8faaf",
+        "parentId" : "1a99987b-05fa-4b25-b3f5-d97b84f9882b",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> Will that work for history server and master/worker UI? If yes let's try to avoid changing them.\r\n\r\nHow about current?",
+        "createdAt" : "2021-07-27T16:45:01Z",
+        "updatedAt" : "2021-07-27T16:45:01Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cd8483bf-0017-4096-b3b5-11def3522e75",
+        "parentId" : "1a99987b-05fa-4b25-b3f5-d97b84f9882b",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "I mean, will history server and master/worker UI show the same page(spark is starting up...) on starting up?",
+        "createdAt" : "2021-07-28T10:53:07Z",
+        "updatedAt" : "2021-07-28T10:53:27Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9ace0a0c-5ade-484a-bc50-6f4d2b75fc85",
+        "parentId" : "1a99987b-05fa-4b25-b3f5-d97b84f9882b",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> I mean, will history server and master/worker UI show the same page(spark is starting up...) on starting up?\r\n\r\nWith current code, won't impact history server/master/worker web UI. and   history server/master/worker web UI doesn't have such problem.",
+        "createdAt" : "2021-07-28T11:09:38Z",
+        "updatedAt" : "2021-07-28T11:09:38Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "0c9c3ce97871ae1d081c3e3cdc32034b1a1e66fd",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +639,643 @@\n    // After application started, attach handlers to started server and start handler.\n    _ui.foreach(_.attachAllHandler())\n    // Attach the driver metrics servlet handler to the web ui after the metrics system is started.\n    _env.metricsSystem.getServletHandlers.foreach(handler => ui.foreach(_.attachHandler(handler)))"
+  }
+]
