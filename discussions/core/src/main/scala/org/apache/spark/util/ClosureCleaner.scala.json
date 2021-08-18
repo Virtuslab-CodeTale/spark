@@ -86,5 +86,522 @@
     "commit" : "0b7bc9f3aa2d642673c4445919b8e19390adc38f",
     "line" : 448,
     "diffHunk" : "@@ -1,1 +703,707 @@            logDebug(s\"    found inner class $ownerExternalName\")\n            // val innerClassInfo = getOrUpdateClassInfo(owner)\n            val (innerClass, innerClassNode) = getOrUpdateClassInfo(owner)\n            // val innerClass = innerClassInfo._1\n            // val innerClassNode = innerClassInfo._2"
+  },
+  {
+    "id" : "b8f7f30d-b028-408a-bf88-7566c0397c8b",
+    "prId" : 28463,
+    "prUrl" : "https://github.com/apache/spark/pull/28463#pullrequestreview-406604791",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "957fc4f9-6d34-44d6-98de-968b6c03a7e3",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "does this create a copy?",
+        "createdAt" : "2020-05-06T12:47:46Z",
+        "updatedAt" : "2020-05-09T01:47:48Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f224f514-2924-4c50-822e-6c0e847ef651",
+        "parentId" : "957fc4f9-6d34-44d6-98de-968b6c03a7e3",
+        "authorId" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "body" : "Not a copy, but a \"serialization proxy\" object that holds on to the symbolic information of the original closure object.\r\n\r\nThe original closure object contains too much runtime-specific information (e.g. class loader info, reference to runtime-generated lambda class) that's not suitable for serialization. So the JDK uses a \"serialization proxy\" that only holds on to the symbolic info for serialization purposes.\r\n\r\nSpark's `ClosureCleaner` abuses this serialization proxy for introspection into what's inside the black box.",
+        "createdAt" : "2020-05-06T13:21:35Z",
+        "updatedAt" : "2020-05-09T01:47:48Z",
+        "lastEditedBy" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "978e60e171e35b01ee166e00c4f63da3db877aad",
+    "line" : 217,
+    "diffHunk" : "@@ -1,1 +485,489 @@\n  def inspect(closure: AnyRef): SerializedLambda = {\n    val writeReplace = closure.getClass.getDeclaredMethod(\"writeReplace\")\n    writeReplace.setAccessible(true)\n    writeReplace.invoke(closure).asInstanceOf[SerializedLambda]"
+  },
+  {
+    "id" : "96e243be-9c97-4da5-9cca-4d7e241b7c6e",
+    "prId" : 28463,
+    "prUrl" : "https://github.com/apache/spark/pull/28463#pullrequestreview-406778311",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "742e5a78-44d1-42e9-a887-ebe50cf35bf7",
+        "parentId" : null,
+        "authorId" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "body" : "This is moved from `ClosureCleaner.getSerializedLambda` with some enhancements.",
+        "createdAt" : "2020-05-06T16:21:29Z",
+        "updatedAt" : "2020-05-09T01:47:48Z",
+        "lastEditedBy" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "978e60e171e35b01ee166e00c4f63da3db877aad",
+    "line" : 184,
+    "diffHunk" : "@@ -1,1 +452,456 @@   * @param maybeClosure the closure to check.\n   */\n  def getSerializationProxy(maybeClosure: AnyRef): Option[SerializedLambda] = {\n    def isClosureCandidate(cls: Class[_]): Boolean = {\n      // TODO: maybe lift this restriction to support other functional interfaces in the future"
+  },
+  {
+    "id" : "841fa304-19cd-4aa9-8dea-b1021b6b23e5",
+    "prId" : 28463,
+    "prUrl" : "https://github.com/apache/spark/pull/28463#pullrequestreview-406778637",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "35b56e4f-5f3e-4fce-9047-200fcc3625ec",
+        "parentId" : null,
+        "authorId" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "body" : "This is moved from `ClosureCleaner.inspect`, verbatim",
+        "createdAt" : "2020-05-06T16:21:51Z",
+        "updatedAt" : "2020-05-09T01:47:48Z",
+        "lastEditedBy" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "978e60e171e35b01ee166e00c4f63da3db877aad",
+    "line" : 216,
+    "diffHunk" : "@@ -1,1 +484,488 @@  }\n\n  def inspect(closure: AnyRef): SerializedLambda = {\n    val writeReplace = closure.getClass.getDeclaredMethod(\"writeReplace\")\n    writeReplace.setAccessible(true)"
+  },
+  {
+    "id" : "ec853b6b-0c1c-4b65-9145-f6f0efeb97a5",
+    "prId" : 28463,
+    "prUrl" : "https://github.com/apache/spark/pull/28463#pullrequestreview-407235220",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a5b56d62-ac30-4f83-93cb-e782f9b9cb27",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "This `isClosureDeclaredInScalaRepl && ...` means only Scala REPL line object needs cleaning?",
+        "createdAt" : "2020-05-06T23:26:51Z",
+        "updatedAt" : "2020-05-09T01:47:48Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ac2c1c7b-ef60-49cc-b031-49f00c874dd2",
+        "parentId" : "a5b56d62-ac30-4f83-93cb-e782f9b9cb27",
+        "authorId" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "body" : "It means only Scala closures are supported. Spark's `ClosureCleaner` was never capable of cleaning non-Scala closures, e.g. Java 8's lambdas, because the specifics of how captures work are different, among various reasons. My new code just makes it explicit in the naming to make sure there's no confusion that this is only geared towards Scala.",
+        "createdAt" : "2020-05-07T08:00:31Z",
+        "updatedAt" : "2020-05-09T01:47:48Z",
+        "lastEditedBy" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "978e60e171e35b01ee166e00c4f63da3db877aad",
+    "line" : 129,
+    "diffHunk" : "@@ -1,1 +370,374 @@      // should be something cleanable, i.e. a Scala REPL line object\n      val needsCleaning = isClosureDeclaredInScalaRepl &&\n        outerThisOpt.isDefined && outerThisOpt.get.getClass.getName == capturingClassName\n\n      if (needsCleaning) {"
+  },
+  {
+    "id" : "2d10ede6-75a7-4e47-8474-ea14a59a109c",
+    "prId" : 28463,
+    "prUrl" : "https://github.com/apache/spark/pull/28463#pullrequestreview-407239184",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "009d4796-623f-4081-8a3d-fcfae3de4e7b",
+        "parentId" : null,
+        "authorId" : "44205d46-4619-49c7-a427-e3f32de32cda",
+        "body" : "I think an code snippet here together then the resulting `logTrace` output would be really useful.",
+        "createdAt" : "2020-05-07T07:49:12Z",
+        "updatedAt" : "2020-05-09T01:47:48Z",
+        "lastEditedBy" : "44205d46-4619-49c7-a427-e3f32de32cda",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "03bc6485-00b1-4865-81f8-21c0deaafbf7",
+        "parentId" : "009d4796-623f-4081-8a3d-fcfae3de4e7b",
+        "authorId" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "body" : "That's a very good suggestion. I was intending to write more explanation in the comments but haven't decided on how.",
+        "createdAt" : "2020-05-07T08:06:05Z",
+        "updatedAt" : "2020-05-09T01:47:48Z",
+        "lastEditedBy" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "978e60e171e35b01ee166e00c4f63da3db877aad",
+    "line" : 270,
+    "diffHunk" : "@@ -1,1 +538,542 @@   *               outer classes and their super classes to be in the map as keys, e.g.\n   *               initializing via ClosureCleaner.initAccessedFields.\n   */\n  // scalastyle:off line.size.limit\n  // Example: run the following code snippet in a Spark Shell w/ Scala 2.12+:"
+  },
+  {
+    "id" : "b7b9e54f-ff25-49df-977d-e47e62fd3130",
+    "prId" : 28463,
+    "prUrl" : "https://github.com/apache/spark/pull/28463#pullrequestreview-407971224",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6e517e16-14d0-4efe-8ed3-bb37a2eef41b",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Hi, @rednaxelafx . Do we need to change this PR for Scala 2.11 when we backport into `branch-2.4`?",
+        "createdAt" : "2020-05-07T09:58:25Z",
+        "updatedAt" : "2020-05-09T01:47:48Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f4da400f-c11a-4eaf-b770-9d4dda3d4111",
+        "parentId" : "6e517e16-14d0-4efe-8ed3-bb37a2eef41b",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Never mind. I found your previous comment (https://github.com/apache/spark/pull/28463#issuecomment-624779079).",
+        "createdAt" : "2020-05-07T10:03:44Z",
+        "updatedAt" : "2020-05-09T01:47:48Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d268a49a-cf43-476a-a072-4dc7500fd2ce",
+        "parentId" : "6e517e16-14d0-4efe-8ed3-bb37a2eef41b",
+        "authorId" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "body" : "Right, the new `IndylambdaScalaClosures.getSerializationProxy` is pretty much the same as the old `getSerializedLambda`, just with a few more checks.\r\nIt's supposed to return `None` for Scala 2.11 closures, and `Some(...)` for Scala 2.12+ closures, no changes.",
+        "createdAt" : "2020-05-08T03:20:41Z",
+        "updatedAt" : "2020-05-09T01:47:48Z",
+        "lastEditedBy" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "978e60e171e35b01ee166e00c4f63da3db877aad",
+    "line" : 67,
+    "diffHunk" : "@@ -1,1 +213,217 @@    // so we check first\n    // non LMF-closures should be less frequent from now on\n    val maybeIndylambdaProxy = IndylambdaScalaClosures.getSerializationProxy(func)\n\n    if (!isClosure(func.getClass) && maybeIndylambdaProxy.isEmpty) {"
+  },
+  {
+    "id" : "89bcde5c-506b-41b6-94a4-dee607e15d56",
+    "prId" : 28463,
+    "prUrl" : "https://github.com/apache/spark/pull/28463#pullrequestreview-408131932",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ddca7ebb-e86e-4ae4-9468-c445fc6df367",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Not `accessedFields(capturingClass).size` but `accessedFields.map(_._2.size).sum` here?",
+        "createdAt" : "2020-05-08T08:58:25Z",
+        "updatedAt" : "2020-05-09T01:47:48Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "49bc2fbd-dcab-4d3a-91d6-924678507814",
+        "parentId" : "ddca7ebb-e86e-4ae4-9468-c445fc6df367",
+        "authorId" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "body" : "~~This is a part of code that I just copied over from the old impl for Scala 2.11 closures, just a few lines above. It was weird to begin with... trust me I have a much larger diff with a lot more cleanups :-p\r\nI wanted to keep the log look similar for easier comparison. If we do a cleanup here, we'd do it in both the old+new versions.~~\r\n\r\nI'd like to keep the old code for 2.11- as intact as possible so that a backport to 3.0 (and maybe even 2.4 for better Scala 2.12 experimental support) is easy. As I mentioned in the PR description, I do plan to do some code cleanup/refactoring of the old code later, and that would cover this part of logging.\r\n\r\nEDIT: sorry I was reading the comment in the wrong context. Let me rephrase my reply...",
+        "createdAt" : "2020-05-08T09:02:55Z",
+        "updatedAt" : "2020-05-09T01:47:48Z",
+        "lastEditedBy" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7c8df70b-3da9-45a9-bca0-403127ea4388",
+        "parentId" : "ddca7ebb-e86e-4ae4-9468-c445fc6df367",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Does this part come from the old code? I looked over the existing code but I couldn't find it. Anyway, what I just to want to know is that, is this comparison correct, `# of outer classes` < `# of fields in the given class` ?",
+        "createdAt" : "2020-05-08T09:36:56Z",
+        "updatedAt" : "2020-05-09T01:47:48Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "72df886d-4e47-46ca-86f5-969be6607446",
+        "parentId" : "ddca7ebb-e86e-4ae4-9468-c445fc6df367",
+        "authorId" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "body" : "Rephrased reply:\r\n\r\n> Not `accessedFields(capturingClass).size` but `accessedFields.map(_._2.size).sum` here?\r\n\r\nNope, my current version makes more sense here.\r\n\r\nContext:\r\n- indylambda Scala closures don't have a `$outer` chain for nested closures\r\n- Scala REPL line objects (as well as other Scala inner classes) still do have the `$outer` chain\r\n- Spark's `ClosureCleaner` is only supposed to be capable of cleaning old-style closure objects and REPL line objects, and nothing else\r\n- Since indylambda closure won't be on the `$outer` chain, the only possible outer object that Spark's `ClosureCleaner` can clean is a Scala REPL line object, i.e. `$iw` (which can have its own `$outer` chain of `$iw`s, but the old code didn't support cleaning that further chain of `$iw`s)\r\n- We make assumptions about Scala REPL line objects. One implicit assumption is that we know all its behavior, and that it shouldn't involve complex inheritance. c.f. https://gist.github.com/rednaxelafx/e9ecd09bbd1c448dbddad4f4edf25d48#closurecleanerisclosure-is-too-loose\r\n\r\nSo processing super classes is unnecessary if the `isClosure` check is strict. It was too loose for the old style closures (via `ClosureCleaner.isClosure`, but the new check is fairly strict so it won't accidentally match non-closure classes.\r\n\r\nThus there should actually be only one key in the `accessedFields` in this new code path, which is the enclosing REPL line object. And we don't need to care about its super class (it's just java.lang.Object, no fields).\r\n\r\n`accessedFields(capturingClass).size` checks the number of accessed fields directly declared on the REPL line object; `capturingClass.getDeclaredFields.length` reports the number of fields directly declared on the REPL line object. If we don't take super classes into account, this is the right check.",
+        "createdAt" : "2020-05-08T09:53:04Z",
+        "updatedAt" : "2020-05-09T01:47:48Z",
+        "lastEditedBy" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "96d33488-f6ee-402f-aefa-a5a78a962536",
+        "parentId" : "ddca7ebb-e86e-4ae4-9468-c445fc6df367",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Ah, I see. Thanks for the explanation.",
+        "createdAt" : "2020-05-08T09:57:06Z",
+        "updatedAt" : "2020-05-09T01:47:48Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "978e60e171e35b01ee166e00c4f63da3db877aad",
+    "line" : 144,
+    "diffHunk" : "@@ -1,1 +385,389 @@        accessedFields.foreach { f => logDebug(\"     \" + f) }\n\n        if (accessedFields(capturingClass).size < capturingClass.getDeclaredFields.length) {\n          // clone and clean the enclosing `this` only when there are fields to null out\n"
+  },
+  {
+    "id" : "f6765d3d-a8c3-4768-89bb-35a21e0d089e",
+    "prId" : 28463,
+    "prUrl" : "https://github.com/apache/spark/pull/28463#pullrequestreview-408105796",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "07a74f7d-cd69-4b43-b378-59db372b8c59",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "nit: how about explicitly saying this is an old style closure here? e.g., `Cleaning old style closure $func`, `Cleaning inline closure $func`, ...?",
+        "createdAt" : "2020-05-08T09:01:06Z",
+        "updatedAt" : "2020-05-09T01:47:48Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ea76a3ab-4837-41d0-8bf4-f9cc603a928c",
+        "parentId" : "07a74f7d-cd69-4b43-b378-59db372b8c59",
+        "authorId" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "body" : "I left this part untouched in this PR intentionally, for the reason mentioned in a previous reply.\r\n\r\nIt's highly unlikely to actually see this log get triggered in Spark 3.0 in the real world, unless someone decided to go with `-Ydelambdafy:inline` explicitly w/ Scala 2.12+. So keeping it the way it is for Spark 3.0 wouldn't hurt much.\r\n\r\nI do plan to send out a few cleanup/refactoring PRs to get the old code into a better shape, and maybe enhance the ClosureCleaner's capabilities, e.g. support cleaning \"sibling\" closures.",
+        "createdAt" : "2020-05-08T09:06:33Z",
+        "updatedAt" : "2020-05-09T01:47:48Z",
+        "lastEditedBy" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "978e60e171e35b01ee166e00c4f63da3db877aad",
+    "line" : 80,
+    "diffHunk" : "@@ -1,1 +228,232 @@\n    if (maybeIndylambdaProxy.isEmpty) {\n      logDebug(s\"+++ Cleaning closure $func (${func.getClass.getName}) +++\")\n\n      // A list of classes that represents closures enclosed in the given one"
+  },
+  {
+    "id" : "9c2afd04-1d6e-4746-8519-9ea009b1d224",
+    "prId" : 28463,
+    "prUrl" : "https://github.com/apache/spark/pull/28463#pullrequestreview-408141797",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f859d43f-7538-40a2-ad16-20e1337ca8c4",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "does this check return true iff the given class is a scala repl? I mean, no chance to accidentally conflict this pattern with that in user-provided scala programs?",
+        "createdAt" : "2020-05-08T10:05:35Z",
+        "updatedAt" : "2020-05-09T01:47:48Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "71949561-573e-4594-9ed4-ef759e6df918",
+        "parentId" : "f859d43f-7538-40a2-ad16-20e1337ca8c4",
+        "authorId" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "body" : "Yes there is a chance of this hacky naming check conflicting with user-defined class. The likelihood is very low, though. It's hard to be fully accurate here, unless there's some backdoor trick in NSC that I haven't found yet. cc @retronym\r\n\r\nThis check can give both false positives and false negatives:\r\n- it's possible for user code to declare a class name like `$line12345$read$iw`, and that'd match this check\r\n- it's possible for user to configure the Scala compiler to use a different prefix for REPL classes (default is `$line`, configurable via `-Dscala.repl.name.line=XXX`). The name for the import wrapper is fixed at `$iw` though (see https://github.com/scala/scala/blob/2.12.x/src/repl/scala/tools/nsc/interpreter/Naming.scala#L71)\r\n\r\nI still think this is a tradeoff we'd be okay to make here though.",
+        "createdAt" : "2020-05-08T10:16:51Z",
+        "updatedAt" : "2020-05-09T01:47:48Z",
+        "lastEditedBy" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "978e60e171e35b01ee166e00c4f63da3db877aad",
+    "line" : 119,
+    "diffHunk" : "@@ -1,1 +360,364 @@\n      val isClosureDeclaredInScalaRepl = capturingClassName.startsWith(\"$line\") &&\n        capturingClassName.endsWith(\"$iw\")\n      val outerThisOpt = if (lambdaProxy.getCapturedArgCount > 0) {\n        Option(lambdaProxy.getCapturedArg(0))"
+  },
+  {
+    "id" : "677cc6cd-6720-4803-be2d-4e6ed274ba97",
+    "prId" : 28463,
+    "prUrl" : "https://github.com/apache/spark/pull/28463#pullrequestreview-408600749",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d71fa835-995d-4fe5-885a-00ae3efe8058",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "How about logging found methods here (e.g., `logTrace(s\"        found method ${m.name}${m.desc}\")`), too?  The additional log looks like this;\r\n```\r\n20/05/09 08:33:01 TRACE IndylambdaScalaClosures:   scanning $line14.$read$$iw$$iw$$iw$$iw$$iw$$iw$$iw$$iw.$anonfun$closure$1(L$line14/$read$$iw$$iw$$iw$$iw$$iw$$iw$$iw$$iw;I)Lscala/collection/immutable/IndexedSeq;\r\n20/05/09 08:33:01 TRACE IndylambdaScalaClosures:     found inner class $line14.$read$$iw$$iw$$iw$$iw$$iw$$iw$$iw$$iw$InnerFoo$1\r\n20/05/09 08:33:01 TRACE IndylambdaScalaClosures:         found method innerClosure()Lscala/Function1;\r\n20/05/09 08:33:01 TRACE IndylambdaScalaClosures:         found method $anonfun$innerClosure$2(L$line14/$read$$iw$$iw$$iw$$iw$$iw$$iw$$iw$$iw$InnerFoo$1;I)Ljava/lang/String;\r\n20/05/09 08:33:01 TRACE IndylambdaScalaClosures:         found method $anonfun$innerClosure$1(L$line14/$read$$iw$$iw$$iw$$iw$$iw$$iw$$iw$$iw$InnerFoo$1;I)Lscala/collection/immutable/IndexedSeq;\r\n20/05/09 08:33:01 TRACE IndylambdaScalaClosures:         found method <init>(L$line14/$read$$iw$$iw$$iw$$iw$$iw$$iw$$iw$$iw;Ljava/lang/String;)V\r\n20/05/09 08:33:01 TRACE IndylambdaScalaClosures:         found method $anonfun$innerClosure$2$adapted(L$line14/$read$$iw$$iw$$iw$$iw$$iw$$iw$$iw$$iw$InnerFoo$1;Ljava/lang/Object;)Ljava/lang/String;\r\n20/05/09 08:33:01 TRACE IndylambdaScalaClosures:         found method $anonfun$innerClosure$1$adapted(L$line14/$read$$iw$$iw$$iw$$iw$$iw$$iw$$iw$$iw$InnerFoo$1;Ljava/lang/Object;)Lscala/collection/immutable/IndexedSeq;\r\n20/05/09 08:33:01 TRACE IndylambdaScalaClosures:         found method $deserializeLambda$(Ljava/lang/invoke/SerializedLambda;)Ljava/lang/Object;\r\n20/05/09 08:33:01 TRACE IndylambdaScalaClosures:     ignoring call to scala.Predef$.intWrapper(I)I\r\n20/05/09 08:33:01 TRACE IndylambdaScalaClosures:     ignoring call to scala.runtime.RichInt$.to$extension0(II)Lscala/collection/immutable/Range$Inclusive;\r\n20/05/09 08:33:01 TRACE IndylambdaScalaClosures:     found call to outer $line14.$read$$iw$$iw$$iw$$iw$$iw$$iw$$iw$$iw$InnerFoo$1.innerClosure()Lscala/Function1;\r\n...\r\n```",
+        "createdAt" : "2020-05-09T00:06:02Z",
+        "updatedAt" : "2020-05-09T01:47:48Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8c761102-ac42-42c2-959a-b9ff20ef96bc",
+        "parentId" : "d71fa835-995d-4fe5-885a-00ae3efe8058",
+        "authorId" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "body" : "Thanks for the suggestion! I actually had something very similar to this at the same place for my own debugging. This helped me squash a few bugs in my code that added the wrong class...already fixed before I sent out the PR 🤣 \r\n\r\nIf we assume that my visiting strategy is correct, then the \"scanning ...\" log lines will actually contain all the information from these \"found method ...\" log lines, just at a different timing / place.\r\n\r\nIt is good to log both the \"found\"s and \"scan\"s for consistency check, but I was wondering whether or not that's too verbose even for trace-level logging.\r\n\r\nWDYT? I was thinking about maybe going the other way around, which is to promote some of my `logTrace`s to `logDebug`, e.g. the `found inner class` and `found inner closure` ones, since they're present in the debug-level logs in the old implementation. Then I'd be willing to add `logTrace` for \"found method\".",
+        "createdAt" : "2020-05-09T00:45:58Z",
+        "updatedAt" : "2020-05-09T01:47:48Z",
+        "lastEditedBy" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "88cdfa1a-74f2-4085-bd4f-f39cf2155007",
+        "parentId" : "d71fa835-995d-4fe5-885a-00ae3efe8058",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "> It is good to log both the \"found\"s and \"scan\"s for consistency check\r\n\r\nYea, I think so, too, and the log message looks useful for debugging. Actually, I added this `logTrace` by myself for checking this PR...",
+        "createdAt" : "2020-05-09T00:54:50Z",
+        "updatedAt" : "2020-05-09T01:47:48Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "be3ebd41-1544-4639-967c-49c1c11fef8b",
+        "parentId" : "d71fa835-995d-4fe5-885a-00ae3efe8058",
+        "authorId" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "body" : "👍  let me promote the the \"found inner class\" and \"found inner closure\" to DEBUG and add the logging you're suggesting here. Thanks!",
+        "createdAt" : "2020-05-09T01:14:22Z",
+        "updatedAt" : "2020-05-09T01:47:48Z",
+        "lastEditedBy" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "41e19c02-6785-487f-a496-77ca278bd33e",
+        "parentId" : "d71fa835-995d-4fe5-885a-00ae3efe8058",
+        "authorId" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "body" : "Addressed ^_^",
+        "createdAt" : "2020-05-09T01:56:14Z",
+        "updatedAt" : "2020-05-09T01:56:14Z",
+        "lastEditedBy" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "978e60e171e35b01ee166e00c4f63da3db877aad",
+    "line" : 431,
+    "diffHunk" : "@@ -1,1 +699,703 @@            trackedClassInternalNames += owner\n            // We need to visit all methods on the inner class so that we don't missing anything.\n            for (m <- innerClassNode.methods.asScala) {\n              logTrace(s\"      found method ${m.name}${m.desc}\")\n              pushIfNotVisited(MethodIdentifier(innerClass, m.name, m.desc))"
+  },
+  {
+    "id" : "d2befd31-25d9-4db5-8d7c-67c3a929888e",
+    "prId" : 28463,
+    "prUrl" : "https://github.com/apache/spark/pull/28463#pullrequestreview-408595546",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "14a22c80-e9ab-4bf1-ba78-8cdd305a7c0d",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Is this log only for outer cases? In [the log](https://github.com/apache/spark/pull/28463/files#diff-4928e25ed331cc478162f750f53652e2R562) shown in the comment above, it seems to capture inner cases, too?\r\n\r\n",
+        "createdAt" : "2020-05-09T00:12:34Z",
+        "updatedAt" : "2020-05-09T01:47:48Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fa9186fc-e61d-491e-ac8e-76b50cde5dbb",
+        "parentId" : "14a22c80-e9ab-4bf1-ba78-8cdd305a7c0d",
+        "authorId" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "body" : "The \"outer\" here is relative: for:\r\n```\r\nstarting closure\r\n  inner class A\r\n    inner class B\r\n      inner closure\r\n```\r\nTo the \"inner closure\" in this example, both inner class B and A are \"outer\" relative to it. I wanted to make this distinction because I'm only tracking two types of calls (relative to current class) and one type of invokedynamic:\r\n- call to method defined on the same class: always follow\r\n- call to method defined on some level of outer class: effectively always follow, but including the \"findTransitively\" flag here just to look closer to the old code (I might do a future cleanup to move the old code to the new style and remove with this flag if possible.\r\n- invokedynamic where the BSM is LMF and impl method is on the same class. Always follow",
+        "createdAt" : "2020-05-09T01:01:47Z",
+        "updatedAt" : "2020-05-09T01:47:48Z",
+        "lastEditedBy" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "978e60e171e35b01ee166e00c4f63da3db877aad",
+    "line" : 436,
+    "diffHunk" : "@@ -1,1 +704,708 @@            }\n          } else if (findTransitively && trackedClassInternalNames.contains(owner)) {\n            logTrace(s\"    found call to outer $ownerExternalName.$name$desc\")\n            val (calleeClass, _) = getOrUpdateClassInfo(owner) // make sure MethodNodes are cached\n            pushIfNotVisited(MethodIdentifier(calleeClass, name, desc))"
+  },
+  {
+    "id" : "f939b6c8-da9a-452a-a2ae-e04495ebd8da",
+    "prId" : 28463,
+    "prUrl" : "https://github.com/apache/spark/pull/28463#pullrequestreview-408600712",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "541bd546-88d5-4b6d-8e92-8e03dbf6acbd",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Ur, one more comment; I think we can avoid this for loop by using `Map`. You didn't do so because we assume the number of `accessedFields` is small in most cases?",
+        "createdAt" : "2020-05-09T01:44:20Z",
+        "updatedAt" : "2020-05-09T01:47:48Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d2a39d5d-04b4-4e9f-9ffe-15e29ea014c4",
+        "parentId" : "541bd546-88d5-4b6d-8e92-8e03dbf6acbd",
+        "authorId" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "body" : "It's just a copy of the old code (see `FieldAccessFinder.visitFieldInsn`). This code shape make it easy to see the correspondence of the new vs old code.\r\nI do indeed expect the number of keys to be small here so perf is not the main concern. And I totally agree this is ugly.\r\nTo turn this into a Map, we'd probably want to populate another map from `accessedFields`, like\r\n`val trackedClassForAccessedFields = accessedFields.keys.map { c => (c.getName.replace('.', '/'), c) }.toMap`\r\n\r\nI was thinking about doing this in a later cleanup which also cleans the old code (that does not get backported to 3.0, but only merges to master). Having this code in the same shape as the old one is partly intentional and partly just being lazy...",
+        "createdAt" : "2020-05-09T01:55:43Z",
+        "updatedAt" : "2020-05-09T01:55:43Z",
+        "lastEditedBy" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "978e60e171e35b01ee166e00c4f63da3db877aad",
+    "line" : 406,
+    "diffHunk" : "@@ -1,1 +674,678 @@          if (op == GETFIELD || op == PUTFIELD) {\n            val ownerExternalName = owner.replace('/', '.')\n            for (cl <- accessedFields.keys if cl.getName == ownerExternalName) {\n              logTrace(s\"    found field access $name on $ownerExternalName\")\n              accessedFields(cl) += name"
+  },
+  {
+    "id" : "3fe84d6d-dd6e-45be-9329-edd65832cd12",
+    "prId" : 28463,
+    "prUrl" : "https://github.com/apache/spark/pull/28463#pullrequestreview-414064655",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "709e8890-c6c7-4ec6-b8af-95e667dad39f",
+        "parentId" : null,
+        "authorId" : "99e31844-a5b3-48a2-af71-412edb607a13",
+        "body" : "nit: `owner` is not used in this method now.",
+        "createdAt" : "2020-05-16T06:09:37Z",
+        "updatedAt" : "2020-05-16T06:09:37Z",
+        "lastEditedBy" : "99e31844-a5b3-48a2-af71-412edb607a13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e0f226a0-ec5c-4801-8342-10a0b151bc75",
+        "parentId" : "709e8890-c6c7-4ec6-b8af-95e667dad39f",
+        "authorId" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "body" : "Good point! Thanks for the suggestion, I'll remove the unused parameter when I gather enough changes for a follow-up change.",
+        "createdAt" : "2020-05-19T02:47:26Z",
+        "updatedAt" : "2020-05-19T02:47:26Z",
+        "lastEditedBy" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "978e60e171e35b01ee166e00c4f63da3db877aad",
+    "line" : 254,
+    "diffHunk" : "@@ -1,1 +522,526 @@   */\n  def isInnerClassCtorCapturingOuter(\n      op: Int, owner: String, name: String, desc: String, callerInternalName: String): Boolean = {\n    op == INVOKESPECIAL && name == \"<init>\" && desc.startsWith(s\"(L$callerInternalName;\")\n  }"
+  },
+  {
+    "id" : "fba500b9-9292-4eda-878c-9df2782cbda7",
+    "prId" : 28463,
+    "prUrl" : "https://github.com/apache/spark/pull/28463#pullrequestreview-414064397",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7665d4e4-2834-41e5-9a47-ba9f0ac03511",
+        "parentId" : null,
+        "authorId" : "99e31844-a5b3-48a2-af71-412edb607a13",
+        "body" : "super nit: How about `val (innerClass, innerClassNode) = ...`?",
+        "createdAt" : "2020-05-17T10:30:34Z",
+        "updatedAt" : "2020-05-17T10:30:34Z",
+        "lastEditedBy" : "99e31844-a5b3-48a2-af71-412edb607a13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2fb45e1b-7bd3-4250-9a03-d45537d9fc5b",
+        "parentId" : "7665d4e4-2834-41e5-9a47-ba9f0ac03511",
+        "authorId" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "body" : "Thank you for the suggestion. Yes this was intentional. Using the destructuring pattern match syntax somehow triggers a problem in Scala compiler's type inferencer, that requires importing scala.lang.existential to resolve. I'd rather write the code in a slightly more tedious fashion than importing that...",
+        "createdAt" : "2020-05-19T02:46:35Z",
+        "updatedAt" : "2020-05-19T02:46:35Z",
+        "lastEditedBy" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "978e60e171e35b01ee166e00c4f63da3db877aad",
+    "line" : 426,
+    "diffHunk" : "@@ -1,1 +694,698 @@            // `$outer` chain. So this is NOT controlled by the `findTransitively` flag.\n            logDebug(s\"    found inner class $ownerExternalName\")\n            val innerClassInfo = getOrUpdateClassInfo(owner)\n            val innerClass = innerClassInfo._1\n            val innerClassNode = innerClassInfo._2"
   }
 ]

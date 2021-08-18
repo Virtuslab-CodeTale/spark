@@ -53,5 +53,71 @@
     "commit" : "56c3001ea558efd4e6290bb805a4b59659c21e04",
     "line" : 6,
     "diffHunk" : "@@ -1,1 +1090,1094 @@ */\ntrait UserDefinedExpression {\n  def name: String\n}"
+  },
+  {
+    "id" : "1dfd02c2-9420-4c8f-b52f-ffc648176258",
+    "prId" : 28420,
+    "prUrl" : "https://github.com/apache/spark/pull/28420#pullrequestreview-409094845",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3432e683-defc-43d6-b4d2-9d083576116c",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Why do we need two extra interface methods just to make the column name pretty? Seems the output isn't even completely pretty.",
+        "createdAt" : "2020-05-11T08:45:30Z",
+        "updatedAt" : "2020-05-11T08:45:30Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e2055ec0-1181-4dfc-935f-f24857bcb18f",
+        "parentId" : "3432e683-defc-43d6-b4d2-9d083576116c",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "It's not about pretty or not. It's about consistency. If we call a function with its alias name, then it will not use `PrettyAttribute` and the string representation is different from if we call the function with the original name.",
+        "createdAt" : "2020-05-11T09:02:09Z",
+        "updatedAt" : "2020-05-11T09:02:10Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3ce1c495-6e3d-46b8-90ca-9caa48290432",
+        "parentId" : "3432e683-defc-43d6-b4d2-9d083576116c",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "The consistency is good but the readability here is the problem. See the implementation side:\r\n\r\n```scala\r\n  override def sql: String = s\"$prettyName(${field.sql} FROM ${source.sql})\"\r\n  override def prettyName: String = \"extract\"\r\n```\r\nvs\r\n```scala\r\n  override def exprsReplaced: Seq[Expression] = Seq(field, source)\r\n\r\n  override def mkString(childrenString: Seq[String]): String = {\r\n    prettyName + childrenString.mkString(\"(\", \" FROM \", \")\")\r\n  }\r\n```\r\n\r\nPreviously, it was fine to only know `sql` and `prettyName` but now you should know what `exprsReplaced` and `mkString` are. From the naming, it's confusing what that means too.",
+        "createdAt" : "2020-05-11T09:31:49Z",
+        "updatedAt" : "2020-05-11T09:31:49Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c14a70be-3ca7-40c5-bc42-ed4252250dc9",
+        "parentId" : "3432e683-defc-43d6-b4d2-9d083576116c",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "I would just document that `sql` and `prettyName` should be properly overridden at `RuntimeReplaceable` just like we have the restriction about the `child`. We could have an util for it as well.",
+        "createdAt" : "2020-05-11T09:40:02Z",
+        "updatedAt" : "2020-05-11T09:40:20Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c250a105-ea99-46eb-bcf8-fc3f1ed3c000",
+        "parentId" : "3432e683-defc-43d6-b4d2-9d083576116c",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "The caller side decides if he wants pretty string or not, by calling `Expression.sql` or `toPrettySQL(Expression)`. So simply overridden `sql` doesn't work, unless we add a boolean parameter.",
+        "createdAt" : "2020-05-11T11:41:48Z",
+        "updatedAt" : "2020-05-11T11:41:49Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5843ac6a41573bb80482aca27069dbd5baf81d5c",
+    "line" : 24,
+    "diffHunk" : "@@ -1,1 +337,341 @@  def mkString(childrenString: Seq[String]): String = {\n    prettyName + childrenString.mkString(\"(\", \", \", \")\")\n  }\n}\n"
   }
 ]

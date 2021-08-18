@@ -218,5 +218,93 @@
     "commit" : "9bcc084160021dd9a7dc1d573b787075016e9f01",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +40,44 @@    try {\n      // The ApplicationInfo may not be available when Spark is starting up.\n      Utils.tryWithResource(\n        store.view(classOf[ApplicationInfoWrapper])\n          .max(1)"
+  },
+  {
+    "id" : "51d81d63-9473-4574-a9bd-2823f4b9a94e",
+    "prId" : 28444,
+    "prUrl" : "https://github.com/apache/spark/pull/28444#pullrequestreview-410239557",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d49c7eb6-4e84-419c-8ad9-4e5d85ed0b52",
+        "parentId" : null,
+        "authorId" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "body" : "Instead of make this function blocking, how about capture the Exception outside and display the proper message?",
+        "createdAt" : "2020-05-08T07:24:07Z",
+        "updatedAt" : "2020-05-12T22:20:38Z",
+        "lastEditedBy" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dd048c7a-7a1d-423d-8cee-9ec2266904a0",
+        "parentId" : "d49c7eb6-4e84-419c-8ad9-4e5d85ed0b52",
+        "authorId" : "2a16373d-c60e-410a-bc37-ba7eae4ec2ad",
+        "body" : "If blocking is supposed to be harmful, I'd prefer an optional result instead of throwing an exception here. In fact, due to the previous design and implementation, all the invokers of the method are expecting a valid `ApplicationInfo`, which means they are not capable of dealing with a `None` value or an exception now. If we change the returned type to `Option`, all the logic of the invokers (and invokers of these invokers maybe) should be somehow adjusted. There will be more design choices then.\r\n\r\nAdding the retry logic solves the problem from the root. As I said, however, I can definitely make another choice if we reach a consensus.",
+        "createdAt" : "2020-05-08T15:11:41Z",
+        "updatedAt" : "2020-05-12T22:20:38Z",
+        "lastEditedBy" : "2a16373d-c60e-410a-bc37-ba7eae4ec2ad",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c90cf7e5-6fcb-4116-bbcd-5d271755f412",
+        "parentId" : "d49c7eb6-4e84-419c-8ad9-4e5d85ed0b52",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "I think capturing the exception outside is actually a good compromise considering the issue is rather a corner case. Let's scope narrow here since the issue is rather minor, and consider a better fix with a standard approach when any bigger issue is found in the design.",
+        "createdAt" : "2020-05-10T05:41:15Z",
+        "updatedAt" : "2020-05-12T22:20:38Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5d164724-2252-4922-9dfa-99aa911e00d9",
+        "parentId" : "d49c7eb6-4e84-419c-8ad9-4e5d85ed0b52",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Also sounds reasonable to me.",
+        "createdAt" : "2020-05-11T02:42:31Z",
+        "updatedAt" : "2020-05-12T22:20:38Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "43a2d01a-c3d1-456b-8e56-fc648ae26ce2",
+        "parentId" : "d49c7eb6-4e84-419c-8ad9-4e5d85ed0b52",
+        "authorId" : "2a16373d-c60e-410a-bc37-ba7eae4ec2ad",
+        "body" : "Thanks for your feedback, @HyukjinKwon. However, I didn't get your point (sorry for that). Did you mean changing the implementation to capturing the exception outside, or let's just keep the current approach?",
+        "createdAt" : "2020-05-12T03:08:45Z",
+        "updatedAt" : "2020-05-12T22:20:38Z",
+        "lastEditedBy" : "2a16373d-c60e-410a-bc37-ba7eae4ec2ad",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1f008c3e-bc50-4592-bd03-ce86ef9bfa6d",
+        "parentId" : "d49c7eb6-4e84-419c-8ad9-4e5d85ed0b52",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Sorry I wasn't clear. I was thinking a way, for example, as below:\r\n\r\n```diff\r\n-    store.view(classOf[ApplicationInfoWrapper]).max(1).iterator().next().info\r\n+    try {\r\n+      store.view(classOf[ApplicationInfoWrapper]).max(1).iterator().next().info\r\n+    } catch {\r\n+      case _: NoSuchElementException =>\r\n+        throw new NoSuchElementException(\r\n+          \"Application information was not found. If your Spark application is \" +\r\n+            \"starting up, try again when your Spark application is ready.\")\r\n+    }\r\n```",
+        "createdAt" : "2020-05-12T04:15:57Z",
+        "updatedAt" : "2020-05-12T22:20:38Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6b29109f-a12c-4209-acc6-536178ecd28b",
+        "parentId" : "d49c7eb6-4e84-419c-8ad9-4e5d85ed0b52",
+        "authorId" : "2a16373d-c60e-410a-bc37-ba7eae4ec2ad",
+        "body" : "Thanks for the explanation. I'll update the PR as suggested.",
+        "createdAt" : "2020-05-12T16:55:21Z",
+        "updatedAt" : "2020-05-12T22:20:38Z",
+        "lastEditedBy" : "2a16373d-c60e-410a-bc37-ba7eae4ec2ad",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e633d1fb5374fa7faa6cd6e15d90f4f04703aa1b",
+    "line" : 12,
+    "diffHunk" : "@@ -1,1 +36,40 @@    val listener: Option[AppStatusListener] = None) {\n\n  def applicationInfo(): v1.ApplicationInfo = {\n    try {\n      // The ApplicationInfo may not be available when Spark is starting up."
   }
 ]

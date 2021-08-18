@@ -2561,5 +2561,181 @@
     "commit" : "e8f24714d90ef7a2fbcd2458463d91c05e28ebbf",
     "line" : 34,
     "diffHunk" : "@@ -1,1 +1385,1389 @@  /**\n   * Rewrite pattern:\n   * 1. (a && b) || (c && d) --> (a || c) && (a || d) && (b || c) && (b && d)\n   * 2. (a && b) || c --> (a || c) && (b || c)\n   * 3. a || (b && c) --> (a || b) && (a || c)"
+  },
+  {
+    "id" : "70f3b495-799d-489d-807c-768188bac766",
+    "prId" : 28424,
+    "prUrl" : "https://github.com/apache/spark/pull/28424#pullrequestreview-407695276",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "599a2a64-1b27-4809-ac98-a27654508243",
+        "parentId" : null,
+        "authorId" : "f3166ab8-4dba-4d22-b10b-31a984dfa2ad",
+        "body" : "1. Should we write a separate rule so that all queries with distinct followed by left semi will benefit? (`select distinct(a.col1) from a left semi join b on a.col2 = b.col2`)\r\n2. Can we make it generic so that distinct followed by right semi join also gets handled?",
+        "createdAt" : "2020-05-07T17:41:48Z",
+        "updatedAt" : "2020-05-07T17:57:28Z",
+        "lastEditedBy" : "f3166ab8-4dba-4d22-b10b-31a984dfa2ad",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "29719f9de51e7026584b7882755d3cd7806ae8f5",
+    "line" : 13,
+    "diffHunk" : "@@ -1,1 +1563,1567 @@ * If Distinct is pushdown on left side, it won't apply Distinct after Join as it is not needed.\n */\nobject ReplaceIntersectWithSemiJoin extends Rule[LogicalPlan] {\n  private def canBroadcast(plan: LogicalPlan): Boolean = {\n    plan.stats.sizeInBytes >= 0 && plan.stats.sizeInBytes <= SQLConf.get.autoBroadcastJoinThreshold"
+  },
+  {
+    "id" : "aea5a7f2-af2e-4901-8e27-666467bd6ebe",
+    "prId" : 28424,
+    "prUrl" : "https://github.com/apache/spark/pull/28424#pullrequestreview-407695276",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "674374fb-8106-46a1-8abf-81f6888052e1",
+        "parentId" : null,
+        "authorId" : "f3166ab8-4dba-4d22-b10b-31a984dfa2ad",
+        "body" : "Should we check only for `canBroadcast(Distinct(right)`, since `canBroadcast(right)` will be checked during physical planning in `JoinSelection`.. That way we could avoid having to copy `canBroadcast` logic? ",
+        "createdAt" : "2020-05-07T17:44:40Z",
+        "updatedAt" : "2020-05-07T17:57:28Z",
+        "lastEditedBy" : "f3166ab8-4dba-4d22-b10b-31a984dfa2ad",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "29719f9de51e7026584b7882755d3cd7806ae8f5",
+    "line" : 21,
+    "diffHunk" : "@@ -1,1 +1571,1575 @@    if (!SQLConf.get.optimizeIntersectEnabled) {\n      false\n    } else if (!canBroadcast(right) && canBroadcast(Distinct(right))) {\n      true\n    } else {"
+  },
+  {
+    "id" : "e3d629fb-ca7a-4bc3-ae56-a4517994d8dc",
+    "prId" : 28424,
+    "prUrl" : "https://github.com/apache/spark/pull/28424#pullrequestreview-407695276",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9fe6284c-8ef6-41da-9b0c-3580ffdb39e6",
+        "parentId" : null,
+        "authorId" : "f3166ab8-4dba-4d22-b10b-31a984dfa2ad",
+        "body" : "Do we want to leave the old code as is and add a sperate branch of case match which gets activated on `SQLConf.get.optimizeIntersectEnabled`, that way we could avoid checks for the flag in each of the methods?",
+        "createdAt" : "2020-05-07T17:46:18Z",
+        "updatedAt" : "2020-05-07T17:57:28Z",
+        "lastEditedBy" : "f3166ab8-4dba-4d22-b10b-31a984dfa2ad",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "29719f9de51e7026584b7882755d3cd7806ae8f5",
+    "line" : 59,
+    "diffHunk" : "@@ -1,1 +1609,1613 @@\n  def apply(plan: LogicalPlan): LogicalPlan = plan transform {\n    case Intersect(left, right, false) =>\n      assert(left.output.size == right.output.size)\n      val applyDistinctToLeftSide = shouldApplyDistinctToLeftSide(left)"
+  },
+  {
+    "id" : "7edadfda-e313-4746-b006-0e7baefa0458",
+    "prId" : 28424,
+    "prUrl" : "https://github.com/apache/spark/pull/28424#pullrequestreview-407695276",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9676a1e4-e53b-4540-92ff-fe83113cff2f",
+        "parentId" : null,
+        "authorId" : "f3166ab8-4dba-4d22-b10b-31a984dfa2ad",
+        "body" : "nit: `SQLConf.get.optimizeIntersectEnabled && shouldApplyDistinctBasedOnReductionThreshold(left)`",
+        "createdAt" : "2020-05-07T17:46:51Z",
+        "updatedAt" : "2020-05-07T17:57:28Z",
+        "lastEditedBy" : "f3166ab8-4dba-4d22-b10b-31a984dfa2ad",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "29719f9de51e7026584b7882755d3cd7806ae8f5",
+    "line" : 29,
+    "diffHunk" : "@@ -1,1 +1579,1583 @@\n  private def shouldApplyDistinctToLeftSide(left: LogicalPlan): Boolean = {\n    if (!SQLConf.get.optimizeIntersectEnabled) {\n      false\n    } else {"
+  },
+  {
+    "id" : "05dd8316-fa3f-4118-a2d3-0951aecf09b3",
+    "prId" : 28424,
+    "prUrl" : "https://github.com/apache/spark/pull/28424#pullrequestreview-407695276",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d838e440-c48f-450a-99f2-3d5ca287cfeb",
+        "parentId" : null,
+        "authorId" : "f3166ab8-4dba-4d22-b10b-31a984dfa2ad",
+        "body" : "nit: remove if.. else.. `reductionRatio >= SQLConf.get.optimizeIntersectDistinctReductionThreshold` should do?",
+        "createdAt" : "2020-05-07T17:47:53Z",
+        "updatedAt" : "2020-05-07T17:57:28Z",
+        "lastEditedBy" : "f3166ab8-4dba-4d22-b10b-31a984dfa2ad",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "29719f9de51e7026584b7882755d3cd7806ae8f5",
+    "line" : 47,
+    "diffHunk" : "@@ -1,1 +1597,1601 @@          rowCountBefore\n        }\n        if (reductionRatio >= SQLConf.get.optimizeIntersectDistinctReductionThreshold) {\n          true\n        } else {"
+  },
+  {
+    "id" : "22a9ea53-344c-46b2-aa42-e2e09e4bad2d",
+    "prId" : 28424,
+    "prUrl" : "https://github.com/apache/spark/pull/28424#pullrequestreview-407695276",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c79cf0c6-ed2e-4629-9115-9354fac171dc",
+        "parentId" : null,
+        "authorId" : "f3166ab8-4dba-4d22-b10b-31a984dfa2ad",
+        "body" : "nit: `case _ =>`",
+        "createdAt" : "2020-05-07T17:48:07Z",
+        "updatedAt" : "2020-05-07T17:57:28Z",
+        "lastEditedBy" : "f3166ab8-4dba-4d22-b10b-31a984dfa2ad",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "29719f9de51e7026584b7882755d3cd7806ae8f5",
+    "line" : 52,
+    "diffHunk" : "@@ -1,1 +1602,1606 @@          false\n        }\n      case (_, _) =>\n        // Stats are not available\n        false"
+  },
+  {
+    "id" : "fe4487db-0639-4936-b1f6-80ffc277c704",
+    "prId" : 28424,
+    "prUrl" : "https://github.com/apache/spark/pull/28424#pullrequestreview-407711165",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "21851dc3-ad72-4af1-b999-8f30f514ed03",
+        "parentId" : null,
+        "authorId" : "f3166ab8-4dba-4d22-b10b-31a984dfa2ad",
+        "body" : "If left leg of join is broadcastable, will it still be useful to push the distinct to the. left leg?",
+        "createdAt" : "2020-05-07T18:03:07Z",
+        "updatedAt" : "2020-05-07T18:03:13Z",
+        "lastEditedBy" : "f3166ab8-4dba-4d22-b10b-31a984dfa2ad",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "29719f9de51e7026584b7882755d3cd7806ae8f5",
+    "line" : 32,
+    "diffHunk" : "@@ -1,1 +1582,1586 @@      false\n    } else {\n      shouldApplyDistinctBasedOnReductionThreshold(left)\n    }\n  }"
+  },
+  {
+    "id" : "f464ca63-da06-4bc2-8218-9a416f2b30e9",
+    "prId" : 28424,
+    "prUrl" : "https://github.com/apache/spark/pull/28424#pullrequestreview-429874731",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e396b79e-62a5-44f6-80ba-2b8cf4c7a9ac",
+        "parentId" : null,
+        "authorId" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "body" : "Now that we have `JoinSelectionHelper`, can we use the methods over there?",
+        "createdAt" : "2020-06-12T16:20:24Z",
+        "updatedAt" : "2020-06-12T16:20:24Z",
+        "lastEditedBy" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "29719f9de51e7026584b7882755d3cd7806ae8f5",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +1564,1568 @@ */\nobject ReplaceIntersectWithSemiJoin extends Rule[LogicalPlan] {\n  private def canBroadcast(plan: LogicalPlan): Boolean = {\n    plan.stats.sizeInBytes >= 0 && plan.stats.sizeInBytes <= SQLConf.get.autoBroadcastJoinThreshold\n  }"
   }
 ]

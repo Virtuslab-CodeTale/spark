@@ -53,5 +53,82 @@
     "commit" : "4cc52f74ab8a12599b74ae163e8f4065a99e359d",
     "line" : 110,
     "diffHunk" : "@@ -1,1 +168,172 @@   *   )\n   * @param plan the plan to be traversed\n   * @return the plan where CTE substitution is applied\n   */\n  private def traverseAndSubstituteCTE("
+  },
+  {
+    "id" : "a1792865-0bd5-4f25-bd40-cb82c45ae91f",
+    "prId" : 28407,
+    "prUrl" : "https://github.com/apache/spark/pull/28407#pullrequestreview-403359701",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9f38d08f-d71a-4d88-8a9a-e8e4a07d1a94",
+        "parentId" : null,
+        "authorId" : "a2fcc15e-a51a-42f0-87a6-137048a28e30",
+        "body" : "@cloud-fan Just trying to understand. innerCTEResolved indicates a already resolved CTE or the one we are going to resolve in the subsequent call to substituteCTE ?",
+        "createdAt" : "2020-04-30T07:29:45Z",
+        "updatedAt" : "2020-04-30T09:20:01Z",
+        "lastEditedBy" : "a2fcc15e-a51a-42f0-87a6-137048a28e30",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a2e60535-8431-4e7a-94d7-b881cce8d889",
+        "parentId" : "9f38d08f-d71a-4d88-8a9a-e8e4a07d1a94",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "\"resolved\" here means the `With` is resolved inside this relation. The relation needs further processing to substitute `UnresolvedRelation` with the previous CTE relations.\r\n\r\nThe naming is not very accurate when `legacy = true`, but this probably doesn't matter.",
+        "createdAt" : "2020-04-30T09:09:37Z",
+        "updatedAt" : "2020-04-30T12:09:57Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f7bb0a0f-fedb-4965-bd00-29492b7d8b0a",
+        "parentId" : "9f38d08f-d71a-4d88-8a9a-e8e4a07d1a94",
+        "authorId" : "a2fcc15e-a51a-42f0-87a6-137048a28e30",
+        "body" : "@cloud-fan OK. sounds good.",
+        "createdAt" : "2020-04-30T09:38:46Z",
+        "updatedAt" : "2020-04-30T09:38:46Z",
+        "lastEditedBy" : "a2fcc15e-a51a-42f0-87a6-137048a28e30",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b022e3513a842329b24569840a07a501bed9a188",
+    "line" : 44,
+    "diffHunk" : "@@ -1,1 +152,156 @@    val resolvedCTERelations = new mutable.ArrayBuffer[(String, LogicalPlan)](relations.size)\n    for ((name, relation) <- relations) {\n      val innerCTEResolved = if (isLegacy) {\n        // In legacy mode, outer CTE relations take precedence. Here we don't resolve the inner\n        // `With` nodes, later we will substitute `UnresolvedRelation`s with outer CTE relations."
+  },
+  {
+    "id" : "11f0251c-006c-49f4-97dd-512ae42cfec2",
+    "prId" : 28407,
+    "prUrl" : "https://github.com/apache/spark/pull/28407#pullrequestreview-403323467",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "32cf7bb3-10c6-4fbb-95f4-4629f0ca5863",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "For legacy case, `innerCTEResolved` might contain an inner `WITH`, but seems `substituteCTE` doesn't remove `WITH`.\r\n\r\nThen in later `substituteCTE`s, will we result some untouched `WITH`s in the final query plan ?\r\n\r\n\r\n\r\n\r\n\r\n",
+        "createdAt" : "2020-04-30T07:57:27Z",
+        "updatedAt" : "2020-04-30T09:20:01Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3786d1a6-c744-4d8d-bd01-48f6d5c5aeb9",
+        "parentId" : "32cf7bb3-10c6-4fbb-95f4-4629f0ca5863",
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "The rule `CTESubstitution` runs in a batch many times (https://github.com/apache/spark/blob/master/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/analysis/Analyzer.scala#L208-L212) so those `With`s will be removed in the end because we substitute `child` here: https://github.com/apache/spark/pull/28407/files#diff-d0bfa3367c63988ad7cf33397e643e75R91",
+        "createdAt" : "2020-04-30T08:49:33Z",
+        "updatedAt" : "2020-04-30T09:20:01Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b022e3513a842329b24569840a07a501bed9a188",
+    "line" : 55,
+    "diffHunk" : "@@ -1,1 +163,167 @@      }\n      // CTE definition can reference a previous one\n      resolvedCTERelations += (name -> substituteCTE(innerCTEResolved, resolvedCTERelations))\n    }\n    resolvedCTERelations"
   }
 ]

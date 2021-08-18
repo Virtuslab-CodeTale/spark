@@ -75,5 +75,60 @@
     "commit" : "71496bdc4d5c8081139e5a26fa9bddfa1ddc38ed",
     "line" : 9,
     "diffHunk" : "@@ -1,1 +89,93 @@    ByteBuffer buffer = getBuffer(requiredBytes);\n    for (int i = 0; i < total; i += 1) {\n      c.putLong(rowId + i, Integer.toUnsignedLong(buffer.getInt()));\n    }\n  }"
+  },
+  {
+    "id" : "3157207f-539d-4d86-8dcf-32e82174ba9f",
+    "prId" : 28477,
+    "prUrl" : "https://github.com/apache/spark/pull/28477#pullrequestreview-407738091",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "663a025c-6229-416e-b195-1562f7506c8e",
+        "parentId" : null,
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "nit: How about:\r\n```java\r\n    if (rebase) {\r\n      if (failIfRebase) {\r\n        throw DataSourceUtils.newRebaseExceptionInRead(\"Parquet\");\r\n      } else {\r\n        for (int i = 0; i < total; i += 1) {\r\n          c.putInt(rowId + i, RebaseDateTime.rebaseJulianToGregorianDays(buffer.getInt()));\r\n        }\r\n      }\r\n    } else {\r\n```",
+        "createdAt" : "2020-05-07T19:38:06Z",
+        "updatedAt" : "2020-05-12T14:35:21Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "eb61edb3058653d40ac35e3e92d4314e7011cc01",
+    "line" : 31,
+    "diffHunk" : "@@ -1,1 +96,100 @@      rebase |= buffer.getInt(buffer.position() + i * 4) < RebaseDateTime.lastSwitchJulianDay();\n    }\n    if (rebase) {\n      if (failIfRebase) {\n        throw DataSourceUtils.newRebaseExceptionInRead(\"Parquet\");"
+  },
+  {
+    "id" : "d9f25733-f394-44d0-9d1f-ba6e25614894",
+    "prId" : 28406,
+    "prUrl" : "https://github.com/apache/spark/pull/28406#pullrequestreview-404035063",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "43a58d8d-80d9-4804-a69d-09fa48f63020",
+        "parentId" : null,
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "The byte code of the loop is:\r\n```\r\n    LINENUMBER 136 L6\r\n    ILOAD 6\r\n    ALOAD 5\r\n    ALOAD 5\r\n    INVOKEVIRTUAL java/nio/ByteBuffer.position ()I\r\n    ILOAD 7\r\n    BIPUSH 8\r\n    IMUL\r\n    IADD\r\n    INVOKEVIRTUAL java/nio/ByteBuffer.getLong (I)J\r\n    INVOKESTATIC org/apache/spark/sql/catalyst/util/RebaseDateTime.lastSwitchJulianTs ()J\r\n    LCMP\r\n    IFGE L7\r\n    ICONST_1\r\n    GOTO L8\r\n```\r\nWe could avoid mul like \r\n```java\r\n    int pos = buffer.position();\r\n    int endPos = pos + total * 8;\r\n    long threshold = RebaseDateTime.lastSwitchJulianTs();\r\n    while (pos < endPos) {\r\n      rebase |= buffer.getLong(pos) < threshold;\r\n      pos += 8;\r\n    }\r\n```\r\nWould it be faster?",
+        "createdAt" : "2020-04-30T18:48:23Z",
+        "updatedAt" : "2020-04-30T18:48:29Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "65c82860-6a92-48ab-b70f-3cf3aa9ba5c0",
+        "parentId" : "43a58d8d-80d9-4804-a69d-09fa48f63020",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I tried it and the perf has no difference.",
+        "createdAt" : "2020-05-01T06:12:23Z",
+        "updatedAt" : "2020-05-01T06:12:24Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5a3009b99a1c4324d5bd109604fb71ff6f251b19",
+    "line" : 54,
+    "diffHunk" : "@@ -1,1 +133,137 @@    ByteBuffer buffer = getBuffer(requiredBytes);\n    boolean rebase = false;\n    for (int i = 0; i < total; i += 1) {\n      rebase |= buffer.getLong(buffer.position() + i * 8) < RebaseDateTime.lastSwitchJulianTs();\n    }"
   }
 ]

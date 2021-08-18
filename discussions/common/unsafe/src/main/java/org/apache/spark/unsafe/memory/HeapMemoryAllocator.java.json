@@ -1,0 +1,46 @@
+[
+  {
+    "id" : "e46e8c34-dded-497c-80d1-6dc2b4ad0139",
+    "prId" : 28389,
+    "prUrl" : "https://github.com/apache/spark/pull/28389#pullrequestreview-402028456",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "96b803c9-8686-4c45-bc34-b8b926a0ea75",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "I'm probably missing something, but how does this help? concurrent access is already excluded.\r\n",
+        "createdAt" : "2020-04-28T14:43:00Z",
+        "updatedAt" : "2020-04-28T14:43:01Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c06a4b6e-669d-44d1-a9b6-71d900e5bd70",
+        "parentId" : "96b803c9-8686-4c45-bc34-b8b926a0ea75",
+        "authorId" : "70434cdc-cd1d-4ed4-b663-ff728634946a",
+        "body" : "You're right. I checked my executor log again and I find the executor got NPE first\r\n```\r\njava.lang.NullPointerException\r\n\tat org.apache.spark.unsafe.memory.HeapMemoryAllocator.allocate(HeapMemoryAllocator.java:58)\r\n\tat org.apache.spark.memory.TaskMemoryManager.allocatePage(TaskMemoryManager.java:302)\r\n\tat org.apache.spark.memory.MemoryConsumer.allocateArray(MemoryConsumer.java:96)\r\n\tat org.apache.spark.unsafe.map.BytesToBytesMap.allocate(BytesToBytesMap:800)\r\n\t...\r\n```\r\n And later got the NoSuchElementExceptionException.\r\n```\r\njava.util.NoSuchElementExceptionException\r\n        at java.util.LinkedList.removeFirst(LinkedList.java:270)\r\n        at java.util.LinkedList.remove(LinkedList.java:685)\r\n\tat org.apache.spark.unsafe.memory.HeapMemoryAllocator.allocate(HeapMemoryAllocator.java:57)\r\n\tat org.apache.spark.memory.TaskMemoryManager.allocatePage(TaskMemoryManager.java:302)\r\n\tat org.apache.spark.memory.MemoryConsumer.allocateArray(MemoryConsumer.java:96)\r\n\tat org.apache.spark.unsafe.map.BytesToBytesMap.allocate(BytesToBytesMap:800)\r\n\t...\r\n```\r\nBut I can't find out why NPE error here. Maybe a null WeakReference<long[]> added?\r\nI updated the JIRA SPARK-31592.",
+        "createdAt" : "2020-04-28T16:35:10Z",
+        "updatedAt" : "2020-04-28T16:35:11Z",
+        "lastEditedBy" : "70434cdc-cd1d-4ed4-b663-ff728634946a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3c72850b-545c-4a3e-9e58-876e1ec8b7d7",
+        "parentId" : "96b803c9-8686-4c45-bc34-b8b926a0ea75",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "I don't see how it can happen. Is this on 2.4, master? the only thing added is a new WeakReference(), which can't be null.",
+        "createdAt" : "2020-04-28T16:51:14Z",
+        "updatedAt" : "2020-04-28T16:51:14Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b0d062829a44e8f045b4f5f8ae1762f66878f8c7",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +51,55 @@    assert (alignedSize >= size);\n    if (shouldPool(alignedSize)) {\n      synchronized (bufferPoolsBySize) {\n        final LinkedList<WeakReference<long[]>> pool = bufferPoolsBySize.get(alignedSize);\n        if (pool != null) {"
+  }
+]
