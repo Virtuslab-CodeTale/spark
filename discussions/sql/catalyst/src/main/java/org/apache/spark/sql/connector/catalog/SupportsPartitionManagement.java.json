@@ -152,5 +152,126 @@
     "commit" : "4c5cd182f7a008cc8363db846e60410e8aead4e3",
     "line" : 20,
     "diffHunk" : "@@ -1,1 +80,84 @@     */\n    default boolean partitionExists(InternalRow ident) {\n      String[] partitionNames = partitionSchema().names();\n      if (ident.numFields() == partitionNames.length) {\n        return listPartitionIdentifiers(partitionNames, ident).length > 0;"
+  },
+  {
+    "id" : "adacb890-a6a1-469e-b7ff-d1db9b141a4c",
+    "prId" : 30514,
+    "prUrl" : "https://github.com/apache/spark/pull/30514#pullrequestreview-539484589",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "be11ed16-27dc-4c1c-9349-4e0ba0349d7f",
+        "parentId" : null,
+        "authorId" : "0f4ef4e8-09be-436f-b743-bf8fbc343490",
+        "body" : "How about `listPartitionIdentifiers(StructType column, InternalRow ident)`?",
+        "createdAt" : "2020-11-26T17:04:49Z",
+        "updatedAt" : "2020-11-26T17:17:27Z",
+        "lastEditedBy" : "0f4ef4e8-09be-436f-b743-bf8fbc343490",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "21a0df52-e5b4-4331-9c13-9882b53e963f",
+        "parentId" : "be11ed16-27dc-4c1c-9349-4e0ba0349d7f",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "`StructType` requires to set additional fields like `nullable`, `metadata` and etc. that could be not necessary to list partitions. For example, I use this method in https://github.com/apache/spark/pull/30398/files#diff-b8fcff1b4de2d6e3641609dc02db791af8c56c2660123fa2b4afd408597fb401R44 where names are coming from `ResolvedPartitionSpec`. With our proposal, I will have to extract `StructType` from the partition schema before calling `listPartitionIdentifiers` which is not convenient ( and necessary) from my point of view. ",
+        "createdAt" : "2020-11-26T17:36:13Z",
+        "updatedAt" : "2020-11-26T17:36:14Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "99cd1c229c4a1ca3d414f9b639c30492c634c24a",
+    "line" : 39,
+    "diffHunk" : "@@ -1,1 +116,120 @@     * @return an array of Identifiers for the partitions\n     */\n    InternalRow[] listPartitionIdentifiers(String[] names, InternalRow ident);\n}"
+  },
+  {
+    "id" : "3af8ec4e-f944-4761-b1ee-16db56440fbe",
+    "prId" : 30514,
+    "prUrl" : "https://github.com/apache/spark/pull/30514#pullrequestreview-539485085",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9210ffa9-d2b8-4c04-9c16-de4fb5f30a1a",
+        "parentId" : null,
+        "authorId" : "0f4ef4e8-09be-436f-b743-bf8fbc343490",
+        "body" : "This PR also changed this API. In the past, we coud use this API to check wether table had partitions",
+        "createdAt" : "2020-11-26T17:17:23Z",
+        "updatedAt" : "2020-11-26T17:17:27Z",
+        "lastEditedBy" : "0f4ef4e8-09be-436f-b743-bf8fbc343490",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "220b51d0-f56d-430e-8e36-a13ba255f16a",
+        "parentId" : "9210ffa9-d2b8-4c04-9c16-de4fb5f30a1a",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "After the changes, you can do the same, right?",
+        "createdAt" : "2020-11-26T17:37:21Z",
+        "updatedAt" : "2020-11-26T17:37:21Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "99cd1c229c4a1ca3d414f9b639c30492c634c24a",
+    "line" : 11,
+    "diffHunk" : "@@ -1,1 +80,84 @@     * @return true if the partition exists, false otherwise\n     */\n    default boolean partitionExists(InternalRow ident) {\n        String[] partitionNames = partitionSchema().names();\n        String[] requiredNames = Arrays.copyOfRange(partitionNames, 0, ident.numFields());"
+  },
+  {
+    "id" : "1b254153-32fa-465c-9567-6ea99015cec3",
+    "prId" : 30514,
+    "prUrl" : "https://github.com/apache/spark/pull/30514#pullrequestreview-540935728",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d634e407-e860-4853-b7e2-3b998277e907",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "shall we fail if the given `ident` is only a prefix? `partitionExists` sounds like it should be applied to a certain partition.\r\n\r\nBTW which command needs it?",
+        "createdAt" : "2020-11-30T09:06:15Z",
+        "updatedAt" : "2020-11-30T09:06:15Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "99b28369-7ddd-44b6-99c3-b0b989325141",
+        "parentId" : "d634e407-e860-4853-b7e2-3b998277e907",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "It uses in tests a lot, and in:\r\n- https://github.com/apache/spark/blob/60fa8e304d1284c269b8ac6be9a3fd65197ef6ec/sql/catalyst/src/test/scala/org/apache/spark/sql/connector/InMemoryAtomicPartitionTable.scala#L61\r\n- https://github.com/apache/spark/blob/60fa8e304d1284c269b8ac6be9a3fd65197ef6ec/sql/catalyst/src/test/scala/org/apache/spark/sql/connector/InMemoryAtomicPartitionTable.scala#L71\r\n- https://github.com/apache/spark/blob/1eb236b9360a000afc30424341698fe26ee96d0f/sql/core/src/main/scala/org/apache/spark/sql/execution/datasources/v2/AlterTableAddPartitionExec.scala#L40\r\n- https://github.com/apache/spark/blob/1eb236b9360a000afc30424341698fe26ee96d0f/sql/core/src/main/scala/org/apache/spark/sql/execution/datasources/v2/AlterTableDropPartitionExec.scala#L38\r\n\r\nI guess, we can rewrite the cases.",
+        "createdAt" : "2020-11-30T10:28:12Z",
+        "updatedAt" : "2020-11-30T10:28:13Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a2ed0124-55a4-4d23-af6e-c38e14c01cd8",
+        "parentId" : "d634e407-e860-4853-b7e2-3b998277e907",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "It seems like we always call it with a complete partition spec.",
+        "createdAt" : "2020-11-30T13:53:06Z",
+        "updatedAt" : "2020-11-30T13:53:06Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "83528d7c-b361-4d4f-8325-baaf5a226e66",
+        "parentId" : "d634e407-e860-4853-b7e2-3b998277e907",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "anyway it's not related to this PR.",
+        "createdAt" : "2020-11-30T14:03:30Z",
+        "updatedAt" : "2020-11-30T14:03:30Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "99cd1c229c4a1ca3d414f9b639c30492c634c24a",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +82,86 @@    default boolean partitionExists(InternalRow ident) {\n        String[] partitionNames = partitionSchema().names();\n        String[] requiredNames = Arrays.copyOfRange(partitionNames, 0, ident.numFields());\n        return listPartitionIdentifiers(requiredNames, ident).length > 0;\n    }"
   }
 ]

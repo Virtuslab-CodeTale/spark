@@ -273,5 +273,632 @@
     "commit" : "35d06150f37e01256314af4956c6e8fdcf7244b4",
     "line" : 74,
     "diffHunk" : "@@ -1,1 +760,764 @@        if (mergeStatus != null &&\n          (mapIndex.isEmpty || mergeStatus.tracker.contains(mapIndex.get))) {\n          shuffleStatus.removeMergeResult(reduceId, bmAddress)\n          incrementEpoch()\n        }"
+  },
+  {
+    "id" : "e83e5ee2-a1ad-4a4e-b478-a8e4fe253f11",
+    "prId" : 30480,
+    "prUrl" : "https://github.com/apache/spark/pull/30480#pullrequestreview-540811155",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4ea1dd31-761c-4f4a-b04f-a364e51a1f09",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Shall we ensure `mergeStatus.totalSize > 0` before updating here?",
+        "createdAt" : "2020-11-30T11:38:50Z",
+        "updatedAt" : "2021-04-19T23:44:44Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d1422bdd5a7b17c69a43208c23becf76a4bad16c",
+    "line" : 932,
+    "diffHunk" : "@@ -1,1 +1415,1419 @@            // ShuffleBlockId with mapId being SHUFFLE_PUSH_MAP_ID to indicate this is\n            // a merged shuffle block.\n            splitsByAddress.getOrElseUpdate(mergeStatus.location, ListBuffer()) +=\n              ((ShuffleBlockId(shuffleId, SHUFFLE_PUSH_MAP_ID, partId), mergeStatus.totalSize, -1))\n            // For the \"holes\" in this pre-merged shuffle partition, i.e., unmerged mapper"
+  },
+  {
+    "id" : "cfb3a0bb-c67a-487a-93c5-9df6435f8d11",
+    "prId" : 30480,
+    "prUrl" : "https://github.com/apache/spark/pull/30480#pullrequestreview-541380537",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "11890564-9359-4b3a-81bd-c04b8027a72a",
+        "parentId" : null,
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "`invalidateSerializedMergeOutputStatusCache` should be done if `mergeStatuses(reduceId) != status`.\r\n",
+        "createdAt" : "2020-11-30T23:39:41Z",
+        "updatedAt" : "2021-04-19T23:44:44Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d1422bdd5a7b17c69a43208c23becf76a4bad16c",
+    "line" : 101,
+    "diffHunk" : "@@ -1,1 +192,196 @@      invalidateSerializedMergeOutputStatusCache()\n    }\n    mergeStatuses(reduceId) = status\n  }\n"
+  },
+  {
+    "id" : "47d5f7e9-b731-40d9-b20f-ba9556d48b03",
+    "prId" : 30480,
+    "prUrl" : "https://github.com/apache/spark/pull/30480#pullrequestreview-541380537",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "cd0d3f01-886a-4754-a27d-7274de7f9689",
+        "parentId" : null,
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "Add `@return` with details for both methods.",
+        "createdAt" : "2020-11-30T23:52:05Z",
+        "updatedAt" : "2021-04-19T23:44:44Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d1422bdd5a7b17c69a43208c23becf76a4bad16c",
+    "line" : 326,
+    "diffHunk" : "@@ -1,1 +515,519 @@   *         and the second item is a sequence of (shuffle block ID, shuffle block size, map index)\n   *         tuples describing the shuffle blocks that are stored at that block manager.\n   */\n  def getMapSizesForMergeResult(\n      shuffleId: Int,"
+  },
+  {
+    "id" : "3aad2046-657b-4047-b95b-b64d7a7f6491",
+    "prId" : 30480,
+    "prUrl" : "https://github.com/apache/spark/pull/30480#pullrequestreview-617044087",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "306f1290-8fa5-4231-8620-d14cd6b2b98c",
+        "parentId" : null,
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "Some of the missing maps can be colocated on the same node - if blocks were not pushed due to map output for reducer being large. So this is a more conservative estimate for locality preference.",
+        "createdAt" : "2021-03-08T16:17:36Z",
+        "updatedAt" : "2021-04-19T23:44:44Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8458db47-0257-4935-bceb-0440659c08ee",
+        "parentId" : "306f1290-8fa5-4231-8620-d14cd6b2b98c",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "That is true.\r\nAlthough we can check among MapStatus to figure this part out as well, it does not change the locality preference significantly.\r\n`REDUCER_PREF_LOCS_FRACTION` is hard coded to 0.2, a merged shuffle partition in almost all cases would have more than 20% of the blocks merged.\r\nThe average merge ratio in terms of number of blocks on our cluster after 100% rollout is around 90%.",
+        "createdAt" : "2021-03-21T17:36:06Z",
+        "updatedAt" : "2021-04-19T23:44:44Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d1422bdd5a7b17c69a43208c23becf76a4bad16c",
+    "line" : 551,
+    "diffHunk" : "@@ -1,1 +894,898 @@          if (status != null && status.getNumMissingMapOutputs(numMaps).toDouble / numMaps\n            <= (1 - REDUCER_PREF_LOCS_FRACTION)) {\n            Seq(status.location.host)\n          } else {\n            Nil"
+  },
+  {
+    "id" : "bab2aa13-77b0-4f5b-a432-aef4164d91cc",
+    "prId" : 30480,
+    "prUrl" : "https://github.com/apache/spark/pull/30480#pullrequestreview-617082848",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e3df59f2-e2bb-46d0-a94b-a5ad4d665e3b",
+        "parentId" : null,
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "Note: With data skew, it is possible that merged output is smaller in size than what is computed from `shuffleLocalityEnabled` case - particularly given these mappers could be running on the same host.\r\nPractically, this is unlikely.",
+        "createdAt" : "2021-03-08T16:19:06Z",
+        "updatedAt" : "2021-04-19T23:44:44Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d9d44a82-52ca-4e8b-b183-a1114e9c18b1",
+        "parentId" : "e3df59f2-e2bb-46d0-a94b-a5ad4d665e3b",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "This is true.\r\nThe consideration is to optimize both the local fetched block size and the reduction of shuffle fetch RPCs.\r\nAlthough only calculating based on number of blocks instead of the size of the blocks would lead to slight inaccuracy, it should be ignorable since the case where most of the mappers for the skewed partition run on the same host should very unlikely.\r\nThe current approach would lead to satisfactory enough calculation while preserving the simplicity in the implementation.",
+        "createdAt" : "2021-03-22T00:24:39Z",
+        "updatedAt" : "2021-04-19T23:44:44Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d1422bdd5a7b17c69a43208c23becf76a4bad16c",
+    "line" : 574,
+    "diffHunk" : "@@ -1,1 +917,921 @@          Nil\n        }\n      }\n    } else {\n      Nil"
+  },
+  {
+    "id" : "3e80b3d0-9d27-476a-bc79-96355fa16add",
+    "prId" : 30480,
+    "prUrl" : "https://github.com/apache/spark/pull/30480#pullrequestreview-541380537",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d5fd62be-89d2-432e-963f-c1a478a6a5d5",
+        "parentId" : null,
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "Add a note about `chunkBitmap`",
+        "createdAt" : "2021-03-08T16:31:10Z",
+        "updatedAt" : "2021-04-19T23:44:44Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d1422bdd5a7b17c69a43208c23becf76a4bad16c",
+    "line" : 344,
+    "diffHunk" : "@@ -1,1 +533,537 @@   *         and the second item is a sequence of (shuffle block ID, shuffle block size, map index)\n   *         tuples describing the shuffle blocks that are stored at that block manager.\n   */\n  def getMapSizesForMergeResult(\n      shuffleId: Int,"
+  },
+  {
+    "id" : "670f7501-40e9-4900-bcbb-86cb99aa8ee2",
+    "prId" : 30480,
+    "prUrl" : "https://github.com/apache/spark/pull/30480#pullrequestreview-634022310",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b1bb4d66-51e3-493f-9a60-25ce22021753",
+        "parentId" : null,
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "If `fetchMergeResult == true`, is it right that there is an expectation that `(mapOutputStatuses == null) == (mergeResultStatuses == null)` ?\r\n\r\nIf yes, can we simplify this ?\r\na) Make this method simpler by using that condition.\r\nb) Do we have any usecase for `GetMergeResultStatuses` withough also fetching  `GetMapOutputStatuses` immediately before ? If not, combine both to avoid two rpc's when `fetchMergeResult == true` ?",
+        "createdAt" : "2021-03-08T16:48:46Z",
+        "updatedAt" : "2021-04-19T23:44:44Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "24d5332e-c63f-4f22-9534-78a498225ae4",
+        "parentId" : "b1bb4d66-51e3-493f-9a60-25ce22021753",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "That's not always true.\r\nWe currently fetch map status and merge status using 2 separate RPCs.\r\nAlthough the fetching of these statuses is guarded by the lock, the initial check at line 1113 for these statuses being not null is out of the lock.\r\nSo, it would be possible that a task might see the map status being non-null while merge status being null.\r\n\r\nWe always need to fetch both map status and merge status together, either during the initial fetch or during fallback.\r\nCombine both RPCs into 1 would increase the code complexity.\r\nFor now, the RPC just returns the pre-serialized bytes for either MapStatus array or MergeStatus array.\r\nIf we want to combine both into a single RPC, we would need to define additional RPC messages so that we can encode the 2 byte arrays for serialized MapStatus array and MergeStatus array together.\r\nCombining both together does not seem to bring enough benefits.\r\nWe haven't observed any issue indicating Spark driver performance regression with doubling the number of RPCs for fetching shuffle statuses.\r\nThis would also help to keep code simpler.",
+        "createdAt" : "2021-03-21T17:46:45Z",
+        "updatedAt" : "2021-04-19T23:44:44Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "229886df-6624-4717-8cb0-06fbbae4030b",
+        "parentId" : "b1bb4d66-51e3-493f-9a60-25ce22021753",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "I would expect multiple rpc's to not be the preferred option given the impact on driver, but code simplicity needs to be balanced against that.\r\n+CC @JoshRosen, @Ngone51 who last made changes here. Any thoughts on this ?",
+        "createdAt" : "2021-03-26T06:34:31Z",
+        "updatedAt" : "2021-04-19T23:44:44Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "62c128d4-5045-46fb-88fd-3d2fe548c2c1",
+        "parentId" : "b1bb4d66-51e3-493f-9a60-25ce22021753",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "I'd prefer to combine them. Actually, the first time when I reviewed this PR, I began to think about a unified way to provide a consistent API for both map status and merged status in `MapOutputTracker` & `ShuffleStatus`. Unfortunately, I didn't get a good idea.\r\n\r\nI think one RPC would ease the error handling for us. Not sure how much complexity you'd expect?\r\n\r\nAnd I'd suggest adding an additional new RPC for the combined case and leave the current one as it is, so that we don't affect the existing code path when push-based shuffle disabled.",
+        "createdAt" : "2021-03-26T13:28:54Z",
+        "updatedAt" : "2021-04-19T23:44:44Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "64f51bcc-2386-419c-9917-5f7b97e68a14",
+        "parentId" : "b1bb4d66-51e3-493f-9a60-25ce22021753",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "One option could be replace `GetMergeResultStatuses` with `GetMapOutputAndMergeResultStatuses`.\r\nThat keeps non push based shuffle codepaths unchanged, and when push based shuffle is enabled, a single rpc handles the response : the code change would mirror what has been done for `GetMergeResultStatuses` already.\r\n\r\nThoughts @Ngone51, @Victsm, @venkata91 ?",
+        "createdAt" : "2021-03-27T09:03:58Z",
+        "updatedAt" : "2021-04-19T23:44:44Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3b67521b-faa6-400c-a117-d36d4d8d3ab7",
+        "parentId" : "b1bb4d66-51e3-493f-9a60-25ce22021753",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "+1. This actually what I mean above.",
+        "createdAt" : "2021-03-29T01:44:48Z",
+        "updatedAt" : "2021-04-19T23:44:44Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dae5fe61-5b3b-4c2b-99be-fd44c4a2930a",
+        "parentId" : "b1bb4d66-51e3-493f-9a60-25ce22021753",
+        "authorId" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "body" : "With the current RPC (`RpcCallContext`) mechanism with `MapOutputTracker`, we can only send one response as oppose to other RPC mechanisms with in Spark. If we have to combine getting both `MapStatuses` and `MergeStatuses` when push based shuffle is enabled, then we have couple of options:\r\n\r\n1. Encode both MapStatuses and MergeStatuses in the same `Array[Byte]` getting returned from `serializedOutputStatus` with some encoding scheme like `length` in bytes of mapStatuses as first part and then mapStatuses similarly for mergeStatuses and in the `deserializeOutputStatuses` we have to decode it accordingly for the output of `GetMapOutputAndMergeResultStatuses` RPC call. This is some what not a cleaner approach as the client keeps the semantics of encoding/decoding of the byte array instead of the RPC layer itself. Although this is already being done wrt whether the mapStatuses are a `DIRECT` fetch or `BROADCAST` fetch. \r\n2. If not, we might need to make changes to `RpcCallContext` in order to respond with 2 byte arrays. This seems to be lot of additional overhead just for this purpose.\r\n\r\nAny other suggestions? cc @Victsm @mridulm @Ngone51 ",
+        "createdAt" : "2021-03-30T19:43:44Z",
+        "updatedAt" : "2021-04-19T23:44:44Z",
+        "lastEditedBy" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "694e7bda-ffdb-4ae7-acba-0e5a77849632",
+        "parentId" : "b1bb4d66-51e3-493f-9a60-25ce22021753",
+        "authorId" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "body" : "Gentle ping @Victsm @mridulm @Ngone51 \r\n",
+        "createdAt" : "2021-04-05T17:48:04Z",
+        "updatedAt" : "2021-04-19T23:44:44Z",
+        "lastEditedBy" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "19b38151-62c6-4bc1-9460-c8dd8a2c3cf2",
+        "parentId" : "b1bb4d66-51e3-493f-9a60-25ce22021753",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "That is an implementation detail of what is response of `GetMapOutputAndMergeResultStatuses` right ?\r\nIt can simply be encoding of `Array[Array[Byte]]` (for example) - where result(0) is for `MapStatus` and result(1) is for `MergeStatus` - keeping everything else same ?",
+        "createdAt" : "2021-04-05T18:11:40Z",
+        "updatedAt" : "2021-04-19T23:44:44Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "721e637d-61d9-4e60-9e0b-7f583f488c65",
+        "parentId" : "b1bb4d66-51e3-493f-9a60-25ce22021753",
+        "authorId" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "body" : "Makes sense @mridulm Instead of `Array[Array[Byte]]` I used a tuple of `(Array[Byte], Array[Byte])`. cc @Victsm ",
+        "createdAt" : "2021-04-12T19:39:33Z",
+        "updatedAt" : "2021-04-19T23:44:44Z",
+        "lastEditedBy" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dc62cbc4-f9ee-43f3-8163-ee6a771024f0",
+        "parentId" : "b1bb4d66-51e3-493f-9a60-25ce22021753",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "I am fine with Tuple as well.\r\n+CC @Ngone51 in case you have any other thoughts.",
+        "createdAt" : "2021-04-12T22:41:58Z",
+        "updatedAt" : "2021-04-19T23:44:44Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d1422bdd5a7b17c69a43208c23becf76a4bad16c",
+    "line" : 754,
+    "diffHunk" : "@@ -1,1 +1209,1213 @@      } else {\n        (mapOutputStatuses, mergeOutputStatuses)\n      }\n    } else {\n      val statuses = mapStatuses.get(shuffleId).orNull"
+  },
+  {
+    "id" : "29b537e1-e2a9-413e-993e-246ce4b64225",
+    "prId" : 30480,
+    "prUrl" : "https://github.com/apache/spark/pull/30480#pullrequestreview-633913941",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "088bf802-834d-46bc-9038-bef3b2983dc3",
+        "parentId" : null,
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "Can we rephrase this as a `TODO` comment ? This will be something we should support in future.",
+        "createdAt" : "2021-03-08T16:55:22Z",
+        "updatedAt" : "2021-04-19T23:44:44Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "857fd351-425b-4c21-948b-02a3ec16fc95",
+        "parentId" : "088bf802-834d-46bc-9038-bef3b2983dc3",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "Just to further clarify a bit.\r\nPush-based shuffle cannot support the current map ID based subdivision of a shuffle partition into multiple smaller parts, because the blocks from different mappers are merged out of order.\r\nWe could, however, support the chunk ID based subdivision of a merged shuffle partition.\r\nWhen blocks get merged, the current approach already divides the merged shuffle file into multiple fix-sized chunks.\r\nTo leverage this, it would also require merging potentially skewed shuffle partition as well.",
+        "createdAt" : "2021-03-21T17:51:05Z",
+        "updatedAt" : "2021-04-19T23:44:44Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b445e268-5eff-4381-9558-2c4702c5fe26",
+        "parentId" : "088bf802-834d-46bc-9038-bef3b2983dc3",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "There are couple of things here:\r\n\r\na) Can we leverage existing skew algo ? My understanding is we can, though it might not be necessarily as optimal as current reads for push based shuffle.\r\nWhat I mean is, if reducer r1.1 is processing m1-m100 and r1.2 is processing m101-m200 for reducer partition 1, we can ensure that m1-m100 can be satisfied with bin packing to get better read than reading from 100 mappers/ESS - right ? It is not as optimal as reading m1-m200, but it will be better than alternative.\r\n\r\nb) Alternative ways to split mapper input for a reducer : which is what you described, and this can be an option as spark evolves.\r\n\r\nGiven both of these, we would want to make the comment a TODO with a jira for it - which can be addressed in some subsequent work.\r\n\r\nOr are there concerns with (a) or (b) that I am missing ?",
+        "createdAt" : "2021-03-26T03:40:27Z",
+        "updatedAt" : "2021-04-19T23:44:44Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7617aeee-1dd0-4e1b-b123-2b98e4bce8e0",
+        "parentId" : "088bf802-834d-46bc-9038-bef3b2983dc3",
+        "authorId" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "body" : "Added a TODO comment along with the [JIRA](https://issues.apache.org/jira/browse/SPARK-35036). Please take a look @mridulm and @Victsm ",
+        "createdAt" : "2021-04-12T19:56:34Z",
+        "updatedAt" : "2021-04-19T23:44:44Z",
+        "lastEditedBy" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d1422bdd5a7b17c69a43208c23becf76a4bad16c",
+    "line" : 917,
+    "diffHunk" : "@@ -1,1 +1400,1404 @@    // subrange requests. However, when a reduce task needs to fetch blocks from a subrange of\n    // map outputs, it usually indicates skewed partitions which push-based shuffle delegates\n    // to AQE to handle.\n    // TODO: SPARK-35036: Instead of reading map blocks in case of AQE with Push based shuffle,\n    // TODO: improve push based shuffle to read partial merged blocks satisfying the start/end"
+  },
+  {
+    "id" : "ed46ae42-8f00-4bb1-afb5-9ff9113e27b2",
+    "prId" : 30480,
+    "prUrl" : "https://github.com/apache/spark/pull/30480#pullrequestreview-635038497",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "fbb7b17c-816d-43e1-94bc-76242458b2dc",
+        "parentId" : null,
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "Both `GetMapStatusMessage` and `GetMergeStatusMessage` are doing pretty much same thing except for log message difference and `isMapOutput` flag difference.\r\nAdd a local method and delegate to it to minimize duplication.",
+        "createdAt" : "2021-03-26T06:19:03Z",
+        "updatedAt" : "2021-04-19T23:44:44Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ada51f75-a97e-4944-87b4-c923687f5eb2",
+        "parentId" : "fbb7b17c-816d-43e1-94bc-76242458b2dc",
+        "authorId" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "body" : "As part of https://issues.apache.org/jira/browse/SPARK-34826  we would be adding one more message for getting shuffle mergers which is why made this change. ",
+        "createdAt" : "2021-03-28T23:31:26Z",
+        "updatedAt" : "2021-04-19T23:44:44Z",
+        "lastEditedBy" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "47f30c46-6d89-4c18-bc58-3a79e3e52744",
+        "parentId" : "fbb7b17c-816d-43e1-94bc-76242458b2dc",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "That would be for a new message right ? Will it have changes to these existing messages ? If not, would something like this not work ?\r\n\r\n```\r\n\r\ndef handleStatusMessage(shuffleId: Int, context: RpcCallContext, messageType: String, mapOutput: Boolean): Unit = {\r\n  val hostPort = context.senderAddress.hostPort\r\n  val shuffleStatus = shuffleStatuses.get(shuffleId).head\r\n  logDebug(s\"Handling request to send $messageType output locations for shuffle $shuffleId to $hostPort\")\r\n  context.reply(\r\n    shuffleStatus.serializedOutputStatus(broadcastManager, isLocal, minSizeForBroadcast, conf, isMapOutput = mapOutput))\r\n}\r\n\r\ndata match {\r\n  case GetMapStatusMessage(shuffleId, context) => handleStatusMessage(shuffleId, context, \"map\", true)\r\n  case GetMergeStatusMessage(shuffleId, context) => handleStatusMessage(shuffleId, context, \"map\", false)\r\n}\r\n\r\n```",
+        "createdAt" : "2021-03-29T01:54:05Z",
+        "updatedAt" : "2021-04-19T23:44:44Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7382790d-e559-48cc-90a3-d715e4e1efb6",
+        "parentId" : "fbb7b17c-816d-43e1-94bc-76242458b2dc",
+        "authorId" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "body" : "Addressed this comment.",
+        "createdAt" : "2021-03-30T18:44:21Z",
+        "updatedAt" : "2021-04-19T23:44:44Z",
+        "lastEditedBy" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b90286e2-de9d-4837-b353-78830d90b098",
+        "parentId" : "fbb7b17c-816d-43e1-94bc-76242458b2dc",
+        "authorId" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "body" : "Just realized I totally misunderstood the first comment above @mridulm ",
+        "createdAt" : "2021-04-13T21:23:35Z",
+        "updatedAt" : "2021-04-19T23:44:44Z",
+        "lastEditedBy" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d1422bdd5a7b17c69a43208c23becf76a4bad16c",
+    "line" : 425,
+    "diffHunk" : "@@ -1,1 +654,658 @@              case GetMapAndMergeOutputMessage(shuffleId, context) =>\n                handleStatusMessage(shuffleId, context, true)\n            }\n          } catch {\n            case NonFatal(e) => logError(e.getMessage, e)"
+  },
+  {
+    "id" : "59b4217c-4bfc-4718-9b45-118128abe9ee",
+    "prId" : 30480,
+    "prUrl" : "https://github.com/apache/spark/pull/30480#pullrequestreview-622114344",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "974a3a44-5834-4590-859a-365c3e7d7cc8",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "\"shuffle partition\" is a bit confusing here. The original mapstatus also uses the word `partition`. Maybe, change all \"shuffle partition\" to \"shuffle reduce partition\"?",
+        "createdAt" : "2021-03-26T13:40:01Z",
+        "updatedAt" : "2021-04-19T23:44:44Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d1422bdd5a7b17c69a43208c23becf76a4bad16c",
+    "line" : 36,
+    "diffHunk" : "@@ -1,1 +95,99 @@   * a shuffle partition, or null if not available. When push-based shuffle is enabled, this array\n   * provides a reducer oriented view of the shuffle status specifically for the results of\n   * merging shuffle partition blocks into per-partition merged shuffle files.\n   */\n  val mergeStatuses = if (numReducers > 0) {"
+  },
+  {
+    "id" : "5788e151-35bd-434f-a886-ff3b9c41f105",
+    "prId" : 30480,
+    "prUrl" : "https://github.com/apache/spark/pull/30480#pullrequestreview-638415039",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f33ee4dc-dc29-41a1-9455-6a1c5561dbe2",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "I may miss some discussion after my last discussion, I think this breaches our decision made before:\r\n\r\nwe won't affect the existing code path in the case of map status only.\r\n\r\n\r\nI think you can return the mapstatus only at the sender side to keep the same behavior?",
+        "createdAt" : "2021-04-16T06:14:52Z",
+        "updatedAt" : "2021-04-19T23:44:44Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "75704b1f-228d-4209-86f3-9e3a83b6252b",
+        "parentId" : "f33ee4dc-dc29-41a1-9455-6a1c5561dbe2",
+        "authorId" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "body" : "do you mean separate out the handling of both `GetMapStatusMessage` and `GetMapAndMergeStatusMessage` to avoid returning `(mapStatuses, null)` in the case of `GetMapStatusMessage` and keep it the same way as it is before, just returning `mapStatuses`?",
+        "createdAt" : "2021-04-19T01:42:14Z",
+        "updatedAt" : "2021-04-19T23:44:44Z",
+        "lastEditedBy" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d56d941a-927e-4395-90f5-55f4a6788b61",
+        "parentId" : "f33ee4dc-dc29-41a1-9455-6a1c5561dbe2",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Yes. (cc @mridulm) ",
+        "createdAt" : "2021-04-19T02:02:45Z",
+        "updatedAt" : "2021-04-19T23:44:44Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "402c478c-7f70-4773-b0db-3e5b0baf332c",
+        "parentId" : "f33ee4dc-dc29-41a1-9455-6a1c5561dbe2",
+        "authorId" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "body" : "@Ngone51 I updated the PR assuming that is what you meant with your above comment. Let me know if thats not the case.",
+        "createdAt" : "2021-04-19T02:10:31Z",
+        "updatedAt" : "2021-04-19T23:44:44Z",
+        "lastEditedBy" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d1422bdd5a7b17c69a43208c23becf76a4bad16c",
+    "line" : 727,
+    "diffHunk" : "@@ -1,1 +1187,1191 @@            logInfo(\"Doing the fetch; tracker endpoint = \" + trackerEndpoint)\n            val fetchedBytes =\n              askTracker[(Array[Byte], Array[Byte])](GetMapAndMergeResultStatuses(shuffleId))\n            try {\n              fetchedMapStatuses ="
+  },
+  {
+    "id" : "411398ec-ff51-4302-bc2c-e067558c1751",
+    "prId" : 30480,
+    "prUrl" : "https://github.com/apache/spark/pull/30480#pullrequestreview-638415122",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "952ddce1-76ff-476c-bc3e-dd7a843680be",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "I remember Magnet declares that it's able to fall back to the original fetch (using mapstatus) when fetch failure happens. But, here, it looks like we only collect the merged status for those maps only without backup mapstatuses. (Because in my mind, I think we can collect both merged statues and original mapstatus together so that we can fall back if need). How do we plan to support the fallback?",
+        "createdAt" : "2021-04-16T07:11:35Z",
+        "updatedAt" : "2021-04-19T23:44:44Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8ea88521-036c-40dd-a824-7e7b00e7a682",
+        "parentId" : "952ddce1-76ff-476c-bc3e-dd7a843680be",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "For fallback support we have added the `getMapSizesForMergeResult` methods. Once there is a fetch failure for a merged shuffle block/chunk then the iterator queries the MOT to get all the map statuses for the blocks that are part of that merged shuffle block/chunk using these new methods. For reference this is the PR:\r\nhttps://github.com/apache/spark/pull/32140/",
+        "createdAt" : "2021-04-16T16:28:06Z",
+        "updatedAt" : "2021-04-19T23:44:44Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2d37e5c7-0ca1-4b76-8beb-51176b8a98ee",
+        "parentId" : "952ddce1-76ff-476c-bc3e-dd7a843680be",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "OK, I'll review it in detail when it gets in.",
+        "createdAt" : "2021-04-19T02:10:51Z",
+        "updatedAt" : "2021-04-19T23:44:44Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d1422bdd5a7b17c69a43208c23becf76a4bad16c",
+    "line" : 927,
+    "diffHunk" : "@@ -1,1 +1410,1414 @@      mergeStatuses.get.zipWithIndex.slice(startPartition, endPartition).foreach {\n        case (mergeStatus, partId) =>\n          val remainingMapStatuses = if (mergeStatus != null && mergeStatus.totalSize > 0) {\n            // If MergeStatus is available for the given partition, add location of the\n            // pre-merged shuffle partition for this partition ID. Here we create a"
+  },
+  {
+    "id" : "5dc39c7a-be93-4154-9090-10d8154615c0",
+    "prId" : 30480,
+    "prUrl" : "https://github.com/apache/spark/pull/30480#pullrequestreview-637879033",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e66ec236-5cd1-4ea4-b36f-0ea38d3761a7",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "comment \"test only\"?",
+        "createdAt" : "2021-04-16T07:13:23Z",
+        "updatedAt" : "2021-04-19T23:44:44Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "84f3e786-f6eb-4f29-9b9a-3af82314472b",
+        "parentId" : "e66ec236-5cd1-4ea4-b36f-0ea38d3761a7",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "This is not just for test. It is used by the iterator when fetchfailure happens for a merged block. This is the wip PR that depends on this change https://github.com/apache/spark/pull/32140/",
+        "createdAt" : "2021-04-16T16:22:41Z",
+        "updatedAt" : "2021-04-19T23:44:44Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d1422bdd5a7b17c69a43208c23becf76a4bad16c",
+    "line" : 642,
+    "diffHunk" : "@@ -1,1 +1120,1124 @@  }\n\n  override def getMapSizesForMergeResult(\n      shuffleId: Int,\n      partitionId: Int): Iterator[(BlockManagerId, Seq[(BlockId, Long, Int)])] = {"
+  },
+  {
+    "id" : "cd6e96e8-c0f8-4050-bd72-8f518ed6ace0",
+    "prId" : 30480,
+    "prUrl" : "https://github.com/apache/spark/pull/30480#pullrequestreview-637880001",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "097cc1b6-6f96-42ef-bf53-d42a14220e1e",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "comment \"test only\"?\r\n\r\n",
+        "createdAt" : "2021-04-16T07:13:31Z",
+        "updatedAt" : "2021-04-19T23:44:44Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8c5b43e5-7b3c-4423-9f7c-109a1e544916",
+        "parentId" : "097cc1b6-6f96-42ef-bf53-d42a14220e1e",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "Same as above. Used by the iterator during fallback",
+        "createdAt" : "2021-04-16T16:23:17Z",
+        "updatedAt" : "2021-04-19T23:44:44Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d1422bdd5a7b17c69a43208c23becf76a4bad16c",
+    "line" : 666,
+    "diffHunk" : "@@ -1,1 +1144,1148 @@  }\n\n  override def getMapSizesForMergeResult(\n      shuffleId: Int,\n      partitionId: Int,"
+  },
+  {
+    "id" : "8e60a08e-7937-461f-9603-af28261eb9c7",
+    "prId" : 30480,
+    "prUrl" : "https://github.com/apache/spark/pull/30480#pullrequestreview-639381121",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3ad39beb-dbda-497d-b98c-8d786eb748dd",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Doesn't this path need to respect `shuffleLocalityEnabled` too?",
+        "createdAt" : "2021-04-16T07:30:30Z",
+        "updatedAt" : "2021-04-19T23:44:44Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "943f6455-9e4e-45c5-980e-75019f29a212",
+        "parentId" : "3ad39beb-dbda-497d-b98c-8d786eb748dd",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "I agree that we should make it consistent, but there's also clear difference between locality calculation for push-based shuffle and the original shuffle.\r\nMy understanding of the reason for adding this flag is due to the potentially costly computation for shuffle locality in the original shuffle.\r\nFor push based shuffle, that cost is no longer a concern, and the reducer task can achieve much much better locality.\r\nAlways calculating shuffle locality is preferred.\r\n",
+        "createdAt" : "2021-04-19T23:15:07Z",
+        "updatedAt" : "2021-04-19T23:44:44Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d1422bdd5a7b17c69a43208c23becf76a4bad16c",
+    "line" : 545,
+    "diffHunk" : "@@ -1,1 +888,892 @@      // Check if the map output is pre-merged and if the merge ratio is above the threshold.\n      // If so, the location of the merged block is the preferred location.\n      val preferredLoc = if (pushBasedShuffleEnabled) {\n        shuffleStatus.withMergeStatuses { statuses =>\n          val status = statuses(partitionId)"
   }
 ]

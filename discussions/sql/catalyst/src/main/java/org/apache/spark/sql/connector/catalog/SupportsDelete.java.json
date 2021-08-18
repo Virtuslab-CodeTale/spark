@@ -20,5 +20,181 @@
     "commit" : "b758060948cdb73e939eeb8ca923bc00caf111dd",
     "line" : 24,
     "diffHunk" : "@@ -1,1 +73,77 @@  @Override\n  default boolean truncateTable() {\n    Filter[] filters = new Filter[] { new AlwaysTrue() };\n    boolean canDelete = canDeleteWhere(filters);\n    if (canDelete) {"
+  },
+  {
+    "id" : "66d4fccb-097f-4778-b6a3-1de84bad0e9e",
+    "prId" : 30562,
+    "prUrl" : "https://github.com/apache/spark/pull/30562#pullrequestreview-542574594",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "99f4ac1a-d452-4652-b428-3db302afc83d",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Shall we have `false` as a safer default?",
+        "createdAt" : "2020-12-01T20:44:59Z",
+        "updatedAt" : "2020-12-02T20:15:34Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0ca8cdd7-de97-41a2-9466-2c69b87fa1e7",
+        "parentId" : "99f4ac1a-d452-4652-b428-3db302afc83d",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "I'm wondering if there is a breaking change which we should have `true` here?",
+        "createdAt" : "2020-12-01T20:53:22Z",
+        "updatedAt" : "2020-12-02T20:15:34Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "30b4d3e3-c3e0-4e66-a823-d3c447837bf0",
+        "parentId" : "99f4ac1a-d452-4652-b428-3db302afc83d",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "Unfortunately, this would change the assumptions for existing implementations. Right now, if this interface is implemented, Spark will call `deleteWhere` for the delete. Returning `false` would cause Spark to skip it where the return of this method is used.\r\n\r\nThe original idea was to try to delete using `deleteWhere`, and if that fails to run a more expensive delete. But when we started implementing the more expensive delete, we needed to know during job planning, not job execution, whether the metadata-only delete can be done. This method solves that problem.",
+        "createdAt" : "2020-12-01T20:59:13Z",
+        "updatedAt" : "2020-12-02T20:15:34Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b0f2f0d7-155a-4fca-b7f9-7cbdb52f5ea9",
+        "parentId" : "99f4ac1a-d452-4652-b428-3db302afc83d",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Got it, @rdblue .",
+        "createdAt" : "2020-12-01T22:35:03Z",
+        "updatedAt" : "2020-12-02T20:15:34Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1cb25d47-bc3e-425b-aec4-8c45e6751aa1",
+        "parentId" : "99f4ac1a-d452-4652-b428-3db302afc83d",
+        "authorId" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "body" : "That's correct and the method returns `true` to keep the old behavior by default.",
+        "createdAt" : "2020-12-02T07:57:47Z",
+        "updatedAt" : "2020-12-02T20:15:34Z",
+        "lastEditedBy" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8b909f3abeb6ef84e9496b7f67bdfbf96f86940f",
+    "line" : 22,
+    "diffHunk" : "@@ -1,1 +47,51 @@   */\n  default boolean canDeleteWhere(Filter[] filters) {\n    return true;\n  }\n"
+  },
+  {
+    "id" : "112e5167-16c6-436f-94fb-22e01982309b",
+    "prId" : 30562,
+    "prUrl" : "https://github.com/apache/spark/pull/30562#pullrequestreview-542347981",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "303fec8f-2989-4734-99bc-021a6d18e0cf",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "`deleteWhere` only possibly rejects a delete operation, even the delete isn't possible without significant effort. \r\n\r\nIf `canDeleteWhere` returns false, does it mean `deleteWhere` definitely reject the delete operation?",
+        "createdAt" : "2020-12-01T21:24:06Z",
+        "updatedAt" : "2020-12-02T20:15:34Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e95d353b-71b5-47a9-a460-b954bd1b7b7d",
+        "parentId" : "303fec8f-2989-4734-99bc-021a6d18e0cf",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "I think that would be the case. In our use case, we can tell whether a delete is aligned with partitioning for this check. But, we can also scan through data to determine whether files themselves are fully matched (or not matched) by the filter. We would do the partitioning check here and the more expensive stats-based check in `deleteWhere`.",
+        "createdAt" : "2020-12-01T22:24:59Z",
+        "updatedAt" : "2020-12-02T20:15:34Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8b909f3abeb6ef84e9496b7f67bdfbf96f86940f",
+    "line" : 24,
+    "diffHunk" : "@@ -1,1 +49,53 @@    return true;\n  }\n\n  /**\n   * Delete data from a data source table that matches filter expressions. Note that this method"
+  },
+  {
+    "id" : "71ac6ef5-5dc3-4148-8512-a26326982134",
+    "prId" : 30562,
+    "prUrl" : "https://github.com/apache/spark/pull/30562#pullrequestreview-543758582",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "fadc741a-3058-4e8f-aec2-a63b68d5b922",
+        "parentId" : null,
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Shall we clarify the relation between this and `deleteWhere`? say `deleteWhere` is only invoked when `canDeleteWhere` is positive. I must admit I'm somewhat confused when looking at this two and not sure what assumption should I make.",
+        "createdAt" : "2020-12-01T21:31:03Z",
+        "updatedAt" : "2020-12-02T20:15:34Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d6b1bb36-c02a-4596-af38-9f1c07106e39",
+        "parentId" : "fadc741a-3058-4e8f-aec2-a63b68d5b922",
+        "authorId" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "body" : "Let me update the doc to make sure it is clear.",
+        "createdAt" : "2020-12-02T08:50:41Z",
+        "updatedAt" : "2020-12-02T20:15:34Z",
+        "lastEditedBy" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4b30554b-36c5-45ab-a47c-37adcb5f9260",
+        "parentId" : "fadc741a-3058-4e8f-aec2-a63b68d5b922",
+        "authorId" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "body" : "Done. Could you check if it is descriptive enough, @sunchao?",
+        "createdAt" : "2020-12-02T09:46:11Z",
+        "updatedAt" : "2020-12-02T20:15:34Z",
+        "lastEditedBy" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "205731a4-5e7a-420c-98e1-46f330adbc97",
+        "parentId" : "fadc741a-3058-4e8f-aec2-a63b68d5b922",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Thanks for the update @aokolnychyi . I'm wondering if it makes sense to clearly point out that `canDeleteWhere` is called at planning time, say: \"Spark will call this method **at planning time** to check if the delete is possible without significant effort.\"\r\n\r\nAlso for `deleteWhere`, I'm wondering if the following makes sense:\r\n\"Delete data from a data source table that matches filter expressions. **This is only invoked when the canDeleteWhere check succeed**\".",
+        "createdAt" : "2020-12-02T18:05:10Z",
+        "updatedAt" : "2020-12-02T20:15:34Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c2fe6dc5-df20-4306-97f6-bc9bc3e7f8eb",
+        "parentId" : "fadc741a-3058-4e8f-aec2-a63b68d5b922",
+        "authorId" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "body" : "Makes sense to me, @sunchao. Updated.",
+        "createdAt" : "2020-12-02T20:16:44Z",
+        "updatedAt" : "2020-12-02T20:16:45Z",
+        "lastEditedBy" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8d80bc22-12e2-4ada-ad5e-6d28edd90be1",
+        "parentId" : "fadc741a-3058-4e8f-aec2-a63b68d5b922",
+        "authorId" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "body" : "This was resolved.",
+        "createdAt" : "2020-12-03T09:29:35Z",
+        "updatedAt" : "2020-12-03T09:29:35Z",
+        "lastEditedBy" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8b909f3abeb6ef84e9496b7f67bdfbf96f86940f",
+    "line" : 21,
+    "diffHunk" : "@@ -1,1 +46,50 @@   * @return true if the delete operation can be performed\n   */\n  default boolean canDeleteWhere(Filter[] filters) {\n    return true;\n  }"
   }
 ]

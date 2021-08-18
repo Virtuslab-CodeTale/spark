@@ -108,5 +108,93 @@
     "commit" : "1de70e4e73c8da2705268f2b6ad7e9d101f7603d",
     "line" : 6,
     "diffHunk" : "@@ -1,1 +95,99 @@  def apply(plan: LogicalPlan): LogicalPlan = plan transform {\n    case Filter(condition, child)\n      if SubqueryExpression.hasInOrCorrelatedExistsSubquery(condition) =>\n      val (withSubquery, withoutSubquery) =\n        splitConjunctivePredicates(condition)"
+  },
+  {
+    "id" : "06a96e4f-667d-4705-84aa-dc6ceb93b7c5",
+    "prId" : 30555,
+    "prUrl" : "https://github.com/apache/spark/pull/30555#pullrequestreview-541927651",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f3fc9c9b-aadb-41dd-a2b3-e0c87e8ea1f4",
+        "parentId" : null,
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "Add a comment above this line? To be honest, it is hard to tell that this trait means UPDATE/MERGE/DELETE. \r\n\r\nAlso, I think this change is just part of the whole changes for supporting the subquery in UPDATE/MERGE/DELETE. We need the other changes in Analyzer and Optimizer rules.  For example, CheckAnalysis. ",
+        "createdAt" : "2020-12-01T02:36:42Z",
+        "updatedAt" : "2020-12-01T02:36:42Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cce60732-dbd3-4c03-8e05-4e3f86388b5a",
+        "parentId" : "f3fc9c9b-aadb-41dd-a2b3-e0c87e8ea1f4",
+        "authorId" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "body" : "> Add a comment above this line? To be honest, it is hard to tell that this trait means UPDATE/MERGE/DELETE.\r\n\r\nSure, what kind of comment would make sense? `SupportsSubquery` seems generic to me and may cover different rules in the future. Here, I match the behavior in the analyzer.\r\n\r\n> Also, I think this change is just part of the whole changes for supporting the subquery in UPDATE/MERGE/DELETE. We need the other changes in Analyzer and Optimizer rules. For example, CheckAnalysis.\r\n\r\nYou are right it is the first step and potentially more changes will be needed. At the same time, I think we've updated the analyzer already. Here is what we have in `CheckAnalysis`:\r\n\r\n```\r\n// Only certain operators are allowed to host subquery expression containing\r\n// outer references.\r\nplan match {\r\n   case _: Filter | _: Aggregate | _: Project | _: SupportsSubquery => // Ok\r\n   case other => failAnalysis(\r\n       \"Correlated scalar sub-queries can only be used in a \" +\r\n       s\"Filter/Aggregate/Project and a few commands: $plan\")\r\n}\r\n```\r\n",
+        "createdAt" : "2020-12-01T08:33:25Z",
+        "updatedAt" : "2020-12-01T08:33:25Z",
+        "lastEditedBy" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e8f32137-4f37-47c8-88f8-79af5815c1a5",
+        "parentId" : "f3fc9c9b-aadb-41dd-a2b3-e0c87e8ea1f4",
+        "authorId" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "body" : "If we decide to implement `SupportsSubquery` in other nodes and remove `UnaryNode` from here, I think the comment above may be sufficient (with minor tweaks once we remove `UnaryNode`). ",
+        "createdAt" : "2020-12-01T14:08:24Z",
+        "updatedAt" : "2020-12-01T14:08:24Z",
+        "lastEditedBy" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b92852d16d85fc79af1d1fa4f62cef6e6181bf48",
+    "line" : 4,
+    "diffHunk" : "@@ -1,1 +329,333 @@    case q: UnaryNode =>\n      rewriteSubQueries(q, q.children)\n    case s: SupportsSubquery =>\n      rewriteSubQueries(s, s.children)\n  }"
+  },
+  {
+    "id" : "533e5d33-6c91-478e-96e5-2197adca9768",
+    "prId" : 30555,
+    "prUrl" : "https://github.com/apache/spark/pull/30555#pullrequestreview-541904236",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c0700269-d36c-45b8-af5d-5ecc755f57e6",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "shall we make `Filter`, `Aggregate` and `Project` extend `SupportsSubquery` and only match `SupportsSubquery` here?",
+        "createdAt" : "2020-12-01T11:25:04Z",
+        "updatedAt" : "2020-12-01T11:25:04Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b3bc731d-76e3-4e0c-8ca8-de3c475e54eb",
+        "parentId" : "c0700269-d36c-45b8-af5d-5ecc755f57e6",
+        "authorId" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "body" : "Sounds good to me. We can also simplify the check inside `CheckAnalysis` in a follow-up PR.\r\n\r\nLet me submit a separate PR for this one.",
+        "createdAt" : "2020-12-01T13:40:15Z",
+        "updatedAt" : "2020-12-01T13:40:35Z",
+        "lastEditedBy" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c65cd6bf-24de-4091-a3b4-1d4c199a3e7d",
+        "parentId" : "c0700269-d36c-45b8-af5d-5ecc755f57e6",
+        "authorId" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "body" : "Actually, we can get this one in first. How does it sound, @cloud-fan?",
+        "createdAt" : "2020-12-01T13:42:42Z",
+        "updatedAt" : "2020-12-01T13:42:42Z",
+        "lastEditedBy" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b92852d16d85fc79af1d1fa4f62cef6e6181bf48",
+    "line" : 2,
+    "diffHunk" : "@@ -1,1 +327,331 @@      rewriteSubQueries(f, Seq(a, a.child))\n    // Only a few unary nodes (Project/Filter/Aggregate) can contain subqueries.\n    case q: UnaryNode =>\n      rewriteSubQueries(q, q.children)\n    case s: SupportsSubquery =>"
   }
 ]

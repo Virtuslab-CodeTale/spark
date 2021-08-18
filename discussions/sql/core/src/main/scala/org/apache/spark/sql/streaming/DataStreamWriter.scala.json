@@ -1,0 +1,145 @@
+[
+  {
+    "id" : "7eaaea11-ff7d-4032-89cf-21a7c6629e03",
+    "prId" : 30521,
+    "prUrl" : "https://github.com/apache/spark/pull/30521#pullrequestreview-542786843",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "14ef0870-4194-4a57-81b6-244a3f87b156",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "I think leveraging the old (probably DSv1) options is not sufficient - this doesn't have full coverage on DSv2 table - no `Transform` on partitioning, no `properties`, no `options`. \r\n\r\nUsing `source` (via `format(...)`) as `USE <provider>` is also not intuitive - it is only effective when table creation is taking place, and it occurs implicitly.\r\n\r\nPlease compare the usage with creating table on DataFrameWriterV2. I still think this worths having V2 writer for streaming.",
+        "createdAt" : "2020-12-02T02:16:37Z",
+        "updatedAt" : "2020-12-03T04:18:53Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "81b292b7-00fd-4905-9571-ebbbc25ff294",
+        "parentId" : "14ef0870-4194-4a57-81b6-244a3f87b156",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "`Using source (via format(...)) as USE <provider> is also not intuitive - it is only effective when table creation is taking place, and it occurs implicitly.`\r\nYes, this is indeed a reasonable concern. We should check the source and provider. Especially when they are different. Done in b6393ba and UT added.",
+        "createdAt" : "2020-12-02T12:29:11Z",
+        "updatedAt" : "2020-12-03T04:18:53Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "32f9940641d479470530dcbaaeed4be12e1eef61",
+    "line" : 74,
+    "diffHunk" : "@@ -1,1 +332,336 @@       * TODO (SPARK-33638): Full support of v2 table creation\n       */\n      val cmd = CreateTableStatement(\n        originalMultipartIdentifier,\n        df.schema.asNullable,"
+  },
+  {
+    "id" : "df5b1e4b-b038-40f9-9b56-19748467f2fd",
+    "prId" : 30521,
+    "prUrl" : "https://github.com/apache/spark/pull/30521#pullrequestreview-544711617",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "415d8742-8feb-4116-ae97-927f7b7dfe4a",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Writing to V1 table shouldn't rely on `normalizedParCols`, but then you'll be stuck how to provide `Array[Transform]` (provided by CatalogTable) to `Seq[String]`.",
+        "createdAt" : "2020-12-02T03:18:02Z",
+        "updatedAt" : "2020-12-03T04:18:53Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ff5560fa-7144-486a-89fe-074121de6dea",
+        "parentId" : "415d8742-8feb-4116-ae97-927f7b7dfe4a",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "I see `ResolveSessionCatalog.buildCatalogTable()` leverages `partitioning.asPartitionColumns` - that could be used here to set `partitionBy`. Not beauty to deal with putting provider and partitioning manually here instead of letting analyzer does it, but as there's no logical node for Streaming write, I guess there's no option.",
+        "createdAt" : "2020-12-02T03:39:49Z",
+        "updatedAt" : "2020-12-03T04:18:53Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5bcf4246-992a-4993-8c86-247da44ecb4b",
+        "parentId" : "415d8742-8feb-4116-ae97-927f7b7dfe4a",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "I think we shouldn't set `partitionBy` here since that will ignore the original setting of partitioningColumns.",
+        "createdAt" : "2020-12-02T12:47:47Z",
+        "updatedAt" : "2020-12-03T04:18:53Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "df8642a4-5ba3-41e2-be3c-74de508cda61",
+        "parentId" : "415d8742-8feb-4116-ae97-927f7b7dfe4a",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "So are we completely ignoring the table's partition information? I don't think this is same as DSv2 path.",
+        "createdAt" : "2020-12-02T20:10:52Z",
+        "updatedAt" : "2020-12-03T04:18:53Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fe8c220c-797d-4113-83df-5207a268a55b",
+        "parentId" : "415d8742-8feb-4116-ae97-927f7b7dfe4a",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "We didn't ignore. IMO, the partition information should be handled at the DataSource level, no matter V1/V2. Different DS should have their own ability and strategy to handle the partition overwrite/append issue(part discussion of schema evolution). So for the API level, we need to pass both information down to the runtime.",
+        "createdAt" : "2020-12-03T03:52:18Z",
+        "updatedAt" : "2020-12-03T04:18:53Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "52b98332-957e-43f8-94d4-e9daedcabaa6",
+        "parentId" : "415d8742-8feb-4116-ae97-927f7b7dfe4a",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Please find the usage of `normalizedParCols` in DataStreamWriter. This config is only effective in DSv1.",
+        "createdAt" : "2020-12-03T04:13:30Z",
+        "updatedAt" : "2020-12-03T04:18:53Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "34e2e857-ec71-4729-9c98-25b841d46f45",
+        "parentId" : "415d8742-8feb-4116-ae97-927f7b7dfe4a",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "Got the point. So your point focus on how DSv2 addressing the partition column conflict. My point is want to explain we shouldn't overwrite the user's input, ~we need to pass both(user-input and table catalog partition info) into the data source.~ Data source need to know both(user-input and table catalog partition info). I already added this and further discussion to SPARK-33638's [comment](https://issues.apache.org/jira/browse/SPARK-33638?focusedCommentId=17243070&page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel#comment-17243070) since it's part of full support for the V2 table.",
+        "createdAt" : "2020-12-03T10:01:16Z",
+        "updatedAt" : "2020-12-04T07:29:48Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "14815f33-8291-4d06-9c3a-5b95a7562ab8",
+        "parentId" : "415d8742-8feb-4116-ae97-927f7b7dfe4a",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Sorry I missed this. I'm not sure we provide the both into data source, but data source is probably able to know about the partitioning (as table partitioning is given by data source), so consider this as minor and make a follow-up if necessary. In anyway you'll want to check this to achieve my review comments on documentation.",
+        "createdAt" : "2020-12-04T07:11:03Z",
+        "updatedAt" : "2020-12-04T07:11:04Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "955e1738-dbfe-4b72-a50d-f1a1e1ba773a",
+        "parentId" : "415d8742-8feb-4116-ae97-927f7b7dfe4a",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "`I'm not sure we provide the both into data source`\r\nMy bad, didn't make it clear. We don't provide both, only pass the user-provided one(in V1). The partitioning in the catalog is able to know in a data source as you said. I need to change `we need to pass both` to `data source need to know both(we need to pass the user-provided partitioning)`. Let me rephrase the last comment to make it clear.\r\n\r\nYes, of cause, a follow-up is needed.",
+        "createdAt" : "2020-12-04T07:28:46Z",
+        "updatedAt" : "2020-12-04T07:28:46Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "32f9940641d479470530dcbaaeed4be12e1eef61",
+    "line" : 107,
+    "diffHunk" : "@@ -1,1 +359,363 @@          s\"$tableName's data source provider(${table.provider.get}).\")\n      }\n      format(table.provider.get)\n        .option(\"path\", new Path(table.location).toString).start()\n    }"
+  }
+]

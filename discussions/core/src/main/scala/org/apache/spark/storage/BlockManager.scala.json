@@ -64,5 +64,148 @@
     "commit" : "53109918cbdbdba2fe79f38a991c171efec7e85f",
     "line" : 10,
     "diffHunk" : "@@ -1,1 +544,548 @@      } else {\n        shuffleManager.getClass.getName\n      }\n    val shuffleConfig = new ExecutorShuffleInfo(\n      diskBlockManager.localDirsString,"
+  },
+  {
+    "id" : "410e8a54-df98-4e65-b460-af8bd80215a7",
+    "prId" : 30492,
+    "prUrl" : "https://github.com/apache/spark/pull/30492#pullrequestreview-541269445",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "992abbb5-74a3-4e46-b524-d0899b10fd47",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Can you explain the reasoning here? So once any executor cannot get local shuffle block, it will always try to read from fallback storage?",
+        "createdAt" : "2020-11-26T18:04:54Z",
+        "updatedAt" : "2020-11-30T19:56:40Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "326d2ed0-92f3-4510-8837-e323d93e2c88",
+        "parentId" : "992abbb5-74a3-4e46-b524-d0899b10fd47",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Yes. If `STORAGE_DECOMMISSION_FALLBACK_STORAGE_PATH` is defined, it tried to fallback. Currently, it happens when `FALLBACK_BLOCK_MANAGER_ID` has the blocks.",
+        "createdAt" : "2020-11-27T01:32:30Z",
+        "updatedAt" : "2020-11-30T19:56:40Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "98a8d4e4-a403-44e9-a90a-6e64a5ce50b4",
+        "parentId" : "992abbb5-74a3-4e46-b524-d0899b10fd47",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Is there any check if `FALLBACK_BLOCK_MANAGER_ID` has the blocks before calling `FallbackStorage.read`? Looks like if `getBlockData` throws `IOException`, the block manager will just go to read from fallback storage.",
+        "createdAt" : "2020-11-27T01:43:57Z",
+        "updatedAt" : "2020-11-30T19:56:40Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fa2dbdaf-548f-4c89-a885-33a8f66c288e",
+        "parentId" : "992abbb5-74a3-4e46-b524-d0899b10fd47",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "It's already `IOException` and `FallbackStorage.read` throws `IOException` for non-exist files and it's fine and legitimate in the `WorkerDecomission` context, @viirya . Please note the following.\r\n- The whole Worker decommission (including `shuffle and rdd storage decommission`) is designed as a best-effort approach.\r\n- It's because the main use case is K8s graceful shutdown with the default period (`30s`). We can increase the period, but we cannot set it to the infinite value technically. It means executor hangs in case of disk full situation.\r\n- What we are aiming is to rescue data as much as possible, but `100%` is not guaranteed always.\r\n- Lastly, data block selection(shuffle or rdd) was a random-order from the beginning. It became worse when there are multiple shuffle across multiple executors.\r\n\r\nDue to the above reasons, we introduced `SPARK-33387 Support ordered shuffle block migration` to rescue as complete as possible. However, we can still easily imagine that multiple shuffles coexist on an executor in a skewed manner. While the other executor succeeds to complete the migration, the skewed executor may fail to complete the migration in the given grace period.",
+        "createdAt" : "2020-11-29T00:17:37Z",
+        "updatedAt" : "2020-11-30T19:56:40Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "17fc33dd-fb13-4ac0-a2ac-80db4580ca49",
+        "parentId" : "992abbb5-74a3-4e46-b524-d0899b10fd47",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "I think this would probably fail quickly if the external storage doesn’t have the block right? So no need to do a separate check to see if the block is present, the failure message is good enough.",
+        "createdAt" : "2020-11-30T19:03:18Z",
+        "updatedAt" : "2020-11-30T19:56:40Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "03212650-a726-4d11-bb08-f59483046bb2",
+        "parentId" : "992abbb5-74a3-4e46-b524-d0899b10fd47",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Yes, it does, @holdenk .",
+        "createdAt" : "2020-11-30T19:58:24Z",
+        "updatedAt" : "2020-11-30T19:58:24Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bfa011d1-d6c7-4b06-8a3b-1ddec2d1c39a",
+        "parentId" : "992abbb5-74a3-4e46-b524-d0899b10fd47",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Make sense. Thanks @holdenk ",
+        "createdAt" : "2020-11-30T20:29:20Z",
+        "updatedAt" : "2020-11-30T20:29:20Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9c9317378eb61b40f766e41dd168d2189f6008c1",
+    "line" : 13,
+    "diffHunk" : "@@ -1,1 +636,640 @@          } else {\n            throw e\n          }\n      }\n    } else {"
+  },
+  {
+    "id" : "f4a877e9-723e-4fa5-a4a3-7b6e57e494a3",
+    "prId" : 30492,
+    "prUrl" : "https://github.com/apache/spark/pull/30492#pullrequestreview-541280945",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c2a7420c-1ed0-4d2d-8fe8-f62f68e8c898",
+        "parentId" : null,
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Nit/ question: Could we move the if up as part of the case and avoid the need for explicit rethrow?",
+        "createdAt" : "2020-11-30T19:01:14Z",
+        "updatedAt" : "2020-11-30T19:56:40Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fc009249-b435-4828-a944-76083cb5a379",
+        "parentId" : "c2a7420c-1ed0-4d2d-8fe8-f62f68e8c898",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "It's because we should access the normal access path by default. We are able to use `Fallback` path only if the normal access path fail because `conf.get(config.STORAGE_DECOMMISSION_FALLBACK_STORAGE_PATH).isDefined` doesn't mean the fallback storage has the data.",
+        "createdAt" : "2020-11-30T19:53:17Z",
+        "updatedAt" : "2020-11-30T19:56:40Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2073b9df-2c1f-45eb-9a26-b72671a73a70",
+        "parentId" : "c2a7420c-1ed0-4d2d-8fe8-f62f68e8c898",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Please let me know if I misunderstand your comment.",
+        "createdAt" : "2020-11-30T19:57:46Z",
+        "updatedAt" : "2020-11-30T19:57:46Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7872315b-b7e5-4223-9882-0224bcc768fc",
+        "parentId" : "c2a7420c-1ed0-4d2d-8fe8-f62f68e8c898",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Yeah so I mean we still have a try/catch just the case statement has the if as part of it (eg “ Using if expressions in case statements”)",
+        "createdAt" : "2020-11-30T20:46:33Z",
+        "updatedAt" : "2020-11-30T20:46:33Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9c9317378eb61b40f766e41dd168d2189f6008c1",
+    "line" : 8,
+    "diffHunk" : "@@ -1,1 +631,635 @@        shuffleManager.shuffleBlockResolver.getBlockData(blockId)\n      } catch {\n        case e: IOException =>\n          if (conf.get(config.STORAGE_DECOMMISSION_FALLBACK_STORAGE_PATH).isDefined) {\n            FallbackStorage.read(conf, blockId)"
   }
 ]
