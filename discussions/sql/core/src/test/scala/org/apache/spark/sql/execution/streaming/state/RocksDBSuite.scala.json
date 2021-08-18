@@ -240,5 +240,225 @@
     "commit" : "7279d434ddba27a93924577458f8dedf6bf340c5",
     "line" : 42,
     "diffHunk" : "@@ -1,1 +77,81 @@        \"archive/00007.log\" -> 101\n      ))\n      loadAndVerifyCheckpointFiles(fileManager, verificationDir, version = 1, cpFiles1, 101)\n\n      // Save SAME version again with different checkpoint files and load back again to verify"
+  },
+  {
+    "id" : "a84e564a-2847-4b44-b1cb-1ff2cc1d87ed",
+    "prId" : 32582,
+    "prUrl" : "https://github.com/apache/spark/pull/32582#pullrequestreview-674054599",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a5f7ae16-f789-4b60-82aa-f057e3657713",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "nit: empty two lines",
+        "createdAt" : "2021-05-30T07:18:03Z",
+        "updatedAt" : "2021-05-30T07:54:27Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bb96bd3f-e598-41d2-a76b-081999749beb",
+        "parentId" : "a5f7ae16-f789-4b60-82aa-f057e3657713",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "Thanks, done in 3800c51",
+        "createdAt" : "2021-06-02T11:04:55Z",
+        "updatedAt" : "2021-06-02T11:04:55Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c05b140f73f855a148ccedaf753841fb94a4ab1d",
+    "line" : 92,
+    "diffHunk" : "@@ -1,1 +130,134 @@    // scalastyle:on line.size.limit\n  }\n\n  def generateFiles(dir: String, fileToLengths: Seq[(String, Int)]): Unit = {\n    fileToLengths.foreach { case (fileName, length) =>"
+  },
+  {
+    "id" : "4c625f1a-51ec-4a54-87fc-abc2a725be79",
+    "prId" : 32582,
+    "prUrl" : "https://github.com/apache/spark/pull/32582#pullrequestreview-674051843",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "64f66c71-2370-4900-86c3-cef50a723822",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "With this, `def listFiles(file: String)` is probably unnecessary, as I expect implicit conversion happening when calling `listFiles(file: File)` with String.",
+        "createdAt" : "2021-05-30T07:36:40Z",
+        "updatedAt" : "2021-05-30T07:54:27Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "338a1e74-fc34-444c-ad90-2e8ff754a3a6",
+        "parentId" : "64f66c71-2370-4900-86c3-cef50a723822",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "That's right in this PR. In the further PRs, we will have more caller for the `listFiles(file: String)`. Maybe let's keep it for now.",
+        "createdAt" : "2021-06-02T11:01:42Z",
+        "updatedAt" : "2021-06-02T11:01:42Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c05b140f73f855a148ccedaf753841fb94a4ab1d",
+    "line" : 110,
+    "diffHunk" : "@@ -1,1 +148,152 @@  }\n\n  implicit def toFile(path: String): File = new File(path)\n\n  def listFiles(file: File): Seq[File] = {"
+  },
+  {
+    "id" : "88c9fc9a-4677-4d5c-947b-08519cc37d79",
+    "prId" : 32582,
+    "prUrl" : "https://github.com/apache/spark/pull/32582#pullrequestreview-678273540",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "76f0ce5f-72c8-4699-b5ef-e091f08efcb0",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Isn't `checkpointDir` already be defined in `RocksDBFileManager`?",
+        "createdAt" : "2021-06-04T06:33:20Z",
+        "updatedAt" : "2021-06-04T06:33:20Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "842d6f3b-8ad5-4fe5-829c-31bf2f9026c0",
+        "parentId" : "76f0ce5f-72c8-4699-b5ef-e091f08efcb0",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "The `checkpointDir` here is a temp dir for a specific version of checkpointing. This checkpoint here corresponds to a RocksDB checkpoint. The method, `saveCheckpointToDfs` will be called in the `commit` logic for the RocksDBStateStoreProvider. The commit follows these steps:\r\n```\r\n   * - Write all the updates to the native RocksDB\r\n   * - Flush all changes to disk\r\n   * - Create a RocksDB checkpoint in a new local dir [Done in this method]\r\n   * - Sync the checkpoint dir files to DFS [Done in this method]\r\n```",
+        "createdAt" : "2021-06-04T15:26:38Z",
+        "updatedAt" : "2021-06-04T15:26:38Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "eaf99462-3581-4087-861a-7819e604c51c",
+        "parentId" : "76f0ce5f-72c8-4699-b5ef-e091f08efcb0",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Is it `localTempDir`?\r\n\r\n```scala\r\nclass RocksDBFileManager(\r\n    dfsRootDir: String,\r\n    localTempDir: File,\r\n    hadoopConf: Configuration,\r\n    loggingId: String = \"\")\r\n```",
+        "createdAt" : "2021-06-04T16:01:04Z",
+        "updatedAt" : "2021-06-04T16:01:05Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c67cf033-ecb9-4a2e-921e-daaa837f55d9",
+        "parentId" : "76f0ce5f-72c8-4699-b5ef-e091f08efcb0",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "Sorry just found I missed this comment.\r\nNot the same one. The `localTempDir` is controlled by RocksDBFileManager. The lifetime of temp dir for `checkpointDir` is controlled by `RocksDBStateStoreProvider `.",
+        "createdAt" : "2021-06-08T09:00:50Z",
+        "updatedAt" : "2021-06-08T09:00:51Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c05b140f73f855a148ccedaf753841fb94a4ab1d",
+    "line" : 105,
+    "diffHunk" : "@@ -1,1 +143,147 @@      version: Int,\n      numKeys: Int): Unit = {\n    val checkpointDir = Utils.createTempDir().getAbsolutePath // local dir to create checkpoints\n    generateFiles(checkpointDir, fileToLengths)\n    fileManager.saveCheckpointToDfs(checkpointDir, version, numKeys)"
+  },
+  {
+    "id" : "d203a2df-1e2c-49aa-8a1d-5acb6baa80a5",
+    "prId" : 32582,
+    "prUrl" : "https://github.com/apache/spark/pull/32582#pullrequestreview-676422212",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c535348e-afb9-4c03-b3e0-026916fd8405",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "`version = 1`? In practice, will we save checkpoint files for same version? I.e. for same micro-batch?",
+        "createdAt" : "2021-06-04T06:36:55Z",
+        "updatedAt" : "2021-06-04T06:36:55Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "54a7b7da-9a62-4324-bd8f-e05a51f68c22",
+        "parentId" : "c535348e-afb9-4c03-b3e0-026916fd8405",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "For task failover, it's possible that the tasks failed during uploading. The new task uses the same version and may schedule to the same executor but with different checkpoint dir.",
+        "createdAt" : "2021-06-04T15:34:37Z",
+        "updatedAt" : "2021-06-04T15:34:37Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c05b140f73f855a148ccedaf753841fb94a4ab1d",
+    "line" : 52,
+    "diffHunk" : "@@ -1,1 +69,73 @@        \"archive/00003.log\" -> 3000 // new log file\n      )\n      saveCheckpointFiles(fileManager, cpFiles1_, version = 1, numKeys = 1001)\n      assert(numRemoteSSTFiles === 4, \"shouldn't copy same files again\") // 2 old + 2 new SST files\n      assert(numRemoteLogFiles === 4, \"shouldn't copy same files again\") // 2 old + 2 new log files"
+  },
+  {
+    "id" : "c8506f33-1f13-49dc-bbce-8d8cc689326c",
+    "prId" : 32582,
+    "prUrl" : "https://github.com/apache/spark/pull/32582#pullrequestreview-676423789",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6901fd1b-96b0-41a9-b02e-4ad46ff625a9",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Use `withTempDir` too?",
+        "createdAt" : "2021-06-04T06:37:46Z",
+        "updatedAt" : "2021-06-04T06:37:46Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d7423a0b-d9dc-4fae-b913-fc293e423467",
+        "parentId" : "6901fd1b-96b0-41a9-b02e-4ad46ff625a9",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "This test will be further extended and more temp dir will be added. So maybe we just have the root path using `withTempDir`? See the demo here: https://github.com/apache/spark/pull/32767/files#diff-dc6f9dfe11e76f890ff2986f866853bcac263027c82562f9a52f4672a5460826R37",
+        "createdAt" : "2021-06-04T15:35:47Z",
+        "updatedAt" : "2021-06-04T15:35:47Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c05b140f73f855a148ccedaf753841fb94a4ab1d",
+    "line" : 74,
+    "diffHunk" : "@@ -1,1 +91,95 @@        SQLConf.STREAMING_CHECKPOINT_FILE_MANAGER_CLASS.parent.key,\n        classOf[CreateAtomicTestManager].getName)\n      val dfsRootDir = Utils.createTempDir().getAbsolutePath\n      val fileManager = new RocksDBFileManager(dfsRootDir, Utils.createTempDir(), hadoopConf)\n      val cpFiles = Seq(\"sst-file1.sst\" -> 10, \"sst-file2.sst\" -> 20, \"other-file1\" -> 100)"
+  },
+  {
+    "id" : "9612f2ab-0352-42f2-ba99-37769d020450",
+    "prId" : 32582,
+    "prUrl" : "https://github.com/apache/spark/pull/32582#pullrequestreview-676442974",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4e42defb-d8f1-4f20-8895-f4de3f7a13ea",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "I'm not sure why this will fail?",
+        "createdAt" : "2021-06-04T06:40:51Z",
+        "updatedAt" : "2021-06-04T06:40:51Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f9753054-53ba-4c99-9001-47efc67b9e6f",
+        "parentId" : "4e42defb-d8f1-4f20-8895-f4de3f7a13ea",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "This is failed on purpose. \r\n```\r\n[info]   java.io.IOException: Copy failed intentionally\r\n[info]   at org.apache.spark.sql.execution.streaming.CreateAtomicTestManager$$anon$3.close(CheckpointFileManagerSuite.scala:169)\r\n```\r\n\r\nThis test aims to test the behavior that the `cancel` should be called no matter any error happens during `close`. See the comment and code here: https://github.com/apache/spark/pull/32582/files#diff-e3d3914d0398d61fdd299b1f8d3e869ec6a86e97606677c724969e421c9bf44eR222-R227",
+        "createdAt" : "2021-06-04T15:55:04Z",
+        "updatedAt" : "2021-06-04T15:55:05Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c05b140f73f855a148ccedaf753841fb94a4ab1d",
+    "line" : 80,
+    "diffHunk" : "@@ -1,1 +97,101 @@      intercept[IOException] {\n        saveCheckpointFiles(fileManager, cpFiles, version = 1, numKeys = 101)\n      }\n      assert(CreateAtomicTestManager.cancelCalledInCreateAtomic)\n    }"
   }
 ]

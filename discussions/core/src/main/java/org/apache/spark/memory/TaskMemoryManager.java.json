@@ -1,0 +1,90 @@
+[
+  {
+    "id" : "8be44ae9-dcd9-408c-9f42-d21dda52c7bb",
+    "prId" : 32625,
+    "prUrl" : "https://github.com/apache/spark/pull/32625#pullrequestreview-666348355",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "785e337e-439f-4ea7-a585-7384f21722f8",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "How many times does this expect to iterate in the worst case?",
+        "createdAt" : "2021-05-23T20:41:36Z",
+        "updatedAt" : "2021-05-23T20:41:36Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6810aa28-bee7-4cc4-84fd-20e402a3d0e0",
+        "parentId" : "785e337e-439f-4ea7-a585-7384f21722f8",
+        "authorId" : "b5a22c00-a076-425b-9ae2-bc7d0e8a80b8",
+        "body" : "Good question. The worst case occurs when waiting tasks take all the memory released by `consumer.spill()`. The specific number of iterations depends on the behavior of `consumer.spill()`:\r\n\r\n- If `consumer.spill()` releases memory promptly when requested to, as all current implementations do, then this can iterate up to `consumer.getUsed() / (required - got) + 2` times. In all but the last two iterations, `consumer` spills `required - got` bytes; in the second-to-last iteration, `consumer` spills any remaining bytes; and in the last iteration, `consumer` spills 0 bytes.\r\n- If `consumer.spill()` trickles out memory, for example by releasing only 1 byte per call, then there can be up to `consumer.getUsed() + 1` iterations. In all but the last iteration, `consumer` spills 1 byte, and in the last iteration, `consumer` spills 0 bytes.\r\n\r\nThis is the same worst-case behavior as the `while (!sortedConsumers.isEmpty())` loop above.",
+        "createdAt" : "2021-05-24T01:49:27Z",
+        "updatedAt" : "2021-05-24T02:03:33Z",
+        "lastEditedBy" : "b5a22c00-a076-425b-9ae2-bc7d0e8a80b8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ce8c5007-d74c-489b-b737-8a67a1f66a4b",
+        "parentId" : "785e337e-439f-4ea7-a585-7384f21722f8",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Thank you for the explanation.",
+        "createdAt" : "2021-05-24T02:19:17Z",
+        "updatedAt" : "2021-05-24T02:19:17Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3f85e39584658160951f7ffb1670e9d0779600bc",
+    "line" : 12,
+    "diffHunk" : "@@ -1,1 +209,213 @@      // newly-freed memory before we have a chance to do so (SPARK-35486). In that case, we will\n      // try again in the next loop iteration.\n      while (got < required) {\n        try {\n          long released = consumer.spill(required - got, consumer);"
+  },
+  {
+    "id" : "5872f2fb-e948-4216-aab2-ec3c23ff1d1f",
+    "prId" : 32625,
+    "prUrl" : "https://github.com/apache/spark/pull/32625#pullrequestreview-667315395",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "090c2fff-c0f1-4397-b8e4-8b2128455bcd",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Shall we break earlier when `got >= required`?",
+        "createdAt" : "2021-05-24T09:27:18Z",
+        "updatedAt" : "2021-05-24T09:27:18Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9cddab69-05fb-49c5-8a96-0aec8cd8f17f",
+        "parentId" : "090c2fff-c0f1-4397-b8e4-8b2128455bcd",
+        "authorId" : "b5a22c00-a076-425b-9ae2-bc7d0e8a80b8",
+        "body" : "What did you have in mind?\r\n- If `got >= required` prior to calling `consumer.spill()`, the loop condition `while (got < required)` will not be met and we will not execute the loop.\r\n- If `got >= required` after executing `got += memoryManager.acquireExecutionMemory()`, we will finish executing the current loop iteration, then exit the loop.",
+        "createdAt" : "2021-05-24T16:33:38Z",
+        "updatedAt" : "2021-05-24T16:34:41Z",
+        "lastEditedBy" : "b5a22c00-a076-425b-9ae2-bc7d0e8a80b8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "286cc345-ee6d-46c7-b749-1bc10ba9351d",
+        "parentId" : "090c2fff-c0f1-4397-b8e4-8b2128455bcd",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "ok, I misread the code.",
+        "createdAt" : "2021-05-25T01:26:56Z",
+        "updatedAt" : "2021-05-25T01:26:57Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3f85e39584658160951f7ffb1670e9d0779600bc",
+    "line" : 21,
+    "diffHunk" : "@@ -1,1 +218,222 @@          } else {\n            // Self-spilling could not free up any more memory.\n            break;\n          }\n        } catch (ClosedByInterruptException e) {"
+  }
+]

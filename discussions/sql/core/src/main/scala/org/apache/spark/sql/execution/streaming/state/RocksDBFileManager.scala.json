@@ -218,5 +218,192 @@
     "commit" : "7279d434ddba27a93924577458f8dedf6bf340c5",
     "line" : 36,
     "diffHunk" : "@@ -1,1 +170,174 @@      RocksDBCheckpointMetadata(Seq.empty, 0)\n    } else {\n      // Delete all non-immutable files in local dir, and unzip new ones from DFS commit file\n      listRocksDBFiles(localDir)._2.foreach(_.delete())\n      Utils.unzipFilesFromFile(fs, dfsBatchZipFile(version), localDir)"
+  },
+  {
+    "id" : "4c6c5352-d52f-45b9-b36f-b875b83fd05b",
+    "prId" : 32582,
+    "prUrl" : "https://github.com/apache/spark/pull/32582#pullrequestreview-662202504",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "eee0dee8-c674-40af-856d-6e7fbd00d2d1",
+        "parentId" : null,
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "Per https://github.com/apache/spark/pull/32272#discussion_r624388116, we only use prettyJson in the log.",
+        "createdAt" : "2021-05-18T14:59:51Z",
+        "updatedAt" : "2021-05-18T14:59:52Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c05b140f73f855a148ccedaf753841fb94a4ab1d",
+    "line" : 127,
+    "diffHunk" : "@@ -1,1 +140,144 @@    val metadataFile = localMetadataFile(checkpointDir)\n    metadata.writeToFile(metadataFile)\n    logInfo(s\"Written metadata for version $version:\\n${metadata.prettyJson}\")\n\n    if (version <= 1 && numKeys == 0) {"
+  },
+  {
+    "id" : "969cdaaf-cf6c-495b-a9be-d0e11ec2ca34",
+    "prId" : 32582,
+    "prUrl" : "https://github.com/apache/spark/pull/32582#pullrequestreview-674051699",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4b701ee1-4b35-4a5e-8856-117fa2099f37",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Just to confirm, could I safely assume versionToRocksDBFiles will be loaded when RocksDBFileManager is initialized with existing checkpoint in further PR?",
+        "createdAt" : "2021-05-30T05:50:45Z",
+        "updatedAt" : "2021-05-30T07:54:27Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "921bbe5a-e651-4686-a34d-d244c16ad6a1",
+        "parentId" : "4b701ee1-4b35-4a5e-8856-117fa2099f37",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "That's right. `versionToRocksDBFiles` was touched in the following 3 places:\r\n- saveCheckpointToDfs (this PR)\r\n- deleteOldVersions\r\n- loadCheckpointFromDfs",
+        "createdAt" : "2021-06-02T11:01:32Z",
+        "updatedAt" : "2021-06-02T11:01:32Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c05b140f73f855a148ccedaf753841fb94a4ab1d",
+    "line" : 115,
+    "diffHunk" : "@@ -1,1 +128,132 @@  import RocksDBImmutableFile._\n\n  private val versionToRocksDBFiles = new ConcurrentHashMap[Long, Seq[RocksDBImmutableFile]]\n  private lazy val fm = CheckpointFileManager.create(new Path(dfsRootDir), hadoopConf)\n  private val fs = new Path(dfsRootDir).getFileSystem(hadoopConf)"
+  },
+  {
+    "id" : "04c4f026-260e-48ca-9543-3e61db0acd62",
+    "prId" : 32582,
+    "prUrl" : "https://github.com/apache/spark/pull/32582#pullrequestreview-674053690",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9775dfa7-2f30-442e-b43c-7d60be35ab26",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "We count `filesReused` but not leaving the information here. Can we add it in the log message as well?",
+        "createdAt" : "2021-05-30T05:58:41Z",
+        "updatedAt" : "2021-05-30T07:54:27Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "467307a2-5b55-4975-930c-fc349b06cbf2",
+        "parentId" : "9775dfa7-2f30-442e-b43c-7d60be35ab26",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "Sure, done in 3800c51",
+        "createdAt" : "2021-06-02T11:03:52Z",
+        "updatedAt" : "2021-06-02T11:03:52Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c05b140f73f855a148ccedaf753841fb94a4ab1d",
+    "line" : 181,
+    "diffHunk" : "@@ -1,1 +194,198 @@        }\n    }\n    logInfo(s\"Copied $filesCopied files ($bytesCopied bytes) from local to\" +\n      s\" DFS for version $version. $filesReused files reused without copying.\")\n    versionToRocksDBFiles.put(version, immutableFiles)"
+  },
+  {
+    "id" : "3dcf7d1e-d7e7-424b-9f98-09ef5cd5a2c3",
+    "prId" : 32582,
+    "prUrl" : "https://github.com/apache/spark/pull/32582#pullrequestreview-674054483",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8567cb9f-dd11-4745-bc32-c6e4f0e0530d",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "It'd be nice to note here again the SST files and LOG files are not included to the zip file. I was mistaken as it contains all files including data as well, and concerned about the overhead of creating and sending zip file due to the size.",
+        "createdAt" : "2021-05-30T06:59:22Z",
+        "updatedAt" : "2021-05-30T07:54:27Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "62d69712-6a90-40e0-a88a-9aff533edb21",
+        "parentId" : "8567cb9f-dd11-4745-bc32-c6e4f0e0530d",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "Make sense, add the comment in 3800c51",
+        "createdAt" : "2021-06-02T11:04:47Z",
+        "updatedAt" : "2021-06-02T11:04:47Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c05b140f73f855a148ccedaf753841fb94a4ab1d",
+    "line" : 88,
+    "diffHunk" : "@@ -1,1 +101,105 @@ *\n * Note the following.\n * - Each [version].zip is a complete description of all the data and metadata needed to recover\n *   a RocksDB instance at the corresponding version. The SST files and log files are not included\n *   in the zip files, they can be shared cross different versions. This is unlike the"
+  },
+  {
+    "id" : "650a7d75-47a8-479d-b9fc-b6ce84b9c206",
+    "prId" : 32582,
+    "prUrl" : "https://github.com/apache/spark/pull/32582#pullrequestreview-675127987",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3ecfae0a-e24f-4f94-bb93-75cd8133c628",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "The zipped file is `dfsZipFile`, right? why `filesStr` here?",
+        "createdAt" : "2021-06-03T04:21:31Z",
+        "updatedAt" : "2021-06-03T04:26:18Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dc4e521a-b4f0-4961-bbac-fde0c4e44132",
+        "parentId" : "3ecfae0a-e24f-4f94-bb93-75cd8133c628",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "the `fileStr` contains the `dfsZipFile` name. The log format here is `${dfsZipFile} \\n ${listing all the file names}`",
+        "createdAt" : "2021-06-03T10:31:42Z",
+        "updatedAt" : "2021-06-03T10:31:42Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c05b140f73f855a148ccedaf753841fb94a4ab1d",
+    "line" : 208,
+    "diffHunk" : "@@ -1,1 +221,225 @@      }\n      zout.close()  // so that any error in closing also cancels the output stream\n      logInfo(s\"Zipped $totalBytes bytes (before compression) to $filesStr\")\n    } catch {\n      case e: Exception =>"
+  },
+  {
+    "id" : "2a1beac2-16ef-46e3-8358-c90de995ca59",
+    "prId" : 32582,
+    "prUrl" : "https://github.com/apache/spark/pull/32582#pullrequestreview-675122445",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7cdc51eb-3685-4c23-859c-7f48abb03101",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Can you talk more about there this claim (thread-safe) applies? Where we delete old files?\r\n\r\nDo you mean `versionToRocksDBFiles`? When we prepare files for new version, there is another thread (maintenance thread) deleting old files?",
+        "createdAt" : "2021-06-03T04:22:38Z",
+        "updatedAt" : "2021-06-03T04:26:18Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ea24cbd4-b0a8-4acc-9aef-f9e2ae407f00",
+        "parentId" : "7cdc51eb-3685-4c23-859c-7f48abb03101",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "Yes. It refers to delete the files contained in the old versions. Here's the description of the deleteOldVersions method of RocksDBFileManager, which will be called in RocksDBStateStoreProvider.doMaintenance. As we did before, I'll also refer this comment when the PR for delete path submitted.\r\n```\r\n   * Delete old versions by deleting the associated version and SST files.\r\n   * At a high-level, this method finds which versions to delete, and which SST files that were\r\n   * last used in those versions. Its safe to delete these SST files because a SST file can\r\n   * be reused only in successive versions. Therefore, if a SST file F was last used in version\r\n   * V, then it wont be used in version V+1 or later, and if version V can be deleted, then\r\n   * F can safely be deleted as well.\r\n```",
+        "createdAt" : "2021-06-03T10:24:46Z",
+        "updatedAt" : "2021-06-03T10:24:46Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c05b140f73f855a148ccedaf753841fb94a4ab1d",
+    "line" : 99,
+    "diffHunk" : "@@ -1,1 +112,116 @@ * - Immutable files can be reused only across adjacent checkpoints/versions.\n * - This class is thread-safe. Specifically, it is safe to concurrently delete old files from a\n *   different thread than the task thread saving files.\n *\n * @param dfsRootDir  Directory where the [version].zip files will be stored"
   }
 ]

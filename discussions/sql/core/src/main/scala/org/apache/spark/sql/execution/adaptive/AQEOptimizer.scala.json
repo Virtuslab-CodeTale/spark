@@ -31,5 +31,60 @@
     "commit" : "c7996bbdfc7af288979ea65102e7637d4c5da1a7",
     "line" : 14,
     "diffHunk" : "@@ -1,1 +31,35 @@  private def fixedPoint =\n    FixedPoint(\n      conf.optimizerMaxIterations,\n      maxIterationsSetting = SQLConf.OPTIMIZER_MAX_ITERATIONS.key)\n"
+  },
+  {
+    "id" : "b6c4a6d6-083f-4418-88c5-a3e5baab0c34",
+    "prId" : 32602,
+    "prUrl" : "https://github.com/apache/spark/pull/32602#pullrequestreview-672625084",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3afee352-8a91-4f99-a7a9-4c3d51b2a257",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "shall we also put `ConvertToLocalRelation` in this batch?",
+        "createdAt" : "2021-05-31T16:42:26Z",
+        "updatedAt" : "2021-05-31T16:42:26Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "25898a7d-e203-48af-8b6c-aefd016d0415",
+        "parentId" : "3afee352-8a91-4f99-a7a9-4c3d51b2a257",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "yeah, I noticed it. We can put it so that we can propagate empty through `project/filter`. like such case:\r\n```\r\nAggregate\r\n  Project\r\n    Join\r\n      Shuffle\r\n```\r\nBut it need to isolate normal and AQE due to `transformWithPruning`.\r\n\r\nOtherhand I feel that it's similar if we just let `AQEPropagateEmptyRelation` support propagate `project/filter`. and the later is simpler. ",
+        "createdAt" : "2021-06-01T02:47:27Z",
+        "updatedAt" : "2021-06-01T02:47:27Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "56bbf43b-71aa-4544-a571-0389ac2778b3",
+        "parentId" : "3afee352-8a91-4f99-a7a9-4c3d51b2a257",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "It's a bit different:\r\n```\r\nProject\r\n  Shuffle Stage\r\n```\r\nFor the above case, we don't want to optimize it as the benefit is too small (removing a shuffle stage may cause regression)\r\n\r\n```\r\nProject\r\n  Sort\r\n    Shuffle Stage\r\n```\r\nFor the above case, we will optimize Sort -> Shuffle Stage to empty relation first. Then it makes sense to optimize further and optimize out project, as the shuffle stage is already gone.\r\n\r\nSo adding `ConvertToLocalRelation` looks the best solution here.",
+        "createdAt" : "2021-06-01T02:53:51Z",
+        "updatedAt" : "2021-06-01T02:54:20Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9f4f2aba-218c-42ad-9b35-e0e894d24436",
+        "parentId" : "3afee352-8a91-4f99-a7a9-4c3d51b2a257",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "ah I see, will do this.",
+        "createdAt" : "2021-06-01T03:26:50Z",
+        "updatedAt" : "2021-06-01T03:26:50Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "624e45e27513933e9fe5615601d0dddac341a258",
+    "line" : 15,
+    "diffHunk" : "@@ -1,1 +31,35 @@    Batch(\"Propagate Empty Relations\", Once,\n      AQEPropagateEmptyRelation,\n      UpdateAttributeNullability),\n    Batch(\"Demote BroadcastHashJoin\", Once, DemoteBroadcastHashJoin)\n  )"
   }
 ]
