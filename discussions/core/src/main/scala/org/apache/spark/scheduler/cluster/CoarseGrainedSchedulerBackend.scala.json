@@ -647,5 +647,126 @@
     "commit" : "c4d37111c3bbf1db4eddb7dbaaff487fe82d81ae",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +771,775 @@        if (executorsToKill.nonEmpty) {\n          executorsToKill.foreach(id =>\n            executorDataMap.get(id).foreach(_.executorEndpoint.send(StopExecutor)))\n          _ => doKillExecutors(executorsToKill)\n        } else {"
+  },
+  {
+    "id" : "71363c53-04e0-4ba3-baa0-8fc748c631ec",
+    "prId" : 27773,
+    "prUrl" : "https://github.com/apache/spark/pull/27773#pullrequestreview-375706495",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "90ab3854-a00d-4005-be1c-b9053986e1aa",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Executors may haven't launched at the time we call `maxNumConcurrentTasks` from `checkBarrierStageWithNumSlots`?",
+        "createdAt" : "2020-03-09T08:02:27Z",
+        "updatedAt" : "2020-03-19T20:03:38Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "03358259-b5e1-42be-aec1-1d36d768cac2",
+        "parentId" : "90ab3854-a00d-4005-be1c-b9053986e1aa",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "I assume that could be the case or that executor number went to 0 if some died, the sum will just return 0. there is no change in logic for that.  Is there something specific you are wondering about?",
+        "createdAt" : "2020-03-09T16:00:16Z",
+        "updatedAt" : "2020-03-19T20:03:38Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "424a46de-60f3-4ca1-8638-dd5a85d6588a",
+        "parentId" : "90ab3854-a00d-4005-be1c-b9053986e1aa",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Let's say user has a barrier job like:\r\n\r\n```\r\nrdd.withResources(rp).barrirer().mapPartition { part =>\r\n  // do some barrier stuff\r\n}.collect()\r\n```\r\nSo, at the time we're `createShuffleMapStage`/`mergeResourceProfilesForStage`/`checkBarrierStageWithNumSlots`, it's possible that some executors haven't launched?\r\n\r\n",
+        "createdAt" : "2020-03-10T02:36:50Z",
+        "updatedAt" : "2020-03-19T20:03:38Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8f49d2fc-78d5-4fc6-9282-8fc7c5cf180b",
+        "parentId" : "90ab3854-a00d-4005-be1c-b9053986e1aa",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "Yes, executors need not have launched, launched/running executors might have failed (after computing `rdd` in the example above), or number of executors is < number of partitions in rdd.\r\n`maxNumConcurrentTasks` will tell us how many (max) can be run based on current state.",
+        "createdAt" : "2020-03-10T10:54:52Z",
+        "updatedAt" : "2020-03-19T20:03:38Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "34267c51-5df4-425e-a2c4-03a410d02d93",
+        "parentId" : "90ab3854-a00d-4005-be1c-b9053986e1aa",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Actually, I was not talking about some error cases here. Here, I'm worrying about the normal procedure. And I realize now we already have precaution for it, see: https://github.com/apache/spark/blob/b29829e2abdebdf6fa9dd0a4a4cf4c9d676ee82d/core/src/main/scala/org/apache/spark/scheduler/DAGScheduler.scala#L983-L1004",
+        "createdAt" : "2020-03-17T03:26:02Z",
+        "updatedAt" : "2020-03-19T20:03:38Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2a4a73385ee948d81e51091990a37ebbc8010f61",
+    "line" : 61,
+    "diffHunk" : "@@ -1,1 +615,619 @@  override def maxNumConcurrentTasks(rp: ResourceProfile): Int = synchronized {\n    val cpusPerTask = ResourceProfile.getTaskCpusOrDefaultForProfile(rp, conf)\n    val executorsWithResourceProfile = executorDataMap.values.filter(_.resourceProfileId == rp.id)\n    executorsWithResourceProfile.map(_.totalCores / cpusPerTask).sum\n  }"
+  },
+  {
+    "id" : "8a15d1b2-361b-468c-b234-0a16408532ca",
+    "prId" : 27773,
+    "prUrl" : "https://github.com/apache/spark/pull/27773#pullrequestreview-371975728",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "27e4e1f7-fb36-4c98-91e6-fd2cf5c5cd39",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "We can get `taskCpus` through this executor's resource profile? e.g. `sc.resourceProfileManager.taskCpusForProfileId(taskSetRpID)`\r\n\r\nThus, we don't need to pass `taskCpus` to executor.",
+        "createdAt" : "2020-03-09T08:38:04Z",
+        "updatedAt" : "2020-03-19T20:03:38Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "02f3f6a0-2205-4f0d-bd07-79963e3cbabf",
+        "parentId" : "27e4e1f7-fb36-4c98-91e6-fd2cf5c5cd39",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "I put it there so that I don't have to worry about race conditions between when we get status updates from executors and when the scheduler removes the tasksets. for instance currently we could remove it from the taskidToTaskSetManager if the executor failed.  In the case the taskid to task set manager is missing we wouldn't know how many cores to properly add back. So to keep away from that race this seems cleaner and also possibly gives us a way to expose to the user in the future if we wanted.  ",
+        "createdAt" : "2020-03-09T20:10:40Z",
+        "updatedAt" : "2020-03-19T20:03:38Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2e390ef5-a564-4850-97b0-fb70b675fc49",
+        "parentId" : "27e4e1f7-fb36-4c98-91e6-fd2cf5c5cd39",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Oh..oops..I copied example from your code without update and leave you to another direction. Sorry about that.\r\n\r\nActually, I mean, could we do this?\r\n\r\n`sc.resourceProfileManager.taskCpusForProfileId(executorInfo.resourceProfileId)`\r\n\r\nGet resourceProfileId from executorInfo instead of taskSet.",
+        "createdAt" : "2020-03-10T02:43:24Z",
+        "updatedAt" : "2020-03-19T20:03:38Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6c75e4c7-bb15-4bc6-a6dd-36c6334db075",
+        "parentId" : "27e4e1f7-fb36-4c98-91e6-fd2cf5c5cd39",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "ah, yes we can get it from there. we aren't using it for anything else at this point. ",
+        "createdAt" : "2020-03-10T13:59:12Z",
+        "updatedAt" : "2020-03-19T20:03:38Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2a4a73385ee948d81e51091990a37ebbc8010f61",
+    "line" : 8,
+    "diffHunk" : "@@ -1,1 +149,153 @@              val prof = scheduler.sc.resourceProfileManager.resourceProfileFromId(rpId)\n              val taskCpus = ResourceProfile.getTaskCpusOrDefaultForProfile(prof, conf)\n              executorInfo.freeCores += taskCpus\n              resources.foreach { case (k, v) =>\n                executorInfo.resourcesInfo.get(k).foreach { r =>"
   }
 ]

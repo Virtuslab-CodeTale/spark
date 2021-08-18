@@ -86,5 +86,115 @@
     "commit" : "7a36dd397c6276594308529a9fd6ac2c0e81a5c6",
     "line" : 816,
     "diffHunk" : "@@ -1,1 +643,647 @@            millisData.map(i => Tuple1(Timestamp.valueOf(i))).toDF\n              .write.format(dataSourceName).save(file.getCanonicalPath)\n            readParquetFile(file.getCanonicalPath) { df =>\n              val schema = new SparkToParquetSchemaConverter(conf).convert(df.schema)\n              assertResult(None) {"
+  },
+  {
+    "id" : "9f933d04-1715-44a7-839d-8f83d38dc68f",
+    "prId" : 27728,
+    "prUrl" : "https://github.com/apache/spark/pull/27728#pullrequestreview-381696659",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2a1426cf-8113-44ff-a7c5-5dc3fc8bb9d3",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "how about\r\n```\r\ndef withNestedDataFrame[T : TypeTag](data: Seq[Tuple1[T]])... {\r\n  val df = data.toDF(\"temp\")\r\n}\r\n```\r\n\r\nOtherwise, the `inputDF` can be any schema and this method looks fragile.",
+        "createdAt" : "2020-03-25T07:38:00Z",
+        "updatedAt" : "2020-03-26T08:00:03Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bbabc37a-7e81-46a5-a021-8cbfdd672917",
+        "parentId" : "2a1426cf-8113-44ff-a7c5-5dc3fc8bb9d3",
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "Sounds good.\r\n\r\nI think ` private def withNestedDataFrame[T <: Product: ClassTag: TypeTag](data: Seq[T])` is good enough. I feel no reason to put it in `Tuple1`.",
+        "createdAt" : "2020-03-26T03:58:21Z",
+        "updatedAt" : "2020-03-26T08:00:03Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4b1098e3-9f03-445f-b3fd-3775973bc99f",
+        "parentId" : "2a1426cf-8113-44ff-a7c5-5dc3fc8bb9d3",
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "Okay, this is not easy since one of the test case is like\r\n```scala\r\n        val dataFrame = spark.createDataFrame(rdd, StructType.fromDDL(s\"a decimal($precision, 2)\"))\r\n        withNestedDataFrame(dataFrame) { case (inputDF, pushDownColName, resultFun) =>\r\n          withParquetDataFrame(inputDF) { implicit df =>\r\n            val decimalAttr: Expression = df(pushDownColName).expr\r\n            assert(df(pushDownColName).expr.dataType === DecimalType(precision, 2))\r\n```\r\n, so the dataframe can not be constructed directly from `withNestedDataFrame[T](data: Seq[T])`",
+        "createdAt" : "2020-03-26T04:23:47Z",
+        "updatedAt" : "2020-03-26T08:00:03Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "926e3d98-254d-4615-9e41-653ce1600320",
+        "parentId" : "2a1426cf-8113-44ff-a7c5-5dc3fc8bb9d3",
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "Instead, I add schema checking in the code.",
+        "createdAt" : "2020-03-26T04:34:39Z",
+        "updatedAt" : "2020-03-26T08:00:03Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5fd97c0a90eb1885a93fffb9d04a262b35f62bc3",
+    "line" : 15,
+    "diffHunk" : "@@ -1,1 +108,112 @@   * dataframes as new test data.\n   */\n  private def withNestedDataFrame(inputDF: DataFrame)\n      (runTest: (DataFrame, String, Any => Any) => Unit): Unit = {\n    assert(inputDF.schema.fields.length == 1)"
+  },
+  {
+    "id" : "f86ee0e6-c2f7-43e7-8c51-f0eec1eb3bae",
+    "prId" : 27728,
+    "prUrl" : "https://github.com/apache/spark/pull/27728#pullrequestreview-381703752",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "40d98536-1cbf-4267-ab54-fad089d38e8b",
+        "parentId" : null,
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "@cloud-fan schema checking in the code to avoid passing any type of dataframe.",
+        "createdAt" : "2020-03-26T05:01:34Z",
+        "updatedAt" : "2020-03-26T08:00:03Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5fd97c0a90eb1885a93fffb9d04a262b35f62bc3",
+    "line" : 18,
+    "diffHunk" : "@@ -1,1 +111,115 @@      (runTest: (DataFrame, String, Any => Any) => Unit): Unit = {\n    assert(inputDF.schema.fields.length == 1)\n    assert(!inputDF.schema.fields.head.dataType.isInstanceOf[StructType])\n    val df = inputDF.toDF(\"temp\")\n    Seq("
+  },
+  {
+    "id" : "12cfbf3f-4c39-4cf1-8f75-e2b46ea98e7c",
+    "prId" : 27728,
+    "prUrl" : "https://github.com/apache/spark/pull/27728#pullrequestreview-382218301",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3b4a222a-a8d8-49ec-b7b8-b5b84b76d430",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "minor: we can import it at the beginning of this test suite, instead of each test case.",
+        "createdAt" : "2020-03-26T12:36:09Z",
+        "updatedAt" : "2020-03-26T12:36:10Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8605c14c-a8bf-4258-b4a3-92ffe8ce7223",
+        "parentId" : "3b4a222a-a8d8-49ec-b7b8-b5b84b76d430",
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "Unfortunately, this implicit import will fail \r\n```scala\r\n    } { implicit df =>\r\n      checkFilterPredicate(\r\n        '_1.startsWith(\"blah\").asInstanceOf[Predicate],\r\n        classOf[UserDefinedByInstance[_, _]],\r\n```\r\nMore specifically, the implicit conversion from `Symbols` to `Expression`.",
+        "createdAt" : "2020-03-26T17:02:51Z",
+        "updatedAt" : "2020-03-26T17:08:03Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5fd97c0a90eb1885a93fffb9d04a262b35f62bc3",
+    "line" : 474,
+    "diffHunk" : "@@ -1,1 +410,414 @@  test(\"filter pushdown - double\") {\n    val data = (1 to 4).map(i => Tuple1(Option(i.toDouble)))\n    import testImplicits._\n    withNestedDataFrame(data.toDF()) { case (inputDF, colName, resultFun) =>\n      withParquetDataFrame(inputDF) { implicit df =>"
   }
 ]

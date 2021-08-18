@@ -504,5 +504,104 @@
     "commit" : "ac9015d1df4ee37504b602111267422461e4262d",
     "line" : 103,
     "diffHunk" : "@@ -1,1 +760,764 @@                  \"taskIdToTaskSetManager.contains(tid) <=> taskIdToExecutorId.contains(tid)\"\n                taskSet.abort(errorMsg)\n                throw new SparkException(errorMsg)\n              })\n              if (executorIdToRunningTaskIds.contains(execId)) {"
+  },
+  {
+    "id" : "4a602c19-5a68-4b5a-98bc-40b1c83d1524",
+    "prId" : 27773,
+    "prUrl" : "https://github.com/apache/spark/pull/27773#pullrequestreview-371403455",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3dcf60c4-c6ad-41fb-8dcb-47250ede1859",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Seem this is not necessary anymore since we've checked in `resourcesMeetTaskRequirements`. But I'm OK to keep it, though.",
+        "createdAt" : "2020-03-09T09:03:22Z",
+        "updatedAt" : "2020-03-19T20:03:38Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "73ded64e-ebb1-42c5-b5dc-c1b9f23d0e2d",
+        "parentId" : "3dcf60c4-c6ad-41fb-8dcb-47250ede1859",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "this was always the case - even when cpu only, we left it when adding the original resource scheduling code as it doesn't hurt and just double check if something really unexpected happens",
+        "createdAt" : "2020-03-09T17:54:39Z",
+        "updatedAt" : "2020-03-19T20:03:38Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2a4a73385ee948d81e51091990a37ebbc8010f61",
+    "line" : 76,
+    "diffHunk" : "@@ -1,1 +358,362 @@              executorIdToRunningTaskIds(execId).add(tid)\n              availableCpus(i) -= taskCpus\n              assert(availableCpus(i) >= 0)\n              task.resources.foreach { case (rName, rInfo) =>\n                // Remove the first n elements from availableResources addresses, these removed"
+  },
+  {
+    "id" : "b20394fe-d2fc-4cc6-8603-56461e4d2891",
+    "prId" : 27773,
+    "prUrl" : "https://github.com/apache/spark/pull/27773#pullrequestreview-372450271",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1435bda0-009c-44d6-8421-275e633f63c3",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Maybe we can pass in the target slots and stop calculation once we reach the target. ",
+        "createdAt" : "2020-03-09T09:35:05Z",
+        "updatedAt" : "2020-03-19T20:03:38Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7a6af9bc-110c-4134-aa20-a808b80ba905",
+        "parentId" : "1435bda0-009c-44d6-8421-275e633f63c3",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "we could. the code would become a  loop (adding up as you went) and not like a map.sum().  honestly I just did what was there before and was thinking that barrier doesn't support dynamic allocation at this point (unless it got checked in without me seeing it?) so the number of executors is more likely to be less then what you need, not more.  \r\nDo you see other cases?\r\nI guess  when barrier scheduling starts to support dynamic allocation this could be more of an issue if you run a large ETL stage and then to smaller number with ML. \r\nI'm fine either way, if you think its an issue now I will change or we could wait til dynamic allocation is supported, what are you thoughts?  (note that I am changing that logic as it had a bug that Mridul found in his review) ",
+        "createdAt" : "2020-03-09T21:32:52Z",
+        "updatedAt" : "2020-03-19T20:03:38Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "11349df1-1b58-4223-aa71-dbc840e8d8b3",
+        "parentId" : "1435bda0-009c-44d6-8421-275e633f63c3",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "> unless it got checked in without me seeing it?\r\n\r\nBarrier mode doesn't support dynamic allocation yet.\r\n\r\n\r\nBut sorry I don't quite understand your concern here.\r\n\r\nWith my understanding, `calculateAvailableSlots` only gives a chance to barrier stage to try to launch all tasks at the same time. But it never guarantee that barrier stage can be successfully launched even if there's enough slots(e.g. due to delay scheduling). So, I mean, whether we calculate total or partial sum of resource slots, it should makes no difference for barrier stage scheduling.\r\n\r\n",
+        "createdAt" : "2020-03-10T03:15:51Z",
+        "updatedAt" : "2020-03-19T20:03:38Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1e30d88a-14d5-4c3c-88ed-053a7d1f0a8d",
+        "parentId" : "1435bda0-009c-44d6-8421-275e633f63c3",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "Barrier just needs to make sure there are X slots available, if there are not it skips that round of scheduling. \r\nWhat I'm saying is this is how the code did it before (calculate all slots) and in the scenario people are using barrier scheduling, they can't use dynamic allocation, so I would  expect the user to request X executors up front so it is very unlikely the job would have X + Y executors, so even though calculateAvailableSlots would add up all slots, I wouldn't expect that to be more then X. Meaning calculateAvailableSlots isn't wasting any time adding in extra slots because they wouldn't be there.",
+        "createdAt" : "2020-03-10T13:17:54Z",
+        "updatedAt" : "2020-03-19T20:03:38Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0777d434-3c21-4f17-ad43-f1befcd96237",
+        "parentId" : "1435bda0-009c-44d6-8421-275e633f63c3",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Ok, I see.",
+        "createdAt" : "2020-03-11T03:07:47Z",
+        "updatedAt" : "2020-03-19T20:03:38Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2a4a73385ee948d81e51091990a37ebbc8010f61",
+    "line" : 157,
+    "diffHunk" : "@@ -1,1 +428,432 @@  // Use the resource that the resourceProfile has as the limiting resource to calculate the\n  // total number of slots available based on the current offers.\n  private def calculateAvailableSlots(\n      resourceProfileIds: Array[Int],\n      availableCpus: Array[Int],"
   }
 ]

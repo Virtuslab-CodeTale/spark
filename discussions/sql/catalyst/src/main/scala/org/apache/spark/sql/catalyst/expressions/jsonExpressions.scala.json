@@ -240,5 +240,159 @@
     "commit" : "faa35719770475e35b5970dc4bd703d3e6cea9d4",
     "line" : 46,
     "diffHunk" : "@@ -1,1 +900,904 @@    val json = child.eval(input).asInstanceOf[UTF8String]\n    // return null for `NULL` input\n    if(json == null) {\n      return null\n    }"
+  },
+  {
+    "id" : "c06c4a97-fd0e-4254-961f-772ae8f1d917",
+    "prId" : 27759,
+    "prUrl" : "https://github.com/apache/spark/pull/27759#pullrequestreview-368713103",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b1f6f6f6-c210-42ca-995a-732a90825168",
+        "parentId" : null,
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "Can nextToken return null? Looks like it can:\r\nhttps://github.com/apache/spark/blob/8e280cebf25e47bf40df224461a76fc4c84cc997/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/json/JacksonUtils.scala#L28-L33",
+        "createdAt" : "2020-03-04T08:01:58Z",
+        "updatedAt" : "2020-04-06T12:25:27Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c9e9fa82-d6eb-4297-bd78-fbb06c515052",
+        "parentId" : "b1f6f6f6-c210-42ca-995a-732a90825168",
+        "authorId" : "832e1988-205f-40f9-89d5-c37ea16224c9",
+        "body" : "It returns null when end of input is reached.\r\nIf it returns null before returning `END_ARRAY` then our json is invalid. Invalid input was already handled.\r\nAnyway now i will add one more check for null.",
+        "createdAt" : "2020-03-04T11:49:02Z",
+        "updatedAt" : "2020-04-06T12:25:27Z",
+        "lastEditedBy" : "832e1988-205f-40f9-89d5-c37ea16224c9",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f44e24ec66e11fdb71c1a9a813f04f6e37244b61",
+    "line" : 64,
+    "diffHunk" : "@@ -1,1 +857,861 @@    }\n    // Keep traversing until the end of JSON array\n    while(parser.nextToken() != JsonToken.END_ARRAY) {\n      length += 1\n      // skip all the child of inner object or array"
+  },
+  {
+    "id" : "ea93dd67-e258-47a5-beca-d109507629b4",
+    "prId" : 27759,
+    "prUrl" : "https://github.com/apache/spark/pull/27759#pullrequestreview-384345672",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b9d29a27-69e6-4a43-b84e-6474139af953",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Hi, @iRakson . Please use `ExpectsInputTypes` to prevent `ClassCastException` like the following.\r\n```\r\nspark-sql> SELECT json_array_length(1);\r\n20/03/30 18:19:11 ERROR SparkSQLDriver: Failed in [SELECT json_array_length(1)]\r\njava.lang.ClassCastException: class java.lang.Integer cannot be cast to class org.apache.spark.unsafe.types.UTF8String (java.lang.Integer is in module java.base of loader 'bootstrap'; org.apache.spark.unsafe.types.UTF8String is in unnamed module of loader 'app')\r\n```",
+        "createdAt" : "2020-03-31T01:21:36Z",
+        "updatedAt" : "2020-04-06T12:25:27Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "370aa638-7d97-4f1a-b775-9e5e12aa1850",
+        "parentId" : "b9d29a27-69e6-4a43-b84e-6474139af953",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Especially, please add a test case for `null` since `NullPointerException` is the worst one.\r\n```\r\nspark-sql> SELECT json_array_length(null);\r\n20/03/30 18:34:38 ERROR SparkSQLDriver: Failed in [SELECT json_array_length(null)]\r\njava.lang.NullPointerException\r\n\tat org.apache.spark.sql.catalyst.json.CreateJacksonParser$.utf8String(CreateJacksonParser.scala:38)\r\n```\r\n\r\nThe expected output for the `null` input is `null`.",
+        "createdAt" : "2020-03-31T01:35:34Z",
+        "updatedAt" : "2020-04-06T12:25:27Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f44e24ec66e11fdb71c1a9a813f04f6e37244b61",
+    "line" : 35,
+    "diffHunk" : "@@ -1,1 +828,832 @@\n  override def eval(input: InternalRow): Any = {\n    val json = child.eval(input).asInstanceOf[UTF8String]\n    // return null for null input\n    if (json == null) {"
+  },
+  {
+    "id" : "ef97434e-ab3c-4d73-852a-1aad42319f9c",
+    "prId" : 27759,
+    "prUrl" : "https://github.com/apache/spark/pull/27759#pullrequestreview-387726123",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "39f357c4-f5cc-4565-ac57-21b06fb8b543",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "`NullPointerException` is not catched here.",
+        "createdAt" : "2020-03-31T01:38:01Z",
+        "updatedAt" : "2020-04-06T12:25:27Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2e7c04f4-8139-4a4a-8c82-bee410ffd4d2",
+        "parentId" : "39f357c4-f5cc-4565-ac57-21b06fb8b543",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Maybe, do we need to catch `case NonFatal(e) =>` in general?",
+        "createdAt" : "2020-03-31T01:38:48Z",
+        "updatedAt" : "2020-04-06T12:25:27Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1f808a24-965e-4cc4-aba5-3718e4954b68",
+        "parentId" : "39f357c4-f5cc-4565-ac57-21b06fb8b543",
+        "authorId" : "832e1988-205f-40f9-89d5-c37ea16224c9",
+        "body" : "I think we do not need to catch `NullPointerException` here.",
+        "createdAt" : "2020-04-04T14:35:54Z",
+        "updatedAt" : "2020-04-06T12:25:27Z",
+        "lastEditedBy" : "832e1988-205f-40f9-89d5-c37ea16224c9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bc239d44-62fa-45ff-a009-072fab3a8eb7",
+        "parentId" : "39f357c4-f5cc-4565-ac57-21b06fb8b543",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "The added line 831 looks okay.",
+        "createdAt" : "2020-04-04T19:08:10Z",
+        "updatedAt" : "2020-04-06T12:25:27Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f44e24ec66e11fdb71c1a9a813f04f6e37244b61",
+    "line" : 53,
+    "diffHunk" : "@@ -1,1 +846,850 @@      }\n    } catch {\n      case _: JsonProcessingException | _: IOException => null\n    }\n  }"
+  },
+  {
+    "id" : "b14a9753-f3f5-4a28-8ff3-6c285cf0a2ad",
+    "prId" : 27759,
+    "prUrl" : "https://github.com/apache/spark/pull/27759#pullrequestreview-387739055",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f485ca94-263b-4ff2-8de9-6f780f135719",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Just a question. We still check the invalidity of the content inside children because we should return `null` if there is an invalidity in there. Did I understand correctly?",
+        "createdAt" : "2020-04-04T19:47:10Z",
+        "updatedAt" : "2020-04-06T12:25:27Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3bd348f1-cfe2-42a2-b091-07d2f261bcea",
+        "parentId" : "f485ca94-263b-4ff2-8de9-6f780f135719",
+        "authorId" : "832e1988-205f-40f9-89d5-c37ea16224c9",
+        "body" : "Yes.\r\nActually Jackson parser will throw JsonProcessingException in case of invalid JSON. So, it is not required to check here. ",
+        "createdAt" : "2020-04-04T20:52:53Z",
+        "updatedAt" : "2020-04-06T12:25:27Z",
+        "lastEditedBy" : "832e1988-205f-40f9-89d5-c37ea16224c9",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f44e24ec66e11fdb71c1a9a813f04f6e37244b61",
+    "line" : 67,
+    "diffHunk" : "@@ -1,1 +860,864 @@      length += 1\n      // skip all the child of inner object or array\n      parser.skipChildren()\n    }\n    length"
   }
 ]

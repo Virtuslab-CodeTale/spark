@@ -1,0 +1,90 @@
+[
+  {
+    "id" : "205914b6-7b0f-4ab7-85e9-4e628c6e9c0a",
+    "prId" : 27732,
+    "prUrl" : "https://github.com/apache/spark/pull/27732#pullrequestreview-368218158",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e135b082-9397-46e2-8f13-9ffd00748d83",
+        "parentId" : null,
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "Any particular reasons for using SimpleDateFormat instead of DateTimeFormatter? Just in case, would it possible to use `TimestampFormatter` here?",
+        "createdAt" : "2020-03-03T14:45:04Z",
+        "updatedAt" : "2020-03-03T14:49:20Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "25b5715e-7442-4f03-8d60-2dd16eed5fd4",
+        "parentId" : "e135b082-9397-46e2-8f13-9ffd00748d83",
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "This is to use the same formatter as https://github.com/apache/spark/blob/master/sql/core/src/main/scala/org/apache/spark/sql/execution/streaming/ProgressReporter.scala#L91",
+        "createdAt" : "2020-03-03T18:26:10Z",
+        "updatedAt" : "2020-03-03T18:26:10Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "14795023e1abd1d79cc4b5a2c3ea011304cb1b4c",
+    "line" : 19,
+    "diffHunk" : "@@ -1,1 +66,70 @@  private val progressTimestampFormat = new ThreadLocal[SimpleDateFormat]() {\n    override def initialValue(): SimpleDateFormat = {\n      val format = new SimpleDateFormat(\"yyyy-MM-dd'T'HH:mm:ss.SSS'Z'\") // ISO8601\n      format.setTimeZone(getTimeZone(\"UTC\"))\n      format"
+  },
+  {
+    "id" : "82420010-88d4-4023-87e5-1b106e774a10",
+    "prId" : 27732,
+    "prUrl" : "https://github.com/apache/spark/pull/27732#pullrequestreview-368458185",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a71689de-df8b-4a97-98df-6a5e1ea10beb",
+        "parentId" : null,
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "This is useless settings because you require a time zone in the inputs:\r\n```scala\r\nscala> val sdf = new SimpleDateFormat(\"yyyy-MM-dd'T'HH:mm:ss.SSS'Z'\")\r\nsdf: java.text.SimpleDateFormat = java.text.SimpleDateFormat@5af7aed5\r\n\r\nscala> sdf.parse\r\nparse   parseObject\r\n\r\nscala> sdf.parse(\"2020-03-03T11:12:13.123\")\r\njava.text.ParseException: Unparseable date: \"2020-03-03T11:12:13.123\"\r\n  at java.text.DateFormat.parse(DateFormat.java:366)\r\n  ... 47 elided\r\n\r\nscala> sdf.parse(\"2020-03-03T11:12:13.123Z\")\r\nres1: java.util.Date = Tue Mar 03 11:12:13 MSK 2020\r\n```",
+        "createdAt" : "2020-03-03T14:48:58Z",
+        "updatedAt" : "2020-03-03T14:49:20Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dc4fbbc6-feaa-4349-b7f3-6fd6ab70e755",
+        "parentId" : "a71689de-df8b-4a97-98df-6a5e1ea10beb",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "Sorry, I was confused. Actually, 'Z' at the end of the pattern is not a place holder for time zone. Did you do that intentionally?  ",
+        "createdAt" : "2020-03-03T14:56:37Z",
+        "updatedAt" : "2020-03-03T14:56:38Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1ac04c2c-2885-435b-a346-91cc99c7ec19",
+        "parentId" : "a71689de-df8b-4a97-98df-6a5e1ea10beb",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I think so. It's not for parsing but formatting, and it's always UTC, so putting `Z` at the end is corrected.",
+        "createdAt" : "2020-03-03T16:05:46Z",
+        "updatedAt" : "2020-03-03T16:05:47Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d8bb003a-6eab-4294-a1bb-f710b70f19c9",
+        "parentId" : "a71689de-df8b-4a97-98df-6a5e1ea10beb",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "I also checked this during the review, this timestamp string generated internally at\r\n\r\nhttps://github.com/apache/spark/blob/380e8876316d6ef5a74358be2a04ab20e8b6e7ca/sql/core/src/main/scala/org/apache/spark/sql/execution/streaming/ProgressReporter.scala#L91-L92\r\n\r\nSo here is just parse back.",
+        "createdAt" : "2020-03-04T02:05:03Z",
+        "updatedAt" : "2020-03-04T02:05:04Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "14795023e1abd1d79cc4b5a2c3ea011304cb1b4c",
+    "line" : 20,
+    "diffHunk" : "@@ -1,1 +67,71 @@    override def initialValue(): SimpleDateFormat = {\n      val format = new SimpleDateFormat(\"yyyy-MM-dd'T'HH:mm:ss.SSS'Z'\") // ISO8601\n      format.setTimeZone(getTimeZone(\"UTC\"))\n      format\n    }"
+  }
+]

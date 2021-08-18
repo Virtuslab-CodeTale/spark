@@ -75,5 +75,236 @@
     "commit" : "3047f88bb3d0ca95ea4135e3c997f0602578c480",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +86,90 @@  private val noRows = None\n\n  private lazy val timestampFormatter = TimestampFormatter(\n    options.timestampFormat,\n    options.zoneId,"
+  },
+  {
+    "id" : "bcff7c69-d0e2-4a96-ad38-d643bf455190",
+    "prId" : 27710,
+    "prUrl" : "https://github.com/apache/spark/pull/27710#pullrequestreview-366976795",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2abbad0d-b432-4eda-9474-faa9687b229e",
+        "parentId" : null,
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "Looking at what was removed there https://github.com/apache/spark/pull/23150/files#diff-c82e4b74d2a51fed29069745ce4f9e96L164 , `DateTimeUtils.stringToTime` and `DateTimeUtils.stringToTimestamp` are 2 different functions, see https://github.com/MaxGekk/spark/blob/60c0974261c947c0838457c40f4fe0e64d17ca15/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/util/DateTimeUtils.scala#L173-L191 \r\n\r\n`stringToTime` has a few problems - it doesn't respect to Spark's session time zone, and parses in the combined calendar. If you use it as a fallback, you can get parsed values in different calendars.",
+        "createdAt" : "2020-02-26T15:51:56Z",
+        "updatedAt" : "2020-02-27T16:42:11Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "34fe55d1-cb51-4e19-aedc-aad530921845",
+        "parentId" : "2abbad0d-b432-4eda-9474-faa9687b229e",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Yea I just want to support the legacy format, not to be exactly the same with 2.4. We switch the calendar so we can't be exactly the same anyway.",
+        "createdAt" : "2020-02-26T16:24:54Z",
+        "updatedAt" : "2020-02-27T16:42:11Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fa8f704d-ec50-4a6f-b60f-aca0e3630674",
+        "parentId" : "2abbad0d-b432-4eda-9474-faa9687b229e",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "If we can't be exactly the same, why do we add this back?\r\ncc @marmbrus and @gatorsmile ",
+        "createdAt" : "2020-02-26T17:05:51Z",
+        "updatedAt" : "2020-02-27T16:42:11Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a931f857-bec1-4877-81b1-aeba3ebe268c",
+        "parentId" : "2abbad0d-b432-4eda-9474-faa9687b229e",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "We can't be exactly the same in 1% cases, and this change can make us exactly the same in 99% cases.",
+        "createdAt" : "2020-02-26T17:33:47Z",
+        "updatedAt" : "2020-02-27T16:42:11Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "64db043f-5787-4b6f-919a-4079cac638fd",
+        "parentId" : "2abbad0d-b432-4eda-9474-faa9687b229e",
+        "authorId" : "1d40bb30-68bd-4124-82bc-33d93ee4bc65",
+        "body" : " - What cases used to be supported that are no longer supported?\r\n - What remains in the 1%?\r\n - Why can we not get 100%?\r\n\r\nTo me, Spark suddenly failing to parse timestamps that it used to parse fall into the \"extremely annoying\" category of regressions. Working with timestamps is already hard and confusing. If my job just suddenly starts returning `null` when it used to work as expected its:\r\n - Probably going to take a while for people to figure it out (while the `null` partition of their table mysteriously fills up).\r\n - Probably non-trival for them to figure out how to fix it. (I don't think constructing / testing format strings is a trivial activity).\r\n\r\nI really question why we changed these API's rather than creating new better ones. These changes broke my pipeline and it took me hours + access to a team of spark committers to figure out why!!!!!",
+        "createdAt" : "2020-02-26T17:59:34Z",
+        "updatedAt" : "2020-02-27T16:42:11Z",
+        "lastEditedBy" : "1d40bb30-68bd-4124-82bc-33d93ee4bc65",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c3734cdd-6b9d-4d05-bc9d-33d386afe2db",
+        "parentId" : "2abbad0d-b432-4eda-9474-faa9687b229e",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "We switch the calendar from \"hybrid calendar (Julian + Gregorian)\" to \"ISO chronology (Proleptic Gregorian)\", which affects date/timestamp values before October 15, 1582. For example, some dates are invalid according to the new calendar but the old calendar accepts it. When we add days to a date, the calendar skips invalid dates.\r\n\r\nThe new calendar is widely used by RDBMS and others like parquet, snowflake, but we should have a better rollout plan for the calendar switch, like making the calendar configurable for Spark. Unfortunately, we catch this too late.\r\n\r\nHowever, the more serious problem is the switch of the pattern string(as we switch to the Java 8 datetime API), and 3.0 can't parse some date/timestamp strings suddenly (I've listed what the legacy format supports in [test](https://github.com/apache/spark/pull/27710/files#diff-2eb1f6bddc96a5e4d54262fee681b4bbR325)). This is the first step to fix this issue by adding back the legacy fallback, we are still working on fixing the 1% when users set a custom pattern string:\r\n1. try to support the previous pattern string with the new calendar. If can't, go 2)\r\n2. detect the conflicts between old and new pattern string and throw an exception to tell users what to do (turn on the legacy config or accept the new pattern string knowing what it means)",
+        "createdAt" : "2020-02-26T18:26:07Z",
+        "updatedAt" : "2020-02-27T16:42:11Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8b2e8c6e-d3b0-4c14-a7ce-f06f0e34c253",
+        "parentId" : "2abbad0d-b432-4eda-9474-faa9687b229e",
+        "authorId" : "1d40bb30-68bd-4124-82bc-33d93ee4bc65",
+        "body" : "I agree with your analysis of the relative costs here.\r\n\r\nI think there are probably very few Spark programs in existence where the specifics of date handling for dates before October 15, 1582 are critical to correctness. This is especially true if you still get back some valid date (rather than `null`). If thats really the only difference with the calendar switch, then I think you could even make an argument that making the calendar configurable is too high a cost for the project.\r\n\r\nRemoving support for previously supported date format parsing strings in contrast seems pretty disastrous to me. Having to remove test cases really should have been a red flag to reviewers of those changes that we were going to break users' programs.",
+        "createdAt" : "2020-02-26T19:33:06Z",
+        "updatedAt" : "2020-02-27T16:42:11Z",
+        "lastEditedBy" : "1d40bb30-68bd-4124-82bc-33d93ee4bc65",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "64be3b48-de0e-4ad5-bcfc-57f8daed1c71",
+        "parentId" : "2abbad0d-b432-4eda-9474-faa9687b229e",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "My five cents, besides of the calendar problem the fallback function `DateTimeUtils.stringToTime()` didn't take into account the session time zone (`spark.sql.session.timeZone`). This can lead to the situation when there are values in a column parsed in different time zones. I do think this is serious problem of the fallback mechanism. If we are going to restore it to only don't get nulls, this will make users life harder in troubleshooting wrong results. ",
+        "createdAt" : "2020-02-27T05:45:33Z",
+        "updatedAt" : "2020-02-27T16:42:11Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1f597cc2-b3b8-4789-b492-74b1c0445fbc",
+        "parentId" : "2abbad0d-b432-4eda-9474-faa9687b229e",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "@MaxGekk now we call `DateTimeUtils.stringToTimestamp(str, options.zoneId)`, so timezone is not an issue?",
+        "createdAt" : "2020-02-27T05:57:08Z",
+        "updatedAt" : "2020-02-27T16:42:11Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b54578c9-d7a8-4ca0-b4ed-8cc2b1f42ac0",
+        "parentId" : "2abbad0d-b432-4eda-9474-faa9687b229e",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "`stringToTimestamp` doesn't have the issue but you implemented different fallback mechanism. From my point of view, it makes sense to either:\r\n- restore the old function `stringToTime`\r\n- or keep current code as is.\r\n\r\nFallback to `stringToTimestamp` is new feature, I think.",
+        "createdAt" : "2020-02-27T06:16:41Z",
+        "updatedAt" : "2020-02-27T16:42:11Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fd3be581-2987-4a49-8da4-9206238d65ed",
+        "parentId" : "2abbad0d-b432-4eda-9474-faa9687b229e",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I know they are different implementations, but we care more about the behavior to end users.\r\n\r\nAre there any timestamp strings that can be parsed by `stringToTime` but not `stringToTimestamp`?",
+        "createdAt" : "2020-02-27T06:23:21Z",
+        "updatedAt" : "2020-02-27T16:42:11Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2e2ab278-588c-45fd-82f0-4de6a51c4ce3",
+        "parentId" : "2abbad0d-b432-4eda-9474-faa9687b229e",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "`stringToTimestamp` cannot parse time zone id with the `GMT` prefix, see https://github.com/MaxGekk/spark/blob/60c0974261c947c0838457c40f4fe0e64d17ca15/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/util/DateTimeUtils.scala#L176 ",
+        "createdAt" : "2020-02-27T09:55:07Z",
+        "updatedAt" : "2020-02-27T16:42:11Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e61411a1-c476-4a28-b8d9-59d0e80c78c7",
+        "parentId" : "2abbad0d-b432-4eda-9474-faa9687b229e",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "looks like a corner case, but let's add it back as well.",
+        "createdAt" : "2020-02-27T12:59:52Z",
+        "updatedAt" : "2020-02-27T16:42:11Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "58b0a360-91a0-4fb8-be1f-2aabbcfad720",
+        "parentId" : "2abbad0d-b432-4eda-9474-faa9687b229e",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "@cloud-fan Here is a draft PR which supports any zone ids by `stringToTimestamp`: https://github.com/apache/spark/pull/27753",
+        "createdAt" : "2020-03-01T18:38:53Z",
+        "updatedAt" : "2020-03-01T18:38:53Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8ee94b83-c08f-468a-b7ba-1e4fa965d68c",
+        "parentId" : "2abbad0d-b432-4eda-9474-faa9687b229e",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Thank you for keeping moving (improving) this situation!",
+        "createdAt" : "2020-03-02T00:32:46Z",
+        "updatedAt" : "2020-03-02T00:32:57Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fc0c5260-0297-4cb2-96d5-48fd1ca5d5be",
+        "parentId" : "2abbad0d-b432-4eda-9474-faa9687b229e",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "@MaxGekk that's a good complement to support more legacy formats!",
+        "createdAt" : "2020-03-02T06:44:43Z",
+        "updatedAt" : "2020-03-02T06:44:44Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "16db32f50449bb4bb721101c709ea56cc305d324",
+    "line" : 13,
+    "diffHunk" : "@@ -1,1 +184,188 @@            // compatibility.\n            val str = UTF8String.fromString(DateTimeUtils.cleanLegacyTimestampStr(datum))\n            DateTimeUtils.stringToTimestamp(str, options.zoneId).getOrElse(throw e)\n        }\n      }"
+  },
+  {
+    "id" : "aa9d0d8b-7e72-4525-82c7-34350724ef53",
+    "prId" : 27710,
+    "prUrl" : "https://github.com/apache/spark/pull/27710#pullrequestreview-367825072",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d0704fb5-c7ff-47ca-9c09-8d0bb1c84a8e",
+        "parentId" : null,
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "Should we also shadow this fallback behavior under legacy config? Or JSON/CSV will not keep the same behavior with the SQL side?\r\nAs the current approach, it seems to break the rule we want to achieve in #27537: throw an exception when the result changing between old and new Spark versions.",
+        "createdAt" : "2020-03-03T02:18:56Z",
+        "updatedAt" : "2020-03-03T02:19:02Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "50fcc99f-7434-4a38-87a5-014a25e11c12",
+        "parentId" : "d0704fb5-c7ff-47ca-9c09-8d0bb1c84a8e",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I don't think it should be protected by a config.\r\n\r\nThe fallback was there at the very beginning without any config, and I think it's reasonable to support the legacy format always, to make the parser more relaxed.",
+        "createdAt" : "2020-03-03T07:01:37Z",
+        "updatedAt" : "2020-03-03T07:01:37Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8018910a-ffcb-42d8-9277-6aae6a6a1e44",
+        "parentId" : "d0704fb5-c7ff-47ca-9c09-8d0bb1c84a8e",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "Copy, that makes sense.\r\nSo this fallback logic is kind of guard logic for the parser, no matter the parser is new or legacy one. \r\nAfter this merged, #27537 need to address the logic conflict.",
+        "createdAt" : "2020-03-03T09:36:59Z",
+        "updatedAt" : "2020-03-03T09:36:59Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "16db32f50449bb4bb721101c709ea56cc305d324",
+    "line" : 7,
+    "diffHunk" : "@@ -1,1 +178,182 @@      nullSafeDatum(d, name, nullable, options) { datum =>\n        try {\n          timestampFormatter.parse(datum)\n        } catch {\n          case NonFatal(e) =>"
   }
 ]

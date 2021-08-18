@@ -790,5 +790,82 @@
     "commit" : "125d09408edcbee3a5bae591e949c53c90878ca7",
     "line" : 9,
     "diffHunk" : "@@ -1,1 +3493,3497 @@      sql(\"(SELECT map()) UNION ALL (SELECT map(1, 2))\"),\n      Seq(Row(Map[Int, Int]()), Row(Map(1 -> 2))))\n  }\n}\n"
+  },
+  {
+    "id" : "1e9bfa36-2140-40c6-8702-0a349b985b4f",
+    "prId" : 27702,
+    "prUrl" : "https://github.com/apache/spark/pull/27702#pullrequestreview-365464802",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ea90fb50-5bbd-4799-90c2-bac714dd052c",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "The below test coverage looks better. Last time, it checked only the exception occurs or not. BTW, do we need to store as table to avoid some local table optimization?",
+        "createdAt" : "2020-02-27T04:14:35Z",
+        "updatedAt" : "2020-02-27T20:05:27Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1bd8c960-75d3-47af-8953-28ab5d1557c6",
+        "parentId" : "ea90fb50-5bbd-4799-90c2-bac714dd052c",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Yea, if not store as a table, the query becomes a simple LocalRelation. ",
+        "createdAt" : "2020-02-27T06:21:36Z",
+        "updatedAt" : "2020-02-27T20:05:27Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8d96c7f9-a617-4732-9890-9f3b53177c93",
+        "parentId" : "ea90fb50-5bbd-4799-90c2-bac714dd052c",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Sorry if I am being dumb here but I can't fully follow why LocalRelation matters here. How does the current fix relate to the test fix here?\r\n\r\nIf we concern about `ConvertToLocalRelation`, it seems not effective here:\r\n\r\n```\r\n\r\n== Parsed Logical Plan ==\r\n'Project ['explodedvalue.field]\r\n+- 'Generate 'explode('value), false, as, ['explodedvalue]\r\n   +- 'SubqueryAlias AS\r\n      +- 'UnresolvedInlineTable [value], [List('array('named_struct(field, 'named_struct(a, 1, b, 2))))]\r\n\r\n== Analyzed Logical Plan ==\r\nfield: struct<a:int,b:int>\r\nProject [explodedvalue#219.field AS field#220]\r\n+- Generate explode(value#218), false, as, [explodedvalue#219]\r\n   +- SubqueryAlias AS\r\n      +- LocalRelation [value#218]\r\n\r\n== Optimized Logical Plan ==\r\nProject [explodedvalue#219.field AS field#220]\r\n+- Generate explode(value#218), [0], false, as, [explodedvalue#219]\r\n   +- LocalRelation [value#218]\r\n\r\n== Physical Plan ==\r\n*(1) Project [explodedvalue#219.field AS field#220]\r\n+- Generate explode(value#218), false, [explodedvalue#219]\r\n   +- LocalTableScan [value#218]\r\n```",
+        "createdAt" : "2020-02-27T07:10:43Z",
+        "updatedAt" : "2020-02-27T20:05:27Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ca890989-6385-41e9-95ab-af0b8b607cf3",
+        "parentId" : "ea90fb50-5bbd-4799-90c2-bac714dd052c",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "I changed the test added by SPARK-30870, because the root cause of the failure is not due to selecting whole structure. Here I change this test to more fit the original purpose of SPARK-30870: when selecting whole structure, column pruning shouldn't alias the nested column.",
+        "createdAt" : "2020-02-27T07:15:57Z",
+        "updatedAt" : "2020-02-27T20:05:27Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4ce52ab8-e08a-43dd-99fb-bf1a4fc5bf7f",
+        "parentId" : "ea90fb50-5bbd-4799-90c2-bac714dd052c",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "The test added by SPARK-30870 is moved to `SchemaPruningSuite`.",
+        "createdAt" : "2020-02-27T07:16:53Z",
+        "updatedAt" : "2020-02-27T20:05:27Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "363ae173-25f1-47fc-8113-fa88f1edecaf",
+        "parentId" : "ea90fb50-5bbd-4799-90c2-bac714dd052c",
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "Both PRs fix the concrete SQL in SPARK-30870 independently because \r\n- the whole structure was selected (my pr fixed it) and \r\n- a nested column was selected from the output of a generate (this PR fixes it).\r\n\r\nBut this PR is better for cases that contain generate as it can handle nested field of a nested field https://github.com/apache/spark/pull/27702/files#diff-957112380b0a2ef014abc8227d0b70acR313-R318",
+        "createdAt" : "2020-02-27T07:38:48Z",
+        "updatedAt" : "2020-02-27T20:05:27Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5862428c552c82d858e9edc29d59fd4d9419460f",
+    "line" : 24,
+    "diffHunk" : "@@ -1,1 +3403,3407 @@          |FROM VALUES array(named_struct('field', named_struct('a', 1, 'b', 2))) AS (value)\n        \"\"\".stripMargin)\n      df.write.format(\"parquet\").saveAsTable(\"t\")\n\n      val df2 = spark.table(\"t\")"
   }
 ]
