@@ -1,0 +1,90 @@
+[
+  {
+    "id" : "66c00a0c-e44a-4279-a600-61961a100bb6",
+    "prId" : 33261,
+    "prUrl" : "https://github.com/apache/spark/pull/33261#pullrequestreview-704607629",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4a62fc63-34e2-4931-bd58-a6f2fad5fc42",
+        "parentId" : null,
+        "authorId" : "c13f1277-0254-494b-8e7a-bd7c261b2e9f",
+        "body" : "The [autoConfigure](https://github.com/fabric8io/kubernetes-client/blob/4e4dcc73bfd6e0d811e3aba32ffa7956b71d951d/kubernetes-client/src/main/java/io/fabric8/kubernetes/client/Config.java#L418) helps us set backofflimit with [priority](https://github.com/fabric8io/kubernetes-client/blob/5bfcac2d8a144f66b1323df5988dd2761fc7e561/kubernetes-client/src/main/java/io/fabric8/kubernetes/client/utils/Utils.java#L80-L92) :\r\n1. System.getProperty(KUBERNETES_REQUEST_RETRY_BACKOFFLIMIT_SYSTEM_PROPERTY)\r\n2. System.getenv(KUBERNETES_REQUEST_RETRY_BACKOFFLIMIT_SYSTEM_PROPERTY)\r\n3. then [config.getRequestRetryBackoffLimit()](https://github.com/fabric8io/kubernetes-client/blob/4e4dcc73bfd6e0d811e3aba32ffa7956b71d951d/kubernetes-client/src/main/java/io/fabric8/kubernetes/client/Config.java#L418)\r\n\r\nSo, it works, but looks like a little bit flaky for me (it dependents more internal implements of k8s-client), how about respects user property/env/config after config build() like:\r\n```\r\nif config.getRequestRetryBackoffLimit() != null:\r\n    config.setRequestRetryBackoffLimit(\"3\")\r\n```\r\n",
+        "createdAt" : "2021-07-12T14:11:19Z",
+        "updatedAt" : "2021-07-12T14:39:41Z",
+        "lastEditedBy" : "c13f1277-0254-494b-8e7a-bd7c261b2e9f",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "57c88cd2-6512-4e0c-bf45-d624e06d51f9",
+        "parentId" : "4a62fc63-34e2-4931-bd58-a6f2fad5fc42",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "That would be too late and its value would be set already to 0 and not null.\r\n\r\nSee this line:\r\nhttps://github.com/attilapiros/kubernetes-client/blob/master/kubernetes-client/src/main/java/io/fabric8/kubernetes/client/Config.java#L418\r\n\r\nSo we cannot not differentiate whether 0 is set as an intended value chosen by the user or just the default value of the kubernetes-client.",
+        "createdAt" : "2021-07-12T15:23:23Z",
+        "updatedAt" : "2021-07-12T15:23:23Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8fcd88f3-62b5-410c-a61e-7483c497328a",
+        "parentId" : "4a62fc63-34e2-4931-bd58-a6f2fad5fc42",
+        "authorId" : "c13f1277-0254-494b-8e7a-bd7c261b2e9f",
+        "body" : "> So we cannot not differentiate whether 0 is set as an intended value chosen by the user or just the default value of the kubernetes-client.\n\nOK, thanks for the explanation, make sense.",
+        "createdAt" : "2021-07-12T22:54:49Z",
+        "updatedAt" : "2021-07-12T22:54:50Z",
+        "lastEditedBy" : "c13f1277-0254-494b-8e7a-bd7c261b2e9f",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "64df5f1180fa7f62f87cf695dfd45b9233e646ed",
+    "line" : 23,
+    "diffHunk" : "@@ -1,1 +82,86 @@      System.setProperty(KUBERNETES_REQUEST_RETRY_BACKOFFLIMIT_SYSTEM_PROPERTY, \"3\")\n    }\n\n    // Start from an auto-configured config with the desired context\n    // Fabric 8 uses null to indicate that the users current context should be used so if no"
+  },
+  {
+    "id" : "b333603c-7238-4d6b-85e7-92a33fc6b3ca",
+    "prId" : 33261,
+    "prUrl" : "https://github.com/apache/spark/pull/33261#pullrequestreview-704248281",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "87dabcee-6519-4b81-b158-6cd3df2d51d3",
+        "parentId" : null,
+        "authorId" : "c13f1277-0254-494b-8e7a-bd7c261b2e9f",
+        "body" : "nit: I think the log can be moved before L109(`HttpClientUtils.createHttpClient(config)`)",
+        "createdAt" : "2021-07-12T14:38:37Z",
+        "updatedAt" : "2021-07-12T14:39:41Z",
+        "lastEditedBy" : "c13f1277-0254-494b-8e7a-bd7c261b2e9f",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "65db6b1d-b69e-4e3b-9aed-5a7176c7d888",
+        "parentId" : "87dabcee-6519-4b81-b158-6cd3df2d51d3",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "I would like to keep it as close to `DefaultKubernetesClient` as possible. ",
+        "createdAt" : "2021-07-12T15:24:39Z",
+        "updatedAt" : "2021-07-12T15:24:39Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7c11e389-21ba-46c8-90c5-8dbb05333d5c",
+        "parentId" : "87dabcee-6519-4b81-b158-6cd3df2d51d3",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "As that is the one which we are mostly interested in.",
+        "createdAt" : "2021-07-12T15:25:01Z",
+        "updatedAt" : "2021-07-12T15:25:01Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "64df5f1180fa7f62f87cf695dfd45b9233e646ed",
+    "line" : 31,
+    "diffHunk" : "@@ -1,1 +111,115 @@      .dispatcher(dispatcher)\n      .build()\n    logDebug(\"Kubernetes client config: \" +\n      new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(config))\n    new DefaultKubernetesClient(httpClientWithCustomDispatcher, config)"
+  }
+]

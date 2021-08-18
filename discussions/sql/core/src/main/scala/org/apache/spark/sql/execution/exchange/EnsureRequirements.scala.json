@@ -75,5 +75,93 @@
     "commit" : "61cc6751e4baad96f0a8b251296c6e58ffbbf3a3",
     "line" : 28,
     "diffHunk" : "@@ -1,1 +258,262 @@    case operator @ ShuffleExchangeExec(upper: HashPartitioning, child, shuffleOrigin)\n        if optimizeOutRepartition &&\n          (shuffleOrigin == REPARTITION_BY_COL || shuffleOrigin == REPARTITION_BY_NUM) =>\n      def hasSemanticEqualPartitioning(partitioning: Partitioning): Boolean = {\n        partitioning match {"
+  },
+  {
+    "id" : "fc02e3dd-dea6-4777-aabb-b075c0489de4",
+    "prId" : 33188,
+    "prUrl" : "https://github.com/apache/spark/pull/33188#pullrequestreview-714988801",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "fceab74f-02f1-467b-bd70-b01c4439e3b8",
+        "parentId" : null,
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "Sorry for going back to here. After some more thought, it would be better to skip removing shuffle with all shuffle origin in AQE which include the `REPARTITION_BY_COL`. Then the condition can be changed to `if !conf.adaptiveExecutionEnabled`. Given this we can remove the final stage rules in `AdaptiveSparkPlanExec` safely which seems a little hack.\r\n\r\nFor `REPARTITION_BY_COL`, I want to explain it's also unsafe to remove. We may apply `OptimizeLocalShuffleReader` to change the output partitioning which does not follow the semantics of `RepartitionByExpression`.\r\n\r\nWhat do you think ? @HyukjinKwon @cloud-fan ",
+        "createdAt" : "2021-07-15T01:50:59Z",
+        "updatedAt" : "2021-07-15T01:50:59Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8aad5093-9c9d-4332-820b-5286d751ae8d",
+        "parentId" : "fceab74f-02f1-467b-bd70-b01c4439e3b8",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "This may introduce perf regression (or improve perf if AQE can optimize skew join) but can simplify AQE code a lot. What do you think? @maryannxue @JkSelf ",
+        "createdAt" : "2021-07-15T02:22:38Z",
+        "updatedAt" : "2021-07-15T02:23:00Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b5c0f2f0-ca8e-400a-b353-a2fdb3b1bd3e",
+        "parentId" : "fceab74f-02f1-467b-bd70-b01c4439e3b8",
+        "authorId" : "1b84a7ff-6bf9-4417-bf9f-e46e997e5974",
+        "body" : "The `CoalesceShufflePartitions` rule may change the partition number when the `shuffleOrigin` is `REPARTITION_BY_COL`. I think it maybe a potential bug if removing the shuffle and not the perf issue.",
+        "createdAt" : "2021-07-20T01:51:29Z",
+        "updatedAt" : "2021-07-20T01:51:29Z",
+        "lastEditedBy" : "1b84a7ff-6bf9-4417-bf9f-e46e997e5974",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "68d61e10-3b3e-4a0a-b4d1-cf531f76f120",
+        "parentId" : "fceab74f-02f1-467b-bd70-b01c4439e3b8",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "yeah, as we have only skipped applying `CoalesceShufflePartitions` or other custom shuffle reader at final stage. But for the stages which are in the process, we do nothing. That's why I think a little bit hack.\r\n\r\nOne other hack idea is we can remark the shuffle which is before the removed shuffle and change the `ENSURE_REQUIREMENTS` to `REPARTITION_BY_COL`. Then in AQE, we can do optimization safely.\r\n\r\nIMO, I prefer the idea of `skip removing shuffle with all shuffle origin in AQE`, it's simple and it can be seen as a behavior change due to AQE is enabled by default. If user really hit this issue, they can just disable AQE.",
+        "createdAt" : "2021-07-20T03:26:31Z",
+        "updatedAt" : "2021-07-20T03:26:31Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d4404007-2068-466c-92dd-0bc962e6a3f5",
+        "parentId" : "fceab74f-02f1-467b-bd70-b01c4439e3b8",
+        "authorId" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "body" : "Changing sth. that would introduce regressions to the existing logic just to get the potential benefit of sth. we have not implemented yet is NOT acceptable.\r\n\r\nA better solution here is to have a \"root distribution (and potentially ordering) requirement\", which will be passed to EnsureRequirement and ValidateRequirement, so that each custom-shuffle-reader rule (e.g., local-shuffle-reader, skew-join) can decide whether to apply just by calling `ValidateRequirement` or add back necessary shuffle by calling `EnsureRequirement`. There would be no need for final-stage hacks.",
+        "createdAt" : "2021-07-20T15:25:19Z",
+        "updatedAt" : "2021-07-20T15:25:19Z",
+        "lastEditedBy" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5f968e77-da5a-4f7e-a0e0-08cdcd091769",
+        "parentId" : "fceab74f-02f1-467b-bd70-b01c4439e3b8",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "given this, is it better to add a new physical plan for repartition ? which can aslo hold the `\"root distribution (and potentially ordering) requirement\"`. I remember some PR discussed about it before, and it should have other benefits, e.g. `AliasAwareOutputPartitioning`.\r\n",
+        "createdAt" : "2021-07-22T04:56:05Z",
+        "updatedAt" : "2021-07-22T04:56:05Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "02e53335-b3fd-4b7f-a3cd-2eea9476f71a",
+        "parentId" : "fceab74f-02f1-467b-bd70-b01c4439e3b8",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "This doesn't solve the real problem: shall we eliminate the new physical plan for user-specified shuffles and skip some AQE rules? Or do not eliminate and always run all the AQE rules?",
+        "createdAt" : "2021-07-26T15:29:24Z",
+        "updatedAt" : "2021-07-26T15:29:24Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7b668bbd9cef4ca2f0cfa84d2e16870464db4f1b",
+    "line" : 10,
+    "diffHunk" : "@@ -1,1 +256,260 @@    // So, here we only remove REPARTITION_BY_COL in AQE.\n    case operator @ ShuffleExchangeExec(upper: HashPartitioning, child, shuffleOrigin)\n        if shuffleOrigin == REPARTITION_BY_COL || !conf.adaptiveExecutionEnabled =>\n      def hasSemanticEqualPartitioning(partitioning: Partitioning): Boolean = {\n        partitioning match {"
   }
 ]

@@ -42,5 +42,93 @@
     "commit" : "39d7c26aaef799b6901c4b88982ca3c9cf8f531d",
     "line" : 11,
     "diffHunk" : "@@ -1,1 +332,336 @@\n    // We don't actually hit this exception though, we keep it for understandability\n    case _ => throw QueryExecutionErrors.unsupportedTypeError(dataType)\n  }\n"
+  },
+  {
+    "id" : "f5790698-229c-4a7a-986f-06212cb89f25",
+    "prId" : 33212,
+    "prUrl" : "https://github.com/apache/spark/pull/33212#pullrequestreview-706214688",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e37e84e4-2cf0-4451-9977-6d3685cdce9a",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Does this additional check cause no performance regression? For example, if a schema does not have non-nullable fields at all, we don't need this check, right?",
+        "createdAt" : "2021-07-12T06:44:12Z",
+        "updatedAt" : "2021-07-12T06:44:13Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7ae27084-005a-417a-b216-d53769565043",
+        "parentId" : "e37e84e4-2cf0-4451-9977-6d3685cdce9a",
+        "authorId" : "c12eb4aa-c39d-4fa9-8470-ed071c0be24a",
+        "body" : "Yes, you are right. this check has two purposes.\r\n1. check the non-nullable field. \r\n2. skipping row using the missing field.\r\n\r\nDo you have a better idea to implement that without performance regression?",
+        "createdAt" : "2021-07-12T07:12:41Z",
+        "updatedAt" : "2021-07-12T07:12:41Z",
+        "lastEditedBy" : "c12eb4aa-c39d-4fa9-8470-ed071c0be24a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "91d8dc43-a49e-4ce2-9071-02640ee7b12f",
+        "parentId" : "e37e84e4-2cf0-4451-9977-6d3685cdce9a",
+        "authorId" : "c12eb4aa-c39d-4fa9-8470-ed071c0be24a",
+        "body" : "skip this additional check when the mode is `PERMISSIVE`.",
+        "createdAt" : "2021-07-14T12:30:58Z",
+        "updatedAt" : "2021-07-14T12:30:59Z",
+        "lastEditedBy" : "c12eb4aa-c39d-4fa9-8470-ed071c0be24a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9fb8fbd5598eb0d80c11bf7e129ad5c9b146f837",
+    "line" : 24,
+    "diffHunk" : "@@ -1,1 +427,431 @@    }\n\n    // When the input schema is setting to `nullable = false`, make sure the field is not null.\n    checkNotNullableInRow(row, schema, skipRow, badRecordException)\n"
+  },
+  {
+    "id" : "902f3d76-9f1b-4ee5-b9f5-41c170be1993",
+    "prId" : 33212,
+    "prUrl" : "https://github.com/apache/spark/pull/33212#pullrequestreview-710156125",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2507f75f-cea5-47c2-826c-3cad53f9222c",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "I .. am not sure if we really need these complicated fix to address nullability mismatch (which is rather a corner case) to be honest. I wonder if there's a simpler approach, e.g.) simply warning on non-nullable columns?\r\nJust to be clear, I don't mind if other committers prefer to fix it.",
+        "createdAt" : "2021-07-20T00:44:07Z",
+        "updatedAt" : "2021-07-20T00:44:07Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "483ed5ee-04ac-4570-be75-d625139d1600",
+        "parentId" : "2507f75f-cea5-47c2-826c-3cad53f9222c",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "That's another proposal I mentioned earlier: if the user-given schema is not-nullable, we just turn it into nullable schema and don't fail.",
+        "createdAt" : "2021-07-20T03:12:07Z",
+        "updatedAt" : "2021-07-20T03:12:07Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7425fa55-b97e-4827-b684-f9ef4756acc1",
+        "parentId" : "2507f75f-cea5-47c2-826c-3cad53f9222c",
+        "authorId" : "c12eb4aa-c39d-4fa9-8470-ed071c0be24a",
+        "body" : "Thank you for your suggestions, I'll raise a new PR.",
+        "createdAt" : "2021-07-20T03:55:32Z",
+        "updatedAt" : "2021-07-20T03:55:32Z",
+        "lastEditedBy" : "c12eb4aa-c39d-4fa9-8470-ed071c0be24a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9fb8fbd5598eb0d80c11bf7e129ad5c9b146f837",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +406,410 @@        case Some(index) =>\n          try {\n            val fieldValue = fieldConverters(index).apply(parser)\n            val isIllegal =\n              options.parseMode != PermissiveMode && !schema(index).nullable && fieldValue == null"
   }
 ]
