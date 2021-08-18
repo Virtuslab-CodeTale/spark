@@ -1,0 +1,211 @@
+[
+  {
+    "id" : "c585c920-7590-499d-a22c-4dcb3181faa4",
+    "prId" : 27636,
+    "prUrl" : "https://github.com/apache/spark/pull/27636#pullrequestreview-367205695",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "bcdf59a9-11d6-4a47-9665-b24e74ae98f2",
+        "parentId" : null,
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Can you clarify what else it's doing? If it's just tracking a list we should just use a hash set.",
+        "createdAt" : "2020-02-28T20:15:54Z",
+        "updatedAt" : "2020-06-11T10:43:18Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3f3f2bd5-5c05-4e79-a708-7205b268f421",
+        "parentId" : "bcdf59a9-11d6-4a47-9665-b24e74ae98f2",
+        "authorId" : "11f6c849-b5b9-4c65-990c-525cf572b913",
+        "body" : "updated the comments in the code",
+        "createdAt" : "2020-03-02T13:42:35Z",
+        "updatedAt" : "2020-06-11T10:43:18Z",
+        "lastEditedBy" : "11f6c849-b5b9-4c65-990c-525cf572b913",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c476e5271ca8b8fd3c401980a080334b8d7b9a36",
+    "line" : 33,
+    "diffHunk" : "@@ -1,1 +31,35 @@\n/**\n * DecommissionTracker tracks the list of decommissioned nodes.\n * This decommission trackers maintains the decommissioned nodes state.\n * Decommission tracker schedules the executor decommission and shuffle"
+  },
+  {
+    "id" : "59fa1558-8e01-421e-a975-3535dddcb7df",
+    "prId" : 27636,
+    "prUrl" : "https://github.com/apache/spark/pull/27636#pullrequestreview-375378502",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ff3f6d49-4cb8-4c05-9e37-32ee645d9388",
+        "parentId" : null,
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "why do we need 20 threads for this?",
+        "createdAt" : "2020-03-09T14:30:52Z",
+        "updatedAt" : "2020-06-11T10:43:18Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4a34a92e-de27-4492-8411-c84edfa2e639",
+        "parentId" : "ff3f6d49-4cb8-4c05-9e37-32ee645d9388",
+        "authorId" : "11f6c849-b5b9-4c65-990c-525cf572b913",
+        "body" : "We have created a threadpool for 20 here, For handling the scenario when there are lots of node decommissioning happened at same time. But we can add this as part of config . Shall I made this as a part of config?",
+        "createdAt" : "2020-03-15T16:00:45Z",
+        "updatedAt" : "2020-06-11T10:43:18Z",
+        "lastEditedBy" : "11f6c849-b5b9-4c65-990c-525cf572b913",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0567da54-0d85-40e2-84ab-03509bf503bb",
+        "parentId" : "ff3f6d49-4cb8-4c05-9e37-32ee645d9388",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "20 threads to just handle node decommissions seems like a lot.  How long does it normally take for a decommission? On Yarn I realize it has to send message to AM which could then be blocked on doing allocate call or something, so I'm assuming that is where possible delay is.  But have you actually run this and decommissioned multiple nodes, how long does it take? \r\nYou are also calling executedecomission separate from the shuffle decommission and then have delays to have them happen not at the same time. Couldn't they be done in sequence and then you know they aren't done at same time?  \r\nwhat was the default yarn timeout on newer versions?  I know you said 30 seconds on gap.",
+        "createdAt" : "2020-03-16T13:04:01Z",
+        "updatedAt" : "2020-06-11T10:43:18Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b2cffa8c-fc82-4d9f-bbcc-b97a8752b272",
+        "parentId" : "ff3f6d49-4cb8-4c05-9e37-32ee645d9388",
+        "authorId" : "11f6c849-b5b9-4c65-990c-525cf572b913",
+        "body" : "So the above code creates the thread pool of 20. A new thread will be created if none of the thread is free in the thread pool after scheduled time for the executors and shuffle decommission(executorsDecomissionTimeMs and ShuffleDecosmmissionTimeMs). These active threads completes the task in less than second (for executorDecommission it will kill all the executors on the host and for shuffleDecommission remove all the entries of shuffle data for that node from the MapOutputTracker).\r\n\r\n**You are also calling executedecomission separate from the shuffle decommission and then have delays to have them happen not at the same time. Couldn't they be done in sequence and then you know they aren't done at same time?** - So the reason why it is not done in sequence . If inside  executordecommission after decommission of executors the same thread wait for some time and than do the shuffleDecommission . In this case we are holding thread for long time which can be free in 1 sec. Now consider a scenario where aws spotloss happened after 120 sec of receiving the decommission event, As per the logic written executor decommission will takes place after 50% time i.e. after 60 sec  and shuffleDecommission will happen after 90% of the time 108 sec. If we do this sequentially than we have to hold current thread for another (108-60=48) 48 secs. So there are more chances of creating more thread from the pool if we do it sequentially.\r\n\r\nNow as per the current code the executor decommission will takes place after 50% time i.e. after 60 sec. ExecutorDecommissionThread can take one of the thread completes its task in max 1 sec and than that thread is free and same is for shuffle decommission which will happened after 90% time 108sec completes the task in 1 sec and than the thread is free again. This free thread can be used by another Executordecommision/Shuffle decommission if decommission is received for  multiple nodes.\r\n\r\nIts very rare scenario when all the 20 threads would be active where the decommission is very frequent. I think we can have the config for the thread pool and believe 8 would be good number and if someone facing the issue very frequent  decommission than they can change it ",
+        "createdAt" : "2020-03-16T16:25:52Z",
+        "updatedAt" : "2020-06-11T10:43:18Z",
+        "lastEditedBy" : "11f6c849-b5b9-4c65-990c-525cf572b913",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c476e5271ca8b8fd3c401980a080334b8d7b9a36",
+    "line" : 52,
+    "diffHunk" : "@@ -1,1 +50,54 @@  // Decommission thread of node decommissioning!!\n  private val decommissionThread =\n    ThreadUtils.newDaemonThreadPoolScheduledExecutor(\"node-decommissioning-thread\", 20)\n\n  // Contains workers hostname which are decommissioning. Added when"
+  },
+  {
+    "id" : "474d5ab9-149a-42ef-8732-52b1ffdb9714",
+    "prId" : 27636,
+    "prUrl" : "https://github.com/apache/spark/pull/27636#pullrequestreview-375383805",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8a4819a4-2261-420d-9208-2309f2a1e4ca",
+        "parentId" : null,
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "this seems a bit racey, what happen is it happens before or at same time?\r\nIs it guaranteed to happen afterwards",
+        "createdAt" : "2020-03-09T14:53:57Z",
+        "updatedAt" : "2020-06-11T10:43:18Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "af5d1d72-3488-4cc8-9cf2-5411fdb31a78",
+        "parentId" : "8a4819a4-2261-420d-9208-2309f2a1e4ca",
+        "authorId" : "11f6c849-b5b9-4c65-990c-525cf572b913",
+        "body" : "This is the life cycle of the nodes which is decommissioned\r\nDECOMMISSIONING -> EXECUTOR_DECOMMISSIONED -> SHUFFLEDATA_DECOMMISSIONED -> TERMINATED.\r\n\r\n**Now the query is what happen if SHUFFLEDATA_DECOMMISSIONED  happens before or at same time of the EXECUTOR_DECOMMISSIONED** - If we make SHUFFLEDATA_DECOMMISSIONED before the EXECUTOR_DECOMMISSIONED than there is a chance that some of the task will erred out due to fetch failed exception since we have already done SHUFFLEDATA_DECOMMISSIONED here. \r\n\r\nAlso I have explained this here in this comment https://github.com/apache/spark/pull/27636#issuecomment-593338415",
+        "createdAt" : "2020-03-15T15:47:56Z",
+        "updatedAt" : "2020-06-11T10:43:18Z",
+        "lastEditedBy" : "11f6c849-b5b9-4c65-990c-525cf572b913",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f91ae696-1203-4f3d-ace0-f90312b2119b",
+        "parentId" : "8a4819a4-2261-420d-9208-2309f2a1e4ca",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "perhaps that explanation needs to be added to description of lira as a design aspect. Also goes back to if need to happen in sequence then perhaps we should do in sequence in decommission tracker rather then in separate threads?",
+        "createdAt" : "2020-03-16T13:14:06Z",
+        "updatedAt" : "2020-06-11T10:43:18Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3c17cac9-abd1-4344-892a-caeec4b315a0",
+        "parentId" : "8a4819a4-2261-420d-9208-2309f2a1e4ca",
+        "authorId" : "11f6c849-b5b9-4c65-990c-525cf572b913",
+        "body" : "sure will update jira with explanation given\r\n\r\n**Also goes back to if need to happen in sequence then perhaps we should do in sequence in decommission tracker rather then in separate threads?** - I have explained above comment \r\n",
+        "createdAt" : "2020-03-16T16:32:17Z",
+        "updatedAt" : "2020-06-11T10:43:18Z",
+        "lastEditedBy" : "11f6c849-b5b9-4c65-990c-525cf572b913",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c476e5271ca8b8fd3c401980a080334b8d7b9a36",
+    "line" : 180,
+    "diffHunk" : "@@ -1,1 +178,182 @@      // Since we want executor to be decommissioned first\n      // than after that shuffleDataDecommission\n      shuffleDataDecommissionTimeMs = curTimeMs + 1000\n    } else {\n      reason match {"
+  },
+  {
+    "id" : "4cbcd4a9-1b5d-4681-9f29-3567249c338d",
+    "prId" : 27636,
+    "prUrl" : "https://github.com/apache/spark/pull/27636#pullrequestreview-374809612",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "cd61774f-4cee-4e27-96af-5c6ba740c682",
+        "parentId" : null,
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "these are purely for metrics and only logged on stop?  I question is this is really needed or useful then for the added code?",
+        "createdAt" : "2020-03-09T15:03:02Z",
+        "updatedAt" : "2020-06-11T10:43:18Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "eeac6cbc-b818-4a57-b900-85cbdce0abd7",
+        "parentId" : "cd61774f-4cee-4e27-96af-5c6ba740c682",
+        "authorId" : "11f6c849-b5b9-4c65-990c-525cf572b913",
+        "body" : "These stats which is shown at the end of the application is helpful to find out how the application ran even if there was node decommission event has happened. Instead of checking the entire logs to find out if the node decommission happened or not , is there any fetch failure happened.\r\n\r\nAlso in future we can some code change where we can add these metrics in spark eventLogs to show in Spark UI these metrics can be used.\r\n\r\nThese metrics calculated here can be used in multiple purpose for those who wants to send this metrics to there downstream application like signalfx etc. They just have to add the code to pass these stats calculated here to the client.\r\n",
+        "createdAt" : "2020-03-15T15:36:10Z",
+        "updatedAt" : "2020-06-11T10:43:18Z",
+        "lastEditedBy" : "11f6c849-b5b9-4c65-990c-525cf572b913",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c476e5271ca8b8fd3c401980a080334b8d7b9a36",
+    "line" : 352,
+    "diffHunk" : "@@ -1,1 +350,354 @@  // Stats\n  val decommissionNodeCnt = new AtomicInteger(0)\n  val fetchFailIgnoreCnt = new AtomicInteger(0)\n  val fetchFailIgnoreCntThresholdExceeded = new AtomicBoolean(false)\n  val abortStage = new AtomicBoolean(false)"
+  },
+  {
+    "id" : "7323b459-6f55-4e4a-a394-ca763cf0d686",
+    "prId" : 27636,
+    "prUrl" : "https://github.com/apache/spark/pull/27636#pullrequestreview-427634225",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7955b68b-851d-496e-9bfe-cf094bc4f4da",
+        "parentId" : null,
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "this only works with dynamic allocation then?  Decommissioning is just ignored with dynamic allocation off?  This needs to be documented",
+        "createdAt" : "2020-03-09T15:09:59Z",
+        "updatedAt" : "2020-06-11T10:43:18Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "18e2e638-cbf1-4771-9112-b30cf60e5893",
+        "parentId" : "7955b68b-851d-496e-9bfe-cf094bc4f4da",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "@tgravescs why do you say that ? executorAllocClient would exist whenever the scheduler backend inherits from CoarseGrainedSchedulerBackend, which happens with almost all scheduling modes including local, master, k8s and yarn etc. Perhaps I am not understanding something. Thanks.",
+        "createdAt" : "2020-06-10T00:30:56Z",
+        "updatedAt" : "2020-06-11T10:43:18Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c476e5271ca8b8fd3c401980a080334b8d7b9a36",
+    "line" : 269,
+    "diffHunk" : "@@ -1,1 +267,271 @@    // deadlock between schedulerBacked (ExecutorAllocationManager)\n    // and this.\n    executorAllocClient.map(_.killExecutorsOnHost(hostname))\n    decommissionHostNameMap(hostname).state = NodeDecommissionState.EXECUTOR_DECOMMISSIONED\n    logInfo(s\"Node $hostname decommissioned\")"
+  }
+]

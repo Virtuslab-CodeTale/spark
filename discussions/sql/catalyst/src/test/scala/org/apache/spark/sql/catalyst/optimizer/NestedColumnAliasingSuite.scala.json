@@ -262,5 +262,148 @@
     "commit" : "b2e56d55fe1dda39a47ba654e2b60a81fea7e492",
     "line" : 32,
     "diffHunk" : "@@ -1,1 +370,374 @@      (plan: LogicalPlan) => plan.limit(100),\n      (plan: LogicalPlan) => plan.repartition(100),\n      (plan: LogicalPlan) => Sample(0.0, 0.6, false, 11L, plan)).foreach {  base =>\n      runTest(base)\n    }"
+  },
+  {
+    "id" : "27db9da4-b0ae-4613-a92c-47fec36e4abb",
+    "prId" : 27675,
+    "prUrl" : "https://github.com/apache/spark/pull/27675#pullrequestreview-363656699",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5279f2dc-f9a4-46fb-8aa9-2548a68d9ea8",
+        "parentId" : null,
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "Since we need the whole structure, why we expected the local relation to be column pruned?",
+        "createdAt" : "2020-02-22T19:12:26Z",
+        "updatedAt" : "2020-02-24T13:37:32Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e7a3954b-723a-44f5-b598-d478b0dcb411",
+        "parentId" : "5279f2dc-f9a4-46fb-8aa9-2548a68d9ea8",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Yea, it seems that's just a mistake. cc: @dongjoon-hyun  ",
+        "createdAt" : "2020-02-23T06:39:24Z",
+        "updatedAt" : "2020-02-24T13:37:32Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6f235bd0-9ef0-4407-acf3-117f2c4c13aa",
+        "parentId" : "5279f2dc-f9a4-46fb-8aa9-2548a68d9ea8",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "btw, can you add tests in this suite, too?",
+        "createdAt" : "2020-02-23T06:40:45Z",
+        "updatedAt" : "2020-02-24T13:37:32Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "419a572b-9ff1-40ed-b881-14ee215aea33",
+        "parentId" : "5279f2dc-f9a4-46fb-8aa9-2548a68d9ea8",
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "I could add something similar to the SQL test to here as well:\r\n```\r\n  test(\"SPARK-30870: Don't alias a nested column if it means the whole attribute\") {\r\n    val valueStructType = StructType.fromDDL(\"field struct<a:int, b:int>\")\r\n    val r = LocalRelation('value.struct(valueStructType))\r\n\r\n    val field = GetStructField('value, 0, Some(\"field\"))\r\n\r\n    val query = r\r\n      .limit(5)\r\n      .select(field)\r\n      .analyze\r\n\r\n    val optimized = Optimize.execute(query)\r\n\r\n    comparePlans(optimized, query)\r\n  }\r\n```\r\nbut it wouldn't be much different to this particular test (`Some nested column means the whole structure`). ",
+        "createdAt" : "2020-02-24T13:18:10Z",
+        "updatedAt" : "2020-02-24T13:37:32Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0e27c0d6-3a5c-44e5-b3f5-32599871a676",
+        "parentId" : "5279f2dc-f9a4-46fb-8aa9-2548a68d9ea8",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Hi, @peter-toth and @maropu .\r\nThe original code is correct, this is not about column pruning. This is about `limit` push down.",
+        "createdAt" : "2020-02-24T18:56:47Z",
+        "updatedAt" : "2020-02-24T18:57:19Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ace3417a-4596-4fb5-b44a-6687545e2360",
+        "parentId" : "5279f2dc-f9a4-46fb-8aa9-2548a68d9ea8",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "But the test name is `Some nested column means the whole structure`?",
+        "createdAt" : "2020-02-24T19:06:28Z",
+        "updatedAt" : "2020-02-24T19:06:28Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6bc39688-494f-4521-9e08-e9d9076deee5",
+        "parentId" : "5279f2dc-f9a4-46fb-8aa9-2548a68d9ea8",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Ya. It might be misleading now, but It was `true` in the original context.\r\n- https://github.com/apache/spark/pull/23964",
+        "createdAt" : "2020-02-24T19:12:55Z",
+        "updatedAt" : "2020-02-24T19:12:55Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9d430d39-7a08-45f1-9a3e-9259ea38c13c",
+        "parentId" : "5279f2dc-f9a4-46fb-8aa9-2548a68d9ea8",
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "@dongjoon-hyun hmm, does this test have anything to do with limit push down? There is no `LimitPushDown` in the optimizer of this suite: https://github.com/apache/spark/blob/5a51b9472f5dfbf99ef6f8d6c7151618157c446e/sql/catalyst/src/test/scala/org/apache/spark/sql/catalyst/optimizer/NestedColumnAliasingSuite.scala#L34-L39 and actually `limit` is closer to the relation in the original `query` than in `expected`, but I might be wrong.",
+        "createdAt" : "2020-02-24T19:16:14Z",
+        "updatedAt" : "2020-02-24T19:31:48Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d553fa22-c7c2-46a9-bf16-c317f329ffe2",
+        "parentId" : "5279f2dc-f9a4-46fb-8aa9-2548a68d9ea8",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Sorry, I meant a pushdown over `limit`.",
+        "createdAt" : "2020-02-24T19:39:57Z",
+        "updatedAt" : "2020-02-24T19:39:57Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "52531dde-28a6-4c50-af41-509c25121b2c",
+        "parentId" : "5279f2dc-f9a4-46fb-8aa9-2548a68d9ea8",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "`[SPARK-26975][SQL] Support nested-column pruning over limit/sample/repartition` is about that.",
+        "createdAt" : "2020-02-24T19:40:11Z",
+        "updatedAt" : "2020-02-24T19:40:11Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "855946b2-7402-428f-9b94-c248b8920661",
+        "parentId" : "5279f2dc-f9a4-46fb-8aa9-2548a68d9ea8",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Hmm. I got it. So, this is the result of bug fix, isn't it?",
+        "createdAt" : "2020-02-24T19:42:02Z",
+        "updatedAt" : "2020-02-24T19:42:02Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1cf36ea2-ee99-4b06-bae2-dfa1bd35fa60",
+        "parentId" : "5279f2dc-f9a4-46fb-8aa9-2548a68d9ea8",
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "Yes, it is. In this test case there is no point in pushing down the `project` over the `limit`.",
+        "createdAt" : "2020-02-24T19:51:24Z",
+        "updatedAt" : "2020-02-24T19:51:25Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e4c900979baffd4f04f3d953b3f0b7ec3c387b2f",
+    "line" : 10,
+    "diffHunk" : "@@ -1,1 +216,220 @@    val optimized = Optimize.execute(query)\n\n    comparePlans(optimized, query)\n  }\n"
   }
 ]

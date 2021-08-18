@@ -163,5 +163,126 @@
     "commit" : "11188c356113b651435508b9137b5c084d4d990f",
     "line" : 235,
     "diffHunk" : "@@ -1,1 +396,400 @@        $javaType ${ev.value} = ${CodeGenerator.defaultValue(dataType)};\n        if ($isZero) {\n          $divByZero\n        } else {\n          ${eval1.code}"
+  },
+  {
+    "id" : "af7cd149-4fad-48e3-be89-9cd7da1578ff",
+    "prId" : 27628,
+    "prUrl" : "https://github.com/apache/spark/pull/27628#pullrequestreview-361263468",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "818803bb-3b03-478b-b05a-f784aca643ae",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "can we just add a `private val returnLong = SQLConf.get.integralDivideReturnLong` in the class body? Then the config value is fixed when the expression is created. And it can be serialized to executors.\r\n\r\nThe spark Expression constructor is kind of exposed to end users when they call functions in SQL. BTW `Cast` already use a `val` to store config values.\r\n",
+        "createdAt" : "2020-02-19T05:54:22Z",
+        "updatedAt" : "2020-02-19T05:54:23Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "16fcb61e-d64f-44cb-b9b3-b4d6a0899f92",
+        "parentId" : "818803bb-3b03-478b-b05a-f784aca643ae",
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "That can potentially change value every time you transform the tree.",
+        "createdAt" : "2020-02-19T11:56:44Z",
+        "updatedAt" : "2020-02-19T11:56:45Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "12a369a2-33db-4f54-bafb-71c3139208f7",
+        "parentId" : "818803bb-3b03-478b-b05a-f784aca643ae",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "or how about we create 2 expressions `IntegralDivide` and `IntegralDivideReturnLong`? I'm just worried about we allow end users to specify the `returnLong` parameter which becomes an API.",
+        "createdAt" : "2020-02-19T12:01:37Z",
+        "updatedAt" : "2020-02-19T12:01:37Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "eff0cfd2-02ff-4185-91b6-372c98cfd093",
+        "parentId" : "818803bb-3b03-478b-b05a-f784aca643ae",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "> I'm just worried about we allow end users to specify the returnLong parameter which becomes an API.\r\n\r\nWe don't allow that:\r\n```sql\r\nSELECT div(3, 2, false);\r\n```\r\nfails with:\r\n```\r\nInvalid number of arguments for function div. Expected: 2; Found: 3; line 1 pos 7\r\norg.apache.spark.sql.AnalysisException: Invalid number of arguments for function div. Expected: 2; Found: 3; line 1 pos 7\r\n\tat org.apache.spark.sql.catalyst.analysis.FunctionRegistry$.$anonfun$expression$7(FunctionRegistry.scala:618)\r\n\tat scala.Option.getOrElse(Option.scala:189)\r\n\tat org.apache.spark.sql.catalyst.analysis.FunctionRegistry$.$anonfun$expression$4(FunctionRegistry.scala:602)\r\n\tat org.apache.spark.sql.catalyst.analysis.SimpleFunctionRegistry.lookupFunction(FunctionRegistry.scala:121)\r\n\tat org.apache.spark.sql.catalyst.catalog.SessionCatalog.lookupFunction(SessionCatalog.scala:1418)\r\n```\r\nI ran the command on the PR changes.",
+        "createdAt" : "2020-02-19T13:01:55Z",
+        "updatedAt" : "2020-02-19T13:01:55Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8836b79d-8010-4dbe-b1d3-75d62ba3e617",
+        "parentId" : "818803bb-3b03-478b-b05a-f784aca643ae",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "so the non-expression parameter doesn't count? Then I'm fine with it.",
+        "createdAt" : "2020-02-19T13:04:35Z",
+        "updatedAt" : "2020-02-19T13:04:35Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0868aa47-aca1-4a74-8626-d9304b03d659",
+        "parentId" : "818803bb-3b03-478b-b05a-f784aca643ae",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "Yes, we count only expressions, see https://github.com/apache/spark/blob/919d551ddbf7575abe7fe47d4bbba62164d6d845/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/analysis/FunctionRegistry.scala#L601-L602",
+        "createdAt" : "2020-02-19T16:55:31Z",
+        "updatedAt" : "2020-02-19T16:55:32Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ebeec388f5b6f2a1b3b3cb5e972a7262ee463aef",
+    "line" : 8,
+    "diffHunk" : "@@ -1,1 +407,411 @@    left: Expression,\n    right: Expression,\n    returnLong: Boolean) extends DivModLike {\n\n  def this(left: Expression, right: Expression) = {"
+  },
+  {
+    "id" : "a9d852c2-0118-4594-96ba-9b604b5d9463",
+    "prId" : 27628,
+    "prUrl" : "https://github.com/apache/spark/pull/27628#pullrequestreview-361267234",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "518a089b-9f2c-4285-acb2-5e5337c8ab38",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "shall we define `unapply` as well? Most of the time we don't care about the `returnLong` paramter. When we do, we should write `case e @ IntegralDivide(left, right) if e.returnLong`.",
+        "createdAt" : "2020-02-19T13:05:41Z",
+        "updatedAt" : "2020-02-19T13:05:41Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "251c17cf-ae68-44c1-86df-9825d61be75e",
+        "parentId" : "518a089b-9f2c-4285-acb2-5e5337c8ab38",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "There is only one place where we unapply `IntegralDivide`. It is here https://github.com/apache/spark/pull/27628/files#diff-8e1575bb706d6f7e8b5ea0b175eaeafcR178 . And `returnLong` is not checked, it is just extracted and copy-pasted.",
+        "createdAt" : "2020-02-19T16:58:09Z",
+        "updatedAt" : "2020-02-19T16:58:09Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e1221afa-bdc9-4602-8553-ed1cacf1073e",
+        "parentId" : "518a089b-9f2c-4285-acb2-5e5337c8ab38",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "If I define `unapply`, it will be not used. Not sure that is is needed.",
+        "createdAt" : "2020-02-19T16:59:55Z",
+        "updatedAt" : "2020-02-19T21:04:49Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ebeec388f5b6f2a1b3b3cb5e972a7262ee463aef",
+    "line" : 47,
+    "diffHunk" : "@@ -1,1 +463,467 @@    new IntegralDivide(left, right)\n  }\n}\n\n@ExpressionDescription("
   }
 ]

@@ -3012,5 +3012,137 @@
     "commit" : "fc63d40304b1584282fc64edee925ce335ef3626",
     "line" : 73,
     "diffHunk" : "@@ -1,1 +2246,2250 @@    // This method extracts all generators from given expressions and then returns a sequence of\n    // pairs (a found generator, the generator is outer or not).\n    private def collectAdjacentGenerators(children: Seq[Expression]): Seq[(Generator, Boolean)] = {\n      // We've already checked that all the `Generator` has unary nodes only\n      // in `hasUnsupportedNestedGenerator`."
+  },
+  {
+    "id" : "73200de5-1d95-43f7-a1d3-1d3c4ad51739",
+    "prId" : 27643,
+    "prUrl" : "https://github.com/apache/spark/pull/27643#pullrequestreview-361705478",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a797a617-ed25-4c94-98af-981b352c53f6",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Is this a suitable place for the warning? How about putting this in `CheckAnalysis` (this is not an error issue though)?",
+        "createdAt" : "2020-02-20T08:03:02Z",
+        "updatedAt" : "2020-03-06T04:04:24Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "427f4906-13ff-4252-a7af-add63bff99d4",
+        "parentId" : "a797a617-ed25-4c94-98af-981b352c53f6",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "If we put it in `CheckAnalysis`, we can't distinguish `trim(a, b)` and `trim(a from b)`. They are both `String2TrimExpression`",
+        "createdAt" : "2020-02-20T08:14:10Z",
+        "updatedAt" : "2020-03-06T04:04:24Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "97ca99f1-6afd-447d-a683-17e088153b6b",
+        "parentId" : "a797a617-ed25-4c94-98af-981b352c53f6",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Hi, @maropu . Since `CheckAnalysis` received already resolved expressions, there is no way to distinguish `SQL syntax TRIM(trimStr FROM str)` from Parser and `function invocation TRIM(trimStr, str)` from here.\r\n\r\nAlso, `failAnalysis(\"DISTINCT or FILTER specified` also happens here instead of `CheckAnalysis`.",
+        "createdAt" : "2020-02-20T08:18:41Z",
+        "updatedAt" : "2020-03-06T04:04:24Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "45a7194c-2a4d-4103-bdaf-b2b9301dd029",
+        "parentId" : "a797a617-ed25-4c94-98af-981b352c53f6",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Oops. I was late. Yes. @cloud-fan 's comment is correct.",
+        "createdAt" : "2020-02-20T08:21:05Z",
+        "updatedAt" : "2020-03-06T04:04:24Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2fe0e76d-efc0-43d6-a428-6848ee144218",
+        "parentId" : "a797a617-ed25-4c94-98af-981b352c53f6",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Ah, I see. Thanks for the explanation, guys!",
+        "createdAt" : "2020-02-20T08:23:13Z",
+        "updatedAt" : "2020-03-06T04:04:24Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "89b2b040113e7715d7441d3ae9974c38bc6c81f5",
+    "line" : 34,
+    "diffHunk" : "@@ -1,1 +1850,1854 @@                      \" Use SQL syntax `TRIM((BOTH | LEADING | TRAILING)? trimStr FROM str)`\" +\n                      \" instead.\")\n                    trimWarningEnabled.set(false)\n                  }\n                  e"
+  },
+  {
+    "id" : "a99dedca-6e82-4106-9d61-7a4e02142c2b",
+    "prId" : 27643,
+    "prUrl" : "https://github.com/apache/spark/pull/27643#pullrequestreview-362082781",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d4f810d2-b86e-4d6f-a0e5-141e904556c0",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "TRIM is an operator which can do the work of LTRIM and RTRIM functions as well, e.g. `TRIM(LEADING trimStr FROM srcStr)` is the same as LTRIM.\r\n\r\nThere is no FROM syntax for LTRIM and RTRIM as they are just functions. Shall we deprecate LTRIM and RTRIM completely?",
+        "createdAt" : "2020-02-20T10:00:20Z",
+        "updatedAt" : "2020-03-06T04:04:24Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "029a516c-9532-4e32-ad68-dd3fc05521e2",
+        "parentId" : "d4f810d2-b86e-4d6f-a0e5-141e904556c0",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Oops. Sure. Let me think about that.",
+        "createdAt" : "2020-02-20T17:13:23Z",
+        "updatedAt" : "2020-03-06T04:04:24Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "89b2b040113e7715d7441d3ae9974c38bc6c81f5",
+    "line" : 31,
+    "diffHunk" : "@@ -1,1 +1847,1851 @@                case e: String2TrimExpression if arguments.size == 2 =>\n                  if (trimWarningEnabled.get) {\n                    log.warn(\"Two-parameter TRIM/LTRIM/RTRIM function signatures are deprecated.\" +\n                      \" Use SQL syntax `TRIM((BOTH | LEADING | TRAILING)? trimStr FROM str)`\" +\n                      \" instead.\")"
+  },
+  {
+    "id" : "d4ffa518-da5c-4cbd-9f28-3f306c1ae976",
+    "prId" : 27643,
+    "prUrl" : "https://github.com/apache/spark/pull/27643#pullrequestreview-362075442",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6e25c4d3-08ef-4c6d-8032-5230cbfb1fc4",
+        "parentId" : null,
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "When do you set it back to `true`? The `ResolveFunctions` object can live forever. By setting it to `false` only once, you disable warnings for all apps and users.\r\n\r\nLet's image multiple notebooks connected to the same cluster - they will share the same `trimWarningEnabled` if I am not wrong.",
+        "createdAt" : "2020-02-20T16:34:46Z",
+        "updatedAt" : "2020-03-06T04:04:24Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9d7e29f8-288a-4319-9eb0-a06920127242",
+        "parentId" : "6e25c4d3-08ef-4c6d-8032-5230cbfb1fc4",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "This is an inner object of `Analyzer`, and we will have a new instance for a new session which creates an `Analyzer`.",
+        "createdAt" : "2020-02-20T17:03:11Z",
+        "updatedAt" : "2020-03-06T04:04:24Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "89b2b040113e7715d7441d3ae9974c38bc6c81f5",
+    "line" : 12,
+    "diffHunk" : "@@ -1,1 +1797,1801 @@   */\n  object ResolveFunctions extends Rule[LogicalPlan] {\n    val trimWarningEnabled = new AtomicBoolean(true)\n    def apply(plan: LogicalPlan): LogicalPlan = plan.resolveOperatorsUp {\n      case q: LogicalPlan =>"
   }
 ]

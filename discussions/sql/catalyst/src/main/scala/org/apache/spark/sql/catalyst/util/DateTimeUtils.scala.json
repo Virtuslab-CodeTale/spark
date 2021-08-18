@@ -988,5 +988,93 @@
     "commit" : "16db32f50449bb4bb721101c709ea56cc305d324",
     "line" : 11,
     "diffHunk" : "@@ -1,1 +171,175 @@      // ISO8601 with a weird time zone specifier (2000-01-01T00:00GMT+01:00)\n      val s0 = s.substring(0, indexOfGMT)\n      val s1 = s.substring(indexOfGMT + 3)\n      // Mapped to 2000-01-01T00:00+01:00\n      s0 + s1"
+  },
+  {
+    "id" : "7419236d-3ae1-4143-aee7-68b99574a28c",
+    "prId" : 27618,
+    "prUrl" : "https://github.com/apache/spark/pull/27618#pullrequestreview-362463744",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "558e41b3-9c24-443e-a36f-317857e853f8",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I'm surprised `MILLISECONDS.toMicros` is not overflow-safe. AFAIK we use these utils in many places...",
+        "createdAt" : "2020-02-21T08:18:19Z",
+        "updatedAt" : "2020-02-25T05:01:52Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "18c2033b-4a81-414f-961a-a0f8ee16b677",
+        "parentId" : "558e41b3-9c24-443e-a36f-317857e853f8",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "Yeh, need to review other places, and use our util function.",
+        "createdAt" : "2020-02-21T08:26:18Z",
+        "updatedAt" : "2020-02-25T05:01:52Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "17d9566d1dff99503b1364cfc612662d62aaf17c",
+    "line" : 65,
+    "diffHunk" : "@@ -1,1 +148,152 @@   */\n  def millisToMicros(millis: Long): SQLTimestamp = {\n    Math.multiplyExact(millis, MICROS_PER_MILLIS)\n  }\n"
+  },
+  {
+    "id" : "14be0388-4ff9-46e9-a722-074f7438734f",
+    "prId" : 27618,
+    "prUrl" : "https://github.com/apache/spark/pull/27618#pullrequestreview-362482586",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a983bc23-c406-4996-a5ab-e397139d2627",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I checked the implementation and it doesn't use `Math.floorDiv`, so probably have a problem with time before epoch. Let's revisit them later.",
+        "createdAt" : "2020-02-21T09:02:10Z",
+        "updatedAt" : "2020-02-25T05:01:52Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "17d9566d1dff99503b1364cfc612662d62aaf17c",
+    "line" : 87,
+    "diffHunk" : "@@ -1,1 +588,592 @@    // using milliseconds can cause precision loss with more than 8 digits\n    // we follow Hive's implementation which uses seconds\n    val secondsInDay1 = MICROSECONDS.toSeconds(time1 - daysToMicros(date1, zoneId))\n    val secondsInDay2 = MICROSECONDS.toSeconds(time2 - daysToMicros(date2, zoneId))\n    val secondsDiff = (dayInMonth1 - dayInMonth2) * SECONDS_PER_DAY + secondsInDay1 - secondsInDay2"
+  },
+  {
+    "id" : "ce906e00-4e7c-4a21-8799-23d6fd716b20",
+    "prId" : 27617,
+    "prUrl" : "https://github.com/apache/spark/pull/27617#pullrequestreview-363080641",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b7ab66c4-08de-485a-baa8-3c3fb3eb68d6",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Returns local microseconds?",
+        "createdAt" : "2020-02-23T00:53:19Z",
+        "updatedAt" : "2020-06-18T21:04:41Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "84a920cb-461b-4c7b-95d6-a4e82cbac662",
+        "parentId" : "b7ab66c4-08de-485a-baa8-3c3fb3eb68d6",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "It is not just local microseconds. For example, `2020-02-23 12:10:30.123456 Europe/Moscow`. The local microsecond part is `456`, but the function returns `30123456`. ",
+        "createdAt" : "2020-02-23T09:12:01Z",
+        "updatedAt" : "2020-06-18T21:04:41Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "863d747f6132a42cde0f0bb3bfa558faa3ab6170",
+    "line" : 328,
+    "diffHunk" : "@@ -1,1 +506,510 @@\n  /**\n   * Returns local seconds, including fractional parts, multiplied by 1000000.\n   *\n   * @param micros The number of microseconds since the epoch."
   }
 ]

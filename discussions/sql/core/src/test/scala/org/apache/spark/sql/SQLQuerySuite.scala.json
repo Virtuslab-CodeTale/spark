@@ -867,5 +867,60 @@
     "commit" : "5862428c552c82d858e9edc29d59fd4d9419460f",
     "line" : 24,
     "diffHunk" : "@@ -1,1 +3403,3407 @@          |FROM VALUES array(named_struct('field', named_struct('a', 1, 'b', 2))) AS (value)\n        \"\"\".stripMargin)\n      df.write.format(\"parquet\").saveAsTable(\"t\")\n\n      val df2 = spark.table(\"t\")"
+  },
+  {
+    "id" : "d6190894-ff6c-4135-8dbc-ff3ec35cec98",
+    "prId" : 27632,
+    "prUrl" : "https://github.com/apache/spark/pull/27632#pullrequestreview-364761119",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b4733b00-8661-4691-97f2-ef56537bed70",
+        "parentId" : null,
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "It will throw `TreeNodeException: Once strategy's idempotence is broken for batch Infer Filters` before this PR:\r\n```\r\n[info] - SPARK-30872: Constraints inferred from inferred attributes *** FAILED *** (146 milliseconds)\r\n[info]   org.apache.spark.sql.catalyst.errors.package$TreeNodeException: Once strategy's idempotence is broken for batch Infer Filters\r\n[info]  Aggregate [count(1) AS count(1)#19182L]                                                                                                                                                                                                                        Aggregate [count(1) AS count(1)#19182L]\r\n[info]  +- Project                                                                                                                                                                                                                                                     +- Project\r\n[info] !   +- Filter ((((((a#19179L = c#19181L) AND isnotnull(b#19180L)) AND isnotnull(c#19181L)) AND ((b#19180L = 3) OR (b#19180L = 13))) AND isnotnull(a#19179L)) AND (((a#19179L = b#19180L) AND (b#19180L = c#19181L)) AND ((c#19181L = 3) OR (c#19181L = 13))))      +- Filter (((a#19179L = 3) OR (a#19179L = 13)) AND ((((((a#19179L = c#19181L) AND isnotnull(b#19180L)) AND isnotnull(c#19181L)) AND ((b#19180L = 3) OR (b#19180L = 13))) AND isnotnull(a#19179L)) AND (((a#19179L = b#19180L) AND (b#19180L = c#19181L)) AND ((c#19181L = 3) OR (c#19181L = 13)))))\r\n[info]        +- Relation[a#19179L,b#19180L,c#19181L] parquet                                                                                                                                                                                                                +- Relation[a#19179L,b#19180L,c#19181L] parquet\r\n[info]           , tree:\r\n[info] Aggregate [count(1) AS count(1)#19182L]\r\n[info] +- Project\r\n[info]    +- Filter (((a#19179L = 3) OR (a#19179L = 13)) AND ((((((a#19179L = c#19181L) AND isnotnull(b#19180L)) AND isnotnull(c#19181L)) AND ((b#19180L = 3) OR (b#19180L = 13))) AND isnotnull(a#19179L)) AND (((a#19179L = b#19180L) AND (b#19180L = c#19181L)) AND ((c#19181L = 3) OR (c#19181L = 13)))))\r\n[info]       +- Relation[a#19179L,b#19180L,c#19181L] parquet\r\n[info]   at org.apache.spark.sql.catalyst.rules.RuleExecutor.checkBatchIdempotence(RuleExecutor.scala:100)\r\n[info]   at org.apache.spark.sql.catalyst.rules.RuleExecutor.$anonfun$execute$1(RuleExecutor.scala:187)\r\n[info]   at org.apache.spark.sql.catalyst.rules.RuleExecutor.$anonfun$execute$1$adapted(RuleExecutor.scala:132)\r\n[info]   at scala.collection.immutable.List.foreach(List.scala:392)\r\n[info]   at org.apache.spark.sql.catalyst.rules.RuleExecutor.execute(RuleExecutor.scala:132)\r\n[info]   at org.apache.spark.sql.catalyst.rules.RuleExecutor.$anonfun$executeAndTrack$1(RuleExecutor.scala:111)\r\n[info]   at org.apache.spark.sql.catalyst.QueryPlanningTracker$.withTracker(QueryPlanningTracker.scala:88)\r\n[info]   at org.apache.spark.sql.catalyst.rules.RuleExecutor.executeAndTrack(RuleExecutor.scala:111)\r\n[info]   at org.apache.spark.sql.execution.QueryExecution.$anonfun$optimizedPlan$1(QueryExecution.scala:82)\r\n[info]   at org.apache.spark.sql.catalyst.QueryPlanningTracker.measurePhase(QueryPlanningTracker.scala:111)\r\n[info]   at org.apache.spark.sql.execution.QueryExecution.$anonfun$executePhase$1(QueryExecution.scala:119)\r\n[info]   at org.apache.spark.sql.SparkSession.withActive(SparkSession.scala:762)\r\n[info]   at org.apache.spark.sql.execution.QueryExecution.executePhase(QueryExecution.scala:119)\r\n[info]   at org.apache.spark.sql.execution.QueryExecution.optimizedPlan$lzycompute(QueryExecution.scala:82)\r\n[info]   at org.apache.spark.sql.execution.QueryExecution.optimizedPlan(QueryExecution.scala:79)\r\n[info]   at org.apache.spark.sql.QueryTest.assertEmptyMissingInput(QueryTest.scala:231)\r\n[info]   at org.apache.spark.sql.QueryTest.checkAnswer(QueryTest.scala:154)\r\n[info]   at org.apache.spark.sql.SQLQuerySuite.$anonfun$new$746(SQLQuerySuite.scala:3413)\r\n[info]   at scala.runtime.java8.JFunction0$mcV$sp.apply(JFunction0$mcV$sp.java:23)\r\n\r\n```",
+        "createdAt" : "2020-02-26T09:56:31Z",
+        "updatedAt" : "2020-02-26T09:57:07Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "bf7b8e561029791daa17ffb90aac9e970f002cf9",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +3406,3410 @@  }\n\n  test(\"SPARK-30872: Constraints inferred from inferred attributes\") {\n    withTable(\"t1\") {\n      spark.range(20).selectExpr(\"id as a\", \"id as b\", \"id as c\").write.saveAsTable(\"t1\")"
+  },
+  {
+    "id" : "401469fa-79f6-4d23-9c23-20d1a46925a4",
+    "prId" : 27580,
+    "prUrl" : "https://github.com/apache/spark/pull/27580#pullrequestreview-360854923",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3184a54b-bf32-431b-8a7a-d45e926466a1",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "`hashExpression` seems not used.",
+        "createdAt" : "2020-02-17T02:12:40Z",
+        "updatedAt" : "2020-02-26T05:24:32Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0bab75e4-77ba-4822-a366-45e1011d42ee",
+        "parentId" : "3184a54b-bf32-431b-8a7a-d45e926466a1",
+        "authorId" : "832e1988-205f-40f9-89d5-c37ea16224c9",
+        "body" : "I modified the code.",
+        "createdAt" : "2020-02-19T05:45:44Z",
+        "updatedAt" : "2020-02-26T05:24:32Z",
+        "lastEditedBy" : "832e1988-205f-40f9-89d5-c37ea16224c9",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8dfee675f6bfaf04068b856fc15158cea307f188",
+    "line" : 15,
+    "diffHunk" : "@@ -1,1 +2132,2136 @@  test(\"SPARK-27619: when spark.sql.legacy.useHashOnMapType is true, hash can be used on Maptype\") {\n    Seq(\"hash\", \"xxhash64\").foreach {\n      case hashExpression =>\n        withSQLConf(SQLConf.LEGACY_USE_HASH_ON_MAPTYPE.key -> \"true\") {\n          val df = spark.createDataset(Map() :: Nil)"
   }
 ]

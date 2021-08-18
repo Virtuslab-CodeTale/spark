@@ -1208,5 +1208,82 @@
     "commit" : "8494bdd94285c7cc5a41e151da920710be7f4671",
     "line" : 84,
     "diffHunk" : "@@ -1,1 +773,777 @@    mapOutputRequests.offer(PoisonPill)\n    threadpool.shutdown()\n    try {\n      sendTracker(StopMapOutputTracker)\n    } catch {"
+  },
+  {
+    "id" : "094cbb5e-9a00-42e1-b976-58c5fa340e81",
+    "prId" : 27604,
+    "prUrl" : "https://github.com/apache/spark/pull/27604#pullrequestreview-362414708",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "22e1661d-1dbb-4944-9c18-c43dc035364a",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "I'd prefer to add another try catch when we call `broadcast.vaule` at:\r\n\r\nhttps://github.com/apache/spark/blob/a2aa966ef64bc06f65a646777568427d360605e9/core/src/main/scala/org/apache/spark/MapOutputTracker.scala#L969\r\n\r\nand throw `FetchFailedException` when we catch `SparkException` from broadcast.\r\n\r\n",
+        "createdAt" : "2020-02-21T06:09:13Z",
+        "updatedAt" : "2020-06-15T02:58:51Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2e11d1bedf15b59c89b1f686ea716a575802f1e6",
+    "line" : 42,
+    "diffHunk" : "@@ -1,1 +827,831 @@      s\"partitions $startPartition-$endPartition\")\n    try {\n      val statuses = getStatuses(shuffleId, conf)\n      MapOutputTracker.convertMapStatuses(\n        shuffleId, startPartition, endPartition, statuses, startMapIndex, endMapIndex)"
+  },
+  {
+    "id" : "fa406bb8-b67d-409f-b3dd-eee82386839e",
+    "prId" : 27604,
+    "prUrl" : "https://github.com/apache/spark/pull/27604#pullrequestreview-496100609",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "35eedc6e-8456-464b-b220-81f4afe312b6",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Is it OK to clear out all the map status? Shouldn't we only drop the data of the current shuffle id?",
+        "createdAt" : "2020-03-09T11:29:37Z",
+        "updatedAt" : "2020-06-15T02:58:51Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b14285b5-382f-46f1-91ab-d9d79fa82af9",
+        "parentId" : "35eedc6e-8456-464b-b220-81f4afe312b6",
+        "authorId" : "2e5e2a86-4faf-484a-9251-577e584e1564",
+        "body" : "@cloud-fan Good question! yes, it's ok to clear all the map status, but I think maybe just drop the data of the current shuffle id is enough. But it seems that we currently bind an global epoch to the `MapOutputTracker`, if one stage `FetchFailed`, then the epoch will be updated, so that it will clear all the map statuses cache in the executor side.\r\nShould we change this behavior? if so may be we can put another PR for that.",
+        "createdAt" : "2020-03-10T06:09:56Z",
+        "updatedAt" : "2020-06-15T02:58:51Z",
+        "lastEditedBy" : "2e5e2a86-4faf-484a-9251-577e584e1564",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "81f76f35-263e-4735-9bf0-b86b2572cef8",
+        "parentId" : "35eedc6e-8456-464b-b220-81f4afe312b6",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "I think there's a potential assuming that *shuffle data are aways randomly and evenly placed on nodes*. That means, any shuffle fetch failure can imply the potential fetch failure for other shuffles in future. So, currently, we aways clear `mapStatuses` when fetch failure happens.",
+        "createdAt" : "2020-03-10T09:38:33Z",
+        "updatedAt" : "2020-06-15T02:58:51Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9dc9efd1-4c16-464b-a29b-f37da243ea55",
+        "parentId" : "35eedc6e-8456-464b-b220-81f4afe312b6",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "But here is the broadcast being invalid issue. I don't think it usually happens for a lot of shuffles at the same time.",
+        "createdAt" : "2020-09-25T04:20:31Z",
+        "updatedAt" : "2020-09-25T04:20:31Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2e11d1bedf15b59c89b1f686ea716a575802f1e6",
+    "line" : 58,
+    "diffHunk" : "@@ -1,1 +859,863 @@            case e: IOException if\n              Throwables.getCausalChain(e).asScala.exists(_.isInstanceOf[BlockNotFoundException]) =>\n              mapStatuses.clear()\n              throw new MetadataFetchFailedException(\n                shuffleId, -1, Throwables.getStackTraceAsString(e))"
   }
 ]

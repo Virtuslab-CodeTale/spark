@@ -1,0 +1,57 @@
+[
+  {
+    "id" : "8e554b76-817b-48a3-bc3b-d9f9a8343caa",
+    "prId" : 27583,
+    "prUrl" : "https://github.com/apache/spark/pull/27583#pullrequestreview-364196159",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ea51e39c-3000-4f2c-aadd-40884a10a25b",
+        "parentId" : null,
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "For full functionality we are targetting, which is the minimum hadoop version ?\r\nDoes hadoop 3 have all the wiring required for supporting gpu, accel cards, fpga, etc ? Or is it a subset of resources ?\r\n\r\n(This is not directly related to this pr, but was for my own understanding, given you should know this well :) ).",
+        "createdAt" : "2020-02-17T11:32:55Z",
+        "updatedAt" : "2020-02-28T03:38:28Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bf735819-cdab-42e1-bb43-90cb42d2f73b",
+        "parentId" : "ea51e39c-3000-4f2c-aadd-40884a10a25b",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "\r\nhadoop 3.1.1 has full gpu support, they backported some of it to hadoop 2.10 as well. I've tested the normal GPU scheduling feature with both of these as well as older hadoop 2.7 release. With older versions you can still ask Spark for GPUs but if yarn doesn't support it  doesn't ask yarn for it but Spark internally still tries to do it.  If you are running on nodes with GPUs spark will still use your discovery script to find them and assign them out. if the discovery script doesn't find a gpu and you asked for one then it fails. \r\n\r\nThis was actually a more recent change that I put in for gpu scheduling as more and more people were asking for support on older versions of hadoop because they don't plan on upgrading to hadoop 3 for a while. \r\n\r\n I do need to test all that again with the stage level scheduling.",
+        "createdAt" : "2020-02-24T17:27:00Z",
+        "updatedAt" : "2020-02-28T03:38:28Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "aad4a05b-4431-4c6f-a50e-a3e5bf610e53",
+        "parentId" : "ea51e39c-3000-4f2c-aadd-40884a10a25b",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "\r\nThanks for clarifying the behavior when YARN does support GPU, etc as a resource.\r\n\r\nI am probably missing something here, would be great to understand this better when YARN does not.\r\nSuppose I have a spark application, depending on some library which requires GPU (for example) and set corresponding resource profile expectations on the RDD's created (I am trying to make a case where app developer did not explicitly configure the resource profiles, but is implicitly leveraging them via some library).\r\n\r\nNow, if this application gets run on hadoop 2.7 (or anything before 2.10 as you mentioned), what will be the behavior ?\r\nIf I understood it right :\r\n1) We will make requests to YARN without GPU's in the allocation request since YARN does not support it.\r\n2) On the nodes received, we will try to use the discovery script in assumption that GPU's are available - YARN is just oblivious about them. We will probably be using node-label constraint to ensure GPU availability ?\r\n3) If there are GPU's detected, we use them - else executor fails ?\r\n\r\nIs this right?\r\nIf yes, how do we handle multi-tenancy on the executor host ? or choose which gpu(s) to use ?\r\nIs the assumption that in workloads like this, the entire node is reserved to prevent contention ? I am not sure if you have documented/detailed this somewhere and I missed it !",
+        "createdAt" : "2020-02-25T05:16:18Z",
+        "updatedAt" : "2020-02-28T03:38:28Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6d15fdae-4738-41df-81d4-143f01f15a44",
+        "parentId" : "ea51e39c-3000-4f2c-aadd-40884a10a25b",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "You are correct on the behavior.  Many companies requested for this to work with their existing Hadoop installs (2.x where its < 2.10 or 3.1.1) and use the methods they are using with hadoop 2. I'm not trying to create a solution for everyone, just allow their existing solutions to work.\r\n  In most cases I've heard they have like a GPU queue or node labels so they know they run on nodes with GPUs. After that different companies have different ways of doing the multi-tenancy. I've heard of some using file locking for instance. Or you could also put the GPUs in process exclusive mode and then just iterate over them to acquire a free one. The idea here is they can use whatever solution they already have. They can write a custom discovery script and I also added the ability to plugin a class if its easier to write Java code to do this.  https://issues.apache.org/jira/browse/SPARK-30689?filter=-2\r\n",
+        "createdAt" : "2020-02-25T14:45:52Z",
+        "updatedAt" : "2020-02-28T03:38:28Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "bd3509c044d3eca6895815a0e1347b97c1019f29",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +230,234 @@  def isYarnCustomResourcesNonEmpty(resource: Resource): Boolean = {\n    try {\n      // Use reflection as this uses APIs only available in Hadoop 3\n      val getResourcesMethod = resource.getClass().getMethod(\"getResources\")\n      val resources = getResourcesMethod.invoke(resource).asInstanceOf[Array[Any]]"
+  }
+]

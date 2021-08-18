@@ -669,5 +669,148 @@
     "commit" : "c67590a7163aa0435c64df3380932037330002a4",
     "line" : 185,
     "diffHunk" : "@@ -1,1 +194,198 @@        val isRightCoalesced = rightPartSpec.startReducerIndex + 1 < rightPartSpec.endReducerIndex\n\n        // A skewed partition should never be coalesced, but skip it here just to be safe.\n        val leftParts = if (isLeftSkew && !isLeftCoalesced) {\n          val reducerId = leftPartSpec.startReducerIndex"
+  },
+  {
+    "id" : "da814e38-dd13-48cb-9f41-180b0d83773f",
+    "prId" : 27669,
+    "prUrl" : "https://github.com/apache/spark/pull/27669#pullrequestreview-363507529",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a9f5b917-6cdc-4198-a3a8-8a6850de63d6",
+        "parentId" : null,
+        "authorId" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "body" : "We can move this repetitive calc of non-skew average size out of this method, which will leave us just two local variables before the main loop below: `targetPostShuffleSizeConf` and `nonSkewAvgSize`. Then we only need to do: `max(targetPostShuffleSizeConf, nonSkewAvgSize)` without a method call.",
+        "createdAt" : "2020-02-21T15:58:25Z",
+        "updatedAt" : "2020-02-25T06:55:56Z",
+        "lastEditedBy" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7db57bb2-f390-470d-b544-1bbf3c3f2f86",
+        "parentId" : "a9f5b917-6cdc-4198-a3a8-8a6850de63d6",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "This method is called before entering the main loop, so it's not repetitive calc.",
+        "createdAt" : "2020-02-24T13:42:58Z",
+        "updatedAt" : "2020-02-25T06:55:56Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1cb5196b-829f-4cab-9151-89755c6f31e0",
+        "parentId" : "a9f5b917-6cdc-4198-a3a8-8a6850de63d6",
+        "authorId" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "body" : "yeah, you are right!",
+        "createdAt" : "2020-02-24T16:08:22Z",
+        "updatedAt" : "2020-02-25T06:55:56Z",
+        "lastEditedBy" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4755526bd20f44aa24f91a120c98518330081398",
+    "line" : 58,
+    "diffHunk" : "@@ -1,1 +93,97 @@  private def targetSize(stats: MapOutputStatistics, medianSize: Long): Long = {\n    val targetPostShuffleSize = conf.getConf(SQLConf.SHUFFLE_TARGET_POSTSHUFFLE_INPUT_SIZE)\n    val nonSkewSizes = stats.bytesByPartitionId.filterNot(isSkewed(_, medianSize))\n    // It's impossible that all the partitions are skewed, as we use median size to define skew.\n    assert(nonSkewSizes.nonEmpty)"
+  },
+  {
+    "id" : "d82df45c-d2a8-4544-a17f-494cc4666177",
+    "prId" : 27669,
+    "prUrl" : "https://github.com/apache/spark/pull/27669#pullrequestreview-368383402",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e1a1ce11-06ff-45de-aff5-0a67a3a6bb21",
+        "parentId" : null,
+        "authorId" : "1b84a7ff-6bf9-4417-bf9f-e46e997e5974",
+        "body" : "When user enable skewed join optimization and want to change the skewed condition by adjusting the `targetPostShuffleSize`. If we use the `SHUFFLE_TARGET_POSTSHUFFLE_INPUT_SIZE` here, it may also effect the task numbers in map stage.  It is better to use the `ADAPTIVE_EXECUTION_SKEWED_PARTITION_SIZE_THRESHOLD` config  to set the `targetPostShuffleSize` in skewed join optimization?",
+        "createdAt" : "2020-02-25T01:01:45Z",
+        "updatedAt" : "2020-02-25T06:55:56Z",
+        "lastEditedBy" : "1b84a7ff-6bf9-4417-bf9f-e46e997e5974",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e4bd37e0-fa80-4a46-a1e5-d959daba5214",
+        "parentId" : "e1a1ce11-06ff-45de-aff5-0a67a3a6bb21",
+        "authorId" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "body" : "Why would user want the new partition size after split to be different from the sizes of non-skew partition size? The goal of this rule is to coordinate all partitions to be around the same size if possible...",
+        "createdAt" : "2020-02-25T04:34:14Z",
+        "updatedAt" : "2020-02-25T06:55:56Z",
+        "lastEditedBy" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "aff42ab0-7aa0-4926-aade-951f0a4017dd",
+        "parentId" : "e1a1ce11-06ff-45de-aff5-0a67a3a6bb21",
+        "authorId" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "body" : "The problem with the old approach was the new skew partition size after split can be much smaller than that of the non-skew partition size. Being small itself is not a problem, but having more splits may come with a price, esp. with both side skews, and meanwhile if non-skew partitions take longer to finish, it wouldn't be worth that price.",
+        "createdAt" : "2020-02-25T04:38:53Z",
+        "updatedAt" : "2020-02-25T06:55:56Z",
+        "lastEditedBy" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ce02a152-411b-4d0d-9a9c-f74abfd6aa8b",
+        "parentId" : "e1a1ce11-06ff-45de-aff5-0a67a3a6bb21",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "@JkSelf do you have any real-world use cases for it? I noticed it as well but have the same feeling with @maryannxue : why would users set a different value?",
+        "createdAt" : "2020-02-25T08:59:34Z",
+        "updatedAt" : "2020-02-25T08:59:34Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a35875fb-39ad-4d6d-a9f6-3bbb2daef1a8",
+        "parentId" : "e1a1ce11-06ff-45de-aff5-0a67a3a6bb21",
+        "authorId" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "body" : "After coming across the config description of `ADAPTIVE_EXECUTION_SKEWED_PARTITION_SIZE_THRESHOLD`, I probably get @JkSelf 's point. In the description, it is meant to test if a partition is skewed... but the way it is actually used here in this class, it is more like the target size for splitting the skewed partitions.\r\nSo we need to changes here:\r\n1. bring this conf back and use it in `isSkewed` instead.\r\n2. if eventually the entire \"skewed\" partition is not split at all because the size is smaller than the target size, we need to avoid adding the SkewDesc for that partition.",
+        "createdAt" : "2020-03-03T22:47:49Z",
+        "updatedAt" : "2020-03-03T22:47:49Z",
+        "lastEditedBy" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4755526bd20f44aa24f91a120c98518330081398",
+    "line" : 57,
+    "diffHunk" : "@@ -1,1 +92,96 @@   */\n  private def targetSize(stats: MapOutputStatistics, medianSize: Long): Long = {\n    val targetPostShuffleSize = conf.getConf(SQLConf.SHUFFLE_TARGET_POSTSHUFFLE_INPUT_SIZE)\n    val nonSkewSizes = stats.bytesByPartitionId.filterNot(isSkewed(_, medianSize))\n    // It's impossible that all the partitions are skewed, as we use median size to define skew."
+  },
+  {
+    "id" : "9fe049a5-8d57-49d5-9b32-ace33201754e",
+    "prId" : 27669,
+    "prUrl" : "https://github.com/apache/spark/pull/27669#pullrequestreview-364594023",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "55ecaa04-d8cd-42c5-83a6-1897f16b694e",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "This seems to be a mistake. Did you want to say the following?\r\n```\r\n- (L1, R1), (L2, R2), (L2, R2), (L2, R2).\r\n+ (L1, R1), (L2, R2), (L3, R3), (L4, R4).\r\n```",
+        "createdAt" : "2020-02-25T22:21:24Z",
+        "updatedAt" : "2020-02-25T22:21:24Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "74b920b1-baa4-4f3a-ae6c-2f1b48e0f164",
+        "parentId" : "55ecaa04-d8cd-42c5-83a6-1897f16b694e",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "ah yes! will fix it soon",
+        "createdAt" : "2020-02-26T02:55:46Z",
+        "updatedAt" : "2020-02-26T02:55:46Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4755526bd20f44aa24f91a120c98518330081398",
+    "line" : 18,
+    "diffHunk" : "@@ -1,1 +49,53 @@ *\n * Let's say L2, L4 and R3, R4 are skewed, and each of them get split into 2 sub-partitions. This\n * is scheduled to run 4 tasks at the beginning: (L1, R1), (L2, R2), (L2, R2), (L2, R2).\n * This rule expands it to 9 tasks to increase parallelism:\n * (L1, R1),"
   }
 ]
