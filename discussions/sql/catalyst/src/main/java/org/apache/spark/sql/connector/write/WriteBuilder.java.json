@@ -75,5 +75,104 @@
     "commit" : "cc19fd614d9df81d425c95ec81e4c6f34cac2a08",
     "line" : 44,
     "diffHunk" : "@@ -1,1 +59,63 @@   * @deprecated use {@link #build()} instead.\n   */\n  @Deprecated\n  default BatchWrite buildForBatch() {\n    throw new UnsupportedOperationException(getClass().getName() +"
+  },
+  {
+    "id" : "3bb76ace-ebea-43d3-8c17-537ba39194ba",
+    "prId" : 29066,
+    "prUrl" : "https://github.com/apache/spark/pull/29066#pullrequestreview-546404764",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "09484aba-a41b-479e-8e30-bc93c6a5fafa",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "This API looks like overlapping in function with `buildForBatch` and `buildForStreaming`? Which one we should use? `build` then `toBatch`/`toStream` or `buildForBatch`/`buildForStreaming`?",
+        "createdAt" : "2020-08-08T23:42:54Z",
+        "updatedAt" : "2020-12-07T14:50:31Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c53eacca-3ddc-4ea3-b199-aad82ce989e4",
+        "parentId" : "09484aba-a41b-479e-8e30-bc93c6a5fafa",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "The `buildForBatch` method (and stream equivalent) are already released, so this generic `Write` implementation makes the new structure, `build` + `toBatch`, work for existing sources. It also allows sources to implement the version that they choose. So if none of the features that require the `Write` are used, I guess they could avoid a mostly-boilerplate class.",
+        "createdAt" : "2020-10-02T00:43:51Z",
+        "updatedAt" : "2020-12-07T14:50:31Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5b33ebce-fa1a-409d-89eb-7d450e7641b8",
+        "parentId" : "09484aba-a41b-479e-8e30-bc93c6a5fafa",
+        "authorId" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "body" : "Correct, this method was introduced to keep the compatibility.",
+        "createdAt" : "2020-11-25T02:27:04Z",
+        "updatedAt" : "2020-12-07T14:50:31Z",
+        "lastEditedBy" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3139b5ab-84ef-499d-a820-6b7c8919aeed",
+        "parentId" : "09484aba-a41b-479e-8e30-bc93c6a5fafa",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Have you considered to change the default impl for `buildForBatch` to:\r\n```scala\r\n  default BatchWrite buildForBatch() {\r\n    build().toBatch()\r\n  }\r\n```\r\n\r\nand also the `build()` to just return a simple anonymous `new Write() {}`? \r\n\r\nOtherwise, I can see that we'll have the `buildForBatch` (and similarly `buildForStreaming`) logic in two different places: `WriteBuilder` and `Write`. It is easy to miss one or another.",
+        "createdAt" : "2020-12-02T20:02:33Z",
+        "updatedAt" : "2020-12-07T14:50:31Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ed13b17a-0f2d-43b9-9d29-66604c1e5a8c",
+        "parentId" : "09484aba-a41b-479e-8e30-bc93c6a5fafa",
+        "authorId" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "body" : "I am not sure I understood. Could you elaborate a bit more, @sunchao?\r\n\r\nSpark will now always call `build()` and work with the `Write` abstraction. I added the default implementation so that  existing data sources that already implement the current API will continue to work as before. Spark will is not supposed to call `buildForBatch` after this change.",
+        "createdAt" : "2020-12-07T14:40:12Z",
+        "updatedAt" : "2020-12-07T14:50:31Z",
+        "lastEditedBy" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2c7b75d2-ed7f-448f-98cf-2d2f0116c4d4",
+        "parentId" : "09484aba-a41b-479e-8e30-bc93c6a5fafa",
+        "authorId" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "body" : "New data sources should be encouraged to implement only `build`.",
+        "createdAt" : "2020-12-07T14:53:28Z",
+        "updatedAt" : "2020-12-07T14:53:28Z",
+        "lastEditedBy" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2a596b7f-286e-43b6-9927-596edcaea052",
+        "parentId" : "09484aba-a41b-479e-8e30-bc93c6a5fafa",
+        "authorId" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "body" : "We should probably deprecate the other ones.",
+        "createdAt" : "2020-12-07T14:53:45Z",
+        "updatedAt" : "2020-12-07T14:53:46Z",
+        "lastEditedBy" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a014a4d2-bfd5-405f-b71e-38f3534b5e38",
+        "parentId" : "09484aba-a41b-479e-8e30-bc93c6a5fafa",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "What I mean is now we can potentially have two copies of the `toBatch` implementation: one in `WriteBuilder.buildForBatch` and one in `Write.toBatch`, when users start to override `build`, `buildForBatch` and `buildForStreaming`. If moving forward we want `build` to be the canonical impl, perhaps we can make `buildForBatch` and `buildForStreaming` to just call `build.toBatch()` internally so that users just need to override `build`. ",
+        "createdAt" : "2020-12-07T18:07:47Z",
+        "updatedAt" : "2020-12-07T18:07:47Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "32f5687fd628a4ffca38fa0840fd52447db7d680",
+    "line" : 20,
+    "diffHunk" : "@@ -1,1 +38,42 @@   * Returns a logical {@link Write} shared between batch and streaming.\n   */\n  default Write build() {\n    return new Write() {\n      @Override"
   }
 ]

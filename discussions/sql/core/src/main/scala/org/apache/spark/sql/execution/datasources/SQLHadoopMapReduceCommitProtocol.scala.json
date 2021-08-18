@@ -1,0 +1,79 @@
+[
+  {
+    "id" : "2d2804a1-7d4b-4057-bc8c-fd6004e4f697",
+    "prId" : 29000,
+    "prUrl" : "https://github.com/apache/spark/pull/29000#pullrequestreview-681319943",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "30834589-1e35-415f-b905-eb394029897e",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Is it the same if we pass the `committerOutputPath` in `InsertIntoHadoopFsRelationCommand` to `SQLHadoopMapReduceCommitProtocol` directly via `FileCommitProtocol.instantiate()`? ",
+        "createdAt" : "2020-08-01T14:33:22Z",
+        "updatedAt" : "2020-11-24T16:38:32Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a56c2fb2-2825-4c9e-9cc1-63ee072d0251",
+        "parentId" : "30834589-1e35-415f-b905-eb394029897e",
+        "authorId" : "19bcd642-216d-45ca-9e34-13e334fdc8fc",
+        "body" : "In my opinion, it is not the same. Since for  ` SQLHadoopMapReduceCommitProtocol` which derived from `HadoopMapReduceCommitProtocol`, final output path for `dynamicPartitionOverwrite` job is the same as other kind of job, there are 2 steps during job committing:\r\n1. move task committed directories to `/path/to/output/.spark-staging-{jobId}`, the code here inits a committer with output path `/path/to/output/.spark-staging-{jobId}`\r\n2. move partition directories under `/path/to/output/.spark-staging-{jobId}` to final output path",
+        "createdAt" : "2020-08-02T17:57:21Z",
+        "updatedAt" : "2020-11-24T16:38:32Z",
+        "lastEditedBy" : "19bcd642-216d-45ca-9e34-13e334fdc8fc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0e868c53-fd86-40aa-8927-5481254127a5",
+        "parentId" : "30834589-1e35-415f-b905-eb394029897e",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "I mean, previously, we pass `outputPath` to `FileCommitProtocol.instantiate` and `qualifiedOutputPath` to `OutputSpec`. And now, you pass the qualified `committerOutputPath` (the one in `InsertIntoHadoopFsRelationCommand`) to `OutputSpec`, but you still pass `outputPath` to `FileCommitProtocol.instantiate`. So can we just pass the non-qualified `committerOutputPath` to `FileCommitProtocol.instantiate` or even the qualified one if it's the same?",
+        "createdAt" : "2020-08-04T09:09:00Z",
+        "updatedAt" : "2020-11-24T16:38:32Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3f7941bd-184b-49e4-adcd-fbe3b57a0709",
+        "parentId" : "30834589-1e35-415f-b905-eb394029897e",
+        "authorId" : "19bcd642-216d-45ca-9e34-13e334fdc8fc",
+        "body" : "It's not the same. It's a bit confused. I think there are 2 kinds of 'committer':\r\n1. `HadoopMapReduceCommitProtocol`, this is implemented by Spark, `outputPath` of this committer should be the `finalPath`, like `/path/to/output/`. In this patch, `FileCommitProtocol.instantiate` creates a instance of `HadoopMapReduceCommitProtocol`\r\n2. `FileOutputCommitter`, this is implemented by hadoop mapreduce client, `outputPath` of this committer should be `intermediatePath`, in this patch, it's like `/path/to/output/.spark-staging-{jobId}`. `HadoopMapReduceCommitProtocol` set up a committer of `FileOutputCommitter` to deal with actual commit task / job. In `InsertIntoHadoopFsRelationCommand`, we pass `OutputSpec` to `FileFormatWriter.write`, this will trigger `FileOutputFormat.setOutputPath(job, new Path(outputSpec.outputPath))`, which would set `outputPath` of `FileOutputCommitter`, this is a `intermediatePath` rather than a `finalPath`.\r\n\r\nBack to `SQLHadoopMapReduceCommitProtocol`, when `spark.sql.sources.outputCommitterClass` is set in conf and the specified committer class is assignable from `FileOutputCommitter`, the `outputPath` of this committer should be `intermediatePath`, but `outputPath` of `SQLHadoopMapReduceCommitProtocol` should be `finalPath`",
+        "createdAt" : "2020-08-20T08:18:08Z",
+        "updatedAt" : "2020-11-24T16:38:32Z",
+        "lastEditedBy" : "19bcd642-216d-45ca-9e34-13e334fdc8fc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0ca7bffd-383b-4661-b620-e1b475da77c4",
+        "parentId" : "30834589-1e35-415f-b905-eb394029897e",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "I see. I got your point.",
+        "createdAt" : "2020-08-27T16:09:07Z",
+        "updatedAt" : "2020-11-24T16:38:32Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2932dbfc-de4a-47ec-b18c-ad59b9bd07b5",
+        "parentId" : "30834589-1e35-415f-b905-eb394029897e",
+        "authorId" : "bd48244c-ec04-47b7-a7f0-ae8e070e5394",
+        "body" : "Hey @WinkerDu - thank you for the PR. One question: when dynamicPartitionOverwrite is on, this code block will only execute when `clazz` is non-null, which means SQLConf.OUTPUT_COMMITTER_CLASS is set. It works for parquet files since that SQL property is set at https://github.com/apache/spark/blob/master/sql/core/src/main/scala/org/apache/spark/sql/execution/datasources/parquet/ParquetFileFormat.scala#L97. So what about other file formats, like Orc? There seems to be no such property set logic for other file formats, at lease in Spark repo. So is dynamicPartitionOverwrite supposed to be for Parquet only? Am I missing sth here? Thanks. \r\n\r\n@cloud-fan @Ngone51 @agrawaldevesh",
+        "createdAt" : "2021-06-10T22:48:29Z",
+        "updatedAt" : "2021-06-10T22:48:29Z",
+        "lastEditedBy" : "bd48244c-ec04-47b7-a7f0-ae8e070e5394",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "85aa12a618ceadfe510a4f9fc3718a746a1bc357",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +57,61 @@        val ctor = clazz.getDeclaredConstructor(classOf[Path], classOf[TaskAttemptContext])\n        val committerOutputPath = if (dynamicPartitionOverwrite) stagingDir else new Path(path)\n        committer = ctor.newInstance(committerOutputPath, context)\n      } else {\n        // The specified output committer is just an OutputCommitter."
+  }
+]

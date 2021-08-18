@@ -625,5 +625,27 @@
     "commit" : "496eda790c95b1c9895967b7181d582fa87da0ff",
     "line" : 38,
     "diffHunk" : "@@ -1,1 +1198,1202 @@      ).foreach(query => {\n        val (plan, adaptivePlan) = runAdaptiveAndVerifyResult(query)\n        val smj = findTopLevelSortMergeJoin(plan)\n        assert(smj.size == 1)\n        val join = findTopLevelBaseJoin(adaptivePlan)"
+  },
+  {
+    "id" : "019bc341-3b6a-4a92-83dd-3f869c41a446",
+    "prId" : 29021,
+    "prUrl" : "https://github.com/apache/spark/pull/29021#pullrequestreview-443634434",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ea794308-1956-49a2-a9b2-38a60580f932",
+        "parentId" : null,
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "It's hard to build a test case like the case in PR description. So I just want to give a simple one. But the rule is same. In this test case, we build a SMJ like:\r\n```\r\nSMJ\r\n     Sort\r\n       CustomShuffleReader(coalesced)\r\n         Shuffle\r\n     Sort\r\n       HashAggregate\r\n         CustomShuffleReader(coalesced)\r\n           Shuffle\r\n```\r\nIt has already breaked current matching pattern. The plan will be optimized to\r\n```\r\nSMJ\r\n     Sort\r\n       CustomShuffleReader(skewed)\r\n         Shuffle\r\n     Sort\r\n       HashAggregate\r\n         CustomShuffleReader(coalesced)\r\n           Shuffle\r\n```\r\nWe don't split the shuffle side with any AggregateExec.\r\n\r\nThe plan before patch is\r\n```\r\nAdaptiveSparkPlan(isFinalPlan=true)\r\n+- *(5) SortMergeJoin [key1#183L], [key2#189L], Inner, false\r\n   :- *(3) Sort [key1#183L ASC NULLS FIRST], false, 0\r\n   :  +- CustomShuffleReader coalesced\r\n   :     +- ShuffleQueryStage 0\r\n   :        +- Exchange hashpartitioning(key1#183L, 100), true\r\n   :           +- *(1) Project [CASE WHEN (id#181L < 250) THEN 249 WHEN (id#181L >= 750) THEN 1000 ELSE id#181L END AS key1#183L, id#181L AS value1#184L]\r\n   :              +- *(1) Range (0, 1000, step=1, splits=10)\r\n   +- *(4) Sort [key2#189L ASC NULLS FIRST], false, 0\r\n      +- *(4) HashAggregate(keys=[key2#189L], functions=[sum(value2#190L)], output=[key2#189L, sum2#193L])\r\n         +- CustomShuffleReader coalesced\r\n            +- ShuffleQueryStage 1\r\n               +- Exchange hashpartitioning(key2#189L, 100), true\r\n                  +- *(2) HashAggregate(keys=[key2#189L], functions=[partial_sum(value2#190L)], output=[key2#189L, sum#200L])\r\n                     +- *(2) Project [CASE WHEN (id#187L < 250) THEN 249 ELSE id#187L END AS key2#189L, id#187L AS value2#190L]\r\n                        +- *(2) Range (0, 1000, step=1, splits=10)\r\n```\r\nThe plan after is\r\n```\r\nAdaptiveSparkPlan(isFinalPlan=true)\r\n+- *(5) SortMergeJoin(skew=true) [key1#183L], [key2#189L], Inner, true\r\n   :- *(3) Sort [key1#183L ASC NULLS FIRST], false, 0\r\n   :  +- CustomShuffleReader coalesced and skewed\r\n   :     +- ShuffleQueryStage 0\r\n   :        +- Exchange hashpartitioning(key1#183L, 100), true\r\n   :           +- *(1) Project [CASE WHEN (id#181L < 250) THEN 249 WHEN (id#181L >= 750) THEN 1000 ELSE id#181L END AS key1#183L, id#181L AS value1#184L]\r\n   :              +- *(1) Range (0, 1000, step=1, splits=10)\r\n   +- *(4) Sort [key2#189L ASC NULLS FIRST], false, 0\r\n      +- *(4) HashAggregate(keys=[key2#189L], functions=[sum(value2#190L)], output=[key2#189L, sum2#193L])\r\n         +- CustomShuffleReader coalesced\r\n            +- ShuffleQueryStage 1\r\n               +- Exchange hashpartitioning(key2#189L, 100), true\r\n                  +- *(2) HashAggregate(keys=[key2#189L], functions=[partial_sum(value2#190L)], output=[key2#189L, sum#200L])\r\n                     +- *(2) Project [CASE WHEN (id#187L < 250) THEN 249 ELSE id#187L END AS key2#189L, id#187L AS value2#190L]\r\n                        +- *(2) Range (0, 1000, step=1, splits=10)\r\n```",
+        "createdAt" : "2020-07-07T07:35:39Z",
+        "updatedAt" : "2020-07-21T07:50:57Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5bed68ceed90c89457ff04af6da62f2222c795b7",
+    "line" : 45,
+    "diffHunk" : "@@ -1,1 +732,736 @@  }\n\n  test(\"SPARK-32201: handle general skew join pattern\") {\n    withSQLConf(\n      SQLConf.ADAPTIVE_EXECUTION_ENABLED.key -> \"true\","
   }
 ]

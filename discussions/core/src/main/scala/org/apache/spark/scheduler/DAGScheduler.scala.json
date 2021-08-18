@@ -779,5 +779,93 @@
     "commit" : "df128e507a2c7bd11d33197fca6b4fa10f4e9256",
     "line" : 40,
     "diffHunk" : "@@ -1,1 +2031,2035 @@      clearCacheLocs()\n    }\n    if (fileLost) {\n      val remove = if (ignoreShuffleFileLostEpoch) {\n        true"
+  },
+  {
+    "id" : "36bc9e9e-af9f-4386-a0e0-04a514655f0a",
+    "prId" : 29014,
+    "prUrl" : "https://github.com/apache/spark/pull/29014#pullrequestreview-453406412",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "375a2a96-7875-4a95-aac2-a5b580d292cf",
+        "parentId" : null,
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "So would we want to do this unless local fetch is disabled (which since it isn't merged yet it will be) and the executor is decommissioned or the the host is decommissioned? Should we use isShuffleLost here instead?",
+        "createdAt" : "2020-07-17T22:32:07Z",
+        "updatedAt" : "2020-07-29T01:25:46Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cdfa25e3-e979-483b-ba67-1e0e5ee8be58",
+        "parentId" : "375a2a96-7875-4a95-aac2-a5b580d292cf",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "@holdenk .. by \"local fetch\", did you mean https://github.com/apache/spark/pull/28911 ? \r\n\r\nTypically `isHostDecommissioned` is set by the cluster manager: It knows for sure that the host is lost or not. For example, the Master knows when a Worker goes away for real. Something similar would have to be done for YARN.\r\n\r\nIs the reasoning for adding this check: We don't need to clear the shuffle state if an executor is decommissioned even if external shuffle service is disabled, as long as there are other executors on that host ? \r\n\r\nIf I understand you correctly, the condition you are hinting at is this (please do confirm):\r\n\r\n```\r\n   if (host is decommissioned) {\r\n    // clear shuffle state for the entire host\r\n   } else if (!isLocalFetchEnabled || numRemainingLiveExecutorsOnThisHost == 0) {\r\n    // clear shuffle state for just this executor that suffered the fetch failure\r\n    // because we can be sure that no one else will serve this executor's data\r\n   }\r\n```\r\n\r\nI will consider using `isShuffleLost ` here to determine if the shuffle has been lost here. ",
+        "createdAt" : "2020-07-18T00:23:33Z",
+        "updatedAt" : "2020-07-29T01:25:46Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "20f28767-a2f4-4d69-8613-2101d5d4753b",
+        "parentId" : "375a2a96-7875-4a95-aac2-a5b580d292cf",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "`isShuffleLost` is not very applicable here. Actually that method was too narrow in scope so I inlined it. It strictly means that shuffle is lost for this executor. \r\n\r\nIn this context, we already know that shuffle is lost for the executor: We are simply trying to determine if it is also lost for the entire host. I updated the code to reflect the logic/intent better. \r\n\r\nI will create a follow up Jira under the master ticket to track changing this logic when \"Local Fetch\" is merged in.",
+        "createdAt" : "2020-07-18T02:14:53Z",
+        "updatedAt" : "2020-07-29T01:25:46Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7e8f493b-3c1a-4d44-aa4c-7215e76d55c7",
+        "parentId" : "375a2a96-7875-4a95-aac2-a5b580d292cf",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Yes that is correct reading of my comment. In the else if block though I'd also add that the external shuffle service is not enabled.",
+        "createdAt" : "2020-07-20T21:29:43Z",
+        "updatedAt" : "2020-07-29T01:25:46Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "14c107a3-d2d7-49c9-a129-861d845dcf26",
+        "parentId" : "375a2a96-7875-4a95-aac2-a5b580d292cf",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "I thought a bit more about this and I think that the author of #28911 should implement the optimization of whether or not a shuffle state should be cleared when you get a fetchf failure from an executor -- when other \"local\" executors might serve those outputs. \r\n\r\nThis is an optimization in that it leverages the Local fetch feature introduced in #28911. I don't know enough about local fetch implementation to comment more about it.\r\n\r\nFrom my perspective of decommissioning, I have changed the logic to be: Executors on the host are fate shared if either we know that they share an external shuffle service or if we know that the host has been decommissioned. In that case, mark the entire host as lost (if the feature flag `unRegisterOutputOnHostOnFetchFailure` is enabled).\r\n\r\ncc: @Ngone51 (author of #28911)",
+        "createdAt" : "2020-07-21T18:14:13Z",
+        "updatedAt" : "2020-07-29T01:25:46Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "813e7c69-4eb2-4a04-b63f-1acd3ef36f6f",
+        "parentId" : "375a2a96-7875-4a95-aac2-a5b580d292cf",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Sounds reasonable. So long as we reconcile how these two features work together before 3.1.",
+        "createdAt" : "2020-07-21T20:42:59Z",
+        "updatedAt" : "2020-07-29T01:25:46Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "aca2d861-b3f0-48a5-a925-3bf97ff8babd",
+        "parentId" : "375a2a96-7875-4a95-aac2-a5b580d292cf",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "> if (host is decommissioned) {\r\n    // clear shuffle state for the entire host\r\n   } else if (!isLocalFetchEnabled || numRemainingLiveExecutorsOnThisHost == 0) {\r\n    // clear shuffle state for just this executor that suffered the fetch failure\r\n    // because we can be sure that no one else will serve this executor's data\r\n   }\r\n\r\n> should implement the optimization of whether or not a shuffle state should be cleared when you get a fetchf failure from an executor \r\n\r\nThese're actually good idea! I just have a few concerns that whether they are doable with current implementation... I mean, when fetch failure happens on an executor, the possible reasons may be executor lost or shuffle data corrupt. For these two reasons, host-local shuffle reading could still result in fetch failure at the end. Because, even if we use host-local shuffle data reading, we need to ask the lost executor for the directory first. And if the shuffle data is corrupted, we'll fail to read the shuffle data anyway. Though, in the case of executor lost, it's maybe doable as we have local disk directories cache locally so that the executor on the same host won't ask the lost executor for the directory. However, the problem is that the driver is not aware of the status of the cache. Thus, the driver also has no idea whether we should clean up the shuffle state for the lost executor or not.",
+        "createdAt" : "2020-07-22T15:01:37Z",
+        "updatedAt" : "2020-07-29T01:25:46Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dbc478b0d96de0f1a48f93d90f1e648229b5790c",
+    "line" : 11,
+    "diffHunk" : "@@ -1,1 +1825,1829 @@            val isHostDecommissioned = taskScheduler\n              .getExecutorDecommissionInfo(bmAddress.executorId)\n              .exists(_.isHostDecommissioned)\n\n            // Shuffle output of all executors on host `bmAddress.host` may be lost if:"
   }
 ]

@@ -845,5 +845,258 @@
     "commit" : "71a046515efd306f36e4894069abe234271b99d2",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +1882,1886 @@            throw new FileNotFoundException(s\"Jar ${path} not found\")\n          }\n          if (fs.getFileStatus(hadoopPath).isDirectory) {\n            throw new IllegalArgumentException(\n              s\"Directory ${path} is not allowed for addJar\")"
+  },
+  {
+    "id" : "ef27b18a-4d6d-412a-a6bf-8d2420375fd6",
+    "prId" : 28986,
+    "prUrl" : "https://github.com/apache/spark/pull/28986#pullrequestreview-442081563",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e73008f2-3f8c-4b79-a3f4-54678806929a",
+        "parentId" : null,
+        "authorId" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "body" : "Have you tested this under local mode?",
+        "createdAt" : "2020-07-02T23:57:43Z",
+        "updatedAt" : "2020-07-07T18:01:23Z",
+        "lastEditedBy" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b69d60e6-40e6-4b11-bfff-4084de879891",
+        "parentId" : "e73008f2-3f8c-4b79-a3f4-54678806929a",
+        "authorId" : "43998e22-6c2f-401d-9914-8cecf6fad929",
+        "body" : "Under local mode:\r\n\r\n```\r\nscala> sc.range(0, 1).foreach { _ => new SparkContext(new SparkConf().setAppName(\"test\").setMaster(\"local\")) }\r\njava.lang.IllegalStateException: SparkContext should only be created and accessed on the driver.\r\n...\r\n```\r\n\r\nbefore this patch:\r\n\r\n```\r\nscala> sc.range(0, 1).foreach { _ => new SparkContext(new SparkConf().setAppName(\"test\").setMaster(\"local\")) }\r\norg.apache.spark.SparkException: Only one SparkContext should be running in this JVM (see SPARK-2243).The currently running SparkContext was created at:\r\norg.apache.spark.sql.SparkSession$Builder.getOrCreate(SparkSession.scala:921)\r\n...\r\n```\r\n\r\nAlthough the exception is different, it fails anyway.\r\n\r\nI think the new error message is more reasonable.",
+        "createdAt" : "2020-07-03T00:17:11Z",
+        "updatedAt" : "2020-07-07T18:01:23Z",
+        "lastEditedBy" : "43998e22-6c2f-401d-9914-8cecf6fad929",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "0faac2a4495bebc67819122d7a2d23a750c71ddd",
+    "line" : 20,
+    "diffHunk" : "@@ -1,1 +2564,2568 @@   */\n  private def assertOnDriver(): Unit = {\n    if (TaskContext.get != null) {\n      // we're accessing it during task execution, fail.\n      throw new IllegalStateException("
+  },
+  {
+    "id" : "62b5c8a0-d6ee-418d-9b21-f230b247516e",
+    "prId" : 28986,
+    "prUrl" : "https://github.com/apache/spark/pull/28986#pullrequestreview-458081180",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "28c47ee7-319d-4445-a53f-980459e47ca2",
+        "parentId" : null,
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "@ueshin could you submit a follow-up PR to add a conf? In Spark 3.0, turn it off by default; in Spark 3.1 turn it on by default? Also add it to the migration guide?",
+        "createdAt" : "2020-07-27T16:23:37Z",
+        "updatedAt" : "2020-07-27T16:23:37Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "77672472-6b45-4997-9aa0-2e4cd4ef4ba4",
+        "parentId" : "28c47ee7-319d-4445-a53f-980459e47ca2",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Does this actually affect any legitimate use case that would otherwise work? this should be more of a fail-fast for things that will already fail",
+        "createdAt" : "2020-07-27T16:31:57Z",
+        "updatedAt" : "2020-07-27T16:31:57Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "849fe617-b52e-42a0-9e33-a18bcffba45a",
+        "parentId" : "28c47ee7-319d-4445-a53f-980459e47ca2",
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "This is a user error. However, the users may use a Spark library in executors but the library calls SparkContext.getOrCreate. We should still let their workloads work if it worked in the previous releases. ",
+        "createdAt" : "2020-07-27T17:19:48Z",
+        "updatedAt" : "2020-07-27T17:19:48Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "24865dc4-a3af-4b5c-b4a8-1a1068a6ae93",
+        "parentId" : "28c47ee7-319d-4445-a53f-980459e47ca2",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "I see, but would that ever succeed, using the SparkContext that was created? I'm trying to work out what library would do this and not fail. Is it, perhaps, some boilerplate initialization code that gets executed on driver and executor, and it makes a SparkContext that is never actually used on the executor, but now it fails fast?\r\n\r\nI get it, if that's the use case. A release note and/or hidden config to disable it might be an OK workaround.\r\n\r\nAlternatively if arguing that this is not-uncommon, maybe we just don't do this at all, and revert it",
+        "createdAt" : "2020-07-27T17:25:02Z",
+        "updatedAt" : "2020-07-27T17:25:03Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "07b1c5a4-0956-4d1c-a77c-cf96bbe738f0",
+        "parentId" : "28c47ee7-319d-4445-a53f-980459e47ca2",
+        "authorId" : "125776fc-3ad3-48e4-8f31-9dd074ca3131",
+        "body" : "BTW, had been discussing this offline with @ueshin and @HyukjinKwon - one use case that previously (and admittedly unfortunately) relied on the ability to create `SparkContext`s in the executors is MLflow's `mlflow.pyfunc.spark_udf` API ([see docs & usage example](https://www.mlflow.org/docs/latest/python_api/mlflow.pyfunc.html#mlflow.pyfunc.spark_udf)), which provides a unified interface for scoring models trained in arbitrary ML frameworks (tensorflow, scikit-learn, pyspark.ml) on Spark DataFrames as a pandas UDF. Most ML frameworks (e.g. sklearn) are single-node frameworks that can operate on pandas dataframes, so applying them via pandas UDF works well. For a pyspark.ml model to be applied via pandas UDF, we need to convert the input pandas series -> spark dataframe on the executors, which requires a SparkContext on the executors.\r\n\r\nI'll dig to see if there's a way to keep the MLflow use case working with this change (e.g. pyspark.ml models may ultimately perform inference via spark UDF, so maybe we can somehow extract the underlying UDF from the model and return that from `mlflow.pyfunc.spark_udf`?), but otherwise agree that we may want to revert this change.\r\n\r\n\r\n\r\n\r\n\r\n",
+        "createdAt" : "2020-07-27T21:02:58Z",
+        "updatedAt" : "2020-07-27T21:02:58Z",
+        "lastEditedBy" : "125776fc-3ad3-48e4-8f31-9dd074ca3131",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3a15f683-5fe9-4c8c-aaf8-d458ae222377",
+        "parentId" : "28c47ee7-319d-4445-a53f-980459e47ca2",
+        "authorId" : "125776fc-3ad3-48e4-8f31-9dd074ca3131",
+        "body" : "I also sympathize with the notion that it's an antipattern to create a `SparkContext` on the executors, but not sure there's always a workaround for doing so",
+        "createdAt" : "2020-07-27T21:10:44Z",
+        "updatedAt" : "2020-07-27T21:10:44Z",
+        "lastEditedBy" : "125776fc-3ad3-48e4-8f31-9dd074ca3131",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c54ecd7d-84b8-4b5c-b498-ba314280b481",
+        "parentId" : "28c47ee7-319d-4445-a53f-980459e47ca2",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Yep if that's the logic - that one might previously have harmlessly created a SparkContext that does not work and now it fails explicitly - then I'd say just revert it. It's just trying to fail-fast, but maybe that's not a good idea. If it affects mlflow, I'd guess it affects N other applications.",
+        "createdAt" : "2020-07-27T21:17:16Z",
+        "updatedAt" : "2020-07-27T21:17:16Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fb4075d9-8a31-4a58-a137-44500bf72072",
+        "parentId" : "28c47ee7-319d-4445-a53f-980459e47ca2",
+        "authorId" : "43998e22-6c2f-401d-9914-8cecf6fad929",
+        "body" : "I agree with having a config, even if the default is disable for a while, like during 3.x series.\r\nI hope the config will be enabled by default eventually since I believe `SparkContext` is supposed to not be created in executors.",
+        "createdAt" : "2020-07-27T21:33:21Z",
+        "updatedAt" : "2020-07-27T21:33:21Z",
+        "lastEditedBy" : "43998e22-6c2f-401d-9914-8cecf6fad929",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "644c4c43-6ac0-49f1-904e-49fdc620ea03",
+        "parentId" : "28c47ee7-319d-4445-a53f-980459e47ca2",
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "This is pretty similar to the old `spark.driver.allowMultipleContexts`. It looks like working if you are lucky, but there are some surprising behaviors which are pretty hard to debug. For example, `SparkEnv.get` will be set to a new one when someone creates a SparkContext in an executor. (Search `SparkEnv.get` and you will find lots of codes running in executors call it).\r\n\r\nI'm pretty surprised that nobody reports this issue in MLFlow. For myself, I used SparkContext in executors to run stress tests for codes running in driver, but I did hit multiple weird issues. I managed to workaround them by some hacks, such as setting Spark.env back. But it requires deep Spark knowledge. I believe many users won't be able to figure out the root cause without an explicit error added by this PR.\r\n\r\nIMO, it's better to stop people from doing this, but we should also add a flag to give the users an option to turn it off, so that they have some time to migrate their workloads away from the fragile pattern. We can eventually remove the flag like what we did for `spark.driver.allowMultipleContexts`.",
+        "createdAt" : "2020-07-27T21:57:55Z",
+        "updatedAt" : "2020-07-27T21:57:55Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c2909a3f-2820-43ed-998e-6f67a5d1aaf3",
+        "parentId" : "28c47ee7-319d-4445-a53f-980459e47ca2",
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "@smurching how does mlflow create SparkContext? IIUC, it doesn't create SparkContext in the executor JVM, so it should not be impacted by this change.",
+        "createdAt" : "2020-07-27T22:14:23Z",
+        "updatedAt" : "2020-07-27T22:14:23Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "266cddd6-e629-4b29-b636-125fc761f171",
+        "parentId" : "28c47ee7-319d-4445-a53f-980459e47ca2",
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "NVM. I thought the check was only added in JVM side. If we remove the pyspark side change, it should not impact MLflow. That's actually a case working pretty well...",
+        "createdAt" : "2020-07-27T22:21:52Z",
+        "updatedAt" : "2020-07-27T22:22:08Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "59c88177-2fe6-45aa-84cf-bbeae7e4fae3",
+        "parentId" : "28c47ee7-319d-4445-a53f-980459e47ca2",
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "So I'm +1 on blocking creating SparkContext in executor JVM because it messes up the singleton `SparkEnv` (there may be others). But blocking it in Python process is probably not worth since it's working pretty well (unless in future we introduce some singleton objects in executor python processes).",
+        "createdAt" : "2020-07-27T22:27:23Z",
+        "updatedAt" : "2020-07-27T22:28:19Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d0b6ff15-4a76-4afc-b37f-9d587e634b15",
+        "parentId" : "28c47ee7-319d-4445-a53f-980459e47ca2",
+        "authorId" : "125776fc-3ad3-48e4-8f31-9dd074ca3131",
+        "body" : "@zsxwing got it makes sense! Yeah, MLflow's spark UDF works pretty reliably AFAIK, at least for this use case :P. When scoring a pyspark.ml model in a pandas UDF, we construct a SparkContext via the standard SparkSession.builder.getOrCreate API ([see MLflow code](https://github.com/mlflow/mlflow/blob/86ea84f9e6d58b702f362ff512f61cff8ada021f/mlflow/spark.py#L520-L521))",
+        "createdAt" : "2020-07-27T22:50:03Z",
+        "updatedAt" : "2020-07-27T22:50:03Z",
+        "lastEditedBy" : "125776fc-3ad3-48e4-8f31-9dd074ca3131",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "952df6ee-820d-44f9-a548-5c9e6635caa0",
+        "parentId" : "28c47ee7-319d-4445-a53f-980459e47ca2",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "+1 for adding a config, disabling it in 3.0 and enabling it at 3.1.",
+        "createdAt" : "2020-07-28T00:59:49Z",
+        "updatedAt" : "2020-07-28T00:59:49Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7907ed1d-5e6e-4aaf-82ef-73903be3886a",
+        "parentId" : "28c47ee7-319d-4445-a53f-980459e47ca2",
+        "authorId" : "43998e22-6c2f-401d-9914-8cecf6fad929",
+        "body" : "I submitted a PR to add configs #29278.\r\nCould you take a look at it when you are available?",
+        "createdAt" : "2020-07-29T02:35:27Z",
+        "updatedAt" : "2020-07-29T02:35:27Z",
+        "lastEditedBy" : "43998e22-6c2f-401d-9914-8cecf6fad929",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c083316b-c50b-46d3-9860-e094f3c1b34b",
+        "parentId" : "28c47ee7-319d-4445-a53f-980459e47ca2",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "I think it's a bit odds to have two separate configuration for Scala and Python. I don't think we will happen to allow this in PySpark specifically in the future even if it worked. I think we will discourage this behaviour anyway whether it is in Scala or Python, and deprecate/remove both configurations together eventually. In which case would we disable it in Scala side but enable it in Python side?",
+        "createdAt" : "2020-07-30T01:02:27Z",
+        "updatedAt" : "2020-07-30T01:04:44Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "527c8113-92ec-4fbb-9497-be8cc810be03",
+        "parentId" : "28c47ee7-319d-4445-a53f-980459e47ca2",
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "> In which case would we disable it in Scala side but enable it in Python side?\r\n\r\nLike how MLflow uses it today. It's pretty hard to make it work correctly in Scala side. But it's working in Python today.",
+        "createdAt" : "2020-07-30T01:23:15Z",
+        "updatedAt" : "2020-07-30T01:23:15Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8c1dab04-e533-449f-8e52-9160b8e25296",
+        "parentId" : "28c47ee7-319d-4445-a53f-980459e47ca2",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "I see but I guess we should discourage/deprecate/remove the behaviour in the end - am I correct? It's a bit weird to have two configuration to control the same behaviour (to end users). And I think it's a bit unlikely when it should be disabled in Scala but enabled in Python specifically. We could just enable it in both sides.",
+        "createdAt" : "2020-07-30T01:43:38Z",
+        "updatedAt" : "2020-07-30T01:43:38Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d20f845d-9f5e-422a-837b-1b4bec612ceb",
+        "parentId" : "28c47ee7-319d-4445-a53f-980459e47ca2",
+        "authorId" : "43998e22-6c2f-401d-9914-8cecf6fad929",
+        "body" : "I pushed a commit to use a single config.",
+        "createdAt" : "2020-07-30T05:31:00Z",
+        "updatedAt" : "2020-07-30T05:31:00Z",
+        "lastEditedBy" : "43998e22-6c2f-401d-9914-8cecf6fad929",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "0faac2a4495bebc67819122d7a2d23a750c71ddd",
+    "line" : 20,
+    "diffHunk" : "@@ -1,1 +2564,2568 @@   */\n  private def assertOnDriver(): Unit = {\n    if (TaskContext.get != null) {\n      // we're accessing it during task execution, fail.\n      throw new IllegalStateException("
   }
 ]

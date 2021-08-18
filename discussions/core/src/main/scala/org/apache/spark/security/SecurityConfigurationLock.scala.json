@@ -1,0 +1,90 @@
+[
+  {
+    "id" : "5f7e8a51-a8b0-4fca-975d-1f2c13be6bbf",
+    "prId" : 29024,
+    "prUrl" : "https://github.com/apache/spark/pull/29024#pullrequestreview-497742874",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ad31d377-e4e4-4f85-b37f-8781339d0c23",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "I think its annoying to make 3rd-party developers care about this lock. Could we have the synchronization in the caller side, e.g., `ConnectionProvider.create`?",
+        "createdAt" : "2020-07-09T00:45:48Z",
+        "updatedAt" : "2020-09-29T08:38:14Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "259aeea0-3c6f-4d98-8390-66bead3bb525",
+        "parentId" : "ad31d377-e4e4-4f85-b37f-8781339d0c23",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "Considering it though and will come back...\r\nIn general I agree w/ the direction because that way less hassle on 3rd-party developer side.",
+        "createdAt" : "2020-07-10T07:38:31Z",
+        "updatedAt" : "2020-09-29T08:38:14Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "908724a6-7bb7-475f-9feb-aa09b716e1ff",
+        "parentId" : "ad31d377-e4e4-4f85-b37f-8781339d0c23",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "I've had a deeper consideration and here are my findings. Adding global synchronization would give the impression that it's needed under any circumstances (which is not true). A good example is when one uses TGT ticket cache file, such case no need to modify global JVM configuration. From technical point of view this would not generate any issue for now. From logical point of view synchronizing something which may not required is bad message (+ such guarantee is hard to revoke if anything forces us to do so). Considering this I would not add synchronization into the framework. WDYT?",
+        "createdAt" : "2020-07-10T10:15:24Z",
+        "updatedAt" : "2020-09-29T08:38:14Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c2f8b9fd-0427-4ae3-9ce0-dab3b6bde2ee",
+        "parentId" : "ad31d377-e4e4-4f85-b37f-8781339d0c23",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Yea, sounds fine to me. But, I might misunderstand your thought, so could you update the PR based on that approach now? We need to discuss more baed on the impl.",
+        "createdAt" : "2020-07-10T23:22:54Z",
+        "updatedAt" : "2020-09-29T08:38:14Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f852516d-734d-442b-a75a-56cc1fe65ad6",
+        "parentId" : "ad31d377-e4e4-4f85-b37f-8781339d0c23",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "`Considering this I would not add synchronization into the framework` = Adding synchronization into a central place (like `ConnectionProvider.create`) and allowing 3rd-party developers not to care about this is not something where I see the gain (I see cases where such change would do unnecessary synchronization). That said physically it's not an issue but could be misleading.\r\nAn example:\r\n```\r\n  def create(driver: Driver, options: JDBCOptions): Connection = {\r\n    val filteredProviders = providers.filter(_.canHandle(driver, options))\r\n    logDebug(s\"Filtered providers: $filteredProviders\")\r\n    require(filteredProviders.size == 1,\r\n      \"JDBC connection initiated but not exactly one connection provider found which can handle it\")\r\n    var conn: Connection = null\r\n    // This would synchronize but for nothing in some cases\r\n    SecurityConfigurationLock.synchronized {\r\n      conn = filteredProviders.head.getConnection(driver, options)\r\n    }\r\n    conn\r\n  }\r\n```\r\nAn imaginary provider implemented by 3rd-party:\r\n```\r\nclass OracleConnectionProviderTGT {\r\n  override def canHandle(driver: Driver, options: JDBCOptions): Boolean = {\r\n    // Example content of tgtCache: \"/tmp/krb5cc_5088\"\r\n    options.tgtCache != null ...\r\n  }\r\n\r\n  override def getConnection(driver: Driver, options: JDBCOptions): Connection = {\r\n    ...\r\n    // No need to modify global JVM configuration\r\n    prop.setProperty(OracleConnection.CONNECTION_PROPERTY_THIN_NET_AUTHENTICATION_KRB5_CC_NAME,\r\n                     options.tgtCache)\r\n    ...\r\n    driver.connect(url, prop)\r\n  }\r\n}\r\n```\r\nOverall if we would like to add such change then I would mention that `getConnection` is synchronized under any circustances which may or may not needed. This is not suggested from my perspective but no strong opinion.\r\n",
+        "createdAt" : "2020-07-14T09:04:47Z",
+        "updatedAt" : "2020-09-29T08:38:14Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "eb53de28-038c-4521-a1fb-f300adfbcd0c",
+        "parentId" : "ad31d377-e4e4-4f85-b37f-8781339d0c23",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "I would also support removing `SecurityConfigurationLock` ...",
+        "createdAt" : "2020-09-27T08:09:40Z",
+        "updatedAt" : "2020-09-29T08:38:14Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ef7cb150-966b-43e2-a1b9-6f962553a055",
+        "parentId" : "ad31d377-e4e4-4f85-b37f-8781339d0c23",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "Moved into a central place, now Spark makes sure that this happens and 3rd-party developers don't have to care.",
+        "createdAt" : "2020-09-28T17:21:01Z",
+        "updatedAt" : "2020-09-29T08:38:14Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "04124905187fcab366c79adc587cfe2495bff5b3",
+    "line" : 24,
+    "diffHunk" : "@@ -1,1 +22,26 @@ * In order to avoid race the modification must be synchronized with this.\n */\nobject SecurityConfigurationLock"
+  }
+]

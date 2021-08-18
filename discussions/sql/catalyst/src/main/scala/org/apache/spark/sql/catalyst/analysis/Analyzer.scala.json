@@ -2440,5 +2440,104 @@
     "commit" : "12787053aec9d015506d5c59c58e91dd23d5bb82",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +1559,1563 @@          a.copy(aggregateExpressions = buildExpandedProjectList(a.aggregateExpressions, a.child))\n        }\n      // TODO: Remove this logic and see SPARK-34035\n      case t: ScriptTransformation if containsStar(t.input) =>\n        t.copy(input = t.child.output)"
+  },
+  {
+    "id" : "1a64256b-7629-4958-b79f-7197817db162",
+    "prId" : 29062,
+    "prUrl" : "https://github.com/apache/spark/pull/29062#pullrequestreview-446953404",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ce9a5143-2e01-4929-ab7a-84d34678f270",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "I checked the order of analysis rules in branch-2.4. `Substitution` batch is after `Hints` too, like branch-3.0. Is there any change causing this issue?",
+        "createdAt" : "2020-07-12T06:25:39Z",
+        "updatedAt" : "2020-07-12T06:25:39Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "24cee31a-70ed-4194-9bd3-ca045899e3a6",
+        "parentId" : "ce9a5143-2e01-4929-ab7a-84d34678f270",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "It's hard to find which change causing it for me since 2.4 and 3.0 have many differences that I don't know.",
+        "createdAt" : "2020-07-13T02:59:08Z",
+        "updatedAt" : "2020-07-13T02:59:08Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e361401596693557877d750d195c7555fa99cd7c",
+    "line" : 8,
+    "diffHunk" : "@@ -1,1 +205,209 @@      WindowsSubstitution,\n      EliminateUnions,\n      new SubstituteUnresolvedOrdinals(conf)),\n    Batch(\"Disable Hints\", Once,\n      new ResolveHints.DisableHints(conf)),"
+  },
+  {
+    "id" : "c313ec11-5551-48ff-a76d-d264330a4cc3",
+    "prId" : 29062,
+    "prUrl" : "https://github.com/apache/spark/pull/29062#pullrequestreview-461400976",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7898e662-99c4-48a7-b1c2-b4466db63c49",
+        "parentId" : null,
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "Why we have to execute the batch Substitution before the batch ResolveHints? What is the root cause? I am unable to tell it from either PR description or the code comments. Could any of you explain it? \r\n\r\ncc @maryannxue  \r\n",
+        "createdAt" : "2020-07-30T20:13:50Z",
+        "updatedAt" : "2020-07-30T20:13:51Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a7a9b717-4885-47aa-abd7-56b7f04db0ac",
+        "parentId" : "7898e662-99c4-48a7-b1c2-b4466db63c49",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "I don't know which PR causes this regression problem since there is a big gap between 2.4 and 3.0 about CTE. I am not familiar with this part.\r\nI fixed this by debuging. In 3.0, I found only the `child of CTE` could enter into the rule of `ResolveCoalesceHints`. For the above test case:\r\n```\r\nCTE [cte]\r\n:  +- 'SubqueryAlias `cte`\r\n:     +- 'UnresolvedHint REPARTITION, [3]\r\n:        +- 'Project [*]\r\n:           +- 'UnresolvedRelation `t`\r\n+- 'Project [*]\r\n   +- 'UnresolvedRelation `cte`\r\n```\r\nOnly this child `Project` branch could enter into the rule of `ResolveCoalesceHints`\r\n```\r\n+- 'Project [*]\r\n   +- 'UnresolvedRelation `cte`\r\n```",
+        "createdAt" : "2020-08-05T07:18:34Z",
+        "updatedAt" : "2020-08-05T07:19:16Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e361401596693557877d750d195c7555fa99cd7c",
+    "line" : 4,
+    "diffHunk" : "@@ -1,1 +201,205 @@\n  lazy val batches: Seq[Batch] = Seq(\n    Batch(\"Substitution\", fixedPoint,\n      CTESubstitution,\n      WindowsSubstitution,"
+  },
+  {
+    "id" : "fb685f45-548d-4232-9ba6-2fd1d93af4f5",
+    "prId" : 28979,
+    "prUrl" : "https://github.com/apache/spark/pull/28979#pullrequestreview-443138858",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "00c3e1f3-4d35-4e3d-be11-9e4669993d62",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "(This is not related to this PR though) To avoid recomputation, could we use `val` for `inputPrimitives` instead of `def`?\r\nhttps://github.com/apache/spark/blob/42f01e314b4874236544cc8b94bef766269385ee/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/expressions/ScalaUDF.scala#L65",
+        "createdAt" : "2020-07-04T10:14:15Z",
+        "updatedAt" : "2020-07-09T13:18:13Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d5dc4acb-7359-4f96-90ad-8faf8e5a38a5",
+        "parentId" : "00c3e1f3-4d35-4e3d-be11-9e4669993d62",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "yea, sounds good.",
+        "createdAt" : "2020-07-06T14:40:57Z",
+        "updatedAt" : "2020-07-09T13:18:13Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "871c35ffd3d71cef6040849561ae07a8d4e6b370",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +2820,2824 @@      case p => p transformExpressionsUp {\n\n        case udf: ScalaUDF if udf.inputPrimitives.contains(true) =>\n          // Otherwise, add special handling of null for fields that can't accept null.\n          // The result of operations like this, when passed null, is generally to return null."
   }
 ]

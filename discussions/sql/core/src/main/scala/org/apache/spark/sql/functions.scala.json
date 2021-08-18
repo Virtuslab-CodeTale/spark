@@ -515,5 +515,93 @@
     "commit" : "7aed453983b6453940afea7b2c7f6535d69b1ffc",
     "line" : 9,
     "diffHunk" : "@@ -1,1 +1433,1437 @@   * @group math_funcs\n   * @since 3.1.0\n   */\n  def acosh(e: Column): Column = withExpr { Acosh(e.expr) }\n"
+  },
+  {
+    "id" : "0a7135e7-d84f-4c0a-83da-3058d1e716ec",
+    "prId" : 28979,
+    "prUrl" : "https://github.com/apache/spark/pull/28979#pullrequestreview-446031874",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b42f12be-67c0-4ddc-bccc-878f8b1dd0d5",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Hi all, in the latest update, acquring schema can fallback to previous `ScalaReflection.schemaFor[RT]` when `ExpressionEncoder[RT]()` fails. In this way, we can support both`udf((i: String) => null)`(return type is `NullType`) and `udf((i: String) => null.asInstanceOf[String])` (return type is `StringType`) at the same time and avoid behaviour change. cc @maropu ",
+        "createdAt" : "2020-07-09T10:29:06Z",
+        "updatedAt" : "2020-07-09T13:18:13Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5e8ae010-63fe-4ec4-b3d2-660cbfbb41f1",
+        "parentId" : "b42f12be-67c0-4ddc-bccc-878f8b1dd0d5",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Ah, I see. Keeping the current behaviour looks good. WDYT? @cloud-fan \r\nBut, this fallback is only for the null case?\r\n",
+        "createdAt" : "2020-07-09T10:49:29Z",
+        "updatedAt" : "2020-07-09T13:18:13Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9f263fda-ca3f-4fa4-bc94-f69705f76005",
+        "parentId" : "b42f12be-67c0-4ddc-bccc-878f8b1dd0d5",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "+1 to avoid breaking changes.",
+        "createdAt" : "2020-07-09T12:12:51Z",
+        "updatedAt" : "2020-07-09T13:18:13Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d7005605-09d0-4e61-a042-9852f8f775ac",
+        "parentId" : "b42f12be-67c0-4ddc-bccc-878f8b1dd0d5",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "I compared the support types between `schemaFor` between `serializerFor`(which is called by `ExpressionEncoder` indeed). It turns out that we can fallback three types: `NullType`, ~`CalendarInterval`~, ~`Decimal`~.\r\n\r\n(Actually, I'm thinking why `serializerFor` doesn't support them. )",
+        "createdAt" : "2020-07-09T12:42:58Z",
+        "updatedAt" : "2020-07-09T13:18:13Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "070604be-2486-4e0f-96f7-a77bd877913c",
+        "parentId" : "b42f12be-67c0-4ddc-bccc-878f8b1dd0d5",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "> I compared the support types between schemaFor between serializerFor(which is called by ExpressionEncoder indeed). It turns out that we can fallback three types: NullType, CalendarInterval, Decimal.\r\n\r\nOh, I see. So, this update looks okay to me.",
+        "createdAt" : "2020-07-09T12:50:30Z",
+        "updatedAt" : "2020-07-09T13:18:13Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "567f9c7a-a47e-4ba2-9ec9-afcd4b70007d",
+        "parentId" : "b42f12be-67c0-4ddc-bccc-878f8b1dd0d5",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Oh..wait!!\r\n\r\nI just realized that we should actually compare `schemaFor` and `serializerForType`(rather than `serializerFor`).  `serializerForType` will call `dataTypeFor` first.  `dataTypeFor` actually supports `NullType`, `CalendarInterval`, `Decimal` as well.\r\n\r\nThe reason `ExpressionEncoder` doesn't support `NullType` is, before `ExpressionEncoder` calls `serializerForType`, it calls `mirror.runtimeClass(tpe)` first:\r\n\r\nhttps://github.com/apache/spark/blob/fab4ca5156d5e1cc0e976c7c27b28a12fa61eb6d/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/encoders/ExpressionEncoder.scala#L56-L58\r\n\r\nand `null` (without explicit data type) can fail at `mirror.runtimeClass(tpe)`:\r\n```scala\r\njava.lang.ClassNotFoundException: scala.Null\r\n  at scala.reflect.internal.util.AbstractFileClassLoader.findClass(AbstractFileClassLoader.scala:72)\r\n  at java.base/java.lang.ClassLoader.loadClass(ClassLoader.java:588)\r\n  at java.base/java.lang.ClassLoader.loadClass(ClassLoader.java:521)\r\n  at java.base/java.lang.Class.forName0(Native Method)\r\n  at java.base/java.lang.Class.forName(Class.java:398)\r\n  at scala.reflect.runtime.JavaMirrors$JavaMirror.javaClass(JavaMirrors.scala:589)\r\n  at scala.reflect.runtime.JavaMirrors$JavaMirror.$anonfun$classToJava$1(JavaMirrors.scala:1265)\r\n  at scala.reflect.runtime.TwoWayCaches$TwoWayCache.$anonfun$toJava$1(TwoWayCaches.scala:61)\r\n  at scala.reflect.runtime.TwoWayCaches$TwoWayCache.toJava(TwoWayCaches.scala:57)\r\n  at scala.reflect.runtime.JavaMirrors$JavaMirror.classToJava(JavaMirrors.scala:1257)\r\n  at scala.reflect.runtime.JavaMirrors$JavaMirror.typeToJavaClass(JavaMirrors.scala:1351)\r\n  at scala.reflect.runtime.JavaMirrors$JavaMirror.runtimeClass(JavaMirrors.scala:227)\r\n  at scala.reflect.runtime.JavaMirrors$JavaMirror.runtimeClass(JavaMirrors.scala:68)\r\n  at org.apache.spark.sql.catalyst.encoders.ExpressionEncoder$.apply(ExpressionEncoder.scala:56)\r\n  at org.apache.spark.sql.functions$.udf(functions.scala:4542)\r\n  ... 47 elided\r\n```",
+        "createdAt" : "2020-07-09T13:16:41Z",
+        "updatedAt" : "2020-07-09T13:18:13Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1dae40f0-ce92-4a46-b970-be504bd154f1",
+        "parentId" : "b42f12be-67c0-4ddc-bccc-878f8b1dd0d5",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Thanks for the explanation! LGTM",
+        "createdAt" : "2020-07-09T23:26:08Z",
+        "updatedAt" : "2020-07-09T23:26:08Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "871c35ffd3d71cef6040849561ae07a8d4e6b370",
+    "line" : 19,
+    "diffHunk" : "@@ -1,1 +4524,4528 @@  def udf[RT: TypeTag](f: Function0[RT]): UserDefinedFunction = {\n    val outputEncoder = Try(ExpressionEncoder[RT]()).toOption\n    val ScalaReflection.Schema(dataType, nullable) = outputEncoder.map(_.dataTypeAndNullable).getOrElse(ScalaReflection.schemaFor[RT])\n    val inputEncoders = Nil\n    val udf = SparkUserDefinedFunction(f, dataType, inputEncoders, outputEncoder)"
   }
 ]

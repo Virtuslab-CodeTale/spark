@@ -185,5 +185,115 @@
     "commit" : "daa205dc9f257f42b794767601fd844dd596e374",
     "line" : 7,
     "diffHunk" : "@@ -1,1 +449,453 @@      // we only need to calculate available slots if using barrier scheduling, otherwise the\n      // value is -1\n      val availableSlots = if (taskSet.isBarrier) {\n        val availableResourcesAmount = availableResources.map { resourceMap =>\n          // note that the addresses here have been expanded according to the numParts"
+  },
+  {
+    "id" : "aa0e77d7-6e74-46e3-b207-68c4335c68b4",
+    "prId" : 29014,
+    "prUrl" : "https://github.com/apache/spark/pull/29014#pullrequestreview-452918174",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1675bb71-9ba8-47e6-a87d-2b6c631dda4e",
+        "parentId" : null,
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "~~Is there a reason to use the lock on the whole `TaskSchedulerImpl` instance? If there is none then we can change the `HashMap` to a `ConcurrentHashMap` and here we can use a `putIfAbsent`.~~\r\n",
+        "createdAt" : "2020-07-20T13:50:45Z",
+        "updatedAt" : "2020-07-29T01:25:46Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dea65fbb-9f3f-4721-8d27-4d0660bccea7",
+        "parentId" : "1675bb71-9ba8-47e6-a87d-2b6c631dda4e",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "Is there any guarantee that a `ExecutorDecommissionInfo` with `isHostDecommissioned=false` is never followed by another `ExecutorDecommissionInfo` where `isHostDecommissioned=true`?  ",
+        "createdAt" : "2020-07-20T15:48:07Z",
+        "updatedAt" : "2020-07-29T01:25:46Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fea02f2a-a354-43cf-b66c-1418fd76c9b3",
+        "parentId" : "1675bb71-9ba8-47e6-a87d-2b6c631dda4e",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "That would be a bug: isHostDecommissioned is ultimately decided by the cluster manager. It knows for sure whether or not the host is decommissioned with the executor. It shouldn't change its mind :-). I can add an assert in the Driver but it would be a bit of an overkill. ",
+        "createdAt" : "2020-07-21T01:08:30Z",
+        "updatedAt" : "2020-07-29T01:25:46Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d1e7f03e-ba0b-45f9-963a-b92b69700067",
+        "parentId" : "1675bb71-9ba8-47e6-a87d-2b6c631dda4e",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Changed this to \"last writer wins\"",
+        "createdAt" : "2020-07-21T02:04:48Z",
+        "updatedAt" : "2020-07-29T01:25:46Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5238bef5-fff2-49ac-b526-03e1e2796bc9",
+        "parentId" : "1675bb71-9ba8-47e6-a87d-2b6c631dda4e",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "So my concern here is that if a task is scheduled part of the way through decommissioning the executor *could* send back a decommission message with the host lost. Maybe use a getOrElse to make sure if we've ever learnt the entire host is going away we don't forget that?",
+        "createdAt" : "2020-07-21T20:47:54Z",
+        "updatedAt" : "2020-07-29T01:25:46Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a16f06b6-f0cc-4c46-81ca-97b5dc3bf72b",
+        "parentId" : "1675bb71-9ba8-47e6-a87d-2b6c631dda4e",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Ah, I see your point -- its because of the DecommissionExecutor messages that the executor sends to the driver when work is assigned to it. And there, it can reply back with a hostDecommissioned = false, because the executor itself does not know if the host is going away or not (only the cluster manager knows). \r\n\r\nI like your suggestion of doing this \"merging\" semantics, it is easier/less-work than plumbing host Lost to the executor :-) ",
+        "createdAt" : "2020-07-22T00:33:19Z",
+        "updatedAt" : "2020-07-29T01:25:46Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dbc478b0d96de0f1a48f93d90f1e648229b5790c",
+    "line" : 13,
+    "diffHunk" : "@@ -1,1 +942,946 @@  override def executorDecommission(\n      executorId: String, decommissionInfo: ExecutorDecommissionInfo): Unit = {\n    synchronized {\n      // Don't bother noting decommissioning for executors that we don't know about\n      if (executorIdToHost.contains(executorId)) {"
+  },
+  {
+    "id" : "d51419fe-2660-4b71-8774-ec02db1afef3",
+    "prId" : 29014,
+    "prUrl" : "https://github.com/apache/spark/pull/29014#pullrequestreview-451741240",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c698e332-c004-4a78-9a86-8824895b5323",
+        "parentId" : null,
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "~~There is no synchronized here?~~",
+        "createdAt" : "2020-07-20T15:50:51Z",
+        "updatedAt" : "2020-07-29T01:25:46Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8f8579f4-349f-48d6-a58f-922414cc5efc",
+        "parentId" : "c698e332-c004-4a78-9a86-8824895b5323",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "Oh I see, the synchronized is at the caller place in: `executorLost`. This way it is you can leave the HashMap as it is.",
+        "createdAt" : "2020-07-20T15:54:54Z",
+        "updatedAt" : "2020-07-29T01:25:46Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dbc478b0d96de0f1a48f93d90f1e648229b5790c",
+    "line" : 58,
+    "diffHunk" : "@@ -1,1 +1067,1071 @@    }\n\n    executorsPendingDecommission -= executorId\n\n    if (reason != LossReasonPending) {"
   }
 ]

@@ -53,5 +53,82 @@
     "commit" : "a7194092ebc3a9ca97daba29fda0fcc0ec099cf4",
     "line" : 6,
     "diffHunk" : "@@ -1,1 +354,358 @@  testSchemaPruning(\"SPARK-34638: nested column prune on generator output\") {\n    val query1 = spark.table(\"contacts\")\n      .select(explode(col(\"friends\")).as(\"friend\"))\n      .select(\"friend.first\")\n    checkScan(query1, \"struct<friends:array<struct<first:string>>>\")"
+  },
+  {
+    "id" : "3c222462-6d80-4205-8dd1-ebaa2c4da521",
+    "prId" : 28988,
+    "prUrl" : "https://github.com/apache/spark/pull/28988#pullrequestreview-442714714",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8e368d92-b032-469a-ad07-0e2106e0d1c0",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "This issue cannot happen in branch-3.0? \r\nhttps://github.com/apache/spark/blob/fc2660c302b0c83a9a8a5bec3cc7ae28f8fecdd6/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/optimizer/NestedColumnAliasing.scala#L80-L85",
+        "createdAt" : "2020-07-05T11:48:42Z",
+        "updatedAt" : "2020-07-07T15:39:33Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ca307124-72cb-4a22-a4c6-452f151696c0",
+        "parentId" : "8e368d92-b032-469a-ad07-0e2106e0d1c0",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "This test case is only for master branch. However this issue can happen in branch-3.0 too. I added another new test here, which is for branch-3.0.\r\n\r\nBut when we backport this to branch-3.0, we need to remove first test case as it will fail on `checkScan(query, \"struct<name:struct<first:string,last:string>>\")`, because branch-3.0 doesn't prune for repartition by expression.",
+        "createdAt" : "2020-07-05T17:59:27Z",
+        "updatedAt" : "2020-07-07T15:39:33Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f2310a9c-6997-4055-8edc-40d61a078127",
+        "parentId" : "8e368d92-b032-469a-ad07-0e2106e0d1c0",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Yea, thanks for adding the test.",
+        "createdAt" : "2020-07-05T23:25:20Z",
+        "updatedAt" : "2020-07-07T15:39:33Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d352dbcdecfbdab08607c2416748e7650294fa42",
+    "line" : 7,
+    "diffHunk" : "@@ -1,1 +501,505 @@    withTempView(\"contact_alias\") {\n      sql(\"select * from contacts\")\n        .repartition(100, col(\"name.first\"), col(\"name.last\"))\n        .selectExpr(\"name\").createOrReplaceTempView(\"contact_alias\")\n"
+  },
+  {
+    "id" : "0d3d178d-e7d7-4cef-bdf7-96febe214e84",
+    "prId" : 28988,
+    "prUrl" : "https://github.com/apache/spark/pull/28988#pullrequestreview-443977652",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2d8a99e3-e8a3-49d7-8332-1e09b8743298",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "@maropu This test is for branch-3.0.",
+        "createdAt" : "2020-07-05T18:01:05Z",
+        "updatedAt" : "2020-07-07T15:39:33Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "691715b6-6623-4be5-9522-223a2116aacc",
+        "parentId" : "2d8a99e3-e8a3-49d7-8332-1e09b8743298",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Thank you for the test case.",
+        "createdAt" : "2020-07-07T14:59:10Z",
+        "updatedAt" : "2020-07-07T15:39:33Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d352dbcdecfbdab08607c2416748e7650294fa42",
+    "line" : 20,
+    "diffHunk" : "@@ -1,1 +514,518 @@      val query2 = sql(\"select friends.middle, col from contact_alias\")\n      checkScan(query2, \"struct<friends:array<struct<first:string,middle:string>>>\")\n      checkAnswer(query2, Row(Array(\"Z.\"), \"Susan\") :: Nil)\n    }\n  }"
   }
 ]

@@ -284,5 +284,71 @@
     "commit" : "1920c7bf3283083f6ee8851a731deacd9a7374a3",
     "line" : 12,
     "diffHunk" : "@@ -1,1 +252,256 @@  }\n\n  def optimizeSingleStageSkewJoin(plan: SparkPlan): SparkPlan = plan.transformUp {\n    case smj @ SortMergeJoinExec(_, _, joinType, _,\n        sort @ SortExec(_, _, ShuffleStage(qs: ShuffleStageInfo), _), right, _) =>"
+  },
+  {
+    "id" : "47dae22b-d01d-4692-b65d-497c2b74745a",
+    "prId" : 29021,
+    "prUrl" : "https://github.com/apache/spark/pull/29021#pullrequestreview-454697928",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "54d35a75-b01b-4968-8a09-6ee684143bc7",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "why not we break this limitation first?",
+        "createdAt" : "2020-07-24T03:27:17Z",
+        "updatedAt" : "2020-07-24T03:27:17Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "70f75ce0-6398-409a-9a30-077ae29bfbbf",
+        "parentId" : "54d35a75-b01b-4968-8a09-6ee684143bc7",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "Because this PR is not to address the case which has multiple SMJ. We have another PR to change this limitation:\r\n1. `optimizeSingleStageSkewJoin`. This is the case one table is a bucket table and the SMJ is bucketing join with one side shuffle and skewing\r\n2. `optimizeThreeShuffleStageSkewJoin`. This is to address three tables SMJ (Two SMJs in one stage and no one can be changed to BCJ in AQE).",
+        "createdAt" : "2020-07-24T07:58:16Z",
+        "updatedAt" : "2020-07-24T07:58:16Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5bed68ceed90c89457ff04af6da62f2222c795b7",
+    "line" : 252,
+    "diffHunk" : "@@ -1,1 +299,303 @@    val shuffleStages = collectShuffleStages(plan)\n\n    if (shuffleStages.length == 2) {\n      // SPARK-32201. Skew join supports below pattern, \"..\" may contain any number of nodes,\n      // includes such as BroadcastHashJoinExec. So it can handle more than two tables join."
+  },
+  {
+    "id" : "85a126fa-1480-417b-9d11-1efcb09cf0c1",
+    "prId" : 29021,
+    "prUrl" : "https://github.com/apache/spark/pull/29021#pullrequestreview-454695097",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1a10bafd-7c0e-4d99-855e-b1a0676c99fb",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "This PR is very hard to reason about. We need to clearly define:\r\n1. what nodes can appear between the shuffle stage and SMJ. As we discussed before, Agg can't appear at the skew side.\r\n2. how to estimate the size? Since there are nodes in the middle, the stats of the shuffle stage may not be accurate for the final join child. (e.g. Filter in the middle)",
+        "createdAt" : "2020-07-24T03:29:57Z",
+        "updatedAt" : "2020-07-24T03:29:57Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4a9fcb17-cc27-44ef-bdcd-5948152da882",
+        "parentId" : "1a10bafd-7c0e-4d99-855e-b1a0676c99fb",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "> 1. what nodes can appear between the shuffle stage and SMJ. As we discussed before, Agg can't appear at the skew side.\r\n\r\nIn the `canSplitLeftSide` and `canSplitRightSide`, I added a `allUnspecifiedDistribution(plan)` check. Current we only support the nodes with `UnspecifiedDistribution`.\r\n\r\n> 2. how to estimate the size? Since there are nodes in the middle, the stats of the shuffle stage may not be accurate for the final join child. (e.g. Filter in the middle)\r\n\r\nFilter should be pushdown to leaf, I didn't see this user case. Project may be a command case in the middle? Yes. the input size of shuffle stage may not be accurate. But the disadvantage is launching more tasks. I think the benefit from handling the skewing is more important than the disadvantage.",
+        "createdAt" : "2020-07-24T07:53:07Z",
+        "updatedAt" : "2020-07-24T07:53:39Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5bed68ceed90c89457ff04af6da62f2222c795b7",
+    "line" : 125,
+    "diffHunk" : "@@ -1,1 +196,200 @@        assert(left.partitionsWithSizes.length == right.partitionsWithSizes.length)\n        val numPartitions = left.partitionsWithSizes.length\n        // We use the median size of the original shuffle partitions to detect skewed partitions.\n        val leftMedSize = medianSize(left.mapStats)\n        val rightMedSize = medianSize(right.mapStats)"
   }
 ]

@@ -108,5 +108,170 @@
     "commit" : "1bf4f32924df6a3a06623dfcd2e06b6749c6ebad",
     "line" : 10,
     "diffHunk" : "@@ -1,1 +133,137 @@        case (name, i) => Seq(Literal(name), normalize(GetStructField(expr, i)))\n      }\n      val struct = CreateNamedStruct(fields.flatten.toSeq)\n      KnownFloatingPointNormalized(If(IsNull(expr), Literal(null, struct.dataType), struct))\n"
+  },
+  {
+    "id" : "36cca190-f2a0-47c2-a5b5-f0f952c9c451",
+    "prId" : 29061,
+    "prUrl" : "https://github.com/apache/spark/pull/29061#pullrequestreview-446097391",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "09239699-c40f-49ce-97b9-09dafaa22fd9",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Could you narrow-down the PR title? For example, instead of `certain children expressions`, you can mention `IF` and `CaseWhen` specifically because this PR only handles those two.",
+        "createdAt" : "2020-07-10T03:14:08Z",
+        "updatedAt" : "2020-07-12T16:07:08Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "006ff1eb-4683-4362-b182-89f9df0ce143",
+        "parentId" : "09239699-c40f-49ce-97b9-09dafaa22fd9",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Updated. Thanks for the suggestion.",
+        "createdAt" : "2020-07-10T03:20:07Z",
+        "updatedAt" : "2020-07-12T16:07:08Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d5dce7cdf7b5658687533b6ee5bbb76e0490a383",
+    "line" : 16,
+    "diffHunk" : "@@ -1,1 +120,124 @@      If(cond, normalize(trueValue), normalize(falseValue))\n\n    case CaseWhen(branches, elseVale) =>\n      CaseWhen(branches.map(br => (br._1, normalize(br._2))), elseVale.map(normalize))\n"
+  },
+  {
+    "id" : "f314d091-e8c7-4713-9cbf-25c21b6b337d",
+    "prId" : 29061,
+    "prUrl" : "https://github.com/apache/spark/pull/29061#pullrequestreview-446171461",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b30289ca-67cf-48d1-9b46-0e65f1c39a49",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "shall we consider more pass-through expressions? like `Coalesce`?",
+        "createdAt" : "2020-07-10T06:59:16Z",
+        "updatedAt" : "2020-07-12T16:07:08Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c3dc9900-099b-411b-bcf6-c54e2e2b754b",
+        "parentId" : "b30289ca-67cf-48d1-9b46-0e65f1c39a49",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Okay.",
+        "createdAt" : "2020-07-10T07:12:44Z",
+        "updatedAt" : "2020-07-12T16:07:08Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d5dce7cdf7b5658687533b6ee5bbb76e0490a383",
+    "line" : 18,
+    "diffHunk" : "@@ -1,1 +122,126 @@    case CaseWhen(branches, elseVale) =>\n      CaseWhen(branches.map(br => (br._1, normalize(br._2))), elseVale.map(normalize))\n\n    case Coalesce(children) =>\n      Coalesce(children.map(normalize))"
+  },
+  {
+    "id" : "d4ef63f3-725c-4d72-aa8f-c3325c6241af",
+    "prId" : 29061,
+    "prUrl" : "https://github.com/apache/spark/pull/29061#pullrequestreview-446915037",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2af23aa2-9b97-4567-92ba-5cd0be53bde9",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Although a `cond` is `boolean` typed expression. I'm wondering what happens when we have a deeper expression at `cond`. Maybe, `normalize(cond)` is required here?",
+        "createdAt" : "2020-07-12T20:57:58Z",
+        "updatedAt" : "2020-07-12T20:58:19Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "75a5236e-108c-4adc-90b2-96c40e142407",
+        "parentId" : "2af23aa2-9b97-4567-92ba-5cd0be53bde9",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Based on the doc of `NormalizeFloatingNumbers`, we handle that well during comparison. So the boolean condition is okay. We need normalize `trueValue` and `falseValue` because they could be passed through up to binary format in grouping/join/window partition.",
+        "createdAt" : "2020-07-12T21:36:38Z",
+        "updatedAt" : "2020-07-12T21:36:38Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2dda36b9-2069-4df1-bc8c-3ff1268fcbe4",
+        "parentId" : "2af23aa2-9b97-4567-92ba-5cd0be53bde9",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "What happen when we have `If(If(If(cond, trueValue1, falseValue1), trueValue2, falseValue2), trueValue3, falseValue3)`? We don't need to invoke `normalize` at `trueValue1~2` and `falseValue1~2`?",
+        "createdAt" : "2020-07-12T21:48:28Z",
+        "updatedAt" : "2020-07-12T21:48:28Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d527ffbf-4f44-43e9-8fb9-edd8848773de",
+        "parentId" : "2af23aa2-9b97-4567-92ba-5cd0be53bde9",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "I think we only need to have normalization on `trueValue3` and `falseValue3`, as they are the only results passing through the top-level `If`. The inner `If`s are evaluated during executing the top-level `If`. ",
+        "createdAt" : "2020-07-12T21:57:09Z",
+        "updatedAt" : "2020-07-12T21:57:09Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "69582aed-8dc3-4628-9f15-128b34c9fcaa",
+        "parentId" : "2af23aa2-9b97-4567-92ba-5cd0be53bde9",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Got it. I was confused a little. Thank you, @viirya .",
+        "createdAt" : "2020-07-12T22:33:54Z",
+        "updatedAt" : "2020-07-12T22:33:54Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d5dce7cdf7b5658687533b6ee5bbb76e0490a383",
+    "line" : 13,
+    "diffHunk" : "@@ -1,1 +117,121 @@      CreateMap(children.map(normalize), useStringTypeWhenEmpty)\n\n    case If(cond, trueValue, falseValue) =>\n      If(cond, normalize(trueValue), normalize(falseValue))\n"
+  },
+  {
+    "id" : "6eb52509-874b-48c0-a96b-20400e7cae6f",
+    "prId" : 29061,
+    "prUrl" : "https://github.com/apache/spark/pull/29061#pullrequestreview-447371359",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d650f43a-22f8-4920-b746-5c2b80db36b2",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Shall we put these new cases after this case? The main goal of this optimization is to avoid constructing a new `CreateStruct` during normalization. If it's just a float/double type If/CashWhen/Coalesce, it's actually an overhead to duplicate the normalization work in each child.",
+        "createdAt" : "2020-07-13T06:26:34Z",
+        "updatedAt" : "2020-07-13T06:26:34Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7203c266-bbde-4cfb-8783-c8f98490f9b3",
+        "parentId" : "d650f43a-22f8-4920-b746-5c2b80db36b2",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Okay.",
+        "createdAt" : "2020-07-13T15:41:23Z",
+        "updatedAt" : "2020-07-13T15:41:23Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d5dce7cdf7b5658687533b6ee5bbb76e0490a383",
+    "line" : 22,
+    "diffHunk" : "@@ -1,1 +126,130 @@      Coalesce(children.map(normalize))\n\n    case _ if expr.dataType == FloatType || expr.dataType == DoubleType =>\n      KnownFloatingPointNormalized(NormalizeNaNAndZero(expr))\n"
   }
 ]

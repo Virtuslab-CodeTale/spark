@@ -141,5 +141,269 @@
     "commit" : "8cfe79bc81e48b8a990dcad5d08fa9e4af706d5b",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +279,283 @@\n  /* Visible for testing */\n  private[spark] def clearSerializer(): Unit = synchronized { ser = None }\n\n  def convertToColumnarIfPossible(plan: SparkPlan): SparkPlan = plan match {"
+  },
+  {
+    "id" : "83fb7939-92f3-49e3-88cb-06d782e5d862",
+    "prId" : 29067,
+    "prUrl" : "https://github.com/apache/spark/pull/29067#pullrequestreview-451633822",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f71954c3-a6e2-4cf2-bae7-0d5b9f7329b9",
+        "parentId" : null,
+        "authorId" : "99e31844-a5b3-48a2-af71-412edb607a13",
+        "body" : "Can we implement this without double-checked locking? It is not expected in general. Can we do it in initializer?\r\n\r\nIf we need to use double-checked locking, we need `@volatile` for `ser`. See https://www.cs.umd.edu/~pugh/java/memoryModel/DoubleCheckedLocking.html\r\n",
+        "createdAt" : "2020-07-19T05:26:12Z",
+        "updatedAt" : "2020-07-31T17:39:07Z",
+        "lastEditedBy" : "99e31844-a5b3-48a2-af71-412edb607a13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3cca91c8-c93b-467a-9c98-41b06943705f",
+        "parentId" : "f71954c3-a6e2-4cf2-bae7-0d5b9f7329b9",
+        "authorId" : "b19fe247-920f-40ae-83e7-6b8ec9979f6b",
+        "body" : "I'll try to get rid of it. I am aware of the issues with double-checked locking. In this case it is a matter of efficiency instead of correctness. The object being created is not going to change in any meaningful way.  If we created a new one each time it would still do the right thing. The goal here was just to remove the overhead of reflection when creating subsequent objects. but I should have at least documented it as such.",
+        "createdAt" : "2020-07-20T14:00:53Z",
+        "updatedAt" : "2020-07-31T17:39:07Z",
+        "lastEditedBy" : "b19fe247-920f-40ae-83e7-6b8ec9979f6b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3f2f5278c7e8c05e32a5f54ddba1251250dfdca3",
+    "line" : 276,
+    "diffHunk" : "@@ -1,1 +267,271 @@object InMemoryRelation {\n\n  private[this] var ser: Option[CachedBatchSerializer] = None\n  private[this] def getSerializer(sqlConf: SQLConf): CachedBatchSerializer = synchronized {\n    if (ser.isEmpty) {"
+  },
+  {
+    "id" : "e5f39a25-acc1-4672-ad13-3d1812782897",
+    "prId" : 29067,
+    "prUrl" : "https://github.com/apache/spark/pull/29067#pullrequestreview-453656434",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "acd82b57-13fb-4f71-b089-a310dead1378",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "This is the part I want to clarify.\r\n\r\nIf the serializer can't support columnar input, it's easy and we just use the original query plan.\r\n\r\nIf the serializer supports columnar input, what shall we do?\r\n1. if the serializer can't support row-based input (is it possible?), we have to add a row -> columnar operator.\r\n2. If the serializer also supports row-based input, but the query plan is row-based (no parquet scan), does it worth to add a row -> columnar operator?",
+        "createdAt" : "2020-07-21T13:00:24Z",
+        "updatedAt" : "2020-07-31T17:39:07Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "10f82172-c7ae-43e6-83ca-3f31b6878902",
+        "parentId" : "acd82b57-13fb-4f71-b089-a310dead1378",
+        "authorId" : "b19fe247-920f-40ae-83e7-6b8ec9979f6b",
+        "body" : "I picked row based input as a minimum requirement because the majority of the time the output of the plan will be row based. I also wanted to avoid unnecessary transitions from one data format to another. Each time one tries to change the format of the data, row to column, column to row, or even column of one type to column of another there is a cost involved. As a rule of thumb it is ideal to reduce those transformations when ever possible. So in that respect columnar input support is a performance optimization in the rare case that columnar input is a possibility.\r\n\r\n",
+        "createdAt" : "2020-07-21T14:56:52Z",
+        "updatedAt" : "2020-07-31T17:39:07Z",
+        "lastEditedBy" : "b19fe247-920f-40ae-83e7-6b8ec9979f6b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "318ab510-4d4a-420a-9f32-47596256d75b",
+        "parentId" : "acd82b57-13fb-4f71-b089-a310dead1378",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "That makes sense.\r\n\r\nThen my question is: how do we know a plan can produce columnar data? I see you added quite a bit of changes for it, but I've not figured it out yet.\r\n\r\nI expect something like\r\n```\r\nplan.isInstanceOf[WholeStageCodegen] && plan.children.head.isInstanceOf[ColumnarToRow]\r\n```\r\n\r\nMaybe I missed something. Can you elaborate it a bit more?",
+        "createdAt" : "2020-07-21T15:39:08Z",
+        "updatedAt" : "2020-07-31T17:39:07Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "29e35da8-823a-40e9-b976-f84ee595dd76",
+        "parentId" : "acd82b57-13fb-4f71-b089-a310dead1378",
+        "authorId" : "b19fe247-920f-40ae-83e7-6b8ec9979f6b",
+        "body" : "Sorry I didn't explain.  I wanted to avoid reflection if possible, because our GPU plugin can replace `ColumnarToRow` with a version that also pulls data back from the `GPU`, and with (SPARK-32334)[https://issues.apache.org/jira/browse/SPARK-32334] there is the possibility around that more things related to columnar transitions might change. So instead of trying to pick apart the incoming `SparkPlan` to remove the `ColumnarToRow`, I added an API to `QueryExecution` so it can generate a plan without the transition in it.\r\n\r\nIf you would prefer me to try and pick apart the plan I can do that instead. I just thought this was a cleaner approach.\r\n\r\n",
+        "createdAt" : "2020-07-21T16:06:19Z",
+        "updatedAt" : "2020-07-31T17:39:07Z",
+        "lastEditedBy" : "b19fe247-920f-40ae-83e7-6b8ec9979f6b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "02ed70aa-e928-4be4-9bd9-fc5cbe657fee",
+        "parentId" : "acd82b57-13fb-4f71-b089-a310dead1378",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I like SPARK-32334 , maybe we should do that first.\r\n\r\nSay if we have a trait/abstract class for `ColumnarToRow`, then we can safely play `isInstanceOf` here, as your customized version of columnar to row operator should also extend the trait/abstract class.",
+        "createdAt" : "2020-07-22T17:49:04Z",
+        "updatedAt" : "2020-07-31T17:39:07Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9452f026-3380-41a8-9514-2e4ec42240c6",
+        "parentId" : "acd82b57-13fb-4f71-b089-a310dead1378",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "BTW if we want to unblock this PR, I'd suggest we do `isInstanceOf[ColumnarToRow]` first, and waiting for SPARK-32334 to extend it. I feel a bit worried about adding hacks to `QueryExecution`, as it's very critical.",
+        "createdAt" : "2020-07-22T17:50:31Z",
+        "updatedAt" : "2020-07-31T17:39:07Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "38b814f5-7126-4b56-ba97-af69ecc4ebbb",
+        "parentId" : "acd82b57-13fb-4f71-b089-a310dead1378",
+        "authorId" : "b19fe247-920f-40ae-83e7-6b8ec9979f6b",
+        "body" : "I'll switch over to doing `isInstanceOf[ColumnarToRow]` just to get this unblocked.\r\n\r\nI don't consider the change I made a hack. It is a relatively small and focused change. It also will result in less implicit coupling between the cache code and the columnar planning code.\r\n\r\nI like SPARK-32334 too, but for what I have proposed so far it really only covers transformations to arrow. If you have ideas on how you want it to impact these changes please add some comments there so we can discuss it and get a better idea of how it should all fit together.",
+        "createdAt" : "2020-07-22T18:12:27Z",
+        "updatedAt" : "2020-07-31T17:39:07Z",
+        "lastEditedBy" : "b19fe247-920f-40ae-83e7-6b8ec9979f6b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cbf22efd-572b-46ba-bc89-57bca512b32c",
+        "parentId" : "acd82b57-13fb-4f71-b089-a310dead1378",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "or, can we do the check with\r\n```\r\n!plan.supportsColumnar && plan.child.supportsColumnar\r\n```",
+        "createdAt" : "2020-07-22T19:02:49Z",
+        "updatedAt" : "2020-07-31T17:39:07Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fe62a5f1-b51a-4ddc-9b60-25e299a0bfe1",
+        "parentId" : "acd82b57-13fb-4f71-b089-a310dead1378",
+        "authorId" : "b19fe247-920f-40ae-83e7-6b8ec9979f6b",
+        "body" : "I switched the patch to do what you requested.",
+        "createdAt" : "2020-07-22T20:23:16Z",
+        "updatedAt" : "2020-07-31T17:39:07Z",
+        "lastEditedBy" : "b19fe247-920f-40ae-83e7-6b8ec9979f6b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3f2f5278c7e8c05e32a5f54ddba1251250dfdca3",
+    "line" : 308,
+    "diffHunk" : "@@ -1,1 +297,301 @@    val optimizedPlan = qe.optimizedPlan\n    val serializer = getSerializer(optimizedPlan.conf)\n    val child = if (serializer.supportsColumnarInput(optimizedPlan.output)) {\n      convertToColumnarIfPossible(qe.executedPlan)\n    } else {"
+  },
+  {
+    "id" : "e0467995-fac1-44ff-9ab1-923828aabb2c",
+    "prId" : 29067,
+    "prUrl" : "https://github.com/apache/spark/pull/29067#pullrequestreview-456814660",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "155a63bb-0dcd-482e-b574-3e3c4f15bf89",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "hmm, why do we expect `InputAdapter`? Is it possible to be `ColumnarToRowExec(ColumnarProjectExec(...))`?",
+        "createdAt" : "2020-07-28T15:46:51Z",
+        "updatedAt" : "2020-07-31T17:39:07Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0e40d961-e318-4c2a-848e-e14004b1fa7c",
+        "parentId" : "155a63bb-0dcd-482e-b574-3e3c4f15bf89",
+        "authorId" : "b19fe247-920f-40ae-83e7-6b8ec9979f6b",
+        "body" : "Code generation is not currently supported for Columnar data except to transform it into rows before doing more code generation.",
+        "createdAt" : "2020-07-28T16:19:51Z",
+        "updatedAt" : "2020-07-31T17:39:07Z",
+        "lastEditedBy" : "b19fe247-920f-40ae-83e7-6b8ec9979f6b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "73358e33-30b9-41c8-859b-dbe2adbe64eb",
+        "parentId" : "155a63bb-0dcd-482e-b574-3e3c4f15bf89",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "ah I see, so the case here is a simple `WholeStageCodegenExec` with parquet/orc scan or other columnar operators, wrapped by `InputAdapter`.",
+        "createdAt" : "2020-07-28T16:36:04Z",
+        "updatedAt" : "2020-07-31T17:39:07Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9c07c80e-a7cb-4d4c-9cf9-a845cc4ceed4",
+        "parentId" : "155a63bb-0dcd-482e-b574-3e3c4f15bf89",
+        "authorId" : "b19fe247-920f-40ae-83e7-6b8ec9979f6b",
+        "body" : "Right now yes.  Once we have more operators that support columnar processing it can change.",
+        "createdAt" : "2020-07-28T16:38:19Z",
+        "updatedAt" : "2020-07-31T17:39:07Z",
+        "lastEditedBy" : "b19fe247-920f-40ae-83e7-6b8ec9979f6b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3f2f5278c7e8c05e32a5f54ddba1251250dfdca3",
+    "line" : 290,
+    "diffHunk" : "@@ -1,1 +281,285 @@    case gen: WholeStageCodegenExec => gen.child match {\n      case c2r: ColumnarToRowTransition => c2r.child match {\n        case ia: InputAdapter => ia.child\n        case _ => plan\n      }"
+  },
+  {
+    "id" : "2927f968-3659-4ebb-8938-84f0e96d8087",
+    "prId" : 29067,
+    "prUrl" : "https://github.com/apache/spark/pull/29067#pullrequestreview-456754743",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8209fd17-9d33-4fb0-9659-e77445fd4a56",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "shall we allow whole-stage-codegen disabled? I think it's simple to do so\r\n```\r\ncase gen: WholeStageCodegenExec => convertToColumnarIfPossible(gen)\r\ncase ... // the real code\r\n```",
+        "createdAt" : "2020-07-28T15:48:31Z",
+        "updatedAt" : "2020-07-31T17:39:07Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3f2f5278c7e8c05e32a5f54ddba1251250dfdca3",
+    "line" : 297,
+    "diffHunk" : "@@ -1,1 +288,292 @@    case c2r: ColumnarToRowTransition => // This matches when whole stage code gen is disabled.\n      c2r.child\n    case _ => plan\n  }\n"
+  },
+  {
+    "id" : "9ef6072e-08d1-42a6-bf53-a2ab474b0608",
+    "prId" : 29067,
+    "prUrl" : "https://github.com/apache/spark/pull/29067#pullrequestreview-459502406",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "842f0150-bdc7-45d5-91f5-f60efaa63770",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "When reaching here, this `serializer` always supports columnar input? i.e., `supportsColumnarInput` returns true for the `serializer`.",
+        "createdAt" : "2020-07-31T00:31:37Z",
+        "updatedAt" : "2020-07-31T17:39:07Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "018c41b8-6fa7-4618-bab4-3df349ba66d1",
+        "parentId" : "842f0150-bdc7-45d5-91f5-f60efaa63770",
+        "authorId" : "b19fe247-920f-40ae-83e7-6b8ec9979f6b",
+        "body" : "Yes and No.  If you go through the front door and create an `InMemoryRelation` using `InMemoryRelation.apply`, but not the one made for testing, then it guarantees that the only time you get a `SparkPlan` that `supportsColumnar` is when the serializer also `supportsColumnarInput`. You could purposely construct an `InMemoryReplaction` that does not match this, but you would have to go out of your way to do it.  I can add in an assertion to an InMemoryRelation constructor to make sure that it is correct if you want me to.",
+        "createdAt" : "2020-07-31T17:26:53Z",
+        "updatedAt" : "2020-07-31T17:39:07Z",
+        "lastEditedBy" : "b19fe247-920f-40ae-83e7-6b8ec9979f6b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0c61a39e-1f08-4245-8575-3e4ad5f57a4d",
+        "parentId" : "842f0150-bdc7-45d5-91f5-f60efaa63770",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "I think normally we won't create a `InMemoryRelation` in that way, so sounds good.",
+        "createdAt" : "2020-07-31T22:09:52Z",
+        "updatedAt" : "2020-07-31T22:09:52Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3f2f5278c7e8c05e32a5f54ddba1251250dfdca3",
+    "line" : 251,
+    "diffHunk" : "@@ -1,1 +243,247 @@  private def buildBuffers(): RDD[CachedBatch] = {\n    val cb = if (cachedPlan.supportsColumnar) {\n      serializer.convertColumnarBatchToCachedBatch(\n        cachedPlan.executeColumnar(),\n        cachedPlan.output,"
   }
 ]

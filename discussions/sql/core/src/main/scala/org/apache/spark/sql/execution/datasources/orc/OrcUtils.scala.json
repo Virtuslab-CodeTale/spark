@@ -75,5 +75,192 @@
     "commit" : "51f503c5738a714d6ea77467ac8f7dfba231d989",
     "line" : 4,
     "diffHunk" : "@@ -1,1 +143,147 @@      conf: Configuration): Option[(Array[Int], Boolean)] = {\n    val orcFieldNames = reader.getSchema.getFieldNames.asScala\n    val forcePositionalEvolution = OrcConf.FORCE_POSITIONAL_EVOLUTION.getBoolean(conf)\n    if (orcFieldNames.isEmpty) {\n      // SPARK-8501: Some old empty ORC files always have an empty schema stored in their footer."
+  },
+  {
+    "id" : "5e9edb5b-0fe9-42cd-a853-4e489e980d2c",
+    "prId" : 29045,
+    "prUrl" : "https://github.com/apache/spark/pull/29045#pullrequestreview-448177060",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "210eb4aa-7cc9-419f-9aa7-5e8d6d3ba95f",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "let's say we are running the test `CREATE TABLE test_hive_orc_impl ...`, what's the value of `dataSchema`, `requiredSchema` and `orcFieldNames` when we reach here?",
+        "createdAt" : "2020-07-14T06:05:12Z",
+        "updatedAt" : "2020-07-16T05:07:47Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ea84dfb8-39ad-4f8f-ac4b-5dd0bfd59154",
+        "parentId" : "210eb4aa-7cc9-419f-9aa7-5e8d6d3ba95f",
+        "authorId" : "11f6c849-b5b9-4c65-990c-525cf572b913",
+        "body" : "For this example query\r\n```\r\nval u = \"\"\"select date_dim.d_year from date_dim limit 5\"\"\"\r\n\r\nspark.sql(u).collect\r\n```\r\n\r\nvalue of the orcFieldNames\r\n```\r\nval of orcFieldNames = {Wrappers$JListWrapper@13621} \"Wrappers$JListWrapper\" size = 28\r\n 0 = \"_col0\"\r\n 1 = \"_col1\"\r\n 2 = \"_col2\"\r\n 3 = \"_col3\"\r\n 4 = \"_col4\"\r\n 5 = \"_col5\"\r\n 6 = \"_col6\"\r\n 7 = \"_col7\"\r\n 8 = \"_col8\"\r\n 9 = \"_col9\"\r\n 10 = \"_col10\"\r\n```\r\n\r\nvalue of dataSchema\r\n```\r\nvalue of dataSchema = {StructType@13616} \"StructType\" size = 28\r\n 0 = {StructField@16487} \"StructField(d_date_sk,IntegerType,true)\"\r\n 1 = {StructField@16488} \"StructField(d_date_id,StringType,true)\"\r\n 2 = {StructField@16489} \"StructField(d_date,TimestampType,true)\"\r\n 3 = {StructField@16490} \"StructField(d_month_seq,IntegerType,true)\"\r\n 4 = {StructField@16491} \"StructField(d_week_seq,IntegerType,true)\"\r\n 5 = {StructField@16492} \"StructField(d_quarter_seq,IntegerType,true)\"\r\n 6 = {StructField@16493} \"StructField(d_year,IntegerType,true)\"\r\n 7 = {StructField@16494} \"StructField(d_dow,IntegerType,true)\"\r\n 8 = {StructField@16495} \"StructField(d_moy,IntegerType,true)\"\r\n 9 = {StructField@16496} \"StructField(d_dom,IntegerType,true)\"\r\n 10 = {StructField@16497} \"StructField(d_qoy,IntegerType,true)\"\r\n```\r\n\r\nvalue of requiredSchema\r\n\r\n```\r\nresult = {StructType@16990} \"StructType\" size = 1\r\n 0 = {StructField@17128} \"StructField(d_year,IntegerType,true)\"\r\n```",
+        "createdAt" : "2020-07-14T06:22:26Z",
+        "updatedAt" : "2020-07-16T05:07:47Z",
+        "lastEditedBy" : "11f6c849-b5b9-4c65-990c-525cf572b913",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9452d405-d469-4d09-84c4-e88b13f97aab",
+        "parentId" : "210eb4aa-7cc9-419f-9aa7-5e8d6d3ba95f",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Please correct me if I'm wrong:\r\n1. the physical orc file schema is `_col0`, ...\r\n2. the table schema in metastore is `d_date_sk`, ...\r\n3. the query only requires only `d_year`\r\n\r\nI don't know why the query fails. The `requestedColumnIds` will be `[6]` and the orc reader will read the `_col6` column. Everything should be fine.",
+        "createdAt" : "2020-07-14T08:46:00Z",
+        "updatedAt" : "2020-07-16T05:07:47Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1c7ffbb2-b021-4e68-a660-6ed3ed1ec77b",
+        "parentId" : "210eb4aa-7cc9-419f-9aa7-5e8d6d3ba95f",
+        "authorId" : "11f6c849-b5b9-4c65-990c-525cf572b913",
+        "body" : "In this code , this is the place where we are getting exception\r\n\r\nhttps://github.com/apache/spark/blob/d6a68e0b67ff7de58073c176dd097070e88ac831/sql/core/src/main/java/org/apache/spark/sql/execution/datasources/orc/OrcColumnarBatchReader.java#L183\r\n\r\nSo the code is creating a wrap VectorizedRowBatchWrap using the result schema which is \r\n```\r\nresult = {StructType@16990} \"StructType\" size = 1\r\n 0 = {StructField@17128} \"StructField(d_year,IntegerType,true)\"\r\n```\r\n\r\nhttps://github.com/apache/spark/blob/d6a68e0b67ff7de58073c176dd097070e88ac831/sql/core/src/main/java/org/apache/spark/sql/execution/datasources/orc/OrcColumnarBatchReader.java#L149 \r\n\r\nNow wrap is created with size 1 \r\n\r\nand in this code \r\n` code orcVectorWrappers[i] = new OrcColumnVector(dt, wrap.batch().cols[colId]);`\r\n\r\nvalue of colId will be 6 (which is the requestedColumnIds will be [6])\r\n\r\nNow the size of wrap is 1 and code is requesting the fetch wrap.batch().cols[6] so here its getting ArrayIndexOutOfBoundsException\r\n\r\n\r\n",
+        "createdAt" : "2020-07-14T09:43:05Z",
+        "updatedAt" : "2020-07-16T05:07:47Z",
+        "lastEditedBy" : "11f6c849-b5b9-4c65-990c-525cf572b913",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "157670df-6347-44b6-bad4-6cb72b7a6b9d",
+        "parentId" : "210eb4aa-7cc9-419f-9aa7-5e8d6d3ba95f",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Does the failure go away if the physical orc file schema matches the table schema in metastore?",
+        "createdAt" : "2020-07-14T12:27:57Z",
+        "updatedAt" : "2020-07-16T05:07:47Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "01774ab5-9182-49a7-a523-0a1706def372",
+        "parentId" : "210eb4aa-7cc9-419f-9aa7-5e8d6d3ba95f",
+        "authorId" : "11f6c849-b5b9-4c65-990c-525cf572b913",
+        "body" : "yes, if that would be the case then it will be same as how the data created from the spark Application using orc. And it follows the code flow as its working today for spark orc data source tables.\r\n\r\nSo this only failing for the orc data created by hive, So if I create the data from this using the spark orc datasource , This error is not coming\r\n\r\n```\r\nval u = \"\"\"select * from date_dim limit 5\"\"\"\r\n\r\nscala> spark.sql(u).write.format(\"orc\").save(\"/Users/tpcdsdata/testFS/testorc\")\r\n\r\nval table = \"\"\"CREATE TABLE `date_dim345` (\r\n     |   `d_date_sk` INT,\r\n     |   `d_date_id` STRING,\r\n     |   `d_date` TIMESTAMP,\r\n     |   `d_month_seq` INT,\r\n     |   `d_week_seq` INT,\r\n     |   `d_quarter_seq` INT,\r\n     |   `d_year` INT,\r\n     |   `d_dow` INT,\r\n     |   `d_moy` INT,\r\n     |   `d_dom` INT,\r\n     |   `d_qoy` INT,\r\n     |   `d_fy_year` INT,\r\n     |   `d_fy_quarter_seq` INT,\r\n     |   `d_fy_week_seq` INT,\r\n     |   `d_day_name` STRING,\r\n     |   `d_quarter_name` STRING,\r\n     |   `d_holiday` STRING,\r\n     |   `d_weekend` STRING,\r\n     |   `d_following_holiday` STRING,\r\n     |   `d_first_dom` INT,\r\n     |   `d_last_dom` INT,\r\n     |   `d_same_day_ly` INT,\r\n     |   `d_same_day_lq` INT,\r\n     |   `d_current_day` STRING,\r\n     |   `d_current_week` STRING,\r\n     |   `d_current_month` STRING,\r\n     |   `d_current_quarter` STRING,\r\n     |   `d_current_year` STRING)\r\n     | USING orc\r\n     | LOCATION '/Users/tpcdsdata/testFS/testorc/'\"\"\"\r\n\r\nspark.sql(table).collect\r\nval u = \"\"\"select d_date_id from date_dim345 limit 5\"\"\"\r\n```\r\nNow this is having the correct value of  physical orc file not _col1, _col2 etc\r\n```\r\norcFieldNames = {Wrappers$JListWrapper@19940} \"Wrappers$JListWrapper\" size = 28\r\n 1 = \"d_date_id\"\r\n 9 = \"d_dom\"\r\n 7 = \"d_dow\"\r\n 11 = \"d_fy_year\"\r\n 5 = \"d_quarter_seq\"\r\n 0 = \"d_date_sk\"\r\n 8 = \"d_moy\"\r\n 10 = \"d_qoy\"\r\n 4 = \"d_week_seq\"\r\n 6 = \"d_year\"\r\n 3 = \"d_month_seq\"\r\n 2 = \"d_date\"\r\n```\r\n\r\n\r\n\r\n\r\n\r\n",
+        "createdAt" : "2020-07-14T13:34:33Z",
+        "updatedAt" : "2020-07-16T05:07:47Z",
+        "lastEditedBy" : "11f6c849-b5b9-4c65-990c-525cf572b913",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7f817f99-5a42-4424-88ac-6ac0b15ad3b8",
+        "parentId" : "210eb4aa-7cc9-419f-9aa7-5e8d6d3ba95f",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "following your previous explanation in https://github.com/apache/spark/pull/29045#discussion_r454234413\r\n\r\n1. the code is creating a wrap VectorizedRowBatchWrap using the result schema which is `<d_year, int>`\r\n2. `orcVectorWrappers[i] = new OrcColumnVector(dt, wrap.batch().cols[colId]);` accesses the 6th column of the orc batch.\r\n\r\nWhy it doesn't fail when the physical orc file schema matches the table schema in metastore?",
+        "createdAt" : "2020-07-14T14:25:49Z",
+        "updatedAt" : "2020-07-16T05:07:47Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9b9167f9-aa06-4971-84e8-364bf958277f",
+        "parentId" : "210eb4aa-7cc9-419f-9aa7-5e8d6d3ba95f",
+        "authorId" : "11f6c849-b5b9-4c65-990c-525cf572b913",
+        "body" : "In this case code follows this path\r\n\r\nhttps://github.com/apache/spark/blob/d6a68e0b67ff7de58073c176dd097070e88ac831/sql/core/src/main/scala/org/apache/spark/sql/execution/datasources/orc/OrcUtils.scala#L158\r\n\r\nNow requiredSchema (result schema) is used for getting the column id instead of entire dataschema . So in this scenario required requiredSchema(requiredSchema) is used to create the VectorizedRowBatchWrap\r\nwrap = new VectorizedRowBatchWrap(orcSchema.createRowBatch(capacity)); \r\n\r\n\r\nWhere as in failure case column id got from the dataschema and VectorizedRowBatchWrap is created using the requiredSchema (result schema). ",
+        "createdAt" : "2020-07-14T14:45:04Z",
+        "updatedAt" : "2020-07-16T05:07:47Z",
+        "lastEditedBy" : "11f6c849-b5b9-4c65-990c-525cf572b913",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c0f62095f272aed48f0055afe8e7777a2f90fc54",
+    "line" : 27,
+    "diffHunk" : "@@ -1,1 +128,132 @@      reader: Reader,\n      conf: Configuration): Option[(Array[Int], Boolean)] = {\n    val orcFieldNames = reader.getSchema.getFieldNames.asScala\n    if (orcFieldNames.isEmpty) {\n      // SPARK-8501: Some old empty ORC files always have an empty schema stored in their footer."
+  },
+  {
+    "id" : "3df4d84a-1575-4887-96b1-81e9526f3493",
+    "prId" : 29045,
+    "prUrl" : "https://github.com/apache/spark/pull/29045#pullrequestreview-448374498",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "57371e83-eaf2-49c2-a6e3-c89131f59a4d",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I tried the test locally, and saw warning messages like\r\n```\r\n10:45:52.783 WARN org.apache.orc.impl.SchemaEvolution: Column names are missing from this file. This is caused by a writer earlier than HIVE-4243. The reader will reconcile schemas based on index. File type: struct<_col1:int,_col2:string,_col3:int>, reader type: struct<_col2:string>\r\n{9}\r\n```\r\n\r\nI think we can't do column pruning anyway if the physical file schema is `_col0`, ... We can always return true in this branch.",
+        "createdAt" : "2020-07-14T17:54:15Z",
+        "updatedAt" : "2020-07-16T05:07:47Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "840e991b-9f2b-4741-8f99-9e29f0e8c232",
+        "parentId" : "57371e83-eaf2-49c2-a6e3-c89131f59a4d",
+        "authorId" : "11f6c849-b5b9-4c65-990c-525cf572b913",
+        "body" : "for -1 also we need to send true",
+        "createdAt" : "2020-07-14T18:29:58Z",
+        "updatedAt" : "2020-07-16T05:07:47Z",
+        "lastEditedBy" : "11f6c849-b5b9-4c65-990c-525cf572b913",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "aa34d854-1596-4146-9869-dd7e6a896a04",
+        "parentId" : "57371e83-eaf2-49c2-a6e3-c89131f59a4d",
+        "authorId" : "11f6c849-b5b9-4c65-990c-525cf572b913",
+        "body" : "added for -1",
+        "createdAt" : "2020-07-14T18:49:37Z",
+        "updatedAt" : "2020-07-16T05:07:47Z",
+        "lastEditedBy" : "11f6c849-b5b9-4c65-990c-525cf572b913",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c0f62095f272aed48f0055afe8e7777a2f90fc54",
+    "line" : 43,
+    "diffHunk" : "@@ -1,1 +148,152 @@            index\n          } else {\n            -1\n          }\n        }, false)"
+  },
+  {
+    "id" : "eb52e76a-dd7d-4001-8e08-6a3e57536a0b",
+    "prId" : 29045,
+    "prUrl" : "https://github.com/apache/spark/pull/29045#pullrequestreview-455267479",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "894f87da-4921-4738-af95-3d6fef1672e7",
+        "parentId" : null,
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "This description is not clear enough. This utility function also changed the value of `conf`. We need to document it. \r\n\r\n@SaurabhChawla100 Could you submit a follow-up PR to improve the description?",
+        "createdAt" : "2020-07-24T07:55:05Z",
+        "updatedAt" : "2020-07-24T07:55:05Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8566659c-9f5a-4f63-a14a-473f3d3f96b3",
+        "parentId" : "894f87da-4921-4738-af95-3d6fef1672e7",
+        "authorId" : "11f6c849-b5b9-4c65-990c-525cf572b913",
+        "body" : "@gatorsmile - This is the new helper method that we have added as the part of this PR\r\n\r\nsure I Will update the description in the follow-up  PR . Shall I raised the PR against the new Jira or with this same jira . Since this Jira is already resolved",
+        "createdAt" : "2020-07-25T07:02:24Z",
+        "updatedAt" : "2020-07-25T07:02:53Z",
+        "lastEditedBy" : "11f6c849-b5b9-4c65-990c-525cf572b913",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fbce9ff8-a817-4a5b-8833-deb2d9e394f1",
+        "parentId" : "894f87da-4921-4738-af95-3d6fef1672e7",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "> Shall I raised the PR against the new Jira or with this same jira\r\n\r\nIts okay to refer to this JIRA ticket. Then, please add `[FOLLOWUP]` in the PR title.",
+        "createdAt" : "2020-07-25T07:07:22Z",
+        "updatedAt" : "2020-07-25T07:07:22Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c0f62095f272aed48f0055afe8e7777a2f90fc54",
+    "line" : 77,
+    "diffHunk" : "@@ -1,1 +211,215 @@   *         resultSchemaString will be created using resultsSchema in case of\n   *         canPruneCols is true and for canPruneCols as false value\n   *         resultSchemaString will be created using the actual dataSchema.\n   */\n  def orcResultSchemaString("
   }
 ]

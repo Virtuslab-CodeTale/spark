@@ -53,5 +53,60 @@
     "commit" : "3c0e5077722d39b25680870ba9d435aafc62466c",
     "line" : 16,
     "diffHunk" : "@@ -1,1 +40,44 @@  since = \"1.0.0\")\ncase class Sum(child: Expression) extends DeclarativeAggregate with ImplicitCastInputTypes\n    with UnaryLike[Expression] {\n\n  override def nullable: Boolean = true"
+  },
+  {
+    "id" : "183b4339-d11e-4977-99ad-89dae17aec68",
+    "prId" : 29026,
+    "prUrl" : "https://github.com/apache/spark/pull/29026#pullrequestreview-444404776",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1c03f77c-769c-463f-8f7d-868399979ec8",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "When in `updateExpressions`, I think ansi-mode or not doesn't change the behavior. Maybe just `The sum can only be null if overflow happens`?\r\n",
+        "createdAt" : "2020-07-07T21:11:23Z",
+        "updatedAt" : "2020-07-07T21:11:23Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "39eb214f-8e23-499e-b213-98ef590883d1",
+        "parentId" : "1c03f77c-769c-463f-8f7d-868399979ec8",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "It's the `Add` expression, and it always respects the ansi mode, no matter it's in update or merge expression.\r\n\r\nThis makes sense. If overflow happens, we will fail anyway. It's better to fail earlier to save resources.",
+        "createdAt" : "2020-07-08T03:14:05Z",
+        "updatedAt" : "2020-07-08T03:14:05Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "38a6e580-9283-4e33-93f4-4ed838a18812",
+        "parentId" : "1c03f77c-769c-463f-8f7d-868399979ec8",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "<del>Do you mean `checkOverflow` in `Add` expression? If it is enabled, for `DecimalType`, `DecimalExactNumeric` is used for `plus` operation.</del>\r\n\r\n<del>But I don't see it has overrided `plus` behavior to check overflow and respect the ansi mode. Am I missing it?</del>",
+        "createdAt" : "2020-07-08T04:22:20Z",
+        "updatedAt" : "2020-07-08T04:30:50Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "328bc7a0-01fd-41d0-9719-d744d0a5b127",
+        "parentId" : "1c03f77c-769c-463f-8f7d-868399979ec8",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Ah, I see. There is separate rule to handle overflow of Decimal.",
+        "createdAt" : "2020-07-08T04:29:30Z",
+        "updatedAt" : "2020-07-08T04:31:07Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3717fc618548d80464788d07a9b1f81f4418ed81",
+    "line" : 44,
+    "diffHunk" : "@@ -1,1 +80,84 @@        // For decimal type, the initial value of `sum` is 0. We need to keep `sum` unchanged if\n        // the input is null, as SUM function ignores null input. The `sum` can only be null if\n        // overflow happens under non-ansi mode.\n        val sumExpr = if (child.nullable) {\n          If(child.isNull, sum, sum + KnownNotNull(child).cast(resultType))"
   }
 ]

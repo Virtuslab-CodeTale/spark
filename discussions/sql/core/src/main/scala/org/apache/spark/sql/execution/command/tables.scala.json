@@ -460,5 +460,104 @@
     "commit" : "933dc28ed5a54e06d8125e51ae3c86e95760f21e",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +921,925 @@    val catalog = sparkSession.sessionState.catalog\n    if (catalog.isTemporaryTable(table)) {\n      throw new AnalysisException(s\"SHOW TBLPROPERTIES is not allowed on a temporary view: $table\")\n    } else {\n      val catalogTable = catalog.getTableMetadata(table)"
+  },
+  {
+    "id" : "4e698520-eebd-453d-9b6c-7d8133c660cf",
+    "prId" : 29034,
+    "prUrl" : "https://github.com/apache/spark/pull/29034#pullrequestreview-528728078",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c8accfba-f518-49dd-a8d2-9d1b1c59656d",
+        "parentId" : null,
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "I'm not sure if `isCached` can work nicely with streaming tables. Can we test that?",
+        "createdAt" : "2020-11-11T17:56:59Z",
+        "updatedAt" : "2020-12-23T13:10:25Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2d859efc-ba31-4047-b0dc-65651413a6bc",
+        "parentId" : "c8accfba-f518-49dd-a8d2-9d1b1c59656d",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "IMO we can only cache batch table, with streaming we are allowed cache tables in `foreachBatch`. Isn't it?",
+        "createdAt" : "2020-11-12T00:45:59Z",
+        "updatedAt" : "2020-12-23T13:10:25Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5633a6f1-29bc-40f6-9a92-dc688eefd258",
+        "parentId" : "c8accfba-f518-49dd-a8d2-9d1b1c59656d",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "yeah I think we cannot cache streaming table, but here the `isCached` is called irrespective of whether the table is cached or not, is that correct?",
+        "createdAt" : "2020-11-12T00:47:47Z",
+        "updatedAt" : "2020-12-23T13:10:25Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b818fceb-1ebb-4458-ba0d-6b5152cdd314",
+        "parentId" : "c8accfba-f518-49dd-a8d2-9d1b1c59656d",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "I think `SparkSession.table` inside the `isCached` method will create a `UnresolvedRelation` with `isStreaming = false`, and later on in the analysis this flag may cause failure when a streaming table is encountered with that flag.",
+        "createdAt" : "2020-11-12T00:50:33Z",
+        "updatedAt" : "2020-12-23T13:10:25Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c325df9b-fa99-4901-a3f7-4fd76a06e389",
+        "parentId" : "c8accfba-f518-49dd-a8d2-9d1b1c59656d",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "Based on current implementation of cache, we only cache the `LogicalPlan` without any metadata like `table name`. So here we list and filter the table one by one.",
+        "createdAt" : "2020-11-12T01:02:38Z",
+        "updatedAt" : "2020-12-23T13:10:25Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9aff78e7-ecb6-4ca0-b402-81bd87ab4744",
+        "parentId" : "c8accfba-f518-49dd-a8d2-9d1b1c59656d",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "> I think SparkSession.table inside the isCached method will create a UnresolvedRelation with isStreaming = false, and later on in the analysis this flag may cause failure when a streaming table is encountered with that flag.\r\n\r\nI guess you consider about something like this ?\r\n```\r\n\r\ndef lookupTempView(\r\n    identifier: Seq[String], isStreaming: Boolean = false): Option[LogicalPlan] = {\r\n  // Permanent View can't refer to temp views, no need to lookup at all.\r\n  if (isResolvingView) return None\r\n\r\n  val tmpView = identifier match {\r\n    case Seq(part1) => v1SessionCatalog.lookupTempView(part1)\r\n    case Seq(part1, part2) => v1SessionCatalog.lookupGlobalTempView(part1, part2)\r\n    case _ => None\r\n  }\r\n\r\n  if (isStreaming && tmpView.nonEmpty && !tmpView.get.isStreaming) {\r\n    throw new AnalysisException(s\"${identifier.quoted} is not a temp view of streaming \" +\r\n      s\"logical plan, please use batch API such as `DataFrameReader.table` to read it.\")\r\n  }\r\n  tmpView\r\n}\r\n```",
+        "createdAt" : "2020-11-12T01:19:30Z",
+        "updatedAt" : "2020-12-23T13:10:25Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3aa9abcd-70b2-489a-b0aa-4d4af88ee0df",
+        "parentId" : "c8accfba-f518-49dd-a8d2-9d1b1c59656d",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Yes this looks like it. I encountered something similar in #30211 and not sure the same will cause issue for this PR as well.",
+        "createdAt" : "2020-11-12T02:15:53Z",
+        "updatedAt" : "2020-12-23T13:10:25Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e7cf1524-b9c3-42e3-90bc-0c9932dc88dc",
+        "parentId" : "c8accfba-f518-49dd-a8d2-9d1b1c59656d",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "Thanks for your sharing!",
+        "createdAt" : "2020-11-12T03:38:31Z",
+        "updatedAt" : "2020-12-23T13:10:25Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "635d3ab5be8635e4789345480ca3bcf2f0c72cd8",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +858,862 @@        tableIdentifierPattern.map(catalog.listTables(db, _)).getOrElse(catalog.listTables(db))\n      val filterCachedTables = if (showCached) {\n        tables.filter(table => sparkSession.catalog.isCached(table.quotedString))\n      } else {\n        tables"
   }
 ]

@@ -86,5 +86,115 @@
     "commit" : "68fd13176673f2b4fbcec54661fd7dcf8e900e39",
     "line" : 13,
     "diffHunk" : "@@ -1,1 +195,199 @@      }\n      logDebug(s\"Create absolute parent directories: $absParentPaths\")\n      absParentPaths.foreach(fs.mkdirs)\n      for ((src, dst) <- filesToMove) {\n        if (!fs.rename(new Path(src), new Path(dst))) {"
+  },
+  {
+    "id" : "fb83a371-c1b4-4036-afad-ca07d4493df5",
+    "prId" : 29000,
+    "prUrl" : "https://github.com/apache/spark/pull/29000#pullrequestreview-460637765",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ff261b18-2d41-4f14-970d-444f4a6e96db",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Could we make sure that we actually only support `dynamicPartitionOverwrite` with `FileOutputCommitter`?",
+        "createdAt" : "2020-08-01T14:06:14Z",
+        "updatedAt" : "2020-11-24T16:38:32Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "12392a76-59ae-49cc-8509-46f0591cd64f",
+        "parentId" : "ff261b18-2d41-4f14-970d-444f4a6e96db",
+        "authorId" : "19bcd642-216d-45ca-9e34-13e334fdc8fc",
+        "body" : "Hmm, AFAIK yes, dynamicPartitionOverwrite only works for FileOutputCommitter, correct me if wrong :)",
+        "createdAt" : "2020-08-02T16:13:26Z",
+        "updatedAt" : "2020-11-24T16:38:32Z",
+        "lastEditedBy" : "19bcd642-216d-45ca-9e34-13e334fdc8fc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "25daabc3-9019-42a8-98c4-e796aef9c436",
+        "parentId" : "ff261b18-2d41-4f14-970d-444f4a6e96db",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "cc: @cloud-fan @turboFei ?",
+        "createdAt" : "2020-08-04T09:14:00Z",
+        "updatedAt" : "2020-11-24T16:38:32Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "85aa12a618ceadfe510a4f9fc3718a746a1bc357",
+    "line" : 56,
+    "diffHunk" : "@@ -1,1 +124,128 @@      // For FileOutputCommitter it has its own staging path called \"work path\".\n      case f: FileOutputCommitter =>\n        if (dynamicPartitionOverwrite) {\n          assert(dir.isDefined,\n            \"The dataset to be written must be partitioned when dynamicPartitionOverwrite is true.\")"
+  },
+  {
+    "id" : "80110691-b9aa-4d2c-ba84-ba8ccf32a4e8",
+    "prId" : 29000,
+    "prUrl" : "https://github.com/apache/spark/pull/29000#pullrequestreview-477218500",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3b8ad848-6a14-4f4e-87a3-4a4c1530a89d",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "What about the case of `dynamicPartitionOverwrite=true` but `dir.isEmpty`?  IIUC, the workPath will be `/path/to/outputPath/.spark-staging-{jobId}/_temporary/{appAttemptId}/_temporary/{taskAttemptId}/` in this case. And it will be committed to `/path/to/outputPath/.spark-staging-{jobId}/` then. But it seems we don't move them to the `/path/to/outputPath/` in the end.",
+        "createdAt" : "2020-08-27T16:14:08Z",
+        "updatedAt" : "2020-11-24T16:38:32Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "edd93213-6cf3-45a3-a4d0-2a7fc1b1f1cd",
+        "parentId" : "3b8ad848-6a14-4f4e-87a3-4a4c1530a89d",
+        "authorId" : "19bcd642-216d-45ca-9e34-13e334fdc8fc",
+        "body" : "IFAIK，`assert(dir.isDefined, ...)` already avoid this case, `dir.isDefined` means` !dir.isEmpty`, correct me if wrong :)",
+        "createdAt" : "2020-08-28T02:31:09Z",
+        "updatedAt" : "2020-11-24T16:38:32Z",
+        "lastEditedBy" : "19bcd642-216d-45ca-9e34-13e334fdc8fc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2fd4d6a0-82bd-45f3-bb8b-f6e45ada2bc5",
+        "parentId" : "3b8ad848-6a14-4f4e-87a3-4a4c1530a89d",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "oh, I see. My mistake.",
+        "createdAt" : "2020-08-28T03:33:16Z",
+        "updatedAt" : "2020-11-24T16:38:32Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "85aa12a618ceadfe510a4f9fc3718a746a1bc357",
+    "line" : 61,
+    "diffHunk" : "@@ -1,1 +129,133 @@          partitionPaths += dir.get\n        }\n        new Path(Option(f.getWorkPath).map(_.toString).getOrElse(path))\n      case _ => new Path(path)\n    }"
+  },
+  {
+    "id" : "4a590d4d-1569-4469-a54e-08b561396ba9",
+    "prId" : 29000,
+    "prUrl" : "https://github.com/apache/spark/pull/29000#pullrequestreview-681881561",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e4872de2-4351-4288-983c-68f728e40897",
+        "parentId" : null,
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "so this isn't the normal behavior of the algorithm version 2, right?  Normally it writes the task files directly to the final output location.  The whole point of algorithm 2 is to prevent all of the extra moves on the driver at the end of the job. For large jobs this time can be huge.   I'm not sure the benefit here of algorithm 2 because that is all happening distributed on each task?",
+        "createdAt" : "2021-06-11T14:16:30Z",
+        "updatedAt" : "2021-06-11T14:16:30Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "85aa12a618ceadfe510a4f9fc3718a746a1bc357",
+    "line" : 25,
+    "diffHunk" : "@@ -1,1 +56,60 @@ *                                  then move them to\n *                                  /path/to/outputPath/.spark-staging-{jobId}/a=1/b=1.\n *                                  2. When [[FileOutputCommitter]] algorithm version set to 2,\n *                                  committing tasks directly move task attempt output files to\n *                                  /path/to/outputPath/.spark-staging-{jobId}/a=1/b=1."
   }
 ]

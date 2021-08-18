@@ -130,5 +130,38 @@
     "commit" : "a9e5fc025187b7f6576bd73e03dfc1e0cfd87f1d",
     "line" : 8,
     "diffHunk" : "@@ -1,1 +1921,1925 @@      val storageInfo = rdd.context.getRDDStorageInfo(_.id == rdd.id).map(info =>\n        \"    CachedPartitions: %d; MemorySize: %s; DiskSize: %s\".format(\n          info.numCachedPartitions, bytesToString(info.memSize), bytesToString(info.diskSize)))\n\n      s\"$rdd [$persistence]\" +: storageInfo"
+  },
+  {
+    "id" : "74a1b192-ce2e-4fa0-8fc1-0d775b238b74",
+    "prId" : 29028,
+    "prUrl" : "https://github.com/apache/spark/pull/29028#pullrequestreview-446419938",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8aebcf36-09e0-4267-b98e-0aeb4c66740d",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Then, the executor could easily be under excessive memory pressure by `repartition(1)`? \r\n\r\nActually, I think it's probably a good idea to use `treeReduce` instead as mentioned in SPARK-32212.",
+        "createdAt" : "2020-07-08T13:04:51Z",
+        "updatedAt" : "2020-07-15T09:45:52Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "83887da9-2ea7-4864-8991-e107242c65eb",
+        "parentId" : "8aebcf36-09e0-4267-b98e-0aeb4c66740d",
+        "authorId" : "d10d1d81-50d2-468f-8056-2c338a32070d",
+        "body" : "Thank you very much for code review.\r\n\r\nThe analysis of several implementations is as follows:\r\n_p = rdd.getNumPartitions_\r\n_reduce - PriorityQueue_(Original implementation) => At worst, _O(p * k)_ memory may be used in the driver, but intermediate result(local TopK) merging does not need to wait until all partitions are returned. This is executed in parallel.\r\n\r\n_repartition(1) - guava.QuickSelect_ => The merging takes place in the executor. The merging algorithm itself uses _O(k)_ extra memory, and the time complexity is _O(p * k)_. The intermediate result data is from ShuffleBlockFetcherIterator of spark shuffle, the iterator does not use too much memory.\r\n\r\n_treeReduce(depth=2) - guava.QuickSelect_ => At worst, _O(sqrt(p) * k)_ memory may be used in the driver. The memory usage in the executor is the same as _repartition(1)_. Compared with _repartition(1)_ it increases the parallelism of local TopK merging, which can improve the speed of merging under very large amount of data, but it uses more memory on the driver.\r\n\r\nThe number of intermediate results that need to be merged is _p * k_. in general, this number is not very large, and the non parallel _O(p * k)_ merging algorithm is acceptable.\r\nSo I think maybe _repartition(1)_  is a better choice.\r\n",
+        "createdAt" : "2020-07-10T13:53:28Z",
+        "updatedAt" : "2020-07-15T09:45:52Z",
+        "lastEditedBy" : "d10d1d81-50d2-468f-8056-2c338a32070d",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "afacdfa37505df46116d191e7ba7d4904707e218",
+    "line" : 45,
+    "diffHunk" : "@@ -1,1 +1538,1542 @@        mapPartitions { items =>\n          collectionUtils.takeOrdered(items, num)(ord)\n        }.repartition(1).mapPartitions { items =>\n          collectionUtils.takeOrdered(items, num)(ord)\n        }.collect()"
   }
 ]

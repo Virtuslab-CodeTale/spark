@@ -196,5 +196,27 @@
     "commit" : "32a6714bd31fb86e3a2d057943c13ba812b6e28e",
     "line" : 15,
     "diffHunk" : "@@ -1,1 +128,132 @@        operator match {\n          case WindowExec(_, partitionSpec, orderSpec, _)\n            if (!partitionSpec.isEmpty && !orderSpec.isEmpty) =>\n            WindowSortExec(\n              partitionSpec,"
+  },
+  {
+    "id" : "084d3036-bfcd-4203-abf4-35944c55ebe0",
+    "prId" : 29074,
+    "prUrl" : "https://github.com/apache/spark/pull/29074#pullrequestreview-446842786",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "10a340c0-b6a4-410c-bfec-22100f5b5298",
+        "parentId" : null,
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "This can be also implemented by looking at left partitioning first then move to the right partitionoing:\r\n```scala\r\n    (leftPartitioning, rightPartitioning) match {\r\n      case (HashPartitioning(leftExpressions, _), _) =>\r\n        reorder(leftKeys.toIndexedSeq, rightKeys.toIndexedSeq, leftExpressions, leftKeys)\r\n          .orElse(reorderJoinKeysRecursively(\r\n            leftKeys, rightKeys, UnknownPartitioning(0), rightPartitioning))\r\n      case (PartitioningCollection(partitionings), _) =>\r\n        partitionings.foreach { p =>\r\n          reorderJoinKeysRecursively(leftKeys, rightKeys, p, rightPartitioning).map { k =>\r\n            return Some(k)\r\n          }\r\n        }\r\n        reorderJoinKeysRecursively(leftKeys, rightKeys, UnknownPartitioning(0), rightPartitioning)\r\n      case (_, HashPartitioning(rightExpressions, _)) =>\r\n        reorder(leftKeys.toIndexedSeq, rightKeys.toIndexedSeq, rightExpressions, rightKeys)\r\n      case (_, PartitioningCollection(partitionings)) =>\r\n        partitionings.foreach { p =>\r\n          reorderJoinKeysRecursively(leftKeys, rightKeys, leftPartitioning, p).map { k =>\r\n            return Some(k)\r\n          }\r\n        }\r\n        None\r\n      case _ =>\r\n        None\r\n    }\r\n```\r\nHowever, I chose this way so that the behavior remains the same. If you have `leftPartitioning = PartitioningCollection` and `rightPartitioning = HashPartitioning`, it will match the `rightPartitioning` first, which is the existing behavior. ",
+        "createdAt" : "2020-07-12T03:22:02Z",
+        "updatedAt" : "2020-10-07T16:28:37Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3cd6df91b74fc98487ffb1f9920bada5b4040e96",
+    "line" : 69,
+    "diffHunk" : "@@ -1,1 +209,213 @@      case (_, Some(HashPartitioning(rightExpressions, _))) =>\n        reorder(leftKeys.toIndexedSeq, rightKeys.toIndexedSeq, rightExpressions, rightKeys)\n          .orElse(reorderJoinKeysRecursively(\n            leftKeys, rightKeys, leftPartitioning, None))\n      case (Some(PartitioningCollection(partitionings)), _) =>"
   }
 ]
