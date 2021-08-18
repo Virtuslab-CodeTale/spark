@@ -53,5 +53,71 @@
     "commit" : "fae570a68cde1cc25ae60e7ba74651e7972578e3",
     "line" : 30,
     "diffHunk" : "@@ -1,1 +28,32 @@ * to the data source, the data source can still output data with duplicated keys, which is OK\n * as Spark will do GROUP BY key again. The final query plan can be something like this:\n * {{{\n *   Aggregate [key#1], [min(min(value)#2) AS m#3]\n *     +- RelationV2[key#1, min(value)#2]"
+  },
+  {
+    "id" : "9ae11f21-91ff-4cac-a9da-33bd0132b5eb",
+    "prId" : 32049,
+    "prUrl" : "https://github.com/apache/spark/pull/32049#pullrequestreview-648837073",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9b1e145a-6cd7-4bac-b5d6-fb3d01ccffef",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Some thoughts about the v2 pushdown API:\r\n\r\nI've been reluctant to add more v2 pushdown APIs because the semantic is not clear. For now, we only have filter pushdown and column pruning, which is fine as these two don't conflict, the order doesn't matter. However, if we add more pushdown API, like limit pushdown, then the order matters. e.g. LIMIT + FILTER is different from FILTER + LIMIT.\r\n\r\nI've been thinking about it many times. We can require the pushdown implementation to be stateful, and remember the order of the API calls. However, I found this makes the implementation very complicated, and it's simpler to just write catalyst rules.\r\n\r\nAnother idea is to only push down one operator, and apply column pruning at the end. e.g. if a data source supports both filter and limit pushdown, only one can be pushed down each time (the one closer to the scan node gets pushed). This way the implementation can still be simple, and people can write catalyst rules if they want to support complicated cases.\r\n\r\nIn general, I find it's more natural to implement SQL operators pushdown using tree traversal. The DS v2 pushdown API gets complicated very quickly when we add more features. One option is to have a Java version of `LogicalPlan` and provide convenient tree traversal APIs. But I'm not sure how many users will buy in instead of just writing catalyst rules.",
+        "createdAt" : "2021-04-27T14:53:15Z",
+        "updatedAt" : "2021-04-28T06:21:16Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "92f73424-15ec-4dd4-b5e1-87153d55365c",
+        "parentId" : "9b1e145a-6cd7-4bac-b5d6-fb3d01ccffef",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "For this PR, I don't think a v2 aggregate pushdown API makes sense. File source v1 is still the default and the effort of this PR is wasted if we can't turn on file source v2 by default.\r\n\r\nCan we simply write a catalyst rule to match Aggregate and file scan node, and implement the aggregate pushdown?",
+        "createdAt" : "2021-04-27T14:55:49Z",
+        "updatedAt" : "2021-04-28T06:21:16Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "37d8c880-1efa-4262-b8c0-d20a3b9eb559",
+        "parentId" : "9b1e145a-6cd7-4bac-b5d6-fb3d01ccffef",
+        "authorId" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "body" : "@cloud-fan \r\nI quickly tried it out by adding a rule to match Aggregate and V2Relation. I did the following:\r\n1. deleted the `SupportsPushDownAggregates` interface\r\n2. added `pushAggregation` in `Scan`\r\n```\r\n  default void pushAggregation(Aggregation aggregation) {\r\n    throw new UnsupportedOperationException(description() +\r\n        \": Push down Aggregation is not supported\");\r\n  }\r\n```\r\n3. implemented the above method in `ParquetScan`\r\n4. added a rule `PartialAggregatePushDown` in core/sql. I didn't add this in catalyst because I need to access some of the files in core/sql. \r\n5. In `PartialAggregatePushDown`, I only enable the push down if the table in V2Relation is a `ParquetTable`, because I only implemented `pushAggregation` in `ParquetScan` now.\r\n\r\nCould you please take a look to see if this is what you want? Thank you very much!",
+        "createdAt" : "2021-04-28T01:58:15Z",
+        "updatedAt" : "2021-04-28T06:21:16Z",
+        "lastEditedBy" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "509cbf93-58c0-4553-9aad-1a2b362134ab",
+        "parentId" : "9b1e145a-6cd7-4bac-b5d6-fb3d01ccffef",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Can we support file source v1 first? That's the default.",
+        "createdAt" : "2021-04-28T08:59:16Z",
+        "updatedAt" : "2021-04-28T08:59:16Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "aece061e-6125-4be0-9a33-3cebe1a84f3e",
+        "parentId" : "9b1e145a-6cd7-4bac-b5d6-fb3d01ccffef",
+        "authorId" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "body" : "@cloud-fan \r\nMost of the customers at my work use DS v2. Is it OK with you that we use this PR to implement v2 support first, and I will have a follow up to add v1 support later? Thanks a lot!\r\n",
+        "createdAt" : "2021-04-30T03:51:44Z",
+        "updatedAt" : "2021-04-30T03:51:45Z",
+        "lastEditedBy" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5c2b630a61d8ea9263116c37e154884a5cabd2ca",
+    "line" : 43,
+    "diffHunk" : "@@ -1,1 +41,45 @@ */\n@Evolving\npublic interface SupportsPushDownAggregates extends ScanBuilder {\n\n  /**"
   }
 ]

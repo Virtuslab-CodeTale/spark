@@ -218,5 +218,115 @@
     "commit" : "5027ebcec31e9ea21df0bf16daa3e3427d4fe700",
     "line" : 76,
     "diffHunk" : "@@ -1,1 +756,760 @@\n  def apply(plan: LogicalPlan): LogicalPlan = removeProjectBeforeFilter(\n    plan.transformWithPruning(AlwaysProcess.fn, ruleId) {\n    // Prunes the unused columns from project list of Project/Aggregate/Expand\n    case p @ Project(_, p2: Project) if !p2.outputSet.subsetOf(p.references) =>"
+  },
+  {
+    "id" : "422b02ff-1db1-4e86-9116-78455a60e690",
+    "prId" : 31980,
+    "prUrl" : "https://github.com/apache/spark/pull/31980#pullrequestreview-622655510",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6b1f75ba-4045-46b8-b4c9-6c65761ea30a",
+        "parentId" : null,
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "`w1.references.subsetOf(grandChild.outputSet)` Do we need this check?",
+        "createdAt" : "2021-03-27T14:25:45Z",
+        "updatedAt" : "2021-04-02T07:14:22Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d230a834-b878-4aeb-bfa1-fbb011ba6801",
+        "parentId" : "6b1f75ba-4045-46b8-b4c9-6c65761ea30a",
+        "authorId" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "body" : "The test case `SPARK-34807: don't transpose two windows if project between them generates an input column` would fail without it.",
+        "createdAt" : "2021-03-27T14:46:32Z",
+        "updatedAt" : "2021-04-02T07:14:22Z",
+        "lastEditedBy" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "60c6643f0bfda390baa32273f7ca1371a44d5771",
+    "line" : 24,
+    "diffHunk" : "@@ -1,1 +1002,1006 @@\n    case w1 @ Window(_, _, _, Project(pl, w2 @ Window(_, _, _, grandChild)))\n      if windowsCompatible(w1, w2) && w1.references.subsetOf(grandChild.outputSet) =>\n      Project(\n        pl ++ w1.windowOutputSet,"
+  },
+  {
+    "id" : "6f3247d1-b155-4ce3-9ca4-395595639158",
+    "prId" : 31980,
+    "prUrl" : "https://github.com/apache/spark/pull/31980#pullrequestreview-622660526",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ef9dad48-b6c1-4903-9d3d-2cf8831ee500",
+        "parentId" : null,
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "Can we use `w1.output` instead of `pl ++ w1.windowOutputSet`?",
+        "createdAt" : "2021-03-27T15:45:52Z",
+        "updatedAt" : "2021-04-02T07:14:22Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7842ad25-1318-49f5-aed0-a0badc0e5c17",
+        "parentId" : "ef9dad48-b6c1-4903-9d3d-2cf8831ee500",
+        "authorId" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "body" : "The `w1.output` contains only the attributes (name + id), but not how the attributes are computed based on the input attributes. This information is in the project list.",
+        "createdAt" : "2021-03-27T15:56:17Z",
+        "updatedAt" : "2021-04-02T07:14:22Z",
+        "lastEditedBy" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "60c6643f0bfda390baa32273f7ca1371a44d5771",
+    "line" : 26,
+    "diffHunk" : "@@ -1,1 +1004,1008 @@      if windowsCompatible(w1, w2) && w1.references.subsetOf(grandChild.outputSet) =>\n      Project(\n        pl ++ w1.windowOutputSet,\n        w2.copy(child = w1.copy(child = grandChild)))\n  }"
+  },
+  {
+    "id" : "3a03e160-a9e7-4f0b-8b1b-f974e3b419e6",
+    "prId" : 31980,
+    "prUrl" : "https://github.com/apache/spark/pull/31980#pullrequestreview-622747073",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1f78dce7-f0c6-42be-aa4c-3f4cdff68d4a",
+        "parentId" : null,
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "Two more spaces?",
+        "createdAt" : "2021-03-28T13:05:16Z",
+        "updatedAt" : "2021-04-02T07:14:22Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "60c6643f0bfda390baa32273f7ca1371a44d5771",
+    "line" : 20,
+    "diffHunk" : "@@ -1,1 +998,1002 @@    _.containsPattern(WINDOW), ruleId) {\n    case w1 @ Window(_, _, _, w2 @ Window(_, _, _, grandChild))\n      if windowsCompatible(w1, w2) =>\n      Project(w1.output, w2.copy(child = w1.copy(child = grandChild)))\n"
+  },
+  {
+    "id" : "eecc4e6b-7aa5-45dd-a1ec-42634e192d00",
+    "prId" : 31980,
+    "prUrl" : "https://github.com/apache/spark/pull/31980#pullrequestreview-622747082",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c4abdcde-d297-43c5-9466-d9c10013cf12",
+        "parentId" : null,
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "Two more spaces?",
+        "createdAt" : "2021-03-28T13:05:21Z",
+        "updatedAt" : "2021-04-02T07:14:22Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "60c6643f0bfda390baa32273f7ca1371a44d5771",
+    "line" : 24,
+    "diffHunk" : "@@ -1,1 +1002,1006 @@\n    case w1 @ Window(_, _, _, Project(pl, w2 @ Window(_, _, _, grandChild)))\n      if windowsCompatible(w1, w2) && w1.references.subsetOf(grandChild.outputSet) =>\n      Project(\n        pl ++ w1.windowOutputSet,"
   }
 ]

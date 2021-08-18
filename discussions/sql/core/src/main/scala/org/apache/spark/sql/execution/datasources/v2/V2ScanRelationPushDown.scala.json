@@ -86,5 +86,27 @@
     "commit" : "fae570a68cde1cc25ae60e7ba74651e7972578e3",
     "line" : 64,
     "diffHunk" : "@@ -1,1 +69,73 @@  }\n\n  def pushdownAggregate(plan: LogicalPlan): LogicalPlan = plan.transform {\n    // update the scan builder with agg pushdown and return a new plan with agg pushed\n    case aggNode @ Aggregate(groupingExpressions, resultExpressions, child) =>"
+  },
+  {
+    "id" : "66e00c93-cb0b-4dcc-be72-eaa71bfd6f70",
+    "prId" : 32049,
+    "prUrl" : "https://github.com/apache/spark/pull/32049#pullrequestreview-703253675",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f00f8566-a3b5-4544-8258-6b66f4c06e37",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "one thing we should take care of is the changing of expr ID. For example,\r\n```\r\nSort(a#1, sum_b#3)\r\n  Aggregate(groupBy=a#1, result=a#1, sum(b#2) as sum_b#3)\r\n    V2Relation(a#1, b#2)\r\n```\r\nAfter pushdown\r\n```\r\n!Sort(a#1, sum_b#3)\r\n  Aggregate(groupBy=a#4, result=a#4, sum(sum(b)#5) as sum_b#3)\r\n    V2Scan(a#4, sum(b)#5)\r\n```\r\n\r\nThe sort operator becomes invalid because `a#1` is missing now. We should find a way to keep the original expr ID, via `Alias(...)(exprId = originalId)`\r\n```\r\nSort(a#1, sum_b#3)\r\n  Aggregate(groupBy=a#4, result=a#4 as a#1, sum(sum(b)#5) as sum_b#3)\r\n    V2Scan(a#4, sum(b)#5)\r\n```",
+        "createdAt" : "2021-07-09T17:20:50Z",
+        "updatedAt" : "2021-07-09T17:23:10Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5c2b630a61d8ea9263116c37e154884a5cabd2ca",
+    "line" : 142,
+    "diffHunk" : "@@ -1,1 +147,151 @@                  var i = 0\n                  val aggOutput = output.drop(groupAttrs.length)\n                  plan.transformExpressions {\n                    case agg: AggregateExpression =>\n                      i += 1"
   }
 ]

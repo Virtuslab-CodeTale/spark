@@ -1,0 +1,123 @@
+[
+  {
+    "id" : "8e8267ee-bbb4-4b95-834a-81306b03210a",
+    "prId" : 31984,
+    "prUrl" : "https://github.com/apache/spark/pull/31984#pullrequestreview-623849645",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "fa637df9-7ebe-4fe8-88a0-5942a24e4129",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "to confirm: the major change of this PR is to also consider broadcast hint?",
+        "createdAt" : "2021-03-30T03:38:19Z",
+        "updatedAt" : "2021-03-30T05:10:47Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "22ebbac5-727a-4cbc-bc1e-a37cba15a24a",
+        "parentId" : "fa637df9-7ebe-4fe8-88a0-5942a24e4129",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "if it is, can we make it clear in the PR title and description, and add a test?",
+        "createdAt" : "2021-03-30T03:38:48Z",
+        "updatedAt" : "2021-03-30T05:10:47Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d279f5b4-e75b-4b27-80ff-208f743b6491",
+        "parentId" : "fa637df9-7ebe-4fe8-88a0-5942a24e4129",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "Actually we already have a test:\r\nhttps://github.com/apache/spark/blob/56b18386ab71566480777660f52d4913aa319a2f/sql/core/src/test/scala/org/apache/spark/sql/DynamicPartitionPruningSuite.scala#L1117\r\nAnyway, I added a new test.",
+        "createdAt" : "2021-03-30T05:12:08Z",
+        "updatedAt" : "2021-03-30T05:12:08Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7edd25c82e3919f4d7f738f39e3f147aa5a0a849",
+    "line" : 16,
+    "diffHunk" : "@@ -1,1 +248,252 @@            if (partScan.isDefined && canPruneLeft(joinType) &&\n                hasPartitionPruningFilter(right) &&\n                (canBroadcastBySize(right, conf) || hintToBroadcastRight(hint))) {\n              newLeft = insertPredicate(l, newLeft, r, right, rightKeys, partScan.get,\n                canBuildBroadcastRight(joinType))"
+  },
+  {
+    "id" : "eed9bdae-1d04-4819-8550-800ed0538b0e",
+    "prId" : 31984,
+    "prUrl" : "https://github.com/apache/spark/pull/31984#pullrequestreview-629077251",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c80ea0e6-006f-4ef6-8524-d087a3b208ee",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "@wangyum we should update this place. This is not a pure shortcut, as it changes the behavior and skips DPP under some cases, https://github.com/apache/spark/pull/31984/files#r607540865",
+        "createdAt" : "2021-04-06T07:39:33Z",
+        "updatedAt" : "2021-04-06T07:39:33Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9b35fc7c-da06-4ca8-a798-0761bf199dad",
+        "parentId" : "c80ea0e6-006f-4ef6-8524-d087a3b208ee",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "The first commit is to prevent this case: https://github.com/apache/spark/pull/31984/commits/b510d7da21f8a92af69b1485b72aef6ad5901448",
+        "createdAt" : "2021-04-06T07:49:13Z",
+        "updatedAt" : "2021-04-06T07:49:13Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ecebd6f0-023e-41b4-bccc-62f8839277be",
+        "parentId" : "c80ea0e6-006f-4ef6-8524-d087a3b208ee",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "That is more like a hack. If we need a shortcut here, we should closely follow the logic of `insertPredicate` and answer this question: when can we safely skip DPP here?",
+        "createdAt" : "2021-04-06T08:18:44Z",
+        "updatedAt" : "2021-04-06T08:18:44Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "06bcf7f8-0c7f-4839-9cc6-bf30f720ee7d",
+        "parentId" : "c80ea0e6-006f-4ef6-8524-d087a3b208ee",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "If `broadcastOnly=true`, we can't skip DPP here and need to wait until the planner phase to see if it's a broadcast join.\r\n\r\nIf `broadcastOnly=false`, and `hasBenefits=true`, we always do DPP (this PR changes this behavior). If `hasBenefits=false`, we can't skip DPP here and need to wait until the planner phase to see if it's a broadcast join.\r\n\r\nThat said, the shortcut here is to skip DPP earlier if we know for sure that the join can't be broadcast join. I feel it's more robust to wait for the planner and see if it' a broadcast join. Do we really need the shortcut?",
+        "createdAt" : "2021-04-06T08:29:16Z",
+        "updatedAt" : "2021-04-06T08:29:16Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b78a50de-8c64-4076-8baf-0bf1d22327c2",
+        "parentId" : "c80ea0e6-006f-4ef6-8524-d087a3b208ee",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "Revert this pr?",
+        "createdAt" : "2021-04-06T14:46:45Z",
+        "updatedAt" : "2021-04-06T14:46:46Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d8f1f2c3-c8e8-49fa-a836-1ae4264f196a",
+        "parentId" : "c80ea0e6-006f-4ef6-8524-d087a3b208ee",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Let me revert it first. \"broadcast hint\" is still a valid case but that might be too minor. We need to think more about how to improve the cost model of DPP.",
+        "createdAt" : "2021-04-06T14:57:57Z",
+        "updatedAt" : "2021-04-06T14:57:58Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7edd25c82e3919f4d7f738f39e3f147aa5a0a849",
+    "line" : 24,
+    "diffHunk" : "@@ -1,1 +255,259 @@              if (partScan.isDefined && canPruneRight(joinType) &&\n                  hasPartitionPruningFilter(left) &&\n                  (canBroadcastBySize(left, conf) || hintToBroadcastLeft(hint))) {\n                newRight = insertPredicate(r, newRight, l, left, leftKeys, partScan.get,\n                  canBuildBroadcastLeft(joinType))"
+  }
+]
