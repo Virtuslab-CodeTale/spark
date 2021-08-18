@@ -130,5 +130,137 @@
     "commit" : "b022e3513a842329b24569840a07a501bed9a188",
     "line" : 55,
     "diffHunk" : "@@ -1,1 +163,167 @@      }\n      // CTE definition can reference a previous one\n      resolvedCTERelations += (name -> substituteCTE(innerCTEResolved, resolvedCTERelations))\n    }\n    resolvedCTERelations"
+  },
+  {
+    "id" : "144290ef-98e8-4998-bb17-bba7fa83aaf2",
+    "prId" : 28371,
+    "prUrl" : "https://github.com/apache/spark/pull/28371#pullrequestreview-401106704",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "95b29554-9717-474b-afb9-8959b6169bef",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "My bad. I missed to check case-sensitivity.",
+        "createdAt" : "2020-04-27T16:10:38Z",
+        "updatedAt" : "2020-04-27T16:19:50Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "24a487dce69a0bc55148164d650259268b45dc4f",
+    "line" : 47,
+    "diffHunk" : "@@ -1,1 +65,69 @@        relations.foreach {\n          case (name, relation) =>\n            if (startOfQuery && outerCTERelationNames.exists(resolver(_, name))) {\n              throw new AnalysisException(s\"Name $name is ambiguous in nested CTE. \" +\n                s\"Please set ${LEGACY_CTE_PRECEDENCE_POLICY.key} to CORRECTED so that name \" +"
+  },
+  {
+    "id" : "72d396e1-034f-4bbc-b5ac-406a1682ccb5",
+    "prId" : 28318,
+    "prUrl" : "https://github.com/apache/spark/pull/28318#pullrequestreview-399905076",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f9ba50e7-0308-446a-bc1b-e0e412406bd5",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "ditto",
+        "createdAt" : "2020-04-24T12:34:27Z",
+        "updatedAt" : "2020-04-24T13:26:35Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4a3ebf746cc7efa2c7356c79a400b7bd04952764",
+    "line" : 59,
+    "diffHunk" : "@@ -1,1 +63,67 @@        }.toSet ++ namesInSubqueries\n        assertNoNameConflictsInCTE(child, outerCTERelationNames, newNames)\n        w.innerChildren.foreach(assertNoNameConflictsInCTE(_, newNames, newNames))\n\n      case other =>"
+  },
+  {
+    "id" : "48ffe4fb-2f8c-4bc0-82bd-f7f8d47ef03f",
+    "prId" : 28318,
+    "prUrl" : "https://github.com/apache/spark/pull/28318#pullrequestreview-399965592",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7b4ea4aa-98f3-4678-ab2c-09777af0fe2b",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "shouldn't this be `assertNoNameConflictsInCTE(_, namesInSubqueries, Nil)`?",
+        "createdAt" : "2020-04-24T13:35:44Z",
+        "updatedAt" : "2020-04-24T13:35:44Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c17e6aba-3a64-423f-b36e-69342246f542",
+        "parentId" : "7b4ea4aa-98f3-4678-ab2c-09777af0fe2b",
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "In that case we wouldn't report\r\n```\r\nWITH t AS (SELECT 1)\r\nSELECT (\r\n  SELECT (\r\n    WITH t AS (SELECT 2)\r\n    SELECT * FROM t\r\n  )\r\n)\r\n```\r\nas ambiguous, but it returns `1` in legacy and `2` in corrected modes. ",
+        "createdAt" : "2020-04-24T13:52:24Z",
+        "updatedAt" : "2020-04-24T13:52:25Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4a3ebf746cc7efa2c7356c79a400b7bd04952764",
+    "line" : 64,
+    "diffHunk" : "@@ -1,1 +67,71 @@      case other =>\n        other.subqueries.foreach(\n          assertNoNameConflictsInCTE(_, namesInSubqueries, namesInSubqueries))\n        other.children.foreach(\n          assertNoNameConflictsInCTE(_, outerCTERelationNames, namesInSubqueries))"
+  },
+  {
+    "id" : "ebf82aeb-62ab-4bde-9c85-f711ed6f1fb3",
+    "prId" : 28318,
+    "prUrl" : "https://github.com/apache/spark/pull/28318#pullrequestreview-400556142",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9aafcc67-242a-438c-9c43-92889c44fa9b",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "There are 3 kinds of conflicts:\r\n1. conflicts in the children, e.g. `with t as (...) select * from (with t as (...) select * from t)`\r\n2. conflicts in other CTE relations, e.g. `with t as (...), t2 as (with t as (...) select * from t) ...`\r\n3. conflicts in the subqueries of the children, e.g. `with t as (...) select ... where ... in (with t as (...) select * from t)`\r\n\r\nThe third one can be handled correctly by 2.4 as well, so we shouldn't fail.\r\n\r\nCan you briefly explain how you check the first 2 conflicts and skip the third one?",
+        "createdAt" : "2020-04-24T14:18:42Z",
+        "updatedAt" : "2020-04-24T14:18:42Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4d4815c3-b88b-4c9d-b235-06cd2ae9d318",
+        "parentId" : "9aafcc67-242a-438c-9c43-92889c44fa9b",
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "I thought 3. is not handled correctly in 2.4. (I haven't tested it on Spark 2.4.) But it certainly produces different results in Spark 3 in the 2 different modes.\r\n- In legacy it returns `1` (https://github.com/apache/spark/pull/28318/files#diff-46573f0caf504536cf46d2b267bb5a37R171-R181). This PR hasn't touched this mode, but if you are right then it should.\r\n- In corrected it returns empty result after this PR (before the PR it returned `1`)(https://github.com/apache/spark/pull/28318/files#diff-0c15df52c8221453db6102ff4196cb90R171-R181).",
+        "createdAt" : "2020-04-24T14:33:57Z",
+        "updatedAt" : "2020-04-24T14:33:57Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ea13cec1-7087-4abc-9544-336f8dd8ab6c",
+        "parentId" : "9aafcc67-242a-438c-9c43-92889c44fa9b",
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "I checked 3. in Spark 2.4 with the query in the description and it returns `1` so is not handled correctly and we should fail.\r\n\r\n1. In this case the legacy and corrected mode returns the same result due to the same substitution order so we shouldn't throw an exception. If we call the possible conflicting set of names coming from outer CTEs as `outerCTERelationNames` then I handle this case by not extending the set with new names when I traverse down the child of a `With` (https://github.com/apache/spark/pull/28318/files#diff-d0bfa3367c63988ad7cf33397e643e75R64) or when I traverse down the children of any other node (https://github.com/apache/spark/pull/28318/files#diff-d0bfa3367c63988ad7cf33397e643e75R70-R71).\r\n\r\n2. and 3. In these cases, the two modes have different substitution order and so possibly different results. Obviously we need an extended set of names (`newNames`) when we encounter a `With` and switch to that set (pass in as a new `outerCTERelationNames`) when we traverse down inner children (2.)( https://github.com/apache/spark/pull/28318/files#diff-d0bfa3367c63988ad7cf33397e643e75R65) or traverse down subquery expressions (3.)(https://github.com/apache/spark/pull/28318/files#diff-d0bfa3367c63988ad7cf33397e643e75R68-R69)\r\n\r\nSo what is the contents of `outerCTERelationNames`? The set of CTE names coming from outer CTEs. It doesn't contain the CTEs coming from a parent `With` from the same `LogicalPlan` (1.). But it contains outer CTEs coming from `With`s from outer `LogicalPlan`s (2., 3.)\r\nAnd the content of `namesInSubqueries` is simply all CTE names from all outer `With`s, no matter if the `With` is the same plan or in an outer plan.\r\n\r\nSo I think what we need to do here is basically skip the 1. and check 2. and 3.",
+        "createdAt" : "2020-04-24T15:41:23Z",
+        "updatedAt" : "2020-04-24T15:46:31Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2330858f-d5cb-47b5-979d-2d38c534711b",
+        "parentId" : "9aafcc67-242a-438c-9c43-92889c44fa9b",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "I agree with @peter-toth .",
+        "createdAt" : "2020-04-26T22:26:54Z",
+        "updatedAt" : "2020-04-26T22:26:54Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4a3ebf746cc7efa2c7356c79a400b7bd04952764",
+    "line" : 58,
+    "diffHunk" : "@@ -1,1 +62,66 @@            }\n        }.toSet ++ namesInSubqueries\n        assertNoNameConflictsInCTE(child, outerCTERelationNames, newNames)\n        w.innerChildren.foreach(assertNoNameConflictsInCTE(_, newNames, newNames))\n"
   }
 ]

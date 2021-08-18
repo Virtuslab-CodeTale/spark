@@ -317,5 +317,60 @@
     "commit" : "a41c06af4ba4edf73a267763bd26f8fd73b13b97",
     "line" : 17,
     "diffHunk" : "@@ -1,1 +41,45 @@ * Holds the name of a relation that has yet to be looked up in a catalog.\n *\n * @param multipartIdentifier table name\n * @param options options to scan this relation. Only applicable to v2 table scan.\n */"
+  },
+  {
+    "id" : "cca2fe11-52db-4cb3-826a-03845dc0a99d",
+    "prId" : 28294,
+    "prUrl" : "https://github.com/apache/spark/pull/28294#pullrequestreview-400474407",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1921e2c8-b298-4184-8169-93d8f9216c75",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "`UnresolvedHaving`?",
+        "createdAt" : "2020-04-24T08:31:44Z",
+        "updatedAt" : "2020-04-27T12:56:29Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2b3f7790-34a9-47dd-93bc-1d74f7e13866",
+        "parentId" : "1921e2c8-b298-4184-8169-93d8f9216c75",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "We also discussed the naming here: https://github.com/apache/spark/pull/28294#discussion_r413424305",
+        "createdAt" : "2020-04-24T08:34:39Z",
+        "updatedAt" : "2020-04-27T12:56:29Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9450ac16-7774-424c-b5b8-ec153f1166d4",
+        "parentId" : "1921e2c8-b298-4184-8169-93d8f9216c75",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Does `GroupingSets` have this bug as well?",
+        "createdAt" : "2020-04-24T08:37:32Z",
+        "updatedAt" : "2020-04-27T12:56:29Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "972db8a8-21b4-4f13-87f1-9f058620b62a",
+        "parentId" : "1921e2c8-b298-4184-8169-93d8f9216c75",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "I think `GroupingSets` don't have the same bug here.\r\nBut I test the 2 below queries:\r\n```\r\nselect sum(a) as b, '2020-01-01' as fake\r\nFROM VALUES (1, 10), (2, 20) AS T(a, b)\r\ngroup by GROUPING SETS ((b), (a, b))\r\nhaving b > 10;\r\n```\r\nand adding the cast\r\n```\r\nselect sum(a) as b, cast('2020-01-01' as date) as fake\r\nFROM VALUES (1, 10), (2, 20) AS T(a, b)\r\ngroup by GROUPING SETS ((b), (a, b))\r\nhaving b > 10;\r\n```\r\nBoth queries return empty results, it seems the HAVING after GROUPING SET resolve expression in select clauses first. Maybe it's another bug, I think we should follow the resolving strategy of table scheme first and then select clause?",
+        "createdAt" : "2020-04-26T08:19:10Z",
+        "updatedAt" : "2020-04-27T12:56:29Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "18d857fa993e2acd7abcb837700e6bc4f3511dd5",
+    "line" : 17,
+    "diffHunk" : "@@ -1,1 +543,547 @@ * Represents unresolved aggregate with having clause, it is turned by the analyzer into a Filter.\n */\ncase class AggregateWithHaving(\n    havingCondition: Expression,\n    child: Aggregate)"
   }
 ]

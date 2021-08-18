@@ -350,5 +350,137 @@
     "commit" : "b42ce1dde86069a74ebbda44a1729cde39c2672d",
     "line" : 52,
     "diffHunk" : "@@ -1,1 +230,234 @@          val left = groupExpressionsByQualifier(resultStack.pop())\n          // Stop the loop whenever the result exceeds the `maxCnfNodeCount`\n          if (left.size * right.size > maxCnfNodeCount) {\n            logInfo(s\"As the result size exceeds the threshold $maxCnfNodeCount. \" +\n              \"The CNF conversion is skipped and returning Seq.empty now. To avoid this, you can \" +"
+  },
+  {
+    "id" : "ae2d1915-120e-495e-b04b-3b4d085d12db",
+    "prId" : 28343,
+    "prUrl" : "https://github.com/apache/spark/pull/28343#pullrequestreview-401521616",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "49759f8f-7be4-4aa5-bbca-cd4fd8846bda",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "this converts the internal value to external value, and then `Literal.apply` converts external value to internal value.\r\n\r\nCan we just do `Literal(elem, child.dataType).sql`?",
+        "createdAt" : "2020-04-28T05:20:39Z",
+        "updatedAt" : "2020-04-28T05:20:39Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c0654b07-204c-4559-b496-2d2a5800f3da",
+        "parentId" : "49759f8f-7be4-4aa5-bbca-cd4fd8846bda",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "@cloud-fan No, Literal fails on UTF8String value, see https://github.com/apache/spark/pull/28328#discussion_r414566719",
+        "createdAt" : "2020-04-28T06:01:20Z",
+        "updatedAt" : "2020-04-28T06:01:21Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6a3f45fd-cf56-4dbd-ac6d-6e24daa16086",
+        "parentId" : "49759f8f-7be4-4aa5-bbca-cd4fd8846bda",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "Another problem is https://github.com/apache/spark/pull/28328#discussion_r415256811",
+        "createdAt" : "2020-04-28T06:05:46Z",
+        "updatedAt" : "2020-04-28T06:05:46Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0bf0f009-1538-4b71-b1e4-b68895ff22e6",
+        "parentId" : "49759f8f-7be4-4aa5-bbca-cd4fd8846bda",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "So, the problem is Literal requires external types but elem has internal Catalyst's type",
+        "createdAt" : "2020-04-28T06:06:52Z",
+        "updatedAt" : "2020-04-28T06:06:52Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d46c177b4cfe191ed73ec319886084f4b482b784",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +522,526 @@    val valueSQL = child.sql\n    val listSQL = hset.toSeq\n      .map(elem => Literal(convertToScala(elem, child.dataType)).sql)\n      .mkString(\", \")\n    s\"($valueSQL IN ($listSQL))\""
+  },
+  {
+    "id" : "b1bc9628-55e2-4ec5-b41f-185cfa93b09e",
+    "prId" : 28328,
+    "prUrl" : "https://github.com/apache/spark/pull/28328#pullrequestreview-400639828",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4120fb08-f2ab-4e65-948b-43a93a8a1ea4",
+        "parentId" : null,
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "Matching internal Catalyst's types to external types is ambiguous. For example,\r\nLong -> Long\r\nLong -> Timestamp\r\n\r\nAlso type of child can be unknown when InSet has to know Catalyst's type of hset elements.\r\n\r\n`hsetElemType` is needed to eliminate the ambiguity",
+        "createdAt" : "2020-04-26T08:48:11Z",
+        "updatedAt" : "2020-04-27T10:37:01Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3425e6c8-1b54-4a83-b218-c6b841e8dfe0",
+        "parentId" : "4120fb08-f2ab-4e65-948b-43a93a8a1ea4",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Do you think we can make this `Option[DataType]` because only a few things are ambiguous?",
+        "createdAt" : "2020-04-26T19:21:14Z",
+        "updatedAt" : "2020-04-27T10:37:01Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9a90d2e5-dbbe-4790-bf1d-9729f7806505",
+        "parentId" : "4120fb08-f2ab-4e65-948b-43a93a8a1ea4",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "We can but if a caller passes None, `InSet` will be not able to infer elem types when `child.dataType` is `NullType` like in this case. `dataType` returns `NullType` if `child` is `PrettyAttribute`.",
+        "createdAt" : "2020-04-26T20:15:46Z",
+        "updatedAt" : "2020-04-27T10:37:01Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "904d17c9-b896-4900-9ddf-6b79a7d1d3a8",
+        "parentId" : "4120fb08-f2ab-4e65-948b-43a93a8a1ea4",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "when `hsetElemType` can be different from `child.dataType`?",
+        "createdAt" : "2020-04-27T05:19:30Z",
+        "updatedAt" : "2020-04-27T10:37:01Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e4d4bb86-ca24-4c7c-9b1f-417f746f3b94",
+        "parentId" : "4120fb08-f2ab-4e65-948b-43a93a8a1ea4",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "When InSet is created from isInCollection, in that case `child.dataType` is `NullType`. For example, it is NullType in the test https://github.com/apache/spark/pull/28328/files#diff-aa655ba249e00d2591b21cf6a360cf82R886 because child is PrettyAttribute when the `sql` method is called.",
+        "createdAt" : "2020-04-27T05:31:08Z",
+        "updatedAt" : "2020-04-27T10:37:01Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dd79d798-33ed-49d5-9b9a-d21cb53d0b28",
+        "parentId" : "4120fb08-f2ab-4e65-948b-43a93a8a1ea4",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "And `InSet.sql()` is called from `Dataset.select` _.named:\r\n```scala\r\nProject(untypedCols.map(_.named), logicalPlan)\r\n```\r\nThe `named` method calls `toPrettySQL(expr)`:\r\n```scala\r\ncase expr: Expression => Alias(expr, toPrettySQL(expr))()\r\n```\r\nThe `toPrettySQL` method calls `sql`:\r\n```scala\r\ndef toPrettySQL(e: Expression): String = usePrettyExpression(e).sql\r\n```",
+        "createdAt" : "2020-04-27T05:42:45Z",
+        "updatedAt" : "2020-04-27T10:37:01Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4bc0e269df9320e9bb9244afb58b6d1fbbf0e95e",
+    "line" : 8,
+    "diffHunk" : "@@ -1,1 +430,434 @@    child: Expression,\n    hset: Set[Any],\n    hsetElemType: DataType) extends UnaryExpression with Predicate {\n\n  require(hset != null, \"hset could not be null\")"
   }
 ]

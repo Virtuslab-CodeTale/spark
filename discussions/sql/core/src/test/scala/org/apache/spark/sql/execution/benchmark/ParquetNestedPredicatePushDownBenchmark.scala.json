@@ -1,0 +1,90 @@
+[
+  {
+    "id" : "2c018cb9-216a-4533-a24a-66ba3bab1088",
+    "prId" : 28319,
+    "prUrl" : "https://github.com/apache/spark/pull/28319#pullrequestreview-399488844",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5a38fbdf-a6da-4a62-a8dc-77b5da236d74",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "BTW, you need to switch to JDK8 HOME in your environment and run the above command once more. That will generate `ParquetNestedPredicatePushDownBenchmark-results.txt` additionally.",
+        "createdAt" : "2020-04-23T20:04:15Z",
+        "updatedAt" : "2020-04-24T21:57:53Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b502d937-d3d7-44b8-9308-a31c9726aea9",
+        "parentId" : "5a38fbdf-a6da-4a62-a8dc-77b5da236d74",
+        "authorId" : "11c05b02-2c25-4102-9b85-069f1a5eeded",
+        "body" : "Thanks a lot @dongjoon-hyun. I will run the benchmark with JDK8 and commit the report.",
+        "createdAt" : "2020-04-23T20:05:30Z",
+        "updatedAt" : "2020-04-24T21:57:53Z",
+        "lastEditedBy" : "11c05b02-2c25-4102-9b85-069f1a5eeded",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6941adf7-01a2-4ba4-919b-4196d8f5bd3d",
+        "parentId" : "5a38fbdf-a6da-4a62-a8dc-77b5da236d74",
+        "authorId" : "11c05b02-2c25-4102-9b85-069f1a5eeded",
+        "body" : "@dongjoon-hyun , jdk8 benchmark results pushed.",
+        "createdAt" : "2020-04-23T21:23:17Z",
+        "updatedAt" : "2020-04-24T21:57:53Z",
+        "lastEditedBy" : "11c05b02-2c25-4102-9b85-069f1a5eeded",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b36688a4-f736-4175-8a15-45aa1b396b58",
+        "parentId" : "5a38fbdf-a6da-4a62-a8dc-77b5da236d74",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Thanks.",
+        "createdAt" : "2020-04-23T21:25:59Z",
+        "updatedAt" : "2020-04-24T21:57:53Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f275021e9170f35a65b569c1188945092ba8ae43",
+    "line" : 37,
+    "diffHunk" : "@@ -1,1 +35,39 @@ * }}}\n */\nobject ParquetNestedPredicatePushDownBenchmark extends SqlBasedBenchmark {\n\n  private val N = 100 * 1024 * 1024"
+  },
+  {
+    "id" : "9217f4b9-b14b-4f3d-b951-2a0566f6f307",
+    "prId" : 28319,
+    "prUrl" : "https://github.com/apache/spark/pull/28319#pullrequestreview-400277263",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "de2b9a47-f22e-42ec-a74d-497ba29668fb",
+        "parentId" : null,
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "What's the reason for creating 4 partitions (and 4 files) if you have only 1 CPU?",
+        "createdAt" : "2020-04-24T20:57:11Z",
+        "updatedAt" : "2020-04-24T21:57:53Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "eaa8223d-4413-4c22-9265-4eff951fd7d9",
+        "parentId" : "de2b9a47-f22e-42ec-a74d-497ba29668fb",
+        "authorId" : "11c05b02-2c25-4102-9b85-069f1a5eeded",
+        "body" : "Hi @MaxGekk, 4 partitions are here  to make sure we have multiple row groups created for the small benchmark parquet dataset (as I didn't change parquet row group block size).  Multiple partitions and 1 CPU to simulate a production scenario that we get a lot of partitions across limited number of executors with limited number of cores, with nest predicate pushed down we can have big performance gain since we don't need to read all the row groups. In this benchmark, since the data set is small, if put multiple CPUs, partitions will be read in parallel when nest predicate pushdown disabled, in which case we will not be able see a clear performance gain in terms of job execution time.",
+        "createdAt" : "2020-04-24T21:19:39Z",
+        "updatedAt" : "2020-04-24T21:57:53Z",
+        "lastEditedBy" : "11c05b02-2c25-4102-9b85-069f1a5eeded",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f275021e9170f35a65b569c1188945092ba8ae43",
+    "line" : 43,
+    "diffHunk" : "@@ -1,1 +41,45 @@\n  private val df: DataFrame = spark\n    .range(1, N, 1, 4)\n    .toDF(\"id\")\n    .selectExpr(\"id\", \"STRUCT(id x, STRUCT(CAST(id AS STRING) z) y) nested\")"
+  }
+]

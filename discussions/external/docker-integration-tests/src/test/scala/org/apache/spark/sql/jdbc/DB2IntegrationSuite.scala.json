@@ -20,5 +20,82 @@
     "commit" : "0ef813b4171b9942e341ec788ddb41151bdb3110",
     "line" : 15,
     "diffHunk" : "@@ -1,1 +36,40 @@class DB2IntegrationSuite extends DockerJDBCIntegrationSuite {\n  override val db = new DatabaseOnDocker {\n    override val imageName = sys.env.getOrElse(\"DB2_DOCKER_IMAGE_NAME\", \"ibmcom/db2:11.5.4.0\")\n    override val env = Map(\n      \"DB2INST1_PASSWORD\" -> \"rootpass\","
+  },
+  {
+    "id" : "d915835b-eece-4245-98ac-8ab077f04758",
+    "prId" : 28325,
+    "prUrl" : "https://github.com/apache/spark/pull/28325#pullrequestreview-400147479",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d1d5d9c2-74d7-464d-80ec-8f629b13ba8f",
+        "parentId" : null,
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "`ARCHIVE_LOGS` and `AUTOCONFIG` is needed because it triggers a server side restart (which made the suite fail all the time). Please see the following code snippet extracted from the docker image:\r\n```\r\nconfigure_db()\r\n{\r\n   dbname=$1\r\n\r\n   if [ ${ARCHIVE_LOGS?} = \"true\" -o \"${HADR_ENABLED?}\" = \"true\" ]; then\r\n       # Enabling log archiving does not exit with a zero because of SQL1363W\r\n       enable_log_archiving ${dbname?}\r\n       restart_db2\r\n\r\n       if ! back_up ${dbname?}; then\r\n          echo \"(!) Failed to back up ${dbname?} database\"\r\n       fi\r\n   else\r\n       echo \"(*) Log archiving will not be configured as ARCHIVE_LOGS has been set to false. \"\r\n   fi\r\n   \r\n   if [ ${AUTOCONFIG?} = \"true\" -o \"${HADR_ENABLED?}\" = \"true\" ]; then\r\n      if ! run_autoconfig ${dbname?}; then\r\n         echo \"(!) Failed to automatically configure ${dbname?} database\"\r\n      fi\r\n   else\r\n      echo \"(*) Instance and database will not be auto configured. AUTOCONFIG has been set to false. \"\r\n   fi\r\n\r\n   if ! configure_text_search ${dbname?}; then\r\n      echo \"(!) Failed to configure ${dbname?} database for text search\"\r\n   fi\r\n}\r\n```\r\nI've applied the same in the kerberos suite because until now it was only timing luck that it's not failed.\r\n\r\n",
+        "createdAt" : "2020-04-24T09:13:07Z",
+        "updatedAt" : "2020-04-24T09:13:07Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "233cea5b-4640-4292-bbbe-dcbd4984db51",
+        "parentId" : "d1d5d9c2-74d7-464d-80ec-8f629b13ba8f",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Got it.",
+        "createdAt" : "2020-04-24T17:41:40Z",
+        "updatedAt" : "2020-04-24T17:41:41Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7fbc27b5a80b4ac239ffd81e67bf26f614de4e69",
+    "line" : 21,
+    "diffHunk" : "@@ -1,1 +34,38 @@      \"LICENSE\" -> \"accept\",\n      \"DBNAME\" -> \"foo\",\n      \"ARCHIVE_LOGS\" -> \"false\",\n      \"AUTOCONFIG\" -> \"false\"\n    )"
+  },
+  {
+    "id" : "bd49fe3b-32fa-471e-af8e-4aa68794d81e",
+    "prId" : 28325,
+    "prUrl" : "https://github.com/apache/spark/pull/28325#pullrequestreview-400235639",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "87944d9a-1671-46b6-9644-1214b50b9f7e",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Ur, why `privileged` is required?",
+        "createdAt" : "2020-04-24T17:42:02Z",
+        "updatedAt" : "2020-04-24T17:42:03Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0f5e9854-b726-42e6-bf3b-ce1be29317ca",
+        "parentId" : "87944d9a-1671-46b6-9644-1214b50b9f7e",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "This docker requires priviliged run. Please see the how to use section of the docker image.",
+        "createdAt" : "2020-04-24T17:52:52Z",
+        "updatedAt" : "2020-04-24T17:52:52Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e4032869-d8c2-4202-8763-42bb24706b9c",
+        "parentId" : "87944d9a-1671-46b6-9644-1214b50b9f7e",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Thanks. I checked the doc. It's at least required during re-mount the volumes even we don't provide a volume.",
+        "createdAt" : "2020-04-24T20:03:29Z",
+        "updatedAt" : "2020-04-24T20:03:29Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7fbc27b5a80b4ac239ffd81e67bf26f614de4e69",
+    "line" : 26,
+    "diffHunk" : "@@ -1,1 +39,43 @@    override val usesIpc = false\n    override val jdbcPort: Int = 50000\n    override val privileged = true\n    override def getJdbcUrl(ip: String, port: Int): String =\n      s\"jdbc:db2://$ip:$port/foo:user=db2inst1;password=rootpass;retrieveMessagesFromServerOnGetMessage=true;\" //scalastyle:ignore"
   }
 ]

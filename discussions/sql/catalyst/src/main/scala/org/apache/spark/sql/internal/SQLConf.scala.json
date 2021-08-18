@@ -2913,5 +2913,115 @@
     "commit" : "29719f9de51e7026584b7882755d3cd7806ae8f5",
     "line" : 18,
     "diffHunk" : "@@ -1,1 +1697,1701 @@        \" in Intersect optimization\")\n      .intConf\n      .createWithDefault(100)\n\n  private def isValidTimezone(zone: String): Boolean = {"
+  },
+  {
+    "id" : "f59d6996-0c1e-45f0-88ac-5fc041fca6b5",
+    "prId" : 28366,
+    "prUrl" : "https://github.com/apache/spark/pull/28366#pullrequestreview-404433772",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "dea91d51-b1c6-4a08-895f-0bbc209f34ed",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "We need `.transform(_.toUpperCase(Locale.ROOT))`? Also, could we validate input by `checkValues`? btw, is this feature expected to cover custom data sources except for the prebuilt ones (parquet, orc, ...)?",
+        "createdAt" : "2020-04-29T23:52:19Z",
+        "updatedAt" : "2020-05-05T06:13:39Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "72bb9c24-777b-4e23-b8c1-0410e49590ac",
+        "parentId" : "dea91d51-b1c6-4a08-895f-0bbc209f34ed",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "We compare this list with `toLowerCase` when we need it. So seems to be fine to leave it here. Another similar example is `spark.sql.sources.useV1SourceList`. And as `useV1SourceList` too, seems `checkValues` is not needed.\r\n\r\nCurrently I think it is safer to assume custom data sources don't support this feature. I actually also think if custom data source wants to support it, it is better to adapt data source v2.\r\n\r\nWe don't have a common API for v1 data sources that tells if it supports nested predicate pushdown. If we really want to allow custom v1 data sources have that, we can consider adding one common v1 API for the purpose. But, again, seems to me that we will encourage adapting v2 instead adding new things to v1.",
+        "createdAt" : "2020-05-01T06:03:51Z",
+        "updatedAt" : "2020-05-05T06:13:39Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "34211d65-07f7-44bd-8388-22d88d263cce",
+        "parentId" : "dea91d51-b1c6-4a08-895f-0bbc209f34ed",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "> Currently I think it is safer to assume custom data sources don't support this feature.\r\n\r\nYea, +1 on your thought.",
+        "createdAt" : "2020-05-01T06:08:04Z",
+        "updatedAt" : "2020-05-05T06:13:39Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2bd4fe57-9821-4f25-a0b0-ecd5f1d307cf",
+        "parentId" : "dea91d51-b1c6-4a08-895f-0bbc209f34ed",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "> Currently I think it is safer to assume custom data sources don't support this feature.\r\n\r\nLooks fine. @dbtsai are you good with it? Do you have use cases that need nested predicate pushdown for non-file-source?",
+        "createdAt" : "2020-05-01T07:04:17Z",
+        "updatedAt" : "2020-05-05T06:13:39Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f19884c5-46a2-4bb0-812f-29e84820f4be",
+        "parentId" : "dea91d51-b1c6-4a08-895f-0bbc209f34ed",
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "In v1, we don't have any use-case for supporting it in custom data source. I'm good with it.",
+        "createdAt" : "2020-05-01T22:37:36Z",
+        "updatedAt" : "2020-05-05T06:13:39Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "00b9d47702ae76fca3c7246155175cb42f75136f",
+    "line" : 22,
+    "diffHunk" : "@@ -1,1 +2073,2077 @@        \"other data sources don't support this feature yet. So the default value is 'parquet,orc'.\")\n      .version(\"3.0.0\")\n      .stringConf\n      .createWithDefault(\"parquet,orc\")\n"
+  },
+  {
+    "id" : "e601c69a-ef57-419e-9f88-e275d8984329",
+    "prId" : 28366,
+    "prUrl" : "https://github.com/apache/spark/pull/28366#pullrequestreview-406392374",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9f5cee65-926b-4b8a-998c-849dfab43883",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Seems we decided to only make this configuration effective against DSv1, which seems okay because only DSv1 will have compatibility issues.\r\n\r\nBut shell we at least explicitly mention that this configuration is only effective with DSv1, (or make this configuration effective against DSv2)? Seems like it's going to be confusing to both end users or developers.\r\n\r\n",
+        "createdAt" : "2020-05-06T08:04:49Z",
+        "updatedAt" : "2020-05-06T08:05:03Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0e3a1f64-133f-4921-979e-57dd324e5a69",
+        "parentId" : "9f5cee65-926b-4b8a-998c-849dfab43883",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "I think DSv2 API supposes nested column capacity like pushdown and pruning, so we only need to deal with DSv1 compatibility issues here. Precisely, file source.\r\n\r\nI will create a simple followup to refine the doc of this configuration for this point. Thanks.\r\n\r\n",
+        "createdAt" : "2020-05-06T08:12:51Z",
+        "updatedAt" : "2020-05-06T08:12:52Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a9ad2a16-50f2-40c3-b84b-d461f3585dbf",
+        "parentId" : "9f5cee65-926b-4b8a-998c-849dfab43883",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Thanks!",
+        "createdAt" : "2020-05-06T08:16:57Z",
+        "updatedAt" : "2020-05-06T08:16:58Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "00b9d47702ae76fca3c7246155175cb42f75136f",
+    "line" : 18,
+    "diffHunk" : "@@ -1,1 +2071,2075 @@        \"columns and/or names containing `dots` to data sources. Currently, Parquet implements \" +\n        \"both optimizations while ORC only supports predicates for names containing `dots`. The \" +\n        \"other data sources don't support this feature yet. So the default value is 'parquet,orc'.\")\n      .version(\"3.0.0\")\n      .stringConf"
   }
 ]

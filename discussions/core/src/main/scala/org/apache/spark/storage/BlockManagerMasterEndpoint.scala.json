@@ -416,5 +416,181 @@
     "commit" : "8494bdd94285c7cc5a41e151da920710be7f4671",
     "line" : 22,
     "diffHunk" : "@@ -1,1 +163,167 @@      context.reply(true)\n\n    case DecommissionBlockManagers(executorIds) =>\n      val bmIds = executorIds.flatMap(blockManagerIdByExecutor.get)\n      decommissionBlockManagers(bmIds)"
+  },
+  {
+    "id" : "3462a6e1-b0da-4497-bbc2-97f2eb7d1be4",
+    "prId" : 28370,
+    "prUrl" : "https://github.com/apache/spark/pull/28370#pullrequestreview-405386112",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "00d6cc7e-d50f-4e4a-92e7-e4c557e85cad",
+        "parentId" : null,
+        "authorId" : "31c8cfa2-9d5f-412b-80d0-c7d204dd8cd1",
+        "body" : "Any idea of how expensive this is gonna be? \r\nIf there are large number during production, may be they can be stored separately? May be another PR for this",
+        "createdAt" : "2020-05-02T13:44:47Z",
+        "updatedAt" : "2020-05-14T19:07:46Z",
+        "lastEditedBy" : "31c8cfa2-9d5f-412b-80d0-c7d204dd8cd1",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1c177ca0-e049-401a-91c1-8c2a72167d64",
+        "parentId" : "00d6cc7e-d50f-4e4a-92e7-e4c557e85cad",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "I think storing a separate list of RDD blocks would be more expensive, we also only this call occasionally compared to the other operations in the block manager so I think it's ok if filtering the keyset is expensive (although it probably is not  very expensive).",
+        "createdAt" : "2020-05-04T22:15:26Z",
+        "updatedAt" : "2020-05-14T19:07:46Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c34305662cd91d05b5160c7de72e35e4108b6755",
+    "line" : 59,
+    "diffHunk" : "@@ -1,1 +334,338 @@    val info = blockManagerInfo(blockManagerId)\n\n    val rddBlocks = info.blocks.keySet().asScala.filter(_.isRDD)\n    rddBlocks.map { blockId =>\n      val currentBlockLocations = blockLocations.get(blockId)"
+  },
+  {
+    "id" : "7f4342a0-c083-45f8-9bab-b66ed9b16c42",
+    "prId" : 28370,
+    "prUrl" : "https://github.com/apache/spark/pull/28370#pullrequestreview-405385233",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8a36ca1c-dcaa-45e1-a4de-fadb6d20d1db",
+        "parentId" : null,
+        "authorId" : "31c8cfa2-9d5f-412b-80d0-c7d204dd8cd1",
+        "body" : "Can we make this an interface/trait that is implemented by some entity, which holistically decides the location for replication?\r\nI suggest this model, which will help to plugin code which YARN based cluster can extend based on node decommissioning(this PR deals with executor decommissioning) or some strategy to equally distribute the other block managers or external storage etc. ",
+        "createdAt" : "2020-05-02T14:21:01Z",
+        "updatedAt" : "2020-05-14T19:07:46Z",
+        "lastEditedBy" : "31c8cfa2-9d5f-412b-80d0-c7d204dd8cd1",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0ee0e55e-f67f-4b28-8ee4-4943da641876",
+        "parentId" : "8a36ca1c-dcaa-45e1-a4de-fadb6d20d1db",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Currently the logic exists inside of blockReplicationPolicy so that would be the place to explore that.",
+        "createdAt" : "2020-05-04T17:21:50Z",
+        "updatedAt" : "2020-05-14T19:07:46Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "57fdf9b4-7f57-479a-9a50-d7ebae1c499a",
+        "parentId" : "8a36ca1c-dcaa-45e1-a4de-fadb6d20d1db",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "It seems to be plugable, so if you wanted to specify your own policy you could specify `spark.storage.replication.policy`",
+        "createdAt" : "2020-05-04T22:13:45Z",
+        "updatedAt" : "2020-05-14T19:07:46Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c34305662cd91d05b5160c7de72e35e4108b6755",
+    "line" : 64,
+    "diffHunk" : "@@ -1,1 +339,343 @@      val maxReplicas = currentBlockLocations.size + 1\n      val remainingLocations = currentBlockLocations.toSeq.filter(bm => bm != blockManagerId)\n      val replicateMsg = ReplicateBlock(blockId, remainingLocations, maxReplicas)\n      replicateMsg\n    }.toSeq"
+  },
+  {
+    "id" : "89106d99-1a38-4112-a0ee-7202cbf8e547",
+    "prId" : 28370,
+    "prUrl" : "https://github.com/apache/spark/pull/28370#pullrequestreview-413816377",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "221bc857-5a83-4d3c-b031-dd6596b171bb",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "IIUC, there's no need to do replication if `remainingLocations` is equal to `currentBlockLocations` after filtering the `blockManagerId`, which means we've already successfully done decommission for the block in previous decommission round.",
+        "createdAt" : "2020-05-18T02:59:07Z",
+        "updatedAt" : "2020-05-18T02:59:28Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3cebb00d-10b0-4609-8b95-f40b1ea885f3",
+        "parentId" : "221bc857-5a83-4d3c-b031-dd6596b171bb",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "So we currently remove the block on successful decommissioning. But it's possible it somehow is sufficiently replicated we don't need to do anything so I've added this to https://issues.apache.org/jira/browse/SPARK-31555 for tracking.\r\n",
+        "createdAt" : "2020-05-18T17:55:59Z",
+        "updatedAt" : "2020-05-18T17:55:59Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c34305662cd91d05b5160c7de72e35e4108b6755",
+    "line" : 64,
+    "diffHunk" : "@@ -1,1 +339,343 @@      val maxReplicas = currentBlockLocations.size + 1\n      val remainingLocations = currentBlockLocations.toSeq.filter(bm => bm != blockManagerId)\n      val replicateMsg = ReplicateBlock(blockId, remainingLocations, maxReplicas)\n      replicateMsg\n    }.toSeq"
+  },
+  {
+    "id" : "0a34ada0-4323-4718-87ff-b63565c7ff09",
+    "prId" : 28370,
+    "prUrl" : "https://github.com/apache/spark/pull/28370#pullrequestreview-413819644",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9b0010a9-dc74-4340-a2be-54727ec584c4",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Could you please add some comments to explain why we need \"+1\"?",
+        "createdAt" : "2020-05-18T03:35:17Z",
+        "updatedAt" : "2020-05-18T03:35:17Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8e587f0c-64ac-45e9-a1aa-633d33b074b0",
+        "parentId" : "9b0010a9-dc74-4340-a2be-54727ec584c4",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "I think the fact that we’re decommissioning here makes this self evident",
+        "createdAt" : "2020-05-18T03:48:57Z",
+        "updatedAt" : "2020-05-18T03:48:58Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8c3bf1fa-ccb5-42b3-8249-3d3c93c93bbc",
+        "parentId" : "9b0010a9-dc74-4340-a2be-54727ec584c4",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "The method itself does not declare that it's used for decommissioning.",
+        "createdAt" : "2020-05-18T04:21:56Z",
+        "updatedAt" : "2020-05-18T04:21:56Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ba7e37a3-0325-4717-b252-fde710294e0e",
+        "parentId" : "9b0010a9-dc74-4340-a2be-54727ec584c4",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Reasonable then to add a comment",
+        "createdAt" : "2020-05-18T05:11:09Z",
+        "updatedAt" : "2020-05-18T05:11:09Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ef78ae78-7926-4313-807f-a6846ef7fa42",
+        "parentId" : "9b0010a9-dc74-4340-a2be-54727ec584c4",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Added to https://issues.apache.org/jira/browse/SPARK-31555",
+        "createdAt" : "2020-05-18T18:00:48Z",
+        "updatedAt" : "2020-05-18T18:00:48Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c34305662cd91d05b5160c7de72e35e4108b6755",
+    "line" : 62,
+    "diffHunk" : "@@ -1,1 +337,341 @@    rddBlocks.map { blockId =>\n      val currentBlockLocations = blockLocations.get(blockId)\n      val maxReplicas = currentBlockLocations.size + 1\n      val remainingLocations = currentBlockLocations.toSeq.filter(bm => bm != blockManagerId)\n      val replicateMsg = ReplicateBlock(blockId, remainingLocations, maxReplicas)"
   }
 ]
