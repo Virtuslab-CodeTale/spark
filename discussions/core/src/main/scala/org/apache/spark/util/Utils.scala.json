@@ -1,0 +1,134 @@
+[
+  {
+    "id" : "ffee5878-e639-4f46-afd6-4d90b3749111",
+    "prId" : 33101,
+    "prUrl" : "https://github.com/apache/spark/pull/33101#pullrequestreview-698556736",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "23b0443e-ea25-4403-92e0-e299132b5ce4",
+        "parentId" : null,
+        "authorId" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "body" : "@Ngone51 I understand you requested this check to be brought back in your [previous comment](https://github.com/apache/spark/pull/33101#discussion_r661245031), but it doesn't seem right to me. Based on the [Javadoc for createDirectories](https://docs.oracle.com/javase/7/docs/api/java/nio/file/Files.html#createDirectories(java.nio.file.Path,%20java.nio.file.attribute.FileAttribute...)), the contract is that the directory will be created successfully, or an exception will be thrown. Keeping the `exists`/`isDirectory` checks after is redundant. If we're worried about a JDK bug as [described here](https://github.com/apache/spark/pull/33101#discussion_r661579528), why do we trust the implementation of `File#exists()` and `File#isDirectory()` but not `Files.createDirectories()`? IMO the whole point of switching from `File` to the NIO APIs is that they have more sensible semantics and so we don't need to jump through hoops like this.",
+        "createdAt" : "2021-06-30T15:29:36Z",
+        "updatedAt" : "2021-06-30T15:29:44Z",
+        "lastEditedBy" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "837a986b-96f4-422f-8cb0-5bfd98fc6666",
+        "parentId" : "23b0443e-ea25-4403-92e0-e299132b5ce4",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : ">  Based on the Javadoc for createDirectories, the contract is that the directory will be created successfully, or an exception will be thrown.\r\n\r\nI didn't find such a contract there, but only \" Unlike the createDirectory method, an exception is not thrown if the directory could not be created because it already exists.\"...\r\n\r\n> If we're worried about a JDK bug as described here, why do we trust the implementation of File#exists() and File#isDirectory() but not Files.createDirectories()?\r\n\r\nIt's not about which method we should trust but which way is safer to go.  If there's such a contract as you mentioned, I agree we don't need the check. Otherwise, I think it's safer to follow the original way to avoid suffering from the old issue.\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n",
+        "createdAt" : "2021-07-01T02:20:04Z",
+        "updatedAt" : "2021-07-01T02:20:04Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e468efd7-aafc-4fa1-9981-ccc2f9ace29f",
+        "parentId" : "23b0443e-ea25-4403-92e0-e299132b5ce4",
+        "authorId" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "body" : "The word \"contract\" is not used, but I think that is rarely the case in method descriptions. For example none of the methods on `Dataset` explicitly state contracts or guarantees, but we are expected to assume that the method will do what it says it does, and indicate an error condition using an exception otherwise. My impression here is that the weird semantics of `File#mkdirs()` are translating into FUD about the potential shortcomings of `Files.createDirectories()` and that, if the method were taken without that historical context, we wouldn't be worrying about it.\r\n\r\nThis all being said, it's only three lines of code extra, so of course it is no big detriment to be on the safe side.",
+        "createdAt" : "2021-07-01T16:55:38Z",
+        "updatedAt" : "2021-07-01T16:55:38Z",
+        "lastEditedBy" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d9a57dd6-2e04-425e-9928-72524240a243",
+        "parentId" : "23b0443e-ea25-4403-92e0-e299132b5ce4",
+        "authorId" : "afcafcea-ead3-4649-a4d8-74eb9dfd1a22",
+        "body" : "> The word \"contract\" is not used, but I think that is rarely the case in method descriptions. For example none of the methods on `Dataset` explicitly state contracts or guarantees, but we are expected to assume that the method will do what it says it does, and indicate an error condition using an exception otherwise. My impression here is that the weird semantics of `File#mkdirs()` are translating into FUD about the potential shortcomings of `Files.createDirectories()` and that, if the method were taken without that historical context, we wouldn't be worrying about it.\r\n> \r\n> This all being said, it's only three lines of code extra, so of course it is no big detriment to be on the safe side.\r\n\r\nI agree with you in terms of safety and minimizing modification points.Do you have any questions with my current code?",
+        "createdAt" : "2021-07-02T03:12:13Z",
+        "updatedAt" : "2021-07-02T03:12:13Z",
+        "lastEditedBy" : "afcafcea-ead3-4649-a4d8-74eb9dfd1a22",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "440e139b-495d-4e93-91d2-8b20fa81582a",
+        "parentId" : "23b0443e-ea25-4403-92e0-e299132b5ce4",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "@Shockang Could you leave a comment above the check to give the historical context, e.g.,\r\n\r\n\"The check was required by File#mkdirs() because it could sporadically fail silently. After switching to  Files.createDirectories(), ideally, there should no longer be silent fails. But the check is kept for the safety concern. We can remove the check when we're sure that Files.createDirectories() would never fail silently.\" ",
+        "createdAt" : "2021-07-02T07:51:50Z",
+        "updatedAt" : "2021-07-02T07:51:50Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d4afb5de-68f2-4685-be6e-0813726d2296",
+        "parentId" : "23b0443e-ea25-4403-92e0-e299132b5ce4",
+        "authorId" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "body" : "> Do you have any questions with my current code?\r\n\r\nNo, just wanted to explain my viewpoint. Current code is fine. I agree with @Ngone51 that a comment is helpful to explain the context.",
+        "createdAt" : "2021-07-02T16:36:48Z",
+        "updatedAt" : "2021-07-02T16:36:48Z",
+        "lastEditedBy" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "932de0fe-9f1e-4dd2-99cb-ba830683d6c9",
+        "parentId" : "23b0443e-ea25-4403-92e0-e299132b5ce4",
+        "authorId" : "afcafcea-ead3-4649-a4d8-74eb9dfd1a22",
+        "body" : "> @Shockang Could you leave a comment above the check to give the historical context, e.g.,\r\n> \r\n> \"The check was required by File#mkdirs() because it could sporadically fail silently. After switching to Files.createDirectories(), ideally, there should no longer be silent fails. But the check is kept for the safety concern. We can remove the check when we're sure that Files.createDirectories() would never fail silently.\"\r\n\r\nThis comment looks perfect. Thank you very much for your comments.",
+        "createdAt" : "2021-07-03T02:06:08Z",
+        "updatedAt" : "2021-07-03T02:06:08Z",
+        "lastEditedBy" : "afcafcea-ead3-4649-a4d8-74eb9dfd1a22",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6d123ba1258250e681a6f812303299f5fb67d90c",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +293,297 @@      if ( !dir.exists() || !dir.isDirectory) {\n        logError(s\"Failed to create directory \" + dir)\n      }\n      dir.isDirectory\n    } catch {"
+  },
+  {
+    "id" : "9fef151e-3089-4342-b928-fe1daf042e68",
+    "prId" : 33084,
+    "prUrl" : "https://github.com/apache/spark/pull/33084#pullrequestreview-692857925",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "39cf041f-4d75-4270-9a57-64aef1e42e9a",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Yeah, mutable.Seq to scala.Seq now requires explicit conversion as it refers to immutable.Seq. Looks like it's by intention of Scala 2.13 change.",
+        "createdAt" : "2021-06-25T13:41:09Z",
+        "updatedAt" : "2021-06-25T13:41:09Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f2cf34c7-7248-4ccb-8608-9fd907051bb2",
+        "parentId" : "39cf041f-4d75-4270-9a57-64aef1e42e9a",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "Yup, the Scala 2.13 build passed in the latest commit.",
+        "createdAt" : "2021-06-25T14:06:13Z",
+        "updatedAt" : "2021-06-25T14:06:13Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9b3c83a6-c49a-4764-9e82-7cb03f0ca89e",
+        "parentId" : "39cf041f-4d75-4270-9a57-64aef1e42e9a",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Yes, I confirmed that the last commit passed Scala 2.13 build.",
+        "createdAt" : "2021-06-25T14:07:15Z",
+        "updatedAt" : "2021-06-25T14:07:16Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "25c1583da4b91a8285b53cfa04984cadc1a2ce14",
+    "line" : 24,
+    "diffHunk" : "@@ -1,1 +3153,3157 @@      IOUtils.closeQuietly(out)\n    }\n    files.toSeq\n  }\n}"
+  }
+]

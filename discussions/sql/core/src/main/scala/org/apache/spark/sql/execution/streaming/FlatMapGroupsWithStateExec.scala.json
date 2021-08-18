@@ -86,5 +86,192 @@
     "commit" : "457280910896a17e5740bfe9f93f9210c175c908",
     "line" : 53,
     "diffHunk" : "@@ -1,1 +441,445 @@        val optionalStates = states.map { stateValue =>\n          if (foundInitialStateForKey) {\n            foundDuplicateInitialKeyException()\n          }\n          foundInitialStateForKey = true"
+  },
+  {
+    "id" : "96f163e1-d6b0-4c39-8e2b-eae3611b091c",
+    "prId" : 33093,
+    "prUrl" : "https://github.com/apache/spark/pull/33093#pullrequestreview-697102000",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a1abe452-1175-4ee4-a3d7-485e1545f852",
+        "parentId" : null,
+        "authorId" : "9cd657f0-37cd-41bd-908a-f2c996b95a7a",
+        "body" : "add more docs regarding the assumptions here... that both grouping attributes and initStateGroupAttr must group data in the exact same way to ensure that the same key's state and data are collocated.",
+        "createdAt" : "2021-06-30T14:41:06Z",
+        "updatedAt" : "2021-06-30T14:41:06Z",
+        "lastEditedBy" : "9cd657f0-37cd-41bd-908a-f2c996b95a7a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b0a96ec9-a542-40c8-a2d0-ba8c153849b0",
+        "parentId" : "a1abe452-1175-4ee4-a3d7-485e1545f852",
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "Looks like `HashClusteredDistribution` is different than `ClusteredDistribution`. Will this change break existing state store?",
+        "createdAt" : "2021-06-30T21:46:04Z",
+        "updatedAt" : "2021-06-30T21:52:57Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a2b852d8-885b-4707-9244-f6294e1410ab",
+        "parentId" : "a1abe452-1175-4ee4-a3d7-485e1545f852",
+        "authorId" : "0e7383af-ae8f-4891-9ab6-e80efa3990c0",
+        "body" : "done, changed it back to ClusteredDistribution",
+        "createdAt" : "2021-07-01T10:54:06Z",
+        "updatedAt" : "2021-07-01T10:54:06Z",
+        "lastEditedBy" : "0e7383af-ae8f-4891-9ab6-e80efa3990c0",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "eb83b684fdc7d62846b3860f90d26ec119c136c5",
+    "line" : 75,
+    "diffHunk" : "@@ -1,1 +93,97 @@   * to have the same grouping so that the data are co-lacated on the same task.\n   */\n  override def requiredChildDistribution: Seq[Distribution] = {\n    ClusteredDistribution(groupingAttributes, stateInfo.map(_.numPartitions)) ::\n    ClusteredDistribution(initialStateGroupAttrs, stateInfo.map(_.numPartitions)) ::"
+  },
+  {
+    "id" : "21d58eed-f4ce-4244-8947-287b742f2f84",
+    "prId" : 33093,
+    "prUrl" : "https://github.com/apache/spark/pull/33093#pullrequestreview-696275289",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "68a52862-a398-45dc-9117-48f128e87a4c",
+        "parentId" : null,
+        "authorId" : "9cd657f0-37cd-41bd-908a-f2c996b95a7a",
+        "body" : "nit: give a few empty lines here to explain this monolith code.",
+        "createdAt" : "2021-06-30T14:57:01Z",
+        "updatedAt" : "2021-06-30T14:57:02Z",
+        "lastEditedBy" : "9cd657f0-37cd-41bd-908a-f2c996b95a7a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "eb83b684fdc7d62846b3860f90d26ec119c136c5",
+    "line" : 255,
+    "diffHunk" : "@@ -1,1 +223,227 @@        case (partitionId, childDataIterator, initStateIterator) =>\n\n          val stateStoreId = StateStoreId(\n            stateInfo.get.checkpointLocation, stateInfo.get.operatorId, partitionId)\n          val storeProviderId = StateStoreProviderId(stateStoreId, stateInfo.get.queryRunId)"
+  },
+  {
+    "id" : "e91022d6-b58a-4349-8ff2-0e5223ce3e62",
+    "prId" : 33093,
+    "prUrl" : "https://github.com/apache/spark/pull/33093#pullrequestreview-697174513",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "55848365-cce1-428a-828b-04ac50ff1c00",
+        "parentId" : null,
+        "authorId" : "9cd657f0-37cd-41bd-908a-f2c996b95a7a",
+        "body" : "i dont think this is quite right yet. Making this Seq empty probably means that it does not consider the locality of any state store. Maybe this should be set as the `StateStoreId.DEFAULT_STORE_NAME`\r\n\r\nwe will need tests for this. using git history to see how tests were added for `stateStoreAwareZipPartitions`",
+        "createdAt" : "2021-06-30T15:00:00Z",
+        "updatedAt" : "2021-06-30T15:00:00Z",
+        "lastEditedBy" : "9cd657f0-37cd-41bd-908a-f2c996b95a7a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d9bd753e-2fb4-4d6a-94c8-60f28136764a",
+        "parentId" : "55848365-cce1-428a-828b-04ac50ff1c00",
+        "authorId" : "0e7383af-ae8f-4891-9ab6-e80efa3990c0",
+        "body" : "hmm It uses that by default https://livegrep.dev.databricks.com/view/databricks/runtime/sql/core/src/main/scala/org/apache/spark/sql/execution/streaming/state/StateStore.scala#L385\r\n\r\nThe only test I found was https://livegrep.dev.databricks.com/view/databricks/runtime/sql/core/src/test/scala/org/apache/spark/sql/streaming/StreamingJoinSuite.scala#L513 not sure how we can use that for this scenario",
+        "createdAt" : "2021-07-01T12:19:46Z",
+        "updatedAt" : "2021-07-01T12:19:46Z",
+        "lastEditedBy" : "0e7383af-ae8f-4891-9ab6-e80efa3990c0",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "eb83b684fdc7d62846b3860f90d26ec119c136c5",
+    "line" : 203,
+    "diffHunk" : "@@ -1,1 +217,221 @@        initialState.execute(),\n        getStateInfo,\n        storeNames = Seq(),\n        session.sqlContext.streams.stateStoreCoordinator) {\n        // The state store aware zip partitions will provide us with two iterators,"
+  },
+  {
+    "id" : "17ee7c25-c413-4893-abe2-78431c1f9d65",
+    "prId" : 33093,
+    "prUrl" : "https://github.com/apache/spark/pull/33093#pullrequestreview-697103649",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6688cae1-e51b-4d94-91c0-b5e919946a01",
+        "parentId" : null,
+        "authorId" : "9cd657f0-37cd-41bd-908a-f2c996b95a7a",
+        "body" : "this is not quite right... user function is called only once for every key that has either initial state or data or both.",
+        "createdAt" : "2021-06-30T15:02:01Z",
+        "updatedAt" : "2021-06-30T15:02:01Z",
+        "lastEditedBy" : "9cd657f0-37cd-41bd-908a-f2c996b95a7a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8c19b238-006a-449c-a9c6-b20586a61f90",
+        "parentId" : "6688cae1-e51b-4d94-91c0-b5e919946a01",
+        "authorId" : "0e7383af-ae8f-4891-9ab6-e80efa3990c0",
+        "body" : "done",
+        "createdAt" : "2021-07-01T10:55:59Z",
+        "updatedAt" : "2021-07-01T10:55:59Z",
+        "lastEditedBy" : "0e7383af-ae8f-4891-9ab6-e80efa3990c0",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "eb83b684fdc7d62846b3860f90d26ec119c136c5",
+    "line" : 300,
+    "diffHunk" : "@@ -1,1 +287,291 @@    /**\n     * Process the new data iterator along with the initial state. The initial state is applied\n     * before processing the new data for every key. The user defined function is called only\n     * once for every key that has either initial state or data or both.\n     */"
+  },
+  {
+    "id" : "0a463097-152c-4891-8a5e-5541099c88f8",
+    "prId" : 33093,
+    "prUrl" : "https://github.com/apache/spark/pull/33093#pullrequestreview-697103769",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "08a7da3b-a737-480e-bed5-766ef0664761",
+        "parentId" : null,
+        "authorId" : "9cd657f0-37cd-41bd-908a-f2c996b95a7a",
+        "body" : "add more inline docs explaining the steps here",
+        "createdAt" : "2021-06-30T15:02:45Z",
+        "updatedAt" : "2021-06-30T15:02:45Z",
+        "lastEditedBy" : "9cd657f0-37cd-41bd-908a-f2c996b95a7a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3015f1a1-ac0f-4f6b-8474-d9c945a1b4c4",
+        "parentId" : "08a7da3b-a737-480e-bed5-766ef0664761",
+        "authorId" : "0e7383af-ae8f-4891-9ab6-e80efa3990c0",
+        "body" : "done",
+        "createdAt" : "2021-07-01T10:56:07Z",
+        "updatedAt" : "2021-07-01T10:56:08Z",
+        "lastEditedBy" : "0e7383af-ae8f-4891-9ab6-e80efa3990c0",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "eb83b684fdc7d62846b3860f90d26ec119c136c5",
+    "line" : 307,
+    "diffHunk" : "@@ -1,1 +294,298 @@        initStateIter: Iterator[InternalRow]\n      ): Iterator[InternalRow] = {\n\n      if (!childDataIter.hasNext && !initStateIter.hasNext) return Iterator.empty\n"
+  },
+  {
+    "id" : "9c1d78ca-6b6e-48f0-8dc8-c7f5728e0ce9",
+    "prId" : 33093,
+    "prUrl" : "https://github.com/apache/spark/pull/33093#pullrequestreview-697265429",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e2f4f6c7-795b-450f-aa35-490782cd28a4",
+        "parentId" : null,
+        "authorId" : "9cd657f0-37cd-41bd-908a-f2c996b95a7a",
+        "body" : "nit: do not have to do in this PR but is it possible to print the key that has duplicate..   so that the user can debug?",
+        "createdAt" : "2021-07-01T13:46:38Z",
+        "updatedAt" : "2021-07-01T13:46:38Z",
+        "lastEditedBy" : "9cd657f0-37cd-41bd-908a-f2c996b95a7a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "eb83b684fdc7d62846b3860f90d26ec119c136c5",
+    "line" : 324,
+    "diffHunk" : "@@ -1,1 +311,315 @@          initialStateRowIter.foreach { initialStateRow =>\n            if (foundInitialStateForKey) {\n              throw new IllegalArgumentException(\"The initial state provided contained \" +\n                \"multiple rows(state) with the same key. Make sure to de-duplicate the \" +\n                \"initial state before passing it.\")"
   }
 ]

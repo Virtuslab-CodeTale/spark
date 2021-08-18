@@ -1,0 +1,68 @@
+[
+  {
+    "id" : "0448c95c-eaa6-4e24-9725-9e4206b400c2",
+    "prId" : 33146,
+    "prUrl" : "https://github.com/apache/spark/pull/33146#pullrequestreview-697161729",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a236b0e6-1f0b-4615-8902-92772097fddb",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "if `fields(0).nullable` is false, how can `row.isNullAt(0)` be true?",
+        "createdAt" : "2021-06-30T13:11:33Z",
+        "updatedAt" : "2021-06-30T13:11:33Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0d476922-445e-4af8-ab0c-48659f924bb1",
+        "parentId" : "a236b0e6-1f0b-4615-8902-92772097fddb",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "(I have the same question)",
+        "createdAt" : "2021-07-01T02:03:20Z",
+        "updatedAt" : "2021-07-01T02:03:27Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "35b515c3-1bd4-42f3-9113-4306cedb8dbd",
+        "parentId" : "a236b0e6-1f0b-4615-8902-92772097fddb",
+        "authorId" : "c12eb4aa-c39d-4fa9-8470-ed071c0be24a",
+        "body" : "If user create dataframe from `spark.internalCreateDataFrame()`, the `row.isNullAt()` may be true even though the schema nullable is false.\r\nFor instance:\r\n```scala\r\n  val schema = StructType(Seq(\r\n    StructField(\"x\",\r\n      StructType(Seq(\r\n        StructField(\"y\", IntegerType, true),\r\n        StructField(\"z\", IntegerType, false)\r\n      )))))\r\n  val rdd = spark.sparkContext.parallelize(Seq(InternalRow(InternalRow(1, null))))\r\n  val df = spark.internalCreateDataFrame(rdd, schema)\r\n  df.show\r\n  // current master branch output\r\n  //  +---------+\r\n  //  |        x|\r\n  //  +---------+\r\n  //  |{1, null}|\r\n  //  +---------+\r\n```\r\n\r\nAlthough the `spark.internalCreateDataFrame()` is sql package private API, but `spark.read.json()` and `spark.read.csv()` call it without null value handled.(the example show in pr description)\r\n",
+        "createdAt" : "2021-07-01T03:28:58Z",
+        "updatedAt" : "2021-07-01T03:34:21Z",
+        "lastEditedBy" : "c12eb4aa-c39d-4fa9-8470-ed071c0be24a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "992483e1-a9e1-40e7-90a8-fde414f35e1d",
+        "parentId" : "a236b0e6-1f0b-4615-8902-92772097fddb",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Then we need to fix the nullability. There are so many places in the Spark codebase that relies on nullability to do optimizations. It's not possible to change all of them to not trust the nullability anymore.\r\n\r\nCan we fix `spark.read.json()` to set the nullability correctly?",
+        "createdAt" : "2021-07-01T04:54:55Z",
+        "updatedAt" : "2021-07-01T04:54:55Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c637ef51-49df-40ec-bb82-6a4cbd7608ca",
+        "parentId" : "a236b0e6-1f0b-4615-8902-92772097fddb",
+        "authorId" : "c12eb4aa-c39d-4fa9-8470-ed071c0be24a",
+        "body" : "Ok, let me try.",
+        "createdAt" : "2021-07-01T12:05:41Z",
+        "updatedAt" : "2021-07-01T12:05:41Z",
+        "lastEditedBy" : "c12eb4aa-c39d-4fa9-8470-ed071c0be24a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "25c396c3e30679f11318d3a0c449306b12762af2",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +407,411 @@          val st = fields.map(_.dataType)\n          val toUTF8StringFuncs = st.map(castToString)\n          if (fields(0).nullable && row.isNullAt(0)) {\n            if (!legacyCastToStr) builder.append(\"null\")\n          } else {"
+  }
+]

@@ -86,5 +86,93 @@
     "commit" : "44c744988b9e219f34a96a3a5835aff150607d42",
     "line" : 11,
     "diffHunk" : "@@ -1,1 +47,51 @@  // - is still resolved\n  // - only host special expressions in supported operators\n  // - has globally-unique attribute IDs\n  // - optimized plan have same schema with previous plan.\n  override protected def isPlanIntegral("
+  },
+  {
+    "id" : "42db3364-50fe-4fb7-b770-f58b74bd4ee9",
+    "prId" : 33100,
+    "prUrl" : "https://github.com/apache/spark/pull/33100#pullrequestreview-693527498",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c9c3b4e9-1c57-4fa6-871f-92d8570dbb41",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "The change here looks good. I wonder if we should better create a separate file to group similar stuff though .... e.g.) we can remove deduplicate too.",
+        "createdAt" : "2021-06-28T03:28:55Z",
+        "updatedAt" : "2021-06-28T03:28:56Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "82b03f052441b8830100b4202e6037a283aef18f",
+    "line" : 25,
+    "diffHunk" : "@@ -1,1 +1220,1224 @@\n  private val applyLocally: PartialFunction[LogicalPlan, LogicalPlan] = {\n    case Sort(_, _, child) if child.maxRows.exists(_ <= 1L) => child\n    case s @ Sort(orders, _, child) if orders.isEmpty || orders.exists(_.child.foldable) =>\n      val newOrders = orders.filterNot(_.child.foldable)"
+  },
+  {
+    "id" : "62bcb8d2-b9ac-4128-b95a-e2ac4e78d469",
+    "prId" : 33099,
+    "prUrl" : "https://github.com/apache/spark/pull/33099#pullrequestreview-694148158",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d508edda-5fbf-40ef-810c-79402e663dab",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "No, we can't do this. `RebalancePartitions` is a best-effort and does not guarantee partitioning. We intentionally do not let `RebalancePartitions` extend `RepartitionOperation`, to avoid wrong optimizations.\r\n\r\nPlease revert this.",
+        "createdAt" : "2021-06-28T05:24:28Z",
+        "updatedAt" : "2021-06-28T05:24:38Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ab5420ff-0ef9-4190-a76e-8e0a43360d94",
+        "parentId" : "d508edda-5fbf-40ef-810c-79402e663dab",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "See https://github.com/apache/spark/pull/32932#discussion_r656249153",
+        "createdAt" : "2021-06-28T05:25:32Z",
+        "updatedAt" : "2021-06-28T05:25:33Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "25b01e2a-686b-4af7-ac5c-ee467ef15c49",
+        "parentId" : "d508edda-5fbf-40ef-810c-79402e663dab",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "OK",
+        "createdAt" : "2021-06-28T08:18:00Z",
+        "updatedAt" : "2021-06-28T08:18:00Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6abd5891-125d-4c26-bfa0-e0f84cbded16",
+        "parentId" : "d508edda-5fbf-40ef-810c-79402e663dab",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "Reverted at: https://github.com/apache/spark/commit/108635af1708173a72bec0e36bf3f2cea5b088c4",
+        "createdAt" : "2021-06-28T08:43:03Z",
+        "updatedAt" : "2021-06-28T08:43:03Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ddebaa85-5310-41de-9ad7-81b0e426928a",
+        "parentId" : "d508edda-5fbf-40ef-810c-79402e663dab",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Oh, got it. Thank you for reverting, @cloud-fan and @wangyum .",
+        "createdAt" : "2021-06-28T16:16:50Z",
+        "updatedAt" : "2021-06-28T16:16:51Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "67642d87f7d1799e97f925444484f52354e6af72",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +914,918 @@\n    // Case 3: When a RebalancePartitions has a child of Repartition or RepartitionByExpression\n    // we can remove the child.\n    case r @ RebalancePartitions(_, child: RepartitionOperation) =>\n      r.copy(child = child.child)"
   }
 ]
