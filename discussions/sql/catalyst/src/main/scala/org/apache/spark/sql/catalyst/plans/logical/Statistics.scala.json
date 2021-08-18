@@ -42,5 +42,60 @@
     "commit" : "40ba767126a0275d7d50f55afe8f9dba88901818",
     "line" : 16,
     "diffHunk" : "@@ -1,1 +125,129 @@      oldNumRows: BigInt,\n      newNumRows: BigInt,\n      updatedColumnStatOpt: Option[ColumnStat] = None): ColumnStat = {\n    val updatedColumnStat = updatedColumnStatOpt.getOrElse(this)\n    val newDistinctCount = EstimationUtils.updateStat(oldNumRows, newNumRows,"
+  },
+  {
+    "id" : "87245845-02f6-42d4-a72f-86e9d1bb3d8e",
+    "prId" : 32450,
+    "prUrl" : "https://github.com/apache/spark/pull/32450#pullrequestreview-654447348",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "dce60797-a939-4857-b3e9-e16266ee741c",
+        "parentId" : null,
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "I feel it's a bit weird that `Statistics` has a field `MapOutputStatistics` where `MapOutputStatistics` is a physical shuffle operator only thing, but `Statistics` is for all logical operators. Maybe we can have:\r\n\r\n```\r\nRunTimeStatsSpec(\r\n  isRuntime: Boolean,\r\n  sizeInBytesPerPartition: Option[Array[Long]]\r\n)\r\n\r\nStatistics(\r\n  runTimeStatsSpec: Option[RunTimeStatsSpec] = None,\r\n  ...\r\n)\r\n```",
+        "createdAt" : "2021-05-06T06:45:46Z",
+        "updatedAt" : "2021-05-06T06:45:51Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fc61f867-6179-4ae0-bf8c-e3845f8ac209",
+        "parentId" : "dce60797-a939-4857-b3e9-e16266ee741c",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "Have the similar thought and the change you point out seems a better approach. What do you think about ? @maropu @cloud-fan ",
+        "createdAt" : "2021-05-06T07:04:11Z",
+        "updatedAt" : "2021-05-06T07:04:11Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "110f5809-66d5-4a3f-8d44-4348df5aeb06",
+        "parentId" : "dce60797-a939-4857-b3e9-e16266ee741c",
+        "authorId" : "8e87861a-4202-49a2-baf7-6d51f6aaa5a2",
+        "body" : "FYI, we took anther approach to support SHJ in AQE. We added a rule in `AdaptiveSparkPlanExec` to convert SMJ to SHJ according to shuffle stats, which requires no changes in `Statistics.scala` as the statistics is ready in `ShuffleStageInfo`.\r\n\r\nThe SMJ could also be converted to SHJ if applicable even if `PREFER_SORTMERGE` is set. cc @Liulietong\r\n\r\ncc @luuliietong",
+        "createdAt" : "2021-05-07T05:30:05Z",
+        "updatedAt" : "2021-05-07T05:30:05Z",
+        "lastEditedBy" : "8e87861a-4202-49a2-baf7-6d51f6aaa5a2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0f2283d6-550c-4eae-b87f-0f6822ad6949",
+        "parentId" : "dce60797-a939-4857-b3e9-e16266ee741c",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "> We added a rule in AdaptiveSparkPlanExec to convert SMJ to SHJ according to shuffle stats\r\n\r\nThis looks like a better idea. Do you want to open a PR for it?",
+        "createdAt" : "2021-05-07T13:18:18Z",
+        "updatedAt" : "2021-05-07T13:18:18Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e8283a21d15bf5c3e79f2d134640838faf5480e2",
+    "line" : 21,
+    "diffHunk" : "@@ -1,1 +59,63 @@    attributeStats: AttributeMap[ColumnStat] = AttributeMap(Nil),\n    isRuntime: Boolean = false,\n    mapOutputStatistics: Option[MapOutputStatistics] = None) {\n\n  override def toString: String = \"Statistics(\" + simpleString + \")\""
   }
 ]

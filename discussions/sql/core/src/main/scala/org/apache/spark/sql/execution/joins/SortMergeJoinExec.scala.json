@@ -207,5 +207,269 @@
     "commit" : "191243698d17978e1d4ed2bb966de2564926b309",
     "line" : 158,
     "diffHunk" : "@@ -1,1 +486,490 @@         |  return false; // unreachable\n         |}\n       \"\"\".stripMargin, inlineToOuterClass = true)\n\n    (streamedRow, matches)"
+  },
+  {
+    "id" : "63d0a7b6-180e-4c76-a5a0-8934c748d9ca",
+    "prId" : 32476,
+    "prUrl" : "https://github.com/apache/spark/pull/32476#pullrequestreview-656304733",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9fa1f3ee-6a60-4924-8934-6fd7fcd7437e",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "```\r\n        // Eagerly return streamed row.\r\n        s\"\"\"\r\n           |$matches.clear();\r\n           |return false;\r\n         \"\"\".stripMargin\r\n```\r\n?",
+        "createdAt" : "2021-05-09T14:01:08Z",
+        "updatedAt" : "2021-05-11T09:17:07Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c515a89c-a72f-413a-a98e-ddd032ca68eb",
+        "parentId" : "9fa1f3ee-6a60-4924-8934-6fd7fcd7437e",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "Wanted to avoid `clear()` if `isEmpty()` is true. `ExternalAppendOnlyUnsafeRowArray.isEmpty()` is very cheap but `clear()` sets multiple variables.",
+        "createdAt" : "2021-05-10T00:25:54Z",
+        "updatedAt" : "2021-05-11T09:17:07Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1425cdbf-6125-4343-8792-82c4f1319bfc",
+        "parentId" : "9fa1f3ee-6a60-4924-8934-6fd7fcd7437e",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "I see. Could you leave some comments about it there?",
+        "createdAt" : "2021-05-10T00:38:48Z",
+        "updatedAt" : "2021-05-11T09:17:07Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "15e81b48-0317-408b-a93d-d26d5db57095",
+        "parentId" : "9fa1f3ee-6a60-4924-8934-6fd7fcd7437e",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@maropu - added comment.",
+        "createdAt" : "2021-05-11T05:53:33Z",
+        "updatedAt" : "2021-05-11T09:17:07Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "429edcc5b6ab11f600642fc61d5205da135ce083",
+    "line" : 41,
+    "diffHunk" : "@@ -1,1 +449,453 @@           |  $matches.clear();\n           |}\n           |return false;\n         \"\"\".stripMargin\n      case x =>"
+  },
+  {
+    "id" : "bf2d9519-ec5e-42f2-99a0-df39beac753b",
+    "prId" : 32476,
+    "prUrl" : "https://github.com/apache/spark/pull/32476#pullrequestreview-655203734",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f8270dcd-949d-4639-ad88-fd2b1a3066ca",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "In the outer case, a return value is not used?",
+        "createdAt" : "2021-05-09T23:47:28Z",
+        "updatedAt" : "2021-05-11T09:17:07Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f3e21a41-dc1f-4a1c-91b2-f5ae9c46df74",
+        "parentId" : "f8270dcd-949d-4639-ad88-fd2b1a3066ca",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "It looks reusing the inner-case code makes the outer-case code inefficient. For example, if there are too many matched duplicate rows in the buffered side, it seems we don't need to put all the rows in `matches`, right?",
+        "createdAt" : "2021-05-10T00:18:53Z",
+        "updatedAt" : "2021-05-11T09:17:07Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "26f3f31a-86ad-473e-94ec-ddb8240d4615",
+        "parentId" : "f8270dcd-949d-4639-ad88-fd2b1a3066ca",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "> In the outer case, a return value is not used?\r\n\r\nYes. Otherwise it's very hard to re-use code in `findNextJoinRows`. I can further make more change to not return anything for `findNextJoinRows` in case it's an outer join. Do we want to do that?",
+        "createdAt" : "2021-05-10T00:22:52Z",
+        "updatedAt" : "2021-05-11T09:17:07Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3fac5715-e161-440d-ab76-c95fda73ce7c",
+        "parentId" : "f8270dcd-949d-4639-ad88-fd2b1a3066ca",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "> For example, if there are too many matched duplicate rows in the buffered side, it seems we don't need to put all the rows in matches, right?\r\n\r\nWhy we don't need to put all the rows? We anyway need to evaluate all the rows on buffered side for join, right?",
+        "createdAt" : "2021-05-10T00:26:58Z",
+        "updatedAt" : "2021-05-11T09:17:07Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "506cc00a-d4b5-43e8-9bb1-0a1f3f10eff6",
+        "parentId" : "f8270dcd-949d-4639-ad88-fd2b1a3066ca",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "> Why we don't need to put all the rows? We anyway need to evaluate all the rows on buffered side for join, right?\r\n\r\nOh, my bad. ya, you're right. I misunderstood it.",
+        "createdAt" : "2021-05-10T00:42:55Z",
+        "updatedAt" : "2021-05-11T09:17:07Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "64053a71-200e-4826-85a2-0e8eaa3833f1",
+        "parentId" : "f8270dcd-949d-4639-ad88-fd2b1a3066ca",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "> In the outer case, a return value is not used?\r\nYes. Otherwise it's very hard to re-use code in findNextJoinRows. I can further make more change to not return anything for findNextJoinRows in case it's an outer join. Do we want to do that?\r\n\r\nokay, the current one looks fine. Let's just wait for a @cloud-fan comment here.",
+        "createdAt" : "2021-05-10T00:44:54Z",
+        "updatedAt" : "2021-05-11T09:17:07Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b1c621af-0ab4-420b-a19d-8c2d44b06cbb",
+        "parentId" : "f8270dcd-949d-4639-ad88-fd2b1a3066ca",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "btw, in the current generated code, it seems `conditionCheck` is evaluated outside `findNextJoinRows`. We cannot evaluate it inside `findNextJoinRows` to avoid putting unmached rows in `matches`?",
+        "createdAt" : "2021-05-10T00:54:06Z",
+        "updatedAt" : "2021-05-11T09:17:07Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bfab61a8-0157-4368-8b6d-6e5714df7f0e",
+        "parentId" : "f8270dcd-949d-4639-ad88-fd2b1a3066ca",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@maropu - No I think we need buffer anyway. The buffered rows has same join keys with current streamed row. But there can be multiple followed streamed rows having same join keys, as the buffered rows. Even though buffered rows cannot match condition with current streamed row, they may match condition with followed streamed rows. I think this is how current sort merge join (code-gen & iterator) is designed.",
+        "createdAt" : "2021-05-10T03:25:24Z",
+        "updatedAt" : "2021-05-11T09:17:07Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "429edcc5b6ab11f600642fc61d5205da135ce083",
+    "line" : 91,
+    "diffHunk" : "@@ -1,1 +499,503 @@    ctx.addNewFunction(\"findNextJoinRows\",\n      s\"\"\"\n         |private boolean findNextJoinRows(\n         |    scala.collection.Iterator streamedIter,\n         |    scala.collection.Iterator bufferedIter) {"
+  },
+  {
+    "id" : "1ab018a2-3764-4516-9109-a3cde1809025",
+    "prId" : 32476,
+    "prUrl" : "https://github.com/apache/spark/pull/32476#pullrequestreview-656314667",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e828db20-4d90-4846-8206-b7894ee0cb2f",
+        "parentId" : null,
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "sorry forgot to change this in https://github.com/apache/spark/pull/32495, fix it now here. cc @maropu.",
+        "createdAt" : "2021-05-11T06:12:10Z",
+        "updatedAt" : "2021-05-11T09:17:07Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "429edcc5b6ab11f600642fc61d5205da135ce083",
+    "line" : 118,
+    "diffHunk" : "@@ -1,1 +567,571 @@      streamedRow: String): (Seq[ExprCode], Seq[String]) = {\n    ctx.INPUT_ROW = streamedRow\n    streamedPlan.output.zipWithIndex.map { case (a, i) =>\n      val value = ctx.freshName(\"value\")\n      val valueCode = CodeGenerator.getValue(streamedRow, a.dataType, i.toString)"
+  },
+  {
+    "id" : "4f1636f1-29d8-4440-9e36-32ee3c9b7e6d",
+    "prId" : 32476,
+    "prUrl" : "https://github.com/apache/spark/pull/32476#pullrequestreview-656476508",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9fa2e2d5-3ba4-4285-9a9c-5e52989473ff",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Can we add some comments to explain `findNextJoinRows`? Its \"return value\" is not just the boolean value, it can also change some states, like `bufferedRow = null`. We should explain how the states can be changed and what does it mean.",
+        "createdAt" : "2021-05-11T06:50:24Z",
+        "updatedAt" : "2021-05-11T09:17:07Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "670e9606-2fad-4a9c-b167-c35166a0d437",
+        "parentId" : "9fa2e2d5-3ba4-4285-9a9c-5e52989473ff",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@cloud-fan - sure, updated with comment.",
+        "createdAt" : "2021-05-11T09:17:40Z",
+        "updatedAt" : "2021-05-11T09:17:44Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "429edcc5b6ab11f600642fc61d5205da135ce083",
+    "line" : 89,
+    "diffHunk" : "@@ -1,1 +497,501 @@    //            2. Left/Right Outer join: keep the row and return false (with `matches` being\n    //                                      empty).\n    ctx.addNewFunction(\"findNextJoinRows\",\n      s\"\"\"\n         |private boolean findNextJoinRows("
+  },
+  {
+    "id" : "b12c868b-8bf1-4125-9e9f-96f360c8bdd3",
+    "prId" : 32476,
+    "prUrl" : "https://github.com/apache/spark/pull/32476#pullrequestreview-657264552",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "76596633-d636-401b-8b7a-e4bd5ba36358",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "why can we safely clear the previous `matches`? Are we sure they are already outputed?",
+        "createdAt" : "2021-05-11T09:49:54Z",
+        "updatedAt" : "2021-05-11T09:50:01Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ad32954d-5f7d-4c54-b2d0-7692e1638e6c",
+        "parentId" : "76596633-d636-401b-8b7a-e4bd5ba36358",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@cloud-fan - here is my theory:\r\n\r\n1.Previously some `streamedRow` (say `row_a`) has non-empty `matches`.\r\n2.Current `streamedRow` (say `row_b`) has null join keys. `row_b` does not match with `row_a` (because `row_b` has null key but `row_a` does not have), so `row_b` does not match with `matches`.\r\n\r\nIt's safe to clear `matches` now as there won't be a future `streamedRow` (say `row_c`) to match with `matches`. If there's such `row_c`, then [`row_a`, `row_b`, `row_c`] is not valid sorted on join keys (because then the correct sort ordering should be [`row_a`, `row_c`, `row_b`]). So there's no such `row_c`, and it's safe to clear now.",
+        "createdAt" : "2021-05-11T09:59:19Z",
+        "updatedAt" : "2021-05-11T09:59:20Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f9e4a988-d0e8-4a51-b65b-93e7b9062b54",
+        "parentId" : "76596633-d636-401b-8b7a-e4bd5ba36358",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Why it's not a problem for inner join?",
+        "createdAt" : "2021-05-11T12:16:38Z",
+        "updatedAt" : "2021-05-11T12:16:38Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4772ccb8-4fb6-4987-b657-e3e49d46281b",
+        "parentId" : "76596633-d636-401b-8b7a-e4bd5ba36358",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "For streamed row with null keys, inner join will skip it, but left/right outer join (and left semi/anti join in followup) needs to output it. So for inner join we don't need to clear `matches` right away as the streamed row was not outputted. It seems to me it's not very good to have a streamed row with a non-cleared `matches` (which matches previous rows but not itself). We can change code to live with it but I feel it's not very clean.",
+        "createdAt" : "2021-05-11T21:55:48Z",
+        "updatedAt" : "2021-05-11T21:56:35Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "429edcc5b6ab11f600642fc61d5205da135ce083",
+    "line" : 78,
+    "diffHunk" : "@@ -1,1 +486,490 @@    //            1. Inner join: skip the row. `matches` will be cleared later when hitting the\n    //                           next `streamedRow` with non-null join keys.\n    //            2. Left/Right Outer join: clear the previous `matches` if needed, keep the row,\n    //                                      and return false.\n    //"
   }
 ]

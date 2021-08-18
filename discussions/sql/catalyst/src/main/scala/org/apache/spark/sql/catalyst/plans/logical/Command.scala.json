@@ -1,0 +1,68 @@
+[
+  {
+    "id" : "7c9e9ae2-1f8d-46ba-ba75-e008dcbd829f",
+    "prId" : 32447,
+    "prUrl" : "https://github.com/apache/spark/pull/32447#pullrequestreview-654113657",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "197a6b2b-fd0d-498a-9d39-eca624b6569b",
+        "parentId" : null,
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "@cloud-fan, updated. Do you also want to explicitly override this to be `Nil` for `CacheTable`, `CacheTableAsSelect` and `UncacheTable`?",
+        "createdAt" : "2021-05-06T17:28:06Z",
+        "updatedAt" : "2021-05-06T17:28:28Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ad48fe12-2178-4283-b229-37cb0d569ebb",
+        "parentId" : "197a6b2b-fd0d-498a-9d39-eca624b6569b",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Does it have real impact in EXPLAIN?",
+        "createdAt" : "2021-05-07T03:59:40Z",
+        "updatedAt" : "2021-05-07T03:59:40Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c311df76-51bc-4d19-bf14-eef14ec68703",
+        "parentId" : "197a6b2b-fd0d-498a-9d39-eca624b6569b",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "There is a change, but I think it's for better:\r\nBefore:\r\n```\r\n== Parsed Logical Plan ==\r\n'CacheTableAsSelect tempTable, SELECT key FROM testData, false, false\r\n+- 'Project ['key]\r\n   +- 'UnresolvedRelation [testData], [], false\r\n\r\n== Analyzed Logical Plan ==\r\nCacheTableAsSelect tempTable, Project [key#13], SELECT key FROM testData, false, true\r\n\r\n== Optimized Logical Plan ==\r\nCacheTableAsSelect tempTable, Project [key#13], SELECT key FROM testData, false, true\r\n\r\n== Physical Plan ==\r\nCacheTableAsSelect tempTable, Project [key#13], SELECT key FROM testData, false\r\n```\r\n\r\nNew:\r\n```\r\n== Parsed Logical Plan ==\r\n'CacheTableAsSelect tempTable, SELECT key FROM testData, false, false\r\n+- 'Project ['key]\r\n   +- 'UnresolvedRelation [testData], [], false\r\n\r\n== Analyzed Logical Plan ==\r\nCacheTableAsSelect tempTable, SELECT key FROM testData, false, true\r\n   +- Project [key#13]\r\n      +- SubqueryAlias testdata\r\n         +- View (`testData`, [key#13,value#14])\r\n            +- SerializeFromObject [knownnotnull(assertnotnull(input[0, org.apache.spark.sql.test.SQLTestData$TestData, true])).key AS key#13, staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType, fromString, knownnotnull(assertnotnull(input[0, org.apache.spark.sql.test.SQLTestData$TestData, true])).value, true, false) AS value#14]\r\n               +- ExternalRDD [obj#12]\r\n\r\n== Optimized Logical Plan ==\r\nCacheTableAsSelect tempTable, SELECT key FROM testData, false, true\r\n   +- Project [key#13]\r\n      +- SubqueryAlias testdata\r\n         +- View (`testData`, [key#13,value#14])\r\n            +- SerializeFromObject [knownnotnull(assertnotnull(input[0, org.apache.spark.sql.test.SQLTestData$TestData, true])).key AS key#13, staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType, fromString, knownnotnull(assertnotnull(input[0, org.apache.spark.sql.test.SQLTestData$TestData, true])).value, true, false) AS value#14]\r\n               +- ExternalRDD [obj#12]\r\n\r\n== Physical Plan ==\r\nCacheTableAsSelect tempTable, Project [key#13], SELECT key FROM testData, false\r\n```\r\nWDYT?",
+        "createdAt" : "2021-05-07T05:08:07Z",
+        "updatedAt" : "2021-05-07T05:08:07Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "942a0f7f-f053-4b56-872b-0eabc4046287",
+        "parentId" : "197a6b2b-fd0d-498a-9d39-eca624b6569b",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "And we can improve the EXPLAIN for physical plans as well as a future PR if needed.",
+        "createdAt" : "2021-05-07T05:13:57Z",
+        "updatedAt" : "2021-05-07T05:13:58Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bc150092-78b1-490e-98ce-534b2c4e45f6",
+        "parentId" : "197a6b2b-fd0d-498a-9d39-eca624b6569b",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "yea looks better!",
+        "createdAt" : "2021-05-07T06:07:04Z",
+        "updatedAt" : "2021-05-07T06:07:04Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "abf39b7a849c36979e95caa3aa0c604ca7a5357a",
+    "line" : 12,
+    "diffHunk" : "@@ -1,1 +48,52 @@  def childrenToAnalyze: Seq[LogicalPlan]\n  override final def children: Seq[LogicalPlan] = if (isAnalyzed) Nil else childrenToAnalyze\n  override def innerChildren: Seq[QueryPlan[_]] = if (isAnalyzed) childrenToAnalyze else Nil\n  def markAsAnalyzed(): LogicalPlan\n}"
+  }
+]

@@ -471,5 +471,137 @@
     "commit" : "9e058b10a3e61cfe702cab8a4b15726660e3da78",
     "line" : 31,
     "diffHunk" : "@@ -1,1 +3518,3522 @@        val normalizedChanges = a.changes.flatMap {\n          case add: AddColumn =>\n            CatalogV2Util.failNullType(add.dataType)\n            def addColumn(\n                parentSchema: StructType,"
+  },
+  {
+    "id" : "4c6bbe32-0bee-4084-8945-8ff712da97d5",
+    "prId" : 32470,
+    "prUrl" : "https://github.com/apache/spark/pull/32470#pullrequestreview-681368939",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "94ce2c08-59e8-464b-b0c6-c3595c551be2",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "How about leaving some comments about what are the returned two values?",
+        "createdAt" : "2021-06-11T01:06:22Z",
+        "updatedAt" : "2021-06-11T01:14:46Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b362a098978be65ab1fc033fe0213a78a467b6ae",
+    "line" : 173,
+    "diffHunk" : "@@ -1,1 +2485,2489 @@    def resolveExprsWithAggregate(\n        exprs: Seq[Expression],\n        agg: Aggregate): (Seq[NamedExpression], Seq[Expression]) = {\n      def resolveCol(input: Expression): Expression = {\n        input.transform {"
+  },
+  {
+    "id" : "b98ab40d-3e13-433f-b474-5eb5a153166e",
+    "prId" : 32470,
+    "prUrl" : "https://github.com/apache/spark/pull/32470#pullrequestreview-682103224",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "425810fd-adb3-450c-890c-7595c508b9ba",
+        "parentId" : null,
+        "authorId" : "b3ba992a-312c-46eb-b3c3-8d861d15ac40",
+        "body" : "Should we also take into account the aggregate expressions already added in `aggExprList`? For example\r\n```sql\r\nselect c1 from t1 group by c1 having sum(c2) > 0 and sum(c2) < 10\r\n```\r\nHere `sum(c2)` will be added to the exprList and we don't need to create another alias for the second `sum(c2)`. Maybe use a aggExpr map instead of list?\r\n",
+        "createdAt" : "2021-06-11T17:45:54Z",
+        "updatedAt" : "2021-06-11T17:47:31Z",
+        "lastEditedBy" : "b3ba992a-312c-46eb-b3c3-8d861d15ac40",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "98fddd94-fcbf-4cb4-8b9d-96db2c6f100e",
+        "parentId" : "425810fd-adb3-450c-890c-7595c508b9ba",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Makes sense. The current code follows the previous one in https://github.com/apache/spark/pull/32470/files#diff-ed19f376a63eba52eea59ca71f3355d4495fad4fad4db9a3324aade0d4986a47L2502\r\n\r\nI'll do it in a follow-up as this is an improvement, and update TPCDS query golden files if needed.",
+        "createdAt" : "2021-06-11T18:10:13Z",
+        "updatedAt" : "2021-06-11T18:10:13Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b362a098978be65ab1fc033fe0213a78a467b6ae",
+    "line" : 290,
+    "diffHunk" : "@@ -1,1 +2536,2540 @@      // Avoid adding an extra aggregate expression if it's already present in\n      // `agg.aggregateExpressions`.\n      val index = agg.aggregateExpressions.indexWhere {\n        case Alias(child, _) => child semanticEquals expr\n        case other => other semanticEquals expr"
+  },
+  {
+    "id" : "fcd01a54-0e0a-4cb7-9595-6974ddac05a6",
+    "prId" : 32470,
+    "prUrl" : "https://github.com/apache/spark/pull/32470#pullrequestreview-682626763",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1b34ce8b-7b43-4981-9e19-1dd1313c2db9",
+        "parentId" : null,
+        "authorId" : "b3ba992a-312c-46eb-b3c3-8d861d15ac40",
+        "body" : "The children of the resolved subquery that are not aggregate expressions should also be wrapped in `TempResolvedColumn` (but it seems the current logic can't handle this case with proper error messages either. This can be a follow-up in the future)\r\n```sql\r\nselect c1 from t1 group by c1 having (select sum(c2) from t2 where t1.c2 = t2.c1) > 0\r\n-- org.apache.spark.sql.AnalysisException: Resolved attribute(s) c2#10 missing from c1#9 in operator\r\n-- !Filter (scalar-subquery#8 [c2#10] > cast(0 as bigint)).;\r\n```\r\n",
+        "createdAt" : "2021-06-14T08:13:35Z",
+        "updatedAt" : "2021-06-14T08:14:03Z",
+        "lastEditedBy" : "b3ba992a-312c-46eb-b3c3-8d861d15ac40",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b362a098978be65ab1fc033fe0213a78a467b6ae",
+    "line" : 208,
+    "diffHunk" : "@@ -1,1 +2507,2511 @@        if (SubqueryExpression.hasSubquery(input)) {\n          val fake = Project(Alias(input, \"fake\")() :: Nil, agg.child)\n          ResolveSubquery(fake).asInstanceOf[Project].projectList.head.asInstanceOf[Alias].child\n        } else {\n          input"
+  },
+  {
+    "id" : "23976fe2-35ec-4933-a5f3-c1045ad5dc33",
+    "prId" : 32407,
+    "prUrl" : "https://github.com/apache/spark/pull/32407#pullrequestreview-649505451",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d52e88b0-3e2f-42ce-9b86-21a6e736ef68",
+        "parentId" : null,
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Ideally we'd want to check if this method is actually static, otherwise there could be runtime error. However this only works for methods defined in Java; for Scala seems there is no easy way.",
+        "createdAt" : "2021-04-30T07:23:08Z",
+        "updatedAt" : "2021-05-08T01:02:45Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3b994c6c-bf0e-490e-a87d-080018a81af5",
+        "parentId" : "d52e88b0-3e2f-42ce-9b86-21a6e736ef68",
+        "authorId" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "body" : "Scala doesn't have the concept of truly static methods, right? The equivalent (`object` methods) are actually just instance methods on a singleton.",
+        "createdAt" : "2021-04-30T15:05:16Z",
+        "updatedAt" : "2021-05-08T01:02:45Z",
+        "lastEditedBy" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "43229227-e34d-4c1a-8e4a-a72617a6b863",
+        "parentId" : "d52e88b0-3e2f-42ce-9b86-21a6e736ef68",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Yes that's correct. The `StaticInvoke` calls the static method on the non-anonymous class which just forward to the non-static method defined in anonymous/singleton Java class (i.e., the class with `$` at the end of its name). \r\n\r\nFor instance, for the `LongAddWithStatic` class, this is the method defined in `LongAddWithStaticMagic.class`:\r\n```\r\n  public static long staticInvoke(long, long);\r\n    Code:\r\n       0: getstatic     #16                 // Field org/apache/spark/sql/connector/functions/LongAddWithStaticMagic$.MODULE$:Lorg/apache/spark/sql/connector/functions/LongAddWithStaticMagic$;\r\n       3: lload_0\r\n       4: lload_2\r\n       5: invokevirtual #51                 // Method org/apache/spark/sql/connector/functions/LongAddWithStaticMagic$.staticInvoke:(JJ)J\r\n       8: lreturn\r\n```\r\n\r\nand the same method defined in the singleton class `LongAddWithStaticMagic$`:\r\n```\r\n  public long staticInvoke(long, long);\r\n    Code:\r\n       0: lload_1\r\n       1: lload_3\r\n       2: ladd\r\n       3: lreturn\r\n```\r\n\r\nSo I was expecting worse performance from Scala since it calls `invokevirtual` underneath while Java uses `invokestatic`, but the result doesn't look so. It could be that the performance is dominated by other factors.",
+        "createdAt" : "2021-04-30T18:39:07Z",
+        "updatedAt" : "2021-05-08T01:02:45Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "56515b10-bcc5-4d6c-bc9d-9e3e44d4623c",
+        "parentId" : "d52e88b0-3e2f-42ce-9b86-21a6e736ef68",
+        "authorId" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "body" : "Very interesting, thanks for the explanation!",
+        "createdAt" : "2021-04-30T18:42:05Z",
+        "updatedAt" : "2021-05-08T01:02:45Z",
+        "lastEditedBy" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5096fac302554f88723777ed15583ee8b4b9a4f4",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +2183,2187 @@        findMethod(scalarFunc, MAGIC_METHOD_NAME, argClasses) match {\n          case Some(m) if Modifier.isStatic(m.getModifiers) =>\n            StaticInvoke(scalarFunc.getClass, scalarFunc.resultType(),\n              MAGIC_METHOD_NAME, arguments, returnNullable = scalarFunc.isResultNullable)\n          case Some(_) =>"
   }
 ]

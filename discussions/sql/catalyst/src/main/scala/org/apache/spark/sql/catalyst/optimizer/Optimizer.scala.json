@@ -174,5 +174,49 @@
     "commit" : "67642d87f7d1799e97f925444484f52354e6af72",
     "line" : 6,
     "diffHunk" : "@@ -1,1 +914,918 @@\n    // Case 3: When a RebalancePartitions has a child of Repartition or RepartitionByExpression\n    // we can remove the child.\n    case r @ RebalancePartitions(_, child: RepartitionOperation) =>\n      r.copy(child = child.child)"
+  },
+  {
+    "id" : "8c82774d-b56c-468f-b4d6-c0a705557303",
+    "prId" : 32439,
+    "prUrl" : "https://github.com/apache/spark/pull/32439#pullrequestreview-656933962",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "00cb0166-5c63-4606-b4cd-6455dc59448e",
+        "parentId" : null,
+        "authorId" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "body" : "I might have missed sth. from the previous commit, but what difference is there between regular `transform` and `transformWithPruning(AlwaysProcess.fn, ...)` ?",
+        "createdAt" : "2021-05-11T03:50:17Z",
+        "updatedAt" : "2021-05-11T06:53:50Z",
+        "lastEditedBy" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ef9935e5-c3f6-46e6-92b3-f0b96a3c55da",
+        "parentId" : "00cb0166-5c63-4606-b4cd-6455dc59448e",
+        "authorId" : "8b518862-583d-43a2-a10e-b33ef1b6d824",
+        "body" : "`transform` internally calls\r\n`transformWithPruning(AlwaysProcess.fn, UnknownRuleId)` ...\r\n\r\nThe argument comments are here:\r\nhttps://github.com/apache/spark/blob/e08c40fa3f7054bdc713873c99d3aaf0014d9314/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/trees/TreeNode.scala#L434-L441\r\n\r\n So here, \r\n `plan.transformWithPruning(AlwaysProcess.fn, ruleId)` means there's no pruning based on TreePattern bits, but there's pruning based on ruleIds (if the rule is known to ineffective on a tree instance `T`,  it will be skipped next time when it is invoked on the same tree instance `T`).",
+        "createdAt" : "2021-05-11T03:54:56Z",
+        "updatedAt" : "2021-05-11T06:53:50Z",
+        "lastEditedBy" : "8b518862-583d-43a2-a10e-b33ef1b6d824",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f04922ab-afc7-46da-bcae-7b82d3b9e3da",
+        "parentId" : "00cb0166-5c63-4606-b4cd-6455dc59448e",
+        "authorId" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "body" : "I see. Thanks!",
+        "createdAt" : "2021-05-11T16:05:29Z",
+        "updatedAt" : "2021-05-11T16:05:29Z",
+        "lastEditedBy" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5027ebcec31e9ea21df0bf16daa3e3427d4fe700",
+    "line" : 76,
+    "diffHunk" : "@@ -1,1 +756,760 @@\n  def apply(plan: LogicalPlan): LogicalPlan = removeProjectBeforeFilter(\n    plan.transformWithPruning(AlwaysProcess.fn, ruleId) {\n    // Prunes the unused columns from project list of Project/Aggregate/Expand\n    case p @ Project(_, p2: Project) if !p2.outputSet.subsetOf(p.references) =>"
   }
 ]

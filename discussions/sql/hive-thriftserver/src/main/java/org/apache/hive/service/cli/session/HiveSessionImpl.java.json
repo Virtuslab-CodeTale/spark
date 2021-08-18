@@ -1,0 +1,156 @@
+[
+  {
+    "id" : "8bec1075-2f9d-41b7-97cb-3b0c564989d2",
+    "prId" : 32410,
+    "prUrl" : "https://github.com/apache/spark/pull/32410#pullrequestreview-655195931",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4580eaa8-a298-415f-8052-02b923773c91",
+        "parentId" : null,
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "hmm just curious why we don't need to start the new session in these places. Maybe add more details in the PR description?",
+        "createdAt" : "2021-05-03T20:07:00Z",
+        "updatedAt" : "2021-05-05T08:09:26Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "585e8bbc-e98c-4926-8b44-0f251f6e35ab",
+        "parentId" : "4580eaa8-a298-415f-8052-02b923773c91",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "Spark SQL does not need SessionDirs.",
+        "createdAt" : "2021-05-05T02:11:00Z",
+        "updatedAt" : "2021-05-05T08:09:26Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "de781f38-4900-4c12-b6fe-aa1d78271ad1",
+        "parentId" : "4580eaa8-a298-415f-8052-02b923773c91",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Is it safe when we use `ADD JARS`?",
+        "createdAt" : "2021-05-06T06:00:30Z",
+        "updatedAt" : "2021-05-06T06:00:30Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6e2f850b-69ac-4f9d-9acf-c0c541c57eaa",
+        "parentId" : "4580eaa8-a298-415f-8052-02b923773c91",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "And, I'm wondering about what happens to `LOCALSCRATCHDIR` after this PR?",
+        "createdAt" : "2021-05-06T06:04:53Z",
+        "updatedAt" : "2021-05-06T06:04:53Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "22b049df-fc2e-40c6-8b79-7f85f4194d20",
+        "parentId" : "4580eaa8-a298-415f-8052-02b923773c91",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "Yes. It is safe when use `ADD JARS`. We have disabled creating these directories for more than a year with the following changes(`HiveConf.ConfVars.WITHSCRATCHDIR=false`):\r\n\r\n![image](https://user-images.githubusercontent.com/5399861/116785447-312cc500-aacc-11eb-8dff-6ae75fbbc4d7.png)\r\n\r\n\r\n",
+        "createdAt" : "2021-05-10T02:56:50Z",
+        "updatedAt" : "2021-05-10T02:56:51Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4bca8ecaec066ef19d04a12e134ba830320a2e0f",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +143,147 @@    sessionState.setIsHiveServerQuery(true);\n    // Use setCurrentSessionState to avoid creating useless SessionDirs.\n    SessionState.setCurrentSessionState(sessionState);\n    try {\n      sessionState.loadAuxJars();"
+  },
+  {
+    "id" : "2d676f32-f4a9-45a4-8840-e5297f2bf33f",
+    "prId" : 32410,
+    "prUrl" : "https://github.com/apache/spark/pull/32410#pullrequestreview-681950082",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9f8c50c0-dc15-4bb7-88d3-0814fc206238",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Hm, actually @wangyum. I just noticed that this is different from Hive's https://github.com/apache/hive/blob/master/service/src/java/org/apache/hive/service/cli/session/HiveSessionImpl.java#L180.\r\n\r\nShouldn't we at least keep:\r\n\r\nhttps://github.com/apache/hive/blob/master/ql/src/java/org/apache/hadoop/hive/ql/session/SessionState.java#L692-L699\r\n\r\nfor session history?",
+        "createdAt" : "2021-06-10T01:29:15Z",
+        "updatedAt" : "2021-06-10T01:29:15Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "40d5990d-d11f-42f9-a412-891f861a4f0a",
+        "parentId" : "9f8c50c0-dc15-4bb7-88d3-0814fc206238",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "It would be great if we can justify line by line. I think we won't have to take care about Tez but what about others here:\r\n\r\nhttps://github.com/apache/hive/blob/master/ql/src/java/org/apache/hadoop/hive/ql/session/SessionState.java#L688-L766\r\n\r\n?",
+        "createdAt" : "2021-06-10T01:30:17Z",
+        "updatedAt" : "2021-06-10T01:30:17Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6df84fd5-99d4-4ae0-9e71-b8b6e2648a45",
+        "parentId" : "9f8c50c0-dc15-4bb7-88d3-0814fc206238",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "We have disabled the session history:\r\nhttps://github.com/apache/spark/blob/ebb4858f7185c6525adc4b23bc89f0a8262bf940/sql/hive/src/main/scala/org/apache/spark/sql/hive/client/HiveClientImpl.scala#L1271-L1276",
+        "createdAt" : "2021-06-10T02:59:12Z",
+        "updatedAt" : "2021-06-10T02:59:12Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9813bfb9-c304-47aa-96d2-7847bab5ad51",
+        "parentId" : "9f8c50c0-dc15-4bb7-88d3-0814fc206238",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Thanks Yuming. What about other codes? I know we don't have to take care about Tez but wonder if it's safe for other codes there.",
+        "createdAt" : "2021-06-10T11:27:12Z",
+        "updatedAt" : "2021-06-10T11:37:16Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6e7d2303-5839-48ae-b64b-bc28af063f25",
+        "parentId" : "9f8c50c0-dc15-4bb7-88d3-0814fc206238",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "Other codes also do not needed. We have disabled creating these directories for more than a year with the following changes:\r\n![image](https://user-images.githubusercontent.com/5399861/116785447-312cc500-aacc-11eb-8dff-6ae75fbbc4d7.png)\r\n\r\n",
+        "createdAt" : "2021-06-10T11:57:06Z",
+        "updatedAt" : "2021-06-10T11:57:07Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "801b6402-5b17-4bd6-8f57-f036272769c2",
+        "parentId" : "9f8c50c0-dc15-4bb7-88d3-0814fc206238",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "@wangyum, last question. What about this? Is it safe to remove?\r\n\r\n```\r\n      // Hive object instance should be created with a copy of the conf object. If the conf is\r\n      // shared with SessionState, other parts of the code might update the config, but\r\n      // Hive.get(HiveConf) would not recognize the case when it needs refreshing\r\n      Hive.get(new HiveConf(startSs.conf)).getMSC();\r\n```",
+        "createdAt" : "2021-06-11T13:01:47Z",
+        "updatedAt" : "2021-06-11T13:01:48Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "410e6f58-7570-42ab-a3c5-d42a2109c414",
+        "parentId" : "9f8c50c0-dc15-4bb7-88d3-0814fc206238",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "It has removed by https://github.com/apache/hive/commit/9bebaf6196c1842c285bfbad50765170e064f6e4.\r\n\r\n![image](https://user-images.githubusercontent.com/5399861/121709709-67b62080-cb0b-11eb-9887-ed43258acd1c.png)\r\n\r\n",
+        "createdAt" : "2021-06-11T15:20:43Z",
+        "updatedAt" : "2021-06-11T15:20:43Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4bca8ecaec066ef19d04a12e134ba830320a2e0f",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +143,147 @@    sessionState.setIsHiveServerQuery(true);\n    // Use setCurrentSessionState to avoid creating useless SessionDirs.\n    SessionState.setCurrentSessionState(sessionState);\n    try {\n      sessionState.loadAuxJars();"
+  }
+]

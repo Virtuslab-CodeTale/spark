@@ -108,5 +108,159 @@
     "commit" : "e7a612dab57a47de0d671b8c28a2f271a18fb7bb",
     "line" : 42,
     "diffHunk" : "@@ -1,1 +63,67 @@    implements RpcHandler.MergedBlockMetaReqHandler {\n  private static final Logger logger = LoggerFactory.getLogger(ExternalBlockHandler.class);\n  private static final String SHUFFLE_MERGER_IDENTIFIER = \"shuffle-push-merger\";\n  private static final String SHUFFLE_BLOCK_ID = \"shuffle\";\n  private static final String SHUFFLE_CHUNK_ID = \"shuffleChunk\";"
+  },
+  {
+    "id" : "2b1c68f1-8224-44e3-9120-8d341870bbf4",
+    "prId" : 32388,
+    "prUrl" : "https://github.com/apache/spark/pull/32388#pullrequestreview-693639763",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "20289250-1953-4480-8c93-81d3a5cfb9da",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Is this valid when we do `getContinuousBlocksData`? To be clear to the metric audience, could you revise the definition you are aiming?",
+        "createdAt" : "2021-05-31T01:58:55Z",
+        "updatedAt" : "2021-05-31T02:01:31Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8b9fabfc-b9be-4ded-9939-cd6ed731cd91",
+        "parentId" : "20289250-1953-4480-8c93-81d3a5cfb9da",
+        "authorId" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "body" : "This is a great point, thanks Dongjoon!\r\n\r\nCurrently a single batch fetch will be considered as one block fetch by this metric, regardless of how many blocks are fetched in the block. For our purposes, this is what we're interested in, since a big part of what we want to understand with this is the number of random reads we're submitting.\r\n\r\nHowever I see value in breaking it out as the actual number of blocks as well. Perhaps we can have two metrics, `blockTransferRate` and `blockFetchRequestRate`. In the case of non-batch fetches they will be the same, and with batch fetches the `blockTransferRate` will be higher than the `blockFetchRequestRate`. WDYT?",
+        "createdAt" : "2021-06-01T16:11:00Z",
+        "updatedAt" : "2021-06-01T16:11:01Z",
+        "lastEditedBy" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "011b788e-1dea-412a-a499-5302e03eda71",
+        "parentId" : "20289250-1953-4480-8c93-81d3a5cfb9da",
+        "authorId" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "body" : "On second thought, I don't like `blockFetchRequestRate` since I think `FetchRequest` sounds like it would be at the level of a `OpenBlocks`/`FetchShuffleBlocks` message vs. the individual response level.\r\n\r\nMaybe `blockTransferMessageRate`? Or `blockBufferTransferRate`?",
+        "createdAt" : "2021-06-01T16:43:47Z",
+        "updatedAt" : "2021-06-01T16:43:48Z",
+        "lastEditedBy" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b094cd54-f40c-46e3-b7c5-25d8f53b294a",
+        "parentId" : "20289250-1953-4480-8c93-81d3a5cfb9da",
+        "authorId" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "body" : "Pushed up a new commit with `blockTransferMessageRate` to demonstrate the idea, let me know what you think.",
+        "createdAt" : "2021-06-01T16:54:31Z",
+        "updatedAt" : "2021-06-01T16:54:32Z",
+        "lastEditedBy" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b9941a36-8363-4458-b739-52a575e55ecc",
+        "parentId" : "20289250-1953-4480-8c93-81d3a5cfb9da",
+        "authorId" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "body" : "@dongjoon-hyun how does the new code look to you?",
+        "createdAt" : "2021-06-11T15:37:48Z",
+        "updatedAt" : "2021-06-11T15:37:48Z",
+        "lastEditedBy" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ff44e6ca-cf9f-4b88-a3f6-f206530b782c",
+        "parentId" : "20289250-1953-4480-8c93-81d3a5cfb9da",
+        "authorId" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "body" : "@mridulm I would also be curious about your thoughts on the new metrics.",
+        "createdAt" : "2021-06-17T20:47:12Z",
+        "updatedAt" : "2021-06-17T20:47:13Z",
+        "lastEditedBy" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fdcd77d9-2715-479c-84ff-f64b3705bfb9",
+        "parentId" : "20289250-1953-4480-8c93-81d3a5cfb9da",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "In spark read side, we treat a single read of `ShuffleBlockBatchId` as a single block read (from metric point of view).\r\nA [recent discussion](https://github.com/apache/spark/pull/32140#discussion_r652733447) of this in push based shuffle here for context (see `ShuffleBlockBatchId` in `ShuffleBlockFetcherIterator`).\r\n\r\nGiven that, I am fine with treating a batch read as a single read - given it would be contiguous (effectively, similar to reading a 'large' block).\r\n\r\nThoughts @dongjoon-hyun, @xkrogen ?",
+        "createdAt" : "2021-06-21T23:50:05Z",
+        "updatedAt" : "2021-06-21T23:50:18Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ab9b7651-bf3a-4d9d-b6ef-680152c8dd94",
+        "parentId" : "20289250-1953-4480-8c93-81d3a5cfb9da",
+        "authorId" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "body" : "Thanks for that context @mridulm! To clarify, are you suggesting we ditch the new proposal and only maintain the old version, which would treat a batch fetch as a single block transfer?\r\n\r\nFrom the comments on #32140, it seems like @otterc was indicating that there's a future plan to add metrics on the push-based shuffle side that also break out the merged chunks in terms of number of underlying blocks. Should we do the same here (which is basically my new proposal)?",
+        "createdAt" : "2021-06-22T16:05:24Z",
+        "updatedAt" : "2021-06-22T16:05:25Z",
+        "lastEditedBy" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "20ee03e0-5301-4139-a605-3c289fa10dbd",
+        "parentId" : "20289250-1953-4480-8c93-81d3a5cfb9da",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "That would be a new metric, if introduced, in read side.\r\nCurrently, what is tracked treats it as a single request - that request could be a block fetch or a single fetch for a large block or merged block read.",
+        "createdAt" : "2021-06-23T01:29:33Z",
+        "updatedAt" : "2021-06-23T01:29:33Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e515e793-662b-4eec-9bcb-ade997c2b29f",
+        "parentId" : "20289250-1953-4480-8c93-81d3a5cfb9da",
+        "authorId" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "body" : "Okay. I am pretty neutral here, happy to go either way. @dongjoon-hyun or @otterc , any thoughts?",
+        "createdAt" : "2021-06-23T16:49:30Z",
+        "updatedAt" : "2021-06-23T16:49:31Z",
+        "lastEditedBy" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dd7e5b3d-385c-4a6e-9c39-94b72849d155",
+        "parentId" : "20289250-1953-4480-8c93-81d3a5cfb9da",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "I don't have anything much to add here . Would be okay either ways.",
+        "createdAt" : "2021-06-23T22:17:33Z",
+        "updatedAt" : "2021-06-23T22:17:33Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f5464b70-a9c4-4353-851f-94b670425133",
+        "parentId" : "20289250-1953-4480-8c93-81d3a5cfb9da",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "Would definitely want to hear @dongjoon-hyun's thoughts here, given he has context !\r\nAlso, +CC @Ngone51 who is helping review the client side for push based shuffle and has looked at similar codepaths recently.",
+        "createdAt" : "2021-06-24T05:06:22Z",
+        "updatedAt" : "2021-06-24T05:06:22Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0e4d8e15-bb35-484b-a707-1c9f41f98972",
+        "parentId" : "20289250-1953-4480-8c93-81d3a5cfb9da",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "I am assuming there are no further suggestions to resolve here ... we can do a follow up in case there is a change in behavior required for 3.2\r\n+CC @dongjoon-hyun ",
+        "createdAt" : "2021-06-28T07:34:26Z",
+        "updatedAt" : "2021-06-28T07:34:26Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "16f53dc0e88927d0a80f6d87f0311cce90d4ef9a",
+    "line" : 12,
+    "diffHunk" : "@@ -1,1 +307,311 @@    // Time latency for processing finalize shuffle merge request latency in ms\n    private final Timer finalizeShuffleMergeLatencyMillis = new Timer();\n    // Block transfer rate in blocks per second\n    private final Meter blockTransferRate = new Meter();\n    // Block fetch message rate per second. When using non-batch fetches"
   }
 ]

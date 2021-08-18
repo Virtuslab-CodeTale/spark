@@ -1,0 +1,145 @@
+[
+  {
+    "id" : "d13c2894-934f-4868-8323-4de4b931c33e",
+    "prId" : 32396,
+    "prUrl" : "https://github.com/apache/spark/pull/32396#pullrequestreview-648372300",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "34c50618-530a-4115-9668-8733d00b6635",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "we can stop traversal earlier: `case _ if e.foldable => e`",
+        "createdAt" : "2021-04-29T12:54:06Z",
+        "updatedAt" : "2021-04-29T15:41:54Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9d891e24-d600-498c-b741-37b0a60180f0",
+        "parentId" : "34c50618-530a-4115-9668-8733d00b6635",
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "Thanks indeed, fixed in https://github.com/apache/spark/pull/32396/commits/ba2f0c7ed1268e19cc61d3da02d6ff516b26d9a1.",
+        "createdAt" : "2021-04-29T15:46:37Z",
+        "updatedAt" : "2021-04-29T15:46:37Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "fcc400520960a2ab180ced05f288c4c8c12f6d8d",
+    "line" : 64,
+    "diffHunk" : "@@ -1,1 +62,66 @@              case _ if AggregateExpression.isAggregate(e) => e\n              case _ if e.foldable => e\n              case _ if complexGroupingExpressionMap.contains(e.canonicalized) =>\n                complexGroupingExpressionMap.get(e.canonicalized).map(_.toAttribute).getOrElse(e)\n              case _ => e.mapChildren(replaceComplexGroupingExpressions)"
+  },
+  {
+    "id" : "cfca2faa-4864-43ff-9b70-1ee9babbb976",
+    "prId" : 32396,
+    "prUrl" : "https://github.com/apache/spark/pull/32396#pullrequestreview-649802576",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "323265c8-6dec-4148-b7e8-0272c6cf15b7",
+        "parentId" : null,
+        "authorId" : "8b518862-583d-43a2-a10e-b33ef1b6d824",
+        "body" : "Can it be done with a.transformExpressions similar to this one:\r\nhttps://github.com/databricks/runtime/blob/8aff141a8545c2ea1759230482928e25684acbe2/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/analysis/PullOutNondeterministic.scala#L39-L41\r\n",
+        "createdAt" : "2021-05-01T06:14:29Z",
+        "updatedAt" : "2021-05-01T06:16:34Z",
+        "lastEditedBy" : "8b518862-583d-43a2-a10e-b33ef1b6d824",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8d6ee53e-dd44-4c2e-8db1-4ba3bdad81a7",
+        "parentId" : "323265c8-6dec-4148-b7e8-0272c6cf15b7",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "We need to do a manual tree traversal if we want to stop recursion earlier, e.g. `case _ if AggregateExpression.isAggregate(e) => e`",
+        "createdAt" : "2021-05-01T06:29:29Z",
+        "updatedAt" : "2021-05-01T06:29:29Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8e5d4fd7-6a24-4f9a-932b-8ad57d072921",
+        "parentId" : "323265c8-6dec-4148-b7e8-0272c6cf15b7",
+        "authorId" : "8b518862-583d-43a2-a10e-b33ef1b6d824",
+        "body" : "Does the following one work?\r\n\r\na.transformExpressionsWithPruning(e => !(AggregateExpression.isAggregate(e) || e.fordable)) {\r\n       ....\r\n}\r\n",
+        "createdAt" : "2021-05-01T06:55:33Z",
+        "updatedAt" : "2021-05-01T06:56:12Z",
+        "lastEditedBy" : "8b518862-583d-43a2-a10e-b33ef1b6d824",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ff64d9d6-6454-417d-9b37-93968a93e621",
+        "parentId" : "323265c8-6dec-4148-b7e8-0272c6cf15b7",
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "Hmm, yes, this could work with some explicit casting.",
+        "createdAt" : "2021-05-01T07:11:38Z",
+        "updatedAt" : "2021-05-01T07:11:38Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "24bb1b8d-151e-4488-aa1d-195a643a4217",
+        "parentId" : "323265c8-6dec-4148-b7e8-0272c6cf15b7",
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "But this would traverse on `a.groupingExpressions` too which is not needed.\r\n",
+        "createdAt" : "2021-05-01T08:01:14Z",
+        "updatedAt" : "2021-05-01T08:01:14Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fa53dd81-83c8-42da-8fd1-a72c80523c14",
+        "parentId" : "323265c8-6dec-4148-b7e8-0272c6cf15b7",
+        "authorId" : "8b518862-583d-43a2-a10e-b33ef1b6d824",
+        "body" : "> But this would traverse on a.groupingExpressions too which is not needed.\r\n\r\nYou're right. I think the following would behave the same as the manual recursion:\r\n\r\na.aggregateExpressions.map(_.transformWithPruning(e => !(AggregateExpression.isAggregate(e) || e.fordable))({\r\n   // the first two original case branches can be skipped here.\r\n   .....\r\n}).asInstanceOf....)\r\n",
+        "createdAt" : "2021-05-01T08:13:49Z",
+        "updatedAt" : "2021-05-01T08:13:49Z",
+        "lastEditedBy" : "8b518862-583d-43a2-a10e-b33ef1b6d824",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0ef4549a-102e-4fae-920d-c1cb6ac0d553",
+        "parentId" : "323265c8-6dec-4148-b7e8-0272c6cf15b7",
+        "authorId" : "8b518862-583d-43a2-a10e-b33ef1b6d824",
+        "body" : "Anyway, it's just my small preference -- it seems neater to use framework functions if it works. Feel free to merge whatever you feel comfortable with. ",
+        "createdAt" : "2021-05-01T08:18:25Z",
+        "updatedAt" : "2021-05-01T08:18:25Z",
+        "lastEditedBy" : "8b518862-583d-43a2-a10e-b33ef1b6d824",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b09059d9-dc5f-42a7-9577-36bafb23e6e3",
+        "parentId" : "323265c8-6dec-4148-b7e8-0272c6cf15b7",
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "I think I'm leaving this PR as it is now.\r\n\r\nBut tested that https://github.com/peter-toth/spark/commit/ed374fe046f5bb0a65b2bf72129b37df9cdce2ea could work, just I need to cast `TreePatternBits` to `Expression`.\r\nAlthough, I wonder if it would make sense to split plan and expression pruning in the future like this: https://github.com/peter-toth/spark/commit/d817fc724a78b8aa2de59999f237346d412e46dd and so this pruning (and probably there are other similar use cases where we want to stop traversal) became simpler: https://github.com/peter-toth/spark/commit/d817fc724a78b8aa2de59999f237346d412e46dd#diff-57201016f79912c165715811d7f7f37e2acbef2ae7b241c3c8a0b928d0052eb5R61",
+        "createdAt" : "2021-05-01T08:47:00Z",
+        "updatedAt" : "2021-05-01T09:06:23Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "29b72a71-c4d0-4e76-a2a0-3f384874e605",
+        "parentId" : "323265c8-6dec-4148-b7e8-0272c6cf15b7",
+        "authorId" : "8b518862-583d-43a2-a10e-b33ef1b6d824",
+        "body" : "Thanks a lot for exploring this, Peter!  I'll think more about such use cases.\r\n",
+        "createdAt" : "2021-05-01T17:04:01Z",
+        "updatedAt" : "2021-05-01T17:04:01Z",
+        "lastEditedBy" : "8b518862-583d-43a2-a10e-b33ef1b6d824",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "fcc400520960a2ab180ced05f288c4c8c12f6d8d",
+    "line" : 71,
+    "diffHunk" : "@@ -1,1 +69,73 @@\n          val newAggregateExpressions = a.aggregateExpressions\n            .map(replaceComplexGroupingExpressions(_).asInstanceOf[NamedExpression])\n          val newChild = Project(a.child.output ++ complexGroupingExpressionMap.values, a.child)\n          Aggregate(newGroupingExpressions, newAggregateExpressions, newChild)"
+  }
+]
