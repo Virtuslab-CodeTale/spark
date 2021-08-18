@@ -53,5 +53,137 @@
     "commit" : "378d73bcc7e828f15e7cf60b8ff0dce38a8c2329",
     "line" : 8,
     "diffHunk" : "@@ -1,1 +110,114 @@      sql(s\"ALTER TABLE h2.test.not_existing_table RENAME TO test.dst_table\")\n    }\n    assert(exp1.getMessage.contains(\"Table test.not_existing_table not found\"))\n    val exp2 = intercept[NoSuchTableException] {\n      sql(s\"ALTER TABLE h2.bad_test.not_existing_table RENAME TO test.dst_table\")"
+  },
+  {
+    "id" : "3592af2e-6470-410c-bc8a-6fc33699a6fc",
+    "prId" : 30041,
+    "prUrl" : "https://github.com/apache/spark/pull/30041#pullrequestreview-509042143",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e8009d67-cf63-4d5d-8c2e-cae826c82502",
+        "parentId" : null,
+        "authorId" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "body" : "Without fix (with unquoted column name), `assert(t.schema === expectedSchema)` throws the following Exception:\r\n```\r\norg.scalatest.exceptions.TestFailedException: StructType(StructField(ID,IntegerType,true), StructField(C1,IntegerType,true), StructField(C2,StringType,true), StructField(C3,DoubleType,true)) did not equal StructType(StructField(ID,IntegerType,true), StructField(C1,IntegerType,true), StructField(C2,StringType,true), StructField(c3,DoubleType,true))\r\n\tat org.scalatest.Assertions.newAssertionFailedException(Assertions.scala:472)\r\n```",
+        "createdAt" : "2020-10-15T06:31:56Z",
+        "updatedAt" : "2020-10-15T06:31:56Z",
+        "lastEditedBy" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7e8098cebdfae077205253028e48d7b5bf9a8c07",
+    "line" : 8,
+    "diffHunk" : "@@ -1,1 +181,185 @@      sql(\"ALTER TABLE h2.test.alt_table ADD COLUMNS (c3 DOUBLE)\")\n      t = spark.table(\"h2.test.alt_table\")\n      expectedSchema = expectedSchema.add(\"c3\", DoubleType)\n      assert(t.schema === expectedSchema)\n      // Add already existing column"
+  },
+  {
+    "id" : "e7563beb-fcea-4823-951c-2bef3929dc72",
+    "prId" : 30041,
+    "prUrl" : "https://github.com/apache/spark/pull/30041#pullrequestreview-509547972",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "807b896a-8995-4aeb-858c-d5be67a85197",
+        "parentId" : null,
+        "authorId" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "body" : "Without fix (with unquoted column name), this throws the following Exception:\r\n```\r\nFailed table altering: test.alt_table;\r\norg.apache.spark.sql.AnalysisException: Failed table altering: test.alt_table;\r\n\tat org.apache.spark.sql.jdbc.JdbcDialect.classifyException(JdbcDialects.scala:268)\r\n\r\nCaused by: org.h2.jdbc.JdbcSQLException: Column \"ID\" not found; SQL statement:\r\nALTER TABLE \"test\".\"alt_table\" RENAME COLUMN id TO \"C\" [42122-195]\r\n```",
+        "createdAt" : "2020-10-15T06:32:10Z",
+        "updatedAt" : "2020-10-15T06:32:10Z",
+        "lastEditedBy" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7eaa3554-17d3-4f2f-82ee-5cca13806d37",
+        "parentId" : "807b896a-8995-4aeb-858c-d5be67a85197",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "It should still work if we write `ID`, right? Spark normalizes the columns according to the table schema, so case sensitivity flag can still apply. See `ResolveAlterTableChanges`.\r\n\r\nIt would be better if we can add tests for case insensitive column resolution.",
+        "createdAt" : "2020-10-15T15:36:49Z",
+        "updatedAt" : "2020-10-15T15:36:49Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "872fa58f-4c43-4caf-997f-014edfa77894",
+        "parentId" : "807b896a-8995-4aeb-858c-d5be67a85197",
+        "authorId" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "body" : "Yes, upper case `ID` still works here. I will add tests for case insensitive column resolution.\r\nThanks for reviewing and merging my PR!",
+        "createdAt" : "2020-10-15T16:13:45Z",
+        "updatedAt" : "2020-10-15T16:13:45Z",
+        "lastEditedBy" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7e8098cebdfae077205253028e48d7b5bf9a8c07",
+    "line" : 27,
+    "diffHunk" : "@@ -1,1 +201,205 @@    withTable(\"h2.test.alt_table\") {\n      sql(\"CREATE TABLE h2.test.alt_table (id INTEGER, C0 INTEGER) USING _\")\n      sql(\"ALTER TABLE h2.test.alt_table RENAME COLUMN id TO C\")\n      val t = spark.table(\"h2.test.alt_table\")\n      val expectedSchema = new StructType()"
+  },
+  {
+    "id" : "23927739-4de5-4e93-a8f5-57c1d2e8fe99",
+    "prId" : 30041,
+    "prUrl" : "https://github.com/apache/spark/pull/30041#pullrequestreview-509043057",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "694ff5f2-fbc0-4283-972e-3063c951d3e9",
+        "parentId" : null,
+        "authorId" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "body" : "Without fix (with unquoted column name), this throws the following Exception:\r\n```\r\nFailed table altering: test.alt_table;\r\norg.apache.spark.sql.AnalysisException: Failed table altering: test.alt_table;\r\n\tat org.apache.spark.sql.jdbc.JdbcDialect.classifyException(JdbcDialects.scala:268)\r\nCaused by: org.h2.jdbc.JdbcSQLException: Column \"C3\" not found; SQL statement:\r\nALTER TABLE \"test\".\"alt_table\" DROP COLUMN c3 [42122-195]\r\n```",
+        "createdAt" : "2020-10-15T06:32:23Z",
+        "updatedAt" : "2020-10-15T06:32:24Z",
+        "lastEditedBy" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7e8098cebdfae077205253028e48d7b5bf9a8c07",
+    "line" : 38,
+    "diffHunk" : "@@ -1,1 +226,230 @@      sql(\"CREATE TABLE h2.test.alt_table (C1 INTEGER, C2 INTEGER, c3 INTEGER) USING _\")\n      sql(\"ALTER TABLE h2.test.alt_table DROP COLUMN C1\")\n      sql(\"ALTER TABLE h2.test.alt_table DROP COLUMN c3\")\n      val t = spark.table(\"h2.test.alt_table\")\n      val expectedSchema = new StructType().add(\"C2\", IntegerType)"
+  },
+  {
+    "id" : "87d047a5-f8dc-4af0-865a-58208fb243c8",
+    "prId" : 30041,
+    "prUrl" : "https://github.com/apache/spark/pull/30041#pullrequestreview-509043345",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "75de657e-2ddb-49e5-bbc0-eb5109a461bb",
+        "parentId" : null,
+        "authorId" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "body" : "Without fix (with unquoted column name), this throws the following Exception:\r\n```\r\nFailed table altering: test.alt_table;\r\norg.apache.spark.sql.AnalysisException: Failed table altering: test.alt_table;\r\n\tat org.apache.spark.sql.jdbc.JdbcDialect.classifyException(JdbcDialects.scala:268)\r\n  Caused by: org.h2.jdbc.JdbcSQLException: Column \"DEPTNO\" not found; SQL statement:\r\nALTER TABLE \"test\".\"alt_table\" ALTER COLUMN deptno DOUBLE PRECISION [42122-195]\r\n```",
+        "createdAt" : "2020-10-15T06:32:32Z",
+        "updatedAt" : "2020-10-15T06:32:32Z",
+        "lastEditedBy" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7e8098cebdfae077205253028e48d7b5bf9a8c07",
+    "line" : 49,
+    "diffHunk" : "@@ -1,1 +249,253 @@      sql(\"CREATE TABLE h2.test.alt_table (ID INTEGER, deptno INTEGER) USING _\")\n      sql(\"ALTER TABLE h2.test.alt_table ALTER COLUMN id TYPE DOUBLE\")\n      sql(\"ALTER TABLE h2.test.alt_table ALTER COLUMN deptno TYPE DOUBLE\")\n      val t = spark.table(\"h2.test.alt_table\")\n      val expectedSchema = new StructType().add(\"ID\", DoubleType).add(\"deptno\", DoubleType)"
+  },
+  {
+    "id" : "7af7df0e-02f8-42ef-ab1d-76ee9e184aed",
+    "prId" : 30041,
+    "prUrl" : "https://github.com/apache/spark/pull/30041#pullrequestreview-509043528",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ea6432db-74e0-45ab-9e16-a1262af986b3",
+        "parentId" : null,
+        "authorId" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "body" : "Without fix (with unquoted column name), this throws the following Exception:\r\n```\r\nFailed table altering: test.alt_table;\r\norg.apache.spark.sql.AnalysisException: Failed table altering: test.alt_table;\r\n\tat org.apache.spark.sql.jdbc.JdbcDialect.classifyException(JdbcDialects.scala:268)\r\n  Caused by: org.h2.jdbc.JdbcSQLException: Column \"DEPTNO\" not found; SQL statement:\r\nALTER TABLE \"test\".\"alt_table\" ALTER COLUMN deptno SET NULL [42122-195]\r\n```",
+        "createdAt" : "2020-10-15T06:32:38Z",
+        "updatedAt" : "2020-10-15T06:32:38Z",
+        "lastEditedBy" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7e8098cebdfae077205253028e48d7b5bf9a8c07",
+    "line" : 61,
+    "diffHunk" : "@@ -1,1 +275,279 @@  test(\"alter table ... update column nullability\") {\n    withTable(\"h2.test.alt_table\") {\n      sql(\"CREATE TABLE h2.test.alt_table (ID INTEGER NOT NULL, deptno INTEGER NOT NULL) USING _\")\n      sql(\"ALTER TABLE h2.test.alt_table ALTER COLUMN ID DROP NOT NULL\")\n      sql(\"ALTER TABLE h2.test.alt_table ALTER COLUMN deptno DROP NOT NULL\")"
   }
 ]

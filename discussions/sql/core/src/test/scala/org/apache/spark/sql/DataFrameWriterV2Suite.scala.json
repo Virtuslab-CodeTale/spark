@@ -1,0 +1,35 @@
+[
+  {
+    "id" : "e4a1c06b-517f-49d1-8409-122cdbea2b20",
+    "prId" : 30033,
+    "prUrl" : "https://github.com/apache/spark/pull/30033#pullrequestreview-507963158",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "36298ea1-bba8-4cfc-a8c0-4c348b2b0f5d",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "does this bug only affects complex types?",
+        "createdAt" : "2020-10-14T03:04:20Z",
+        "updatedAt" : "2020-10-14T03:04:20Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4c424c76-7c5b-4a4b-a0c8-179eb3025ead",
+        "parentId" : "36298ea1-bba8-4cfc-a8c0-4c348b2b0f5d",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Yes, according to the implementation of `equalsIgnoreCompatibleNullability`.\r\n\r\n```\r\nprivate[sql] def equalsIgnoreCompatibleNullability(from: DataType, to: DataType): Boolean = {\r\n    (from, to) match {\r\n      case (ArrayType(fromElement, fn), ArrayType(toElement, tn)) =>\r\n        (tn || !fn) && equalsIgnoreCompatibleNullability(fromElement, toElement)\r\n\r\n      case (MapType(fromKey, fromValue, fn), MapType(toKey, toValue, tn)) =>\r\n        (tn || !fn) &&\r\n          equalsIgnoreCompatibleNullability(fromKey, toKey) &&\r\n          equalsIgnoreCompatibleNullability(fromValue, toValue)\r\n\r\n      case (StructType(fromFields), StructType(toFields)) =>\r\n        fromFields.length == toFields.length &&\r\n          fromFields.zip(toFields).forall { case (fromField, toField) =>\r\n            fromField.name == toField.name &&\r\n              (toField.nullable || !fromField.nullable) &&\r\n              equalsIgnoreCompatibleNullability(fromField.dataType, toField.dataType)\r\n          }\r\n\r\n      case (fromDataType, toDataType) => fromDataType == toDataType\r\n    }\r\n  }\r\n```\r\n\r\nFor primitive types the order doesn't affect the result. `outputResolved` itself does the right comparison, just except the swapped parameters.",
+        "createdAt" : "2020-10-14T03:09:24Z",
+        "updatedAt" : "2020-10-14T03:09:24Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "89d329c11baa61a81a4361d3e870e1e2c0a67203",
+    "line" : 26,
+    "diffHunk" : "@@ -1,1 +103,107 @@  case class FakeV2WriteCommand(table: NamedRelation, query: LogicalPlan) extends V2WriteCommand\n\n  test(\"SPARK-33136 output resolved on complex types for V2 write commands\") {\n    val tableCatalog = catalog(\"testcat\")\n"
+  }
+]

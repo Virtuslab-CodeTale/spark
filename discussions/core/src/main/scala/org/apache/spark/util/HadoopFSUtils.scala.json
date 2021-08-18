@@ -1,0 +1,90 @@
+[
+  {
+    "id" : "ff445a7a-190e-4ef7-b56b-5c398569c401",
+    "prId" : 30019,
+    "prUrl" : "https://github.com/apache/spark/pull/30019#pullrequestreview-508148639",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "806b5afa-4e80-4ecd-b09f-ae414826dbe7",
+        "parentId" : null,
+        "authorId" : "224991ce-ad69-410b-8143-bf394b6b5c59",
+        "body" : "Might be good to pull this out into something reusable for any `RemoteIterator[T]` as it gets used in a number of API calls (all because of java's checked exceptions...)",
+        "createdAt" : "2020-10-14T09:13:34Z",
+        "updatedAt" : "2020-10-20T21:51:16Z",
+        "lastEditedBy" : "224991ce-ad69-410b-8143-bf394b6b5c59",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3c0ad259bea09095da30863af9e614e23cfff0d6",
+    "line" : 20,
+    "diffHunk" : "@@ -1,1 +212,216 @@      } else {\n        val remoteIter = fs.listLocatedStatus(path)\n        new Iterator[LocatedFileStatus]() {\n          def next(): LocatedFileStatus = remoteIter.next\n          def hasNext(): Boolean = remoteIter.hasNext"
+  },
+  {
+    "id" : "5c62f5fa-eba6-441a-af93-5345fd95d970",
+    "prId" : 30019,
+    "prUrl" : "https://github.com/apache/spark/pull/30019#pullrequestreview-512996356",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ca6e7bd9-51f1-460c-8c7f-a78727ce24a1",
+        "parentId" : null,
+        "authorId" : "224991ce-ad69-410b-8143-bf394b6b5c59",
+        "body" : "switch to listStatusIterator(path) and again, provide a remoteIterator. This will give you on paged downloads on hdfs, webhdfs, async page prefetch on latest S3A builds, and, at worst elsewhere, exactly the same performance a listStatus",
+        "createdAt" : "2020-10-14T09:15:24Z",
+        "updatedAt" : "2020-10-20T21:51:16Z",
+        "lastEditedBy" : "224991ce-ad69-410b-8143-bf394b6b5c59",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c0454043-dfa8-4b0a-8b88-2e68cb9545d5",
+        "parentId" : "ca6e7bd9-51f1-460c-8c7f-a78727ce24a1",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "sg - I'll switch to `listStatusIterator` and create a wrapper class for the returned `RemoteIterator` in both cases.",
+        "createdAt" : "2020-10-20T18:00:40Z",
+        "updatedAt" : "2020-10-20T21:51:16Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3c0ad259bea09095da30863af9e614e23cfff0d6",
+    "line" : 17,
+    "diffHunk" : "@@ -1,1 +209,213 @@    val statuses: Array[FileStatus] = try {\n      if (ignoreLocality) {\n        fs.listStatus(path)\n      } else {\n        val remoteIter = fs.listLocatedStatus(path)"
+  },
+  {
+    "id" : "4bb37389-669f-4389-831e-58cd9a5f460b",
+    "prId" : 30019,
+    "prUrl" : "https://github.com/apache/spark/pull/30019#pullrequestreview-512995402",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "042e21f8-4c5e-45ad-a840-fde2c5913beb",
+        "parentId" : null,
+        "authorId" : "224991ce-ad69-410b-8143-bf394b6b5c59",
+        "body" : "the longer you can incrementally do per entry in the remote iterator, the more latencies talking to the object stores can be hidden. See HADOOP-17074 and HADOOP-17023 for details; one of the PRs shows some numbers there. \r\n\r\nIf the spark API could return an iterator/yield and the processing of it used that, a lot of that listing cost could be absorbed entirely.",
+        "createdAt" : "2020-10-14T09:19:18Z",
+        "updatedAt" : "2020-10-20T21:51:16Z",
+        "lastEditedBy" : "224991ce-ad69-410b-8143-bf394b6b5c59",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "69db667e-6f88-44c4-9bc7-993a0f255061",
+        "parentId" : "042e21f8-4c5e-45ad-a840-fde2c5913beb",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Yes it would be lovely if we can get async listing here, but I think it requires a much bigger surgery - up to the top level currently Spark's RDD model requires all the input partitions to be ready before it can start processing (deeply embedded in its primitives such as map/reduce).\r\n\r\nWe can perhaps add the async logic here in this class but I think \"local\" processing we're doing here is far cheaper than the remote listing and perhaps can't gain much from the change.\r\n\r\nWe can wrap the iterator and make it looks like a lazy array until certain info is needed but again I think it won't go very far until we make extensive changes in upper stack like in `PartitioningAwareFileIndex` or `DataSourceScanExec`. Anyways I'll perhaps try this in a separate PR.",
+        "createdAt" : "2020-10-20T17:59:32Z",
+        "updatedAt" : "2020-10-20T21:51:16Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3c0ad259bea09095da30863af9e614e23cfff0d6",
+    "line" : 23,
+    "diffHunk" : "@@ -1,1 +215,219 @@          def next(): LocatedFileStatus = remoteIter.next\n          def hasNext(): Boolean = remoteIter.hasNext\n        }.toArray\n      }\n    } catch {"
+  }
+]

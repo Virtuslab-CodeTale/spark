@@ -64,5 +64,126 @@
     "commit" : "db231c30ddb49da115832b7fbbc47df97194f0dc",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +573,577 @@  }\n\n  test(\"SPARK-33358 CLI should break when have command failed\") {\n    runCliWithin(timeout = 2.minute,\n      errorResponses = Seq(\"AnalysisException\"))("
+  },
+  {
+    "id" : "c07f2f84-1e91-4112-95bc-bb1f1a60ef52",
+    "prId" : 29982,
+    "prUrl" : "https://github.com/apache/spark/pull/29982#pullrequestreview-561112577",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e9cac382-8d69-4978-b4bc-17ab9a2f4720",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "nit format:\r\n```\r\n      \"CREATE TEMPORARY VIEW t1 AS SELECT * FROM VALUES(1, 2) AS t1(k, v);\" -> \"\",\r\n      \"CREATE TEMPORARY VIEW t2 AS SELECT * FROM VALUES(2, 1) AS t2(k, v);\" -> \"\",\r\n      \"EXPLAIN SELECT /*+ MERGEJOIN(t1) */ t1.* FROM t1 JOIN t2 ON t1.k = t2.v;\" -> \"SortMergeJoin\",\r\n      \"EXPLAIN SELECT /* + MERGEJOIN(t1) */ t1.* FROM t1 JOIN t2 ON t1.k = t2.v;\"\r\n        -> \"BroadcastHashJoin\"\r\n```",
+        "createdAt" : "2021-01-04T12:54:41Z",
+        "updatedAt" : "2021-01-04T15:06:22Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a1e2aed3-a918-4528-b274-efb29db60773",
+        "parentId" : "e9cac382-8d69-4978-b4bc-17ab9a2f4720",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "Looks ok to me, but instead do we need to see what will happen if `;` is ignored wrongly while it's in the hint ",
+        "createdAt" : "2021-01-04T13:30:05Z",
+        "updatedAt" : "2021-01-04T15:06:22Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8aff976b-88a6-4b6c-824e-da65e5782e4b",
+        "parentId" : "e9cac382-8d69-4978-b4bc-17ab9a2f4720",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "For example `EXPLAIN SELECT /*+ MERGEJOIN(t1); */ t1.* FROM t1 JOIN t2 ON t1.k = t2.v;`, will the ';' be ignored?",
+        "createdAt" : "2021-01-04T13:33:35Z",
+        "updatedAt" : "2021-01-04T15:06:22Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "116d5fc4-c333-4d6a-aa91-bd242aa4b924",
+        "parentId" : "e9cac382-8d69-4978-b4bc-17ab9a2f4720",
+        "authorId" : "b6393788-12cc-4066-9294-857f4baec092",
+        "body" : "sure, the `;` in ` /* + MERGEJOIN(t1); */` in  will be ignored",
+        "createdAt" : "2021-01-04T14:17:01Z",
+        "updatedAt" : "2021-01-04T15:06:22Z",
+        "lastEditedBy" : "b6393788-12cc-4066-9294-857f4baec092",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f06da24d-6708-4865-8025-876e723681b1",
+        "parentId" : "e9cac382-8d69-4978-b4bc-17ab9a2f4720",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "So `/*+ MERGEJOIN(t1); */ ` === `/*+ MERGEJOIN(t1) */`? I am not very familiar with hints",
+        "createdAt" : "2021-01-04T14:20:05Z",
+        "updatedAt" : "2021-01-04T15:06:22Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4e1d98ed-3dd9-4900-bc3c-41ec87d251e1",
+        "parentId" : "e9cac382-8d69-4978-b4bc-17ab9a2f4720",
+        "authorId" : "b6393788-12cc-4066-9294-857f4baec092",
+        "body" : "no,  the ; in /* + MERGEJOIN(t1); */ in will be ignored means that the `;` would be treated as a delimiter, which used to split sql statements.\r\n\r\n\r\n`EXPLAIN SELECT /*+ MERGEJOIN(t1); */ t1.* FROM t1 JOIN t2 ON t1.k = t2.v` would be transfered to SparkSQLCliDriver totally.",
+        "createdAt" : "2021-01-04T14:52:30Z",
+        "updatedAt" : "2021-01-04T15:06:22Z",
+        "lastEditedBy" : "b6393788-12cc-4066-9294-857f4baec092",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d25c3e38-a3e7-4517-a487-94fb2eb92353",
+        "parentId" : "e9cac382-8d69-4978-b4bc-17ab9a2f4720",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "maybe we should add these to test?",
+        "createdAt" : "2021-01-04T14:55:20Z",
+        "updatedAt" : "2021-01-04T15:06:22Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a6fa7748-01c9-4f78-8c6d-52a377732446",
+        "parentId" : "e9cac382-8d69-4978-b4bc-17ab9a2f4720",
+        "authorId" : "b6393788-12cc-4066-9294-857f4baec092",
+        "body" : "sure, will add one",
+        "createdAt" : "2021-01-04T15:06:42Z",
+        "updatedAt" : "2021-01-04T15:06:42Z",
+        "lastEditedBy" : "b6393788-12cc-4066-9294-857f4baec092",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6256b7da-a2bc-4d1c-b2a8-4a7c70d7f38a",
+        "parentId" : "e9cac382-8d69-4978-b4bc-17ab9a2f4720",
+        "authorId" : "b6393788-12cc-4066-9294-857f4baec092",
+        "body" : "It seems that ` /*+ MERGEJOIN(t1); */` does not conform the syntax.\r\n\r\n```\r\n[info]   2021-01-04 07:09:03.961 - stdout> spark-sql> EXPLAIN SELECT /*+ MERGEJOIN(t1); */ t1.* FROM t1 JOIN t2 ON t1.k = t2.v;\r\n[info]   2021-01-04 07:09:03.967 - stderr> Error in query: \r\n[info]   2021-01-04 07:09:03.967 - stderr> extraneous input ';' expecting {',', '*/', 'ADD', 'AFTER', 'ALL', 'ALTER', 'ANALYZE', 'AND', 'ANTI', 'ANY', 'ARCHIVE', 'ARRAY', 'AS', 'ASC', 'AT', 'AUTHORIZATION', 'BETWEEN', 'BOTH', 'BUCKET', 'BUCKETS', 'BY', 'CACHE', 'CASCADE', 'CASE', 'CAST', 'CHANGE', 'CHECK', 'CLEAR', 'CLUSTER', 'CLUSTERED', 'CODEGEN', 'COLLATE', 'COLLECTION', 'COLUMN', 'COLUMNS', 'COMMENT', 'COMMIT', 'COMPACT', 'COMPACTIONS', 'COMPUTE', 'CONCATENATE', 'CONSTRAINT', 'COST', 'CREATE', 'CROSS', 'CUBE', 'CURRENT', 'CURRENT_DATE', 'CURRENT_TIME', 'CURRENT_TIMESTAMP', 'CURRENT_USER', 'DATA', 'DATABASE', DATABASES, 'DBPROPERTIES', 'DEFINED', 'DELETE', 'DELIMITED', 'DESC', 'DESCRIBE', 'DFS', 'DIRECTORIES', 'DIRECTORY', 'DISTINCT', 'DISTRIBUTE', 'DIV', 'DROP', 'ELSE', 'END', 'ESCAPE', 'ESCAPED', 'EXCEPT', 'EXCHANGE', 'EXISTS', 'EXPLAIN', 'EXPORT', 'EXTENDED', 'EXTERNAL', 'EXTRACT', 'FALSE', 'FETCH', 'FIELDS', 'FILTER', 'FILEFORMAT', 'FIRST', 'FOLLOWING', 'FOR', 'FOREIGN', 'FORMAT', 'FORMATTED', 'FROM', 'FULL', 'FUNCTION', 'FUNCTIONS', 'GLOBAL', 'GRANT', 'GROUP', 'GROUPING', 'HAVING', 'IF', 'IGNORE', 'IMPORT', 'IN', 'INDEX', 'INDEXES', 'INNER', 'INPATH', 'INPUTFORMAT', 'INSERT', 'INTERSECT', 'INTERVAL', 'INTO', 'IS', 'ITEMS', 'JOIN', 'KEYS', 'LAST', 'LATERAL', 'LAZY', 'LEADING', 'LEFT', 'LIKE', 'LIMIT', 'LINES', 'LIST', 'LOAD', 'LOCAL', 'LOCATION', 'LOCK', 'LOCKS', 'LOGICAL', 'MACRO', 'MAP', 'MATCHED', 'MERGE', 'MSCK', 'NAMESPACE', 'NAMESPACES', 'NATURAL', 'NO', NOT, 'NULL', 'NULLS', 'OF', 'ON', 'ONLY', 'OPTION', 'OPTIONS', 'OR', 'ORDER', 'OUT', 'OUTER', 'OUTPUTFORMAT', 'OVER', 'OVERLAPS', 'OVERLAY', 'OVERWRITE', 'PARTITION', 'PARTITIONED', 'PARTITIONS', 'PERCENT', 'PIVOT', 'PLACING', 'POSITION', 'PRECEDING', 'PRIMARY', 'PRINCIPALS', 'PROPERTIES', 'PURGE', 'QUERY', 'RANGE', 'RECORDREADER', 'RECORDWRITER', 'RECOVER', 'REDUCE', 'REFERENCES', 'REFRESH', 'RENAME', 'REPAIR', 'REPLACE', 'RESET', 'RESTRICT', 'REVOKE', 'RIGHT', RLIKE, 'ROLE', 'ROLES', 'ROLLBACK', 'ROLLUP', 'ROW', 'ROWS', 'SCHEMA', 'SELECT', 'SEMI', 'SEPARATED', 'SERDE', 'SERDEPROPERTIES', 'SESSION_USER', 'SET', 'MINUS', 'SETS', 'SHOW', 'SKEWED', 'SOME', 'SORT', 'SORTED', 'START', 'STATISTICS', 'STORED', 'STRATIFY', 'STRUCT', 'SUBSTR', 'SUBSTRING', 'TABLE', 'TABLES', 'TABLESAMPLE', 'TBLPROPERTIES', TEMPORARY, 'TERMINATED', 'THEN', 'TIME', 'TO', 'TOUCH', 'TRAILING', 'TRANSACTION', 'TRANSACTIONS', 'TRANSFORM', 'TRIM', 'TRUE', 'TRUNCATE', 'TYPE', 'UNARCHIVE', 'UNBOUNDED', 'UNCACHE', 'UNION', 'UNIQUE', 'UNKNOWN', 'UNLOCK', 'UNSET', 'UPDATE', 'USE', 'USER', 'USING', 'VALUES', 'VIEW', 'VIEWS', 'WHEN', 'WHERE', 'WINDOW', 'WITH', 'ZONE', IDENTIFIER, BACKQUOTED_IDENTIFIER}(line 1, pos 32)\r\n[info]   2021-01-04 07:09:03.967 - stderr> \r\n[info]   2021-01-04 07:09:03.967 - stderr> == SQL ==\r\n[info]   2021-01-04 07:09:03.967 - stderr> EXPLAIN SELECT /*+ MERGEJOIN(t1); */ t1.* FROM t1 JOIN t2 ON t1.k = t2.v\r\n[info]   2021-01-04 07:09:03.967 - stderr> --------------------------------^^^\r\n[info]   2021-01-04 07:09:03.968 - stderr> \r\n[info]   2021-01-04 07:09:04.102 - stdout> spark-sql> \r\n\r\n```",
+        "createdAt" : "2021-01-04T15:13:15Z",
+        "updatedAt" : "2021-01-04T15:13:59Z",
+        "lastEditedBy" : "b6393788-12cc-4066-9294-857f4baec092",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "eff40954-c753-4f56-a998-ae7aa49365da",
+        "parentId" : "e9cac382-8d69-4978-b4bc-17ab9a2f4720",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "That's expected behavior and not be affected by this change ",
+        "createdAt" : "2021-01-04T15:20:49Z",
+        "updatedAt" : "2021-01-04T15:20:49Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f7f803034ae1ffa713b7015f214d63412e101389",
+    "line" : 24,
+    "diffHunk" : "@@ -1,1 +594,598 @@      \"EXPLAIN SELECT /*+ MERGEJOIN(t1) */ t1.* FROM t1 JOIN t2 ON t1.k = t2.v;\" -> \"SortMergeJoin\",\n      \"EXPLAIN SELECT /* + MERGEJOIN(t1) */ t1.* FROM t1 JOIN t2 ON t1.k = t2.v;\"\n        -> \"BroadcastHashJoin\"\n    )\n  }"
   }
 ]

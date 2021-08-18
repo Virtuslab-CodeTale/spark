@@ -1219,5 +1219,687 @@
     "commit" : "f48d52f68e52b63742e7cce5dbb4fbcc89845402",
     "line" : 183,
     "diffHunk" : "@@ -1,1 +589,593 @@            return;\n          }\n          abortIfNecessary();\n          logger.trace(\"{} shuffleId {} reduceId {} onData writable\",\n            partitionInfo.appShuffleId.appId, partitionInfo.appShuffleId.shuffleId,"
+  },
+  {
+    "id" : "4ba2a7ce-65d0-4c2e-8d39-41d161154d45",
+    "prId" : 30062,
+    "prUrl" : "https://github.com/apache/spark/pull/30062#pullrequestreview-515916359",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "29d37791-210f-474e-8262-db2a0d8b5410",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "If it's used for test only, please add a comment to it, e.g., \"used for test only\"",
+        "createdAt" : "2020-10-22T07:21:05Z",
+        "updatedAt" : "2020-11-08T07:14:19Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "caa8f5b8-3297-4b0b-91bf-64fda50941d1",
+        "parentId" : "29d37791-210f-474e-8262-db2a0d8b5410",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "It's not used for test only. This will be used when merged shuffle data is fetched which will be part of future PRs.",
+        "createdAt" : "2020-10-22T21:28:09Z",
+        "updatedAt" : "2020-11-08T07:14:19Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3843abc6-c34f-4a08-84d5-6583ac7dda6e",
+        "parentId" : "29d37791-210f-474e-8262-db2a0d8b5410",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "The merged shuffle partition is different from regular shuffle blocks in the sense that its ownership is at the host level, not at the executor level.\r\nThere is actually some similarity with SPARK-27651.\r\nWhen a reducer is fetching merged shuffle partition chunks from its local host, it's similar to fetching node local shuffle blocks in the sense that the reducer needs to know from the local shuffle service about the local dirs for the blocks.\r\nWe thus leverage SPARK-27651 to reuse existing code path to handle this part.",
+        "createdAt" : "2020-10-23T18:36:44Z",
+        "updatedAt" : "2020-11-08T07:14:19Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "cb1881cc02e9606471d0f29345267bf2052f6880",
+    "line" : 225,
+    "diffHunk" : "@@ -1,1 +223,227 @@\n  @Override\n  public String[] getMergedBlockDirs(String appId) {\n    AppPathsInfo appPathsInfo = Preconditions.checkNotNull(appsPathInfo.get(appId),\n      \"application \" + appId + \" is not registered or NM was restarted.\");"
+  },
+  {
+    "id" : "697463da-923f-4c30-84ec-f506eaac897e",
+    "prId" : 30062,
+    "prUrl" : "https://github.com/apache/spark/pull/30062#pullrequestreview-515164341",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "bcc2480b-3a08-4af2-aae9-6e4fba64e260",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Can't we simply do `indexWriteStream.writeLong(0L)` here? I prefer to get rid of the special case of `mapId=-1` here.",
+        "createdAt" : "2020-10-22T07:41:52Z",
+        "updatedAt" : "2020-11-08T07:14:19Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "03544f46-2283-4d1b-80c7-8cf51b10bdf4",
+        "parentId" : "bcc2480b-3a08-4af2-aae9-6e4fba64e260",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "Will have to repeat some log statements. If there is an exception just while writing to index file, we do want the logs to reflect it. So, some trivial code is repeated. I do prefer writing to index file from a single method instead of writing it from different locations. I think that helps with debugging.\r\nAnyways, I don't have a strong opinion about this. If you insist on changing this, I will make that change.",
+        "createdAt" : "2020-10-22T22:29:46Z",
+        "updatedAt" : "2020-11-08T07:14:19Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "cb1881cc02e9606471d0f29345267bf2052f6880",
+    "line" : 770,
+    "diffHunk" : "@@ -1,1 +768,772 @@      this.currentMapIndex = -1;\n      // Writing 0 offset so that we can reuse ShuffleIndexInformation.getIndex()\n      updateChunkInfo(0L, -1);\n      this.position = 0;\n      this.encounteredFailure = false;"
+  },
+  {
+    "id" : "bf604759-111c-4938-a54b-2bfc6c308a93",
+    "prId" : 30062,
+    "prUrl" : "https://github.com/apache/spark/pull/30062#pullrequestreview-517211478",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b8fef03f-d1ce-4c71-a933-3227f31adca4",
+        "parentId" : null,
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "this doesn't exist? coming later?",
+        "createdAt" : "2020-10-26T21:13:01Z",
+        "updatedAt" : "2020-11-08T07:14:19Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "15bf6467-4400-472e-a425-55ea2daedd8c",
+        "parentId" : "b8fef03f-d1ce-4c71-a933-3227f31adca4",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "Yes, it comes later with the fetch side changes.",
+        "createdAt" : "2020-10-26T22:07:33Z",
+        "updatedAt" : "2020-11-08T07:14:19Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "cb1881cc02e9606471d0f29345267bf2052f6880",
+    "line" : 197,
+    "diffHunk" : "@@ -1,1 +195,199 @@  /**\n   * The logic here is consistent with\n   * org.apache.spark.storage.DiskBlockManager#getMergedShuffleFile\n   */\n  private File getFile(String appId, String filename) {"
+  },
+  {
+    "id" : "52bab32e-b875-4bc8-ad69-1c019ef1bdc0",
+    "prId" : 30062,
+    "prUrl" : "https://github.com/apache/spark/pull/30062#pullrequestreview-518885680",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "04fdea97-81c2-46be-8695-c21cba8ce812",
+        "parentId" : null,
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "When will this occur ? Is it a candidate for deletion ?",
+        "createdAt" : "2020-10-27T17:34:07Z",
+        "updatedAt" : "2020-11-08T07:14:19Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "df154b56-13af-4697-8742-3031631f4c78",
+        "parentId" : "04fdea97-81c2-46be-8695-c21cba8ce812",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "The situations in which this method returns null is explained inside `receiveBlockDataAsStream`.\r\nThere are 2 scenarios: the block is received after merge finalization, or the block is a duplicate of one that's already merged.\r\nHere, we are specifically checking for the first condition.\r\nEven if we are returning null here, we cannot delete the data file, since it might be reused later when stage retries.",
+        "createdAt" : "2020-10-28T16:56:42Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "cb1881cc02e9606471d0f29345267bf2052f6880",
+    "line" : 133,
+    "diffHunk" : "@@ -1,1 +131,135 @@      try {\n        if (dataFile.exists()) {\n          return null;\n        } else {\n          return new AppShufflePartitionInfo(appShuffleId, reduceId, dataFile, indexFile, metaFile);"
+  },
+  {
+    "id" : "a6662e7b-b79d-43ce-ac3d-bd7283b76b99",
+    "prId" : 30062,
+    "prUrl" : "https://github.com/apache/spark/pull/30062#pullrequestreview-519354450",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "98f2e18c-bd59-420d-87af-511da8bde012",
+        "parentId" : null,
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "Given the various `FinalChannel`'s opened, add a `finalize` to invoke `closeAllFiles`.",
+        "createdAt" : "2020-10-28T03:41:37Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b3b0979f-8bb2-4199-9791-6ee363e89775",
+        "parentId" : "98f2e18c-bd59-420d-87af-511da8bde012",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "done",
+        "createdAt" : "2020-10-29T06:06:28Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "cb1881cc02e9606471d0f29345267bf2052f6880",
+    "line" : 751,
+    "diffHunk" : "@@ -1,1 +749,753 @@    // every chunk. The entry per chunk is a serialized bitmap.\n    private RandomAccessFile metaFile;\n    // The offset for the last chunk tracked in the index file for this shuffle partition\n    private long lastChunkOffset;\n    private int lastMergedMapIndex = -1;"
+  },
+  {
+    "id" : "f31c7ca9-2461-45df-94c5-8eaf3ff19aa3",
+    "prId" : 30062,
+    "prUrl" : "https://github.com/apache/spark/pull/30062#pullrequestreview-519354366",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "dd549407-ec72-4e85-a5ce-e9b6f1a2ad05",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "I think we should still remove `partition` from the `shufflePartitions`. Otherwise, `partitionInfoBeforeCheck` can be wrong.",
+        "createdAt" : "2020-10-28T13:10:30Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ec4dc82d-be54-4287-a3a3-607d46a99f89",
+        "parentId" : "dd549407-ec72-4e85-a5ce-e9b6f1a2ad05",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "done",
+        "createdAt" : "2020-10-29T06:06:14Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "cb1881cc02e9606471d0f29345267bf2052f6880",
+    "line" : 381,
+    "diffHunk" : "@@ -1,1 +379,383 @@      while (partitionsIter.hasNext()) {\n        AppShufflePartitionInfo partition = partitionsIter.next();\n        synchronized (partition) {\n          // Get rid of any partial block data at the end of the file. This could either\n          // be due to failure or a request still being processed when the shuffle"
+  },
+  {
+    "id" : "3daa983a-e18a-41e7-9d6d-afa58906683e",
+    "prId" : 30062,
+    "prUrl" : "https://github.com/apache/spark/pull/30062#pullrequestreview-521960984",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "24906974-7fef-4243-87a7-6d383e0c262f",
+        "parentId" : null,
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "Another effect of breaking the map into a 2-level map.\r\nAfter we delete the first level map from `partitions` during merge finalization, if there is another block received for the same shuffle, we would then repopulate the first level map with an empty map, even though we have already finalized this shuffle.\r\nIt's possible that we would keep these empty maps in the partitions map until the application finishes.\r\n\r\nI feel that breaking the previous 1-level map into a 2-level map has quite some side effects.\r\nIf what we want is to speedup the iteration during shuffle finalization, would keep a separate map for (appId, shuffleId) -> reduceId also address the need?\r\nThis way, we do not break the `partitions` map into a 2-level map which lead to these side effects.",
+        "createdAt" : "2020-10-28T23:24:53Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "71fa54fc-36e0-4166-9507-ff32790c91e7",
+        "parentId" : "24906974-7fef-4243-87a7-6d383e0c262f",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "One more aspect to consider.\r\nIn order to support YARN NM restart, we need to store the information tracked inside the `partition` map into a levelDB state store, similarly to what `ExternalShuffleBlockResolver` is doing.\r\nHaving 1-level map would make storing the information inside levelDB much easier compared with a 2-level map.",
+        "createdAt" : "2020-10-28T23:27:55Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d967b4b8-7ea2-4da8-bbe4-664c1ed30e74",
+        "parentId" : "24906974-7fef-4243-87a7-6d383e0c262f",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "CC @Ngone51 @mridulm ",
+        "createdAt" : "2020-10-28T23:28:33Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "99b9f3f6-ac88-480b-938b-7f2a6712b15a",
+        "parentId" : "24906974-7fef-4243-87a7-6d383e0c262f",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "That is a good point @Victsm, the only concern with maintaining a second data structure is potential for divergence (or need to wrap use of either in critical section).\r\n\r\nThoughts @Ngone51 ?",
+        "createdAt" : "2020-10-29T06:43:57Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0110c7ac-6396-4de3-b05a-332e06b358f3",
+        "parentId" : "24906974-7fef-4243-87a7-6d383e0c262f",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "Thinking more, this specific issue can be resolved by introducing the new map only if it will result in addition to it.\r\nI have sketched a probable flow to @otterc, but in a nutshell, it will be :\r\n\r\n```\r\nAtomicReference<AppShufflePartitionInfo> result = new AtomicReference<>(null);\r\nMap<Integer, AppShufflePartitionInfo> shufflePartitions =\r\n      partitions.computeIfAbsent(appShuffleId, id -> {\r\n        // rename\r\n        AppShufflePartitionInfo info = createAppShufflePartitionInfo(<params>);\r\n        if (null != info) {\r\n          Map<Integer, AppShufflePartitionInfo> map = Maps.newConcurrentMap();\r\n          map.put(reduceId, info);\r\n          result.set(info);\r\n          return map;\r\n        } else {\r\n          return null;\r\n        }\r\n      });\r\n\r\nif (null != result.get()) return result.get();\r\nreturn null == shufflePartitions ? null : shufflePartitions.computeIfAbsent(reduceId, key -> createAppShufflePartitionInfo(<params>);\r\n}     \r\n```\r\n",
+        "createdAt" : "2020-10-29T22:11:39Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3fea1a98-1d31-48c3-8629-d3c2a3c9db2a",
+        "parentId" : "24906974-7fef-4243-87a7-6d383e0c262f",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Another way I'm thinking of is, maybe, we can do like:\r\n\r\n```scala\r\nprivate AppShufflePartitionInfo getOrCreateAppShufflePartitionInfo(\r\n      AppShuffleId appShuffleId,\r\n      int reduceId) {\r\n  if (!partitions.containsKey(appShuffleId) && getMergedShuffleDataFile(appShuffleId, reduceId).exists) {\r\n     // finalized\r\n    return null;\r\n  } else {\r\n    // get existing or create new AppShufflePartitionInfo\r\n    ...\r\n  }\r\n}\r\n\r\n```",
+        "createdAt" : "2020-10-30T15:10:19Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ba3ceeff-0167-4323-a4a3-a0764ef731c3",
+        "parentId" : "24906974-7fef-4243-87a7-6d383e0c262f",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "> Another way I'm thinking of is, maybe, we can do like:\r\n> \r\n> ```scala\r\n> private AppShufflePartitionInfo getOrCreateAppShufflePartitionInfo(\r\n>       AppShuffleId appShuffleId,\r\n>       int reduceId) {\r\n>   if (!partitions.containsKey(appShuffleId) && getMergedShuffleDataFile(appShuffleId, reduceId).exists) {\r\n>      // finalized\r\n>     return null;\r\n>   } else {\r\n>     // get existing or create new AppShufflePartitionInfo\r\n>     ...\r\n>   }\r\n> }\r\n> ```\r\n\r\nThis could work if the entry for appShuffleId from partitions is removed after all the files of all partitions are closed in finalizeShuffleMerge.",
+        "createdAt" : "2020-10-30T16:56:03Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "78609a2f-b2fd-46e5-931b-a02bd6bdd38f",
+        "parentId" : "24906974-7fef-4243-87a7-6d383e0c262f",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "I have made this change",
+        "createdAt" : "2020-11-02T20:14:58Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "cb1881cc02e9606471d0f29345267bf2052f6880",
+    "line" : 123,
+    "diffHunk" : "@@ -1,1 +121,125 @@    }\n    Map<Integer, AppShufflePartitionInfo> shufflePartitions =\n      partitions.computeIfAbsent(appShuffleId, id -> Maps.newConcurrentMap());\n    return shufflePartitions.computeIfAbsent(reduceId, key -> {\n      // It only gets here when the key is not present in the map. This could either"
+  },
+  {
+    "id" : "70e1a364-9ac5-48e4-b80f-c58bb49531e9",
+    "prId" : 30062,
+    "prUrl" : "https://github.com/apache/spark/pull/30062#pullrequestreview-525477701",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "31a15c40-e827-4131-a05f-ae2b5c775719",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Could we log a warning too in addition to the exception?",
+        "createdAt" : "2020-11-03T08:29:55Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a55438d4-a93e-4375-b51d-3e86cf8f5a48",
+        "parentId" : "31a15c40-e827-4131-a05f-ae2b5c775719",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "These are currently logged during the `onFailure` callback but we are logging at `debug` level.\r\nLogging them at warning level will clutter the NM logs.\r\nAlso, this seems to be expected behavior. There would be some blocks which didn't get the opportunity to merge and doesn't indicate that something is wrong with the shuffle server which is unexpected. \r\n@Victsm What do you think?\r\n",
+        "createdAt" : "2020-11-03T18:49:35Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fb098376-43d2-4f8b-aa52-9c1765375fa5",
+        "parentId" : "31a15c40-e827-4131-a05f-ae2b5c775719",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "I see. I know this's the expected behavior but I really care about this case and want to have a way to easily monitor it.",
+        "createdAt" : "2020-11-05T07:07:08Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "33cf0239-005c-46b2-8894-59de3ac22703",
+        "parentId" : "31a15c40-e827-4131-a05f-ae2b5c775719",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "That's a good point. In fact, we have also started working on adding server-side metrics that will account for colliding blocks. Metrics will also make it clearer whether any improvements in this area is effective or not. Adding these metrics are pending tasks listed in the SPIP but I haven't created a Spark jira for it yet. ",
+        "createdAt" : "2020-11-05T16:27:09Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "19f0fdcf-1c74-47e3-8fdd-8aad81e98cb5",
+        "parentId" : "31a15c40-e827-4131-a05f-ae2b5c775719",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "I'd prefer to get this information through metrics instead of log.\r\nSince this is inside shuffle service log not Spark driver/executor log, it's usually more difficult to access these logs.\r\nServer side metrics would help to surface the necessary information without polluting the NM logs with many exceptions that doesn't really hurt.",
+        "createdAt" : "2020-11-06T20:37:22Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "cb1881cc02e9606471d0f29345267bf2052f6880",
+    "line" : 656,
+    "diffHunk" : "@@ -1,1 +654,658 @@          }\n        } else {\n          deferredBufs = null;\n          throw new RuntimeException(String.format(\"%s %s to merged shuffle\",\n            ErrorHandler.BlockPushErrorHandler.BLOCK_APPEND_COLLISION_DETECTED_MSG_PREFIX,"
+  },
+  {
+    "id" : "78c2e00a-abe4-4886-95b0-2ff58c1d7113",
+    "prId" : 30062,
+    "prUrl" : "https://github.com/apache/spark/pull/30062#pullrequestreview-522817434",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7fe37cd0-ae55-4e22-8ebe-5c6553790817",
+        "parentId" : null,
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "Do we really need this here in the `onComplete` method (when decision is only made based by `isWriting` value in the `onFailure` method)? \r\n\r\nWhat I mean is the`onComplete` method by definition is only called when all the data is received and everything went fine. And either [onComplete called](https://github.com/apache/spark/blob/0fa7d8051416db67f01edb8c93c9e2e2607d7b31/common/network-common/src/main/java/org/apache/spark/network/client/StreamInterceptor.java#L89)  or [`onFailure`](https://github.com/apache/spark/blob/0fa7d8051416db67f01edb8c93c9e2e2607d7b31/common/network-common/src/main/java/org/apache/spark/network/client/StreamInterceptor.java#L84).\r\n\r\n",
+        "createdAt" : "2020-11-03T13:19:25Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5b9e1752-7ba7-4efa-b5a7-0bd3658b7f89",
+        "parentId" : "7fe37cd0-ae55-4e22-8ebe-5c6553790817",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "If there is an exception from `streamHandler.onComplete` [here](https://github.com/apache/spark/blob/56c623e98c54fdb4d47c9264ae1b282ecb2b7291/common/network-common/src/main/java/org/apache/spark/network/server/TransportRequestHandler.java#L211), then `streamHandler.onFailure` will also be called in the [catch block](https://github.com/apache/spark/blob/56c623e98c54fdb4d47c9264ae1b282ecb2b7291/common/network-common/src/main/java/org/apache/spark/network/server/TransportRequestHandler.java#L217).\r\nThis is why, we need `isWriting=true` in `onComplete` because there could be an IOException while writing to the file.",
+        "createdAt" : "2020-11-03T18:25:20Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8a28cf47-ff35-4126-87d3-fed96c853b91",
+        "parentId" : "7fe37cd0-ae55-4e22-8ebe-5c6553790817",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "Thanks, I missed that one!",
+        "createdAt" : "2020-11-03T19:36:26Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "cb1881cc02e9606471d0f29345267bf2052f6880",
+    "line" : 631,
+    "diffHunk" : "@@ -1,1 +629,633 @@        // Check if we can commit this block\n        if (allowedToWrite()) {\n          isWriting = true;\n          // Identify duplicate block generated by speculative tasks. We respond success to\n          // the client in cases of duplicate even though no data is written."
+  },
+  {
+    "id" : "76aa37dc-0f88-4ab8-8f83-ac5906960134",
+    "prId" : 30062,
+    "prUrl" : "https://github.com/apache/spark/pull/30062#pullrequestreview-525485385",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "82f264ae-b031-41f6-b32c-7edf1db5fcf7",
+        "parentId" : null,
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "The case for collisions are not tested. \r\n\r\nHad you considered storing the `deferredBufs` of the detected collisions (this side) and write them out right after the collided callback (the other) finished  its writing?\r\n",
+        "createdAt" : "2020-11-04T16:52:42Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "892bab85-704c-4ee3-aa7e-4b83f33a6279",
+        "parentId" : "82f264ae-b031-41f6-b32c-7edf1db5fcf7",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "There is a `testFailureWith3Streams` which tests collisions\r\n\r\n> Had you considered storing the deferredBufs of the detected collisions (this side) and write them out right after the collided callback (the other) finished its writing?\r\n\r\nI don't understand the suggestion copletely. The deferredBufs are part of the stream and if the stream doesn't get opportunity to write, then it lands here. We are not storing `deferredBufs` outside the stream. ",
+        "createdAt" : "2020-11-04T16:59:55Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "51f0a629-8e53-4895-b118-8b0d981a1415",
+        "parentId" : "82f264ae-b031-41f6-b32c-7edf1db5fcf7",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "There is a previous conversation related to this [here](https://github.com/apache/spark/pull/30062#discussion_r507403306).\r\n",
+        "createdAt" : "2020-11-04T17:02:43Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4ef9621e-f1ff-4cbe-baa7-3ca5831a078b",
+        "parentId" : "82f264ae-b031-41f6-b32c-7edf1db5fcf7",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "I have also added another simple UT for collisions.",
+        "createdAt" : "2020-11-04T17:29:05Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d0d9586f-1400-4744-b3c1-58b83afd822c",
+        "parentId" : "82f264ae-b031-41f6-b32c-7edf1db5fcf7",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "My idea is sharing those `deferredBufs` in case of collision via the partitionInfo (in-memory and not via a new file, for example stored in a collection to be able to handle multiple collisions too) with the other stream so let this stream finish successfully and the other stream which is able to write to handle this collided `deferredBufs`.",
+        "createdAt" : "2020-11-04T17:49:30Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c41213cf-7984-4e18-b455-7289f9d24d3a",
+        "parentId" : "82f264ae-b031-41f6-b32c-7edf1db5fcf7",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "Ok. That will impact the memory usage though. Currently these `deferredBufs` live as long as the stream is alive. Storing it outside increases the time they stay in memory and that could increase the memory considerably.\r\n\r\nThere is another discussion about limiting the number of bufs in memory [here](https://github.com/apache/spark/pull/30062#discussion_r514026014) which is relevant to this topic.\r\nThe approach we have used so far with push-merge is that it is best-effort. So, current behavior is in-line with that.\r\n@Victsm @mridulm @Ngone51 What do you think?\r\n\r\nI do think that if we decide to try this, it should be a follow-up because this change requires us to evaluate how much memory the shuffle service will use.\r\n",
+        "createdAt" : "2020-11-04T18:23:47Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6e353731-5778-48d4-a9c5-77a780d31ae5",
+        "parentId" : "82f264ae-b031-41f6-b32c-7edf1db5fcf7",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "Sure, a follow-up PR is fine for me. My question was really about whether this idea was considered and evaluated. For sure the memory will be increased (at least the time how long this deferred buffs will be kept in the memory but of course as other streams are working this will lead to increased amount too).",
+        "createdAt" : "2020-11-04T19:37:20Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fc787bf8-c9dc-4806-811e-f6d0b1106c02",
+        "parentId" : "82f264ae-b031-41f6-b32c-7edf1db5fcf7",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "I have updated this jira \r\nhttps://issues.apache.org/jira/browse/SPARK-33331#\r\nI think when we introduce a limit on the number of pending blocks in memory, then we can also add the ignored blocks (the ones that reach here) to memory if there is availability.",
+        "createdAt" : "2020-11-04T20:13:40Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4178a277-513c-4966-909b-7bedeff5f810",
+        "parentId" : "82f264ae-b031-41f6-b32c-7edf1db5fcf7",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Have left a comment to the JIRA. ",
+        "createdAt" : "2020-11-05T07:00:03Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2b899aca-1fe7-4987-b333-b4809c0cb172",
+        "parentId" : "82f264ae-b031-41f6-b32c-7edf1db5fcf7",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "Want to add that one of the things we are considering is the necessity of a bounded in-memory buffer on the server side to help with writing the blocks to merged files.\r\nThe consideration is more from the aspect of how much potential improvement we could see on the disk write I/O when merging the blocks, and less about reaching better merge ratio for blocks.\r\nThese 2 things are however very related though, and will be something that we will consider holistically inside SPARK-33331.",
+        "createdAt" : "2020-11-06T20:51:17Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "cb1881cc02e9606471d0f29345267bf2052f6880",
+    "line" : 657,
+    "diffHunk" : "@@ -1,1 +655,659 @@        } else {\n          deferredBufs = null;\n          throw new RuntimeException(String.format(\"%s %s to merged shuffle\",\n            ErrorHandler.BlockPushErrorHandler.BLOCK_APPEND_COLLISION_DETECTED_MSG_PREFIX,\n            streamId));"
+  },
+  {
+    "id" : "166e912c-1a3a-4ac5-b6e9-a682cb77d3a7",
+    "prId" : 30062,
+    "prUrl" : "https://github.com/apache/spark/pull/30062#pullrequestreview-523887915",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b6253d15-1f68-42b8-a55c-0488cc3dd327",
+        "parentId" : null,
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "this and other new classes (including MergedShuffleFileManager) should have the:\r\n * @since 3.1.0 or @Since(\"3.1.0\")\r\ndepending on java/scala.\r\n\r\nAlso sorry if  this has been discussed do we want to marke the new API as Evolving?\r\n\r\nNote I'm fine with doing this as separate issue.",
+        "createdAt" : "2020-11-04T20:45:29Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e3bd0bcb-5ab1-4982-ad64-13bb888046bf",
+        "parentId" : "b6253d15-1f68-42b8-a55c-0488cc3dd327",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "Yes, I will make them Evolving with this change.",
+        "createdAt" : "2020-11-04T21:09:06Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f0a8cdd9-7259-4401-bdf1-99438744d02a",
+        "parentId" : "b6253d15-1f68-42b8-a55c-0488cc3dd327",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "I don't see `@SInce 3.1.0` on any java classes/interfaces. The annotation doesn't seem to be available in the network-shuffle module. I can add it to the javadoc.\r\ncc. @tgravescs ",
+        "createdAt" : "2020-11-04T21:47:03Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5e2bb4de-57ad-4b50-85eb-06453b97ac9c",
+        "parentId" : "b6253d15-1f68-42b8-a55c-0488cc3dd327",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "yes javadoc is fine similar to https://github.com/apache/spark/blob/master/core/src/main/java/org/apache/spark/api/plugin/ExecutorPlugin.java#L29",
+        "createdAt" : "2020-11-04T21:51:28Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "52125cf7-16c3-4c3b-9e51-3e2641dab098",
+        "parentId" : "b6253d15-1f68-42b8-a55c-0488cc3dd327",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "Also `@Evolving` is not available in network-shuffle module. Will have to add a dependency on hadoop-annotations.\r\nI am not sure if that's okay. \r\n@mridulm @tgravescs ",
+        "createdAt" : "2020-11-04T21:59:18Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8f1e04f2-ae95-46a0-bda9-08848ce6e0c3",
+        "parentId" : "b6253d15-1f68-42b8-a55c-0488cc3dd327",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "ah you are right we don't include it. spark-tags module is pretty small though and just has the annotations. I would think that would be ok to include here.  @mridulm @Ngone51  any objections?\r\n",
+        "createdAt" : "2020-11-04T22:23:36Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a479b27e-3fc4-434c-a25d-2a9f533b6d8d",
+        "parentId" : "b6253d15-1f68-42b8-a55c-0488cc3dd327",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "I see. spark-annotations is already added as a test dependency for this module. Making the scope compile should be fine then.",
+        "createdAt" : "2020-11-04T22:41:05Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1ade4e61-8435-4b30-afcf-ff2ecf6e7ff0",
+        "parentId" : "b6253d15-1f68-42b8-a55c-0488cc3dd327",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "yeah the main thing is we are trying to keep those dependencies to a minimum so they don't conflict with other things and keep size as small as possible because you are running this as part of node manager in yarns case.  tags shouldn't have any other dependencies and it should be small and not much change of it conflicting.",
+        "createdAt" : "2020-11-04T22:58:59Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "47d29d62-7c8d-4993-8877-c460873d3d6f",
+        "parentId" : "b6253d15-1f68-42b8-a55c-0488cc3dd327",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "Done",
+        "createdAt" : "2020-11-05T02:46:06Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "cb1881cc02e9606471d0f29345267bf2052f6880",
+    "line" : 65,
+    "diffHunk" : "@@ -1,1 +63,67 @@/**\n * An implementation of {@link MergedShuffleFileManager} that provides the most essential shuffle\n * service processing logic to support push based shuffle.\n *\n * @since 3.1.0"
+  },
+  {
+    "id" : "6c15aa51-d7de-4fcc-b72d-273af86dac13",
+    "prId" : 30062,
+    "prUrl" : "https://github.com/apache/spark/pull/30062#pullrequestreview-523889970",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b32a8240-17d0-4920-a098-b992463dc2d0",
+        "parentId" : null,
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "should the setting to null really be in a finally block? That way if the close does throw and we ignore it still gets set",
+        "createdAt" : "2020-11-04T20:53:07Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "35ece523-dfdd-43d2-9ab9-8a15a6086291",
+        "parentId" : "b32a8240-17d0-4920-a098-b992463dc2d0",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "done",
+        "createdAt" : "2020-11-05T02:52:35Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "cb1881cc02e9606471d0f29345267bf2052f6880",
+    "line" : 875,
+    "diffHunk" : "@@ -1,1 +873,877 @@            appShuffleId.appId, appShuffleId.shuffleId, reduceId);\n        } finally {\n          dataChannel = null;\n        }\n      }"
   }
 ]

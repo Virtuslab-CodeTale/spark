@@ -1516,5 +1516,236 @@
     "commit" : "3a7f4e740eb5a9cecf880bc5cc294b2459e98cf1",
     "line" : 19,
     "diffHunk" : "@@ -1,1 +815,819 @@    case we @ WindowExpression(AggregateExpression(first: First, _, _, _, _), spec)\n      if spec.orderSpec.nonEmpty &&\n        spec.frameSpecification.asInstanceOf[SpecifiedWindowFrame].frameType == RowFrame =>\n      we.copy(windowFunction = NthValue(first.child, Literal(1), first.ignoreNulls))\n  }"
+  },
+  {
+    "id" : "45b0041b-c56d-479e-828e-eab49b0bcff8",
+    "prId" : 30018,
+    "prUrl" : "https://github.com/apache/spark/pull/30018#pullrequestreview-510408431",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f6ab3e3b-1ef5-4941-aa64-a254e3559260",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "nit: `lowerIsRedundant` -> `hasRedundantAggregate`?",
+        "createdAt" : "2020-10-15T07:20:46Z",
+        "updatedAt" : "2021-03-19T04:24:38Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2ee82dad-dae4-483c-8c53-1dc6ffa06fff",
+        "parentId" : "f6ab3e3b-1ef5-4941-aa64-a254e3559260",
+        "authorId" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "body" : "I think that the current one is more explicit. With your proposition it is not obvious which one is redundant. Perhaps there are situations where `upperIsRedundant`.",
+        "createdAt" : "2020-10-16T12:08:26Z",
+        "updatedAt" : "2021-03-19T04:24:38Z",
+        "lastEditedBy" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "07e758d25e0840bf40129a36ad5bdb90a005058a",
+    "line" : 36,
+    "diffHunk" : "@@ -1,1 +514,518 @@  }\n\n  private def lowerIsRedundant(upper: Aggregate, lower: Aggregate): Boolean = {\n    val upperHasNoAggregateExpressions = !upper.aggregateExpressions.exists(isAggregate)\n"
+  },
+  {
+    "id" : "9e23376b-a16a-4176-a7ec-fa1551560ee6",
+    "prId" : 30018,
+    "prUrl" : "https://github.com/apache/spark/pull/30018#pullrequestreview-513424905",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "42bc38e2-b847-447d-a5a5-8de168e67fac",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "`transformUp` -> `transform`? Seems like this transformation does not depend on the order.",
+        "createdAt" : "2020-10-15T07:22:01Z",
+        "updatedAt" : "2021-03-19T04:24:38Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ecc0b48c-e1bf-4c28-8a19-c5f1b7ce1b76",
+        "parentId" : "42bc38e2-b847-447d-a5a5-8de168e67fac",
+        "authorId" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "body" : "There is a slight difference - `transformUp` can handle more than two consecutive aggregates in a single iteration.\r\nIf there are 3 aggregates `A1(A2(A3(...)))`, where `A2` and  `A3` are redundant, then with `transformDown` on first iteration `A2` is removed and then `A3` on the second iteration. With `transformUp` it removes `A3` and then `A2` on the same iteration.",
+        "createdAt" : "2020-10-15T15:30:49Z",
+        "updatedAt" : "2021-03-19T04:24:38Z",
+        "lastEditedBy" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "234342ac-1eda-4394-a7b3-ce3a4ecd7215",
+        "parentId" : "42bc38e2-b847-447d-a5a5-8de168e67fac",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : ">> where A2 and A3 are redundant\r\n\r\nIf only A2 and A3 are redundant, `lowerIsRedundant(A1, A2)` returns false and it seems like A2/A3 are removed in the same iteration even in `transform` (the first acse). I miss something?",
+        "createdAt" : "2020-10-21T02:20:49Z",
+        "updatedAt" : "2021-03-19T04:24:38Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ceb61bac-8da9-4e41-89fc-3c6959907c5c",
+        "parentId" : "42bc38e2-b847-447d-a5a5-8de168e67fac",
+        "authorId" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "body" : "I meant that `lowerIsRedundant(A1, A2)` would return true, If it would return false, then A2 would not be removed at all.\r\n\r\nWith `transformDown` it would check `A1` and `A2` and remove `A2`, but then it would not check `A1` and `A3` on the same iteration.",
+        "createdAt" : "2020-10-21T03:20:15Z",
+        "updatedAt" : "2021-03-19T04:24:38Z",
+        "lastEditedBy" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0c2f1284-b9fb-4f72-9f5d-95ffcae654b9",
+        "parentId" : "42bc38e2-b847-447d-a5a5-8de168e67fac",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "> transformUp can handle more than two consecutive aggregates in a single iteration.\r\n\r\nYou meant that `transformUp` can transform `A1(A2(A3(...))) => A1()` in a single iteration? Probably, I miss some conditions for the case you described above, so could you give me a concrete query example for it?",
+        "createdAt" : "2020-10-21T05:12:16Z",
+        "updatedAt" : "2021-03-19T04:24:38Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f0613169-2d1d-456c-bac8-d7f744b627bf",
+        "parentId" : "42bc38e2-b847-447d-a5a5-8de168e67fac",
+        "authorId" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "body" : "For example the UT `Remove 2 redundant aggregates`.\r\nWith `transformUp` it runs 2 iterations (1 extra to detect that all changes are done).\r\nWith `transformDown` it runs 3 iterations",
+        "createdAt" : "2020-10-21T05:44:09Z",
+        "updatedAt" : "2021-03-19T04:24:38Z",
+        "lastEditedBy" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c04e0993-c001-4f0c-a061-6cb9a744c2a8",
+        "parentId" : "42bc38e2-b847-447d-a5a5-8de168e67fac",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Ah, ok. I got your point. Looks okay as it is.",
+        "createdAt" : "2020-10-21T08:23:56Z",
+        "updatedAt" : "2021-03-19T04:24:38Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "07e758d25e0840bf40129a36ad5bdb90a005058a",
+    "line" : 17,
+    "diffHunk" : "@@ -1,1 +495,499 @@ */\nobject RemoveRedundantAggregates extends Rule[LogicalPlan] with AliasHelper {\n  def apply(plan: LogicalPlan): LogicalPlan = plan transformUp {\n    case upper @ Aggregate(_, _, lower: Aggregate) if lowerIsRedundant(upper, lower) =>\n      val aliasMap = getAliasMap(lower)"
+  },
+  {
+    "id" : "b5fdc4c6-9097-4d59-8164-1d834d5d8a1e",
+    "prId" : 30018,
+    "prUrl" : "https://github.com/apache/spark/pull/30018#pullrequestreview-556092897",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "fa69cc4b-a547-4ae1-bac2-c876bf949f2d",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Could you add test cases for `PythonUDF.isGroupedAggPandasUDF(e)`, too?",
+        "createdAt" : "2020-12-21T02:04:09Z",
+        "updatedAt" : "2021-03-19T04:24:38Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "07e758d25e0840bf40129a36ad5bdb90a005058a",
+    "line" : 52,
+    "diffHunk" : "@@ -1,1 +530,534 @@  private def isAggregate(expr: Expression): Boolean = {\n    expr.find(e => e.isInstanceOf[AggregateExpression] ||\n      PythonUDF.isGroupedAggPandasUDF(e)).isDefined\n  }\n}"
+  },
+  {
+    "id" : "f491a234-b970-4ae3-a438-186570c498f3",
+    "prId" : 30018,
+    "prUrl" : "https://github.com/apache/spark/pull/30018#pullrequestreview-616944479",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2d854c10-0d8f-4075-ae13-da9a9fbdf4f1",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "nit. Usually, `isXXX` is better and consistent with Apache Spark convention.",
+        "createdAt" : "2021-03-20T21:10:10Z",
+        "updatedAt" : "2021-03-20T21:10:11Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "07e758d25e0840bf40129a36ad5bdb90a005058a",
+    "line" : 36,
+    "diffHunk" : "@@ -1,1 +514,518 @@  }\n\n  private def lowerIsRedundant(upper: Aggregate, lower: Aggregate): Boolean = {\n    val upperHasNoAggregateExpressions = !upper.aggregateExpressions.exists(isAggregate)\n"
+  },
+  {
+    "id" : "d91ca3cb-087b-4e3a-98f5-bd0915b6b63c",
+    "prId" : 30018,
+    "prUrl" : "https://github.com/apache/spark/pull/30018#pullrequestreview-616944661",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "648f0ae0-b8a5-4108-af99-9bc0de71c3d2",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "- `introduces` -> `introduced`\r\n- `expression` -> `expressions`",
+        "createdAt" : "2021-03-20T21:13:24Z",
+        "updatedAt" : "2021-03-20T21:14:01Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "07e758d25e0840bf40129a36ad5bdb90a005058a",
+    "line" : 28,
+    "diffHunk" : "@@ -1,1 +506,510 @@      )\n\n      // We might have introduces non-deterministic grouping expression\n      if (newAggregate.groupingExpressions.exists(!_.deterministic)) {\n        PullOutNondeterministic.applyLocally.applyOrElse(newAggregate, identity[LogicalPlan])"
+  },
+  {
+    "id" : "c003fc4f-eadc-4669-91e2-d2176c191c17",
+    "prId" : 30018,
+    "prUrl" : "https://github.com/apache/spark/pull/30018#pullrequestreview-616945018",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "160cc0cb-c5f9-442e-966a-8f0a9f7d2326",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Could you move this optimizer into a new file please, @tanelk ?",
+        "createdAt" : "2021-03-20T21:19:11Z",
+        "updatedAt" : "2021-03-20T21:19:11Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "07e758d25e0840bf40129a36ad5bdb90a005058a",
+    "line" : 16,
+    "diffHunk" : "@@ -1,1 +494,498 @@ * only goal is to keep distinct values, while its parent aggregate would ignore duplicate values.\n */\nobject RemoveRedundantAggregates extends Rule[LogicalPlan] with AliasHelper {\n  def apply(plan: LogicalPlan): LogicalPlan = plan transformUp {\n    case upper @ Aggregate(_, _, lower: Aggregate) if lowerIsRedundant(upper, lower) =>"
+  },
+  {
+    "id" : "21785bda-f303-45c7-9ddb-559a210a0f7e",
+    "prId" : 30018,
+    "prUrl" : "https://github.com/apache/spark/pull/30018#pullrequestreview-616946037",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "996018b3-503a-495f-84d5-062ce6b6ae92",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "```scala\r\n- .filter(!isAggregate(_))\r\n+ .filterNot(isAggregate)\r\n```",
+        "createdAt" : "2021-03-20T21:37:32Z",
+        "updatedAt" : "2021-03-20T21:37:32Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "07e758d25e0840bf40129a36ad5bdb90a005058a",
+    "line" : 43,
+    "diffHunk" : "@@ -1,1 +521,525 @@        .aggregateExpressions\n        .filter(_.deterministic)\n        .filter(!isAggregate(_))\n        .map(_.toAttribute)\n    ))"
   }
 ]

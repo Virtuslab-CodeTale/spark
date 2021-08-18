@@ -152,5 +152,27 @@
     "commit" : "a35e700696f44698e8b945f99a14f04fa266e0ab",
     "line" : 16,
     "diffHunk" : "@@ -1,1 +1104,1108 @@\n    val nonStringMapDF = Seq(Tuple1(Map(1 -> 1))).toDF(\"col\")\n    // Spark implicit casts string literal \"a\" to int to match the key type.\n    checkAnswer(nonStringMapDF.groupBy(struct($\"col.a\")).count().select(\"count\"), Row(1))\n"
+  },
+  {
+    "id" : "4828f7f7-b222-4d70-b469-7b6eef25542f",
+    "prId" : 29983,
+    "prUrl" : "https://github.com/apache/spark/pull/29983#pullrequestreview-505611130",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7ce07822-ac95-42a6-9177-d86c1f25bc31",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "How about organizing tests like this? (I think it'd better not to update the existing tests as much as possible):\r\n```\r\n  test(\"zero moments\") {\r\n    withSQLConf(SQLConf.LEGACY_CENTRAL_MOMENT_AGG_BEHAVIOR.key -> \"true\") {\r\n      // Don't touch the existing tests\r\n      val input = Seq((1, 2)).toDF(\"a\", \"b\")\r\n      checkAnswer(\r\n        input.agg(stddev($\"a\"), stddev_samp($\"a\"), stddev_pop($\"a\"), variance($\"a\"),\r\n          var_samp($\"a\"), var_pop($\"a\"), skewness($\"a\"), kurtosis($\"a\")),\r\n        Row(Double.NaN, Double.NaN, 0.0, Double.NaN, Double.NaN, 0.0,\r\n          Double.NaN, Double.NaN))\r\n\r\n      checkAnswer(\r\n        input.agg(\r\n          expr(\"stddev(a)\"),\r\n          expr(\"stddev_samp(a)\"),\r\n          expr(\"stddev_pop(a)\"),\r\n          expr(\"variance(a)\"),\r\n          expr(\"var_samp(a)\"),\r\n          expr(\"var_pop(a)\"),\r\n          expr(\"skewness(a)\"),\r\n          expr(\"kurtosis(a)\")),\r\n        Row(Double.NaN, Double.NaN, 0.0, Double.NaN, Double.NaN, 0.0,\r\n          Double.NaN, Double.NaN))\r\n    }\r\n  }\r\n\r\n  test(\"SPARK-13860: xxxx\") {\r\n    // Writes tests for the new behaviour\r\n  }\r\n```",
+        "createdAt" : "2020-10-09T12:06:47Z",
+        "updatedAt" : "2020-10-13T08:29:12Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ddc522cd2a455a08e3151c363645cc3f001465d5",
+    "line" : 3,
+    "diffHunk" : "@@ -1,1 +456,460 @@  }\n\n  test(\"zero moments\") {\n    withSQLConf(SQLConf.LEGACY_STATISTICAL_AGGREGATE.key -> \"true\") {\n      val input = Seq((1, 2)).toDF(\"a\", \"b\")"
   }
 ]

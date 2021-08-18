@@ -42,5 +42,115 @@
     "commit" : "53109918cbdbdba2fe79f38a991c171efec7e85f",
     "line" : 9,
     "diffHunk" : "@@ -1,1 +425,429 @@   */\n  public int appAttemptId() {\n    return conf.getInt(\"spark.app.attempt.id\", -1);\n  }\n}"
+  },
+  {
+    "id" : "9ea07373-fbce-40b7-a739-eb558719aff2",
+    "prId" : 30062,
+    "prUrl" : "https://github.com/apache/spark/pull/30062#pullrequestreview-512062068",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b51d6003-6b80-4335-a6d7-73cd2c4ecff6",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "I'm not sure if you're aware of the feature that Spark can save the shuffle data into the disk when the data is too large to hold in the memory.",
+        "createdAt" : "2020-10-19T05:04:52Z",
+        "updatedAt" : "2020-11-08T07:14:19Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6c11c2d2-95b3-4d30-af17-5bbac437ca78",
+        "parentId" : "b51d6003-6b80-4335-a6d7-73cd2c4ecff6",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "Are you referring to the configuration `maxRemoteBlockSizeFetchToMem`? \r\nWe are aware that when this configuration is set and if a request is larger than this, the block will be saved to disk. \r\nWith push-based shuffle, data of a remote merged block is always large. If we don't divide it into chunks, the remote merged data will always be written to disk and then read from it again. This adds a lot more time.\r\nAlso any failure during fetching an entire merged block will be much more costly. With the approach of dividing a merged block into size-able chunks\r\n- We don't have to write to the disk always so the runtime of jobs are shorter.\r\n- When fetch of a shuffle chunk fails, then we fallback to the original blocks corresponding to the mapIds which are part of this chunk.",
+        "createdAt" : "2020-10-19T18:48:23Z",
+        "updatedAt" : "2020-11-08T07:14:19Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "cb1881cc02e9606471d0f29345267bf2052f6880",
+    "line" : 21,
+    "diffHunk" : "@@ -1,1 +381,385 @@   * push-based shuffle.\n   * A merged shuffle file consists of multiple small shuffle blocks. Fetching the\n   * complete merged shuffle file in a single response increases the memory requirements for the\n   * clients. Instead of serving the entire merged file, the shuffle service serves the\n   * merged file in `chunks`. A `chunk` constitutes few shuffle blocks in entirety and this"
+  },
+  {
+    "id" : "f949fa39-0808-468c-bf64-506c0ce2416a",
+    "prId" : 30062,
+    "prUrl" : "https://github.com/apache/spark/pull/30062#pullrequestreview-518413224",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a906ce4a-1b2c-4af8-9290-8b5dd1e2540e",
+        "parentId" : null,
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "One thing we discussed internally is whether this config should be a server side config or a client side config.\r\nAs @otterc mentioned, there are multiple reasons we break a merged shuffle partition file into multiple smaller chunks.\r\nOne of the biggest reasons is to parallelize fetching shuffle data and task execution.\r\nIf we have a multi-GB merged shuffle partition and the client is fetching it as a single block, then the client would wait until it fetches its entirety before handing off to the task processing logic to process the block, which is not ideal.\r\nThe question is that whether size of the chunk should be a global configuration on the server side, irrespective of individual applications, or a Spark app configuration so users can fine tune it.\r\nWe currently make it a server side config so we don't introduce another parameter for users to tune.\r\nWant to get inputs from the community on this as well.\r\ncc @Ngone51 @attilapiros @jiangxb1987 @tgravescs ",
+        "createdAt" : "2020-10-23T18:01:41Z",
+        "updatedAt" : "2020-11-08T07:14:19Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1eea3ed7-0c97-4a86-8ca5-c2f2235b1f40",
+        "parentId" : "a906ce4a-1b2c-4af8-9290-8b5dd1e2540e",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "Thanks for making the comment here as I was just wondering the same thing.\r\nHow much difference have you seen in tuning this parameter?   I assume if its not a static here for the server, then it would have to be passed in as a parameter during fetching.",
+        "createdAt" : "2020-10-23T19:14:15Z",
+        "updatedAt" : "2020-11-08T07:14:19Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "275e8968-0a22-4e85-9b2f-9a6fbc8bf556",
+        "parentId" : "a906ce4a-1b2c-4af8-9290-8b5dd1e2540e",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "If it's not static, we would make it as a parameter passed during initial executor registration.\r\nThis would perhaps introduce a new registration RPC to maintain backward compatibility with the existing RegisterExecutor RPC, and make this chunk size a global config for all shuffles of that application.\r\n\r\nIn terms of difference, we don't see much impact on the performance side if this size is set to something reasonable, in a few MB range.\r\nWhen we set it too large, like above 5 MB, it could have slight memory implications if the other parameters like `maxBytesInFlight`, `maxReqsInFlight`, and `maxBlocksInFlightPerAddress` are not set accordingly.\r\nIf an executor runs multiple reducers concurrently, each fetching chunks from a merged shuffle partition, then these reducers potentially need to fetch 100s or even 1000+ MB-sized blocks.\r\nThis could be a very different block fetching pattern compared with fetching the original blocks.\r\nAn inappropriate setting for parameters `maxBytesInFlight`, `maxReqsInFlight`, and `maxBlocksInFlightPerAddress` could lead to more data being fetched concurrently, thus increasing memory consumptions on the client side.\r\n\r\nWe mitigated this by reducing the default chunk size to 2mb, and also adjusted our settings for the default values for the other shuffle related parameters.",
+        "createdAt" : "2020-10-23T20:32:21Z",
+        "updatedAt" : "2020-11-08T07:14:19Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "654cb4d2-4684-4b15-9a43-ee77754a7e15",
+        "parentId" : "a906ce4a-1b2c-4af8-9290-8b5dd1e2540e",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "I think it is fine to keep it on the server side first. Especially as based on the aboves it does not seem to have huge impact right now (and of course latter when we will have more experience with push-based shuffle this decision can be revisited).",
+        "createdAt" : "2020-10-26T12:31:18Z",
+        "updatedAt" : "2020-11-08T07:14:19Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8020f623-c449-4199-a7ef-c8c62374ea55",
+        "parentId" : "a906ce4a-1b2c-4af8-9290-8b5dd1e2540e",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "yeah agree, I think leave on server side.",
+        "createdAt" : "2020-10-26T19:40:32Z",
+        "updatedAt" : "2020-11-08T07:14:19Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4c28d567-5f21-4ca2-aaa1-343542b30998",
+        "parentId" : "a906ce4a-1b2c-4af8-9290-8b5dd1e2540e",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "+1 to leave on the server side.",
+        "createdAt" : "2020-10-28T08:19:48Z",
+        "updatedAt" : "2020-11-08T07:14:20Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "cb1881cc02e9606471d0f29345267bf2052f6880",
+    "line" : 29,
+    "diffHunk" : "@@ -1,1 +389,393 @@  public int minChunkSizeInMergedShuffleFile() {\n    return Ints.checkedCast(JavaUtils.byteStringAsBytes(\n      conf.get(\"spark.shuffle.server.minChunkSizeInMergedShuffleFile\", \"2m\")));\n  }\n"
   }
 ]

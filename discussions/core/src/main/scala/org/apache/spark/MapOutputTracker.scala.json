@@ -900,5 +900,170 @@
     "commit" : "d1422bdd5a7b17c69a43208c23becf76a4bad16c",
     "line" : 545,
     "diffHunk" : "@@ -1,1 +888,892 @@      // Check if the map output is pre-merged and if the merge ratio is above the threshold.\n      // If so, the location of the merged block is the preferred location.\n      val preferredLoc = if (pushBasedShuffleEnabled) {\n        shuffleStatus.withMergeStatuses { statuses =>\n          val status = statuses(partitionId)"
+  },
+  {
+    "id" : "5a62a47a-28bc-43da-abca-9905eb6ab07b",
+    "prId" : 30004,
+    "prUrl" : "https://github.com/apache/spark/pull/30004#pullrequestreview-605734036",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ce0b45ac-a33c-4b68-b2e0-e63096ae4ce0",
+        "parentId" : null,
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "Please clear the `mapStatuses` in case of `MetadataFetchFailedException`!\r\n\r\nReasoning:\r\nThe `getStatuses` method before this PR was only used in `getMapSizesByExecutorId ` where the `MetadataFetchFailedException` (the case when missing output location was detected) handled by clearing of the `mapStatuses` cache as it is probably outdated.\r\n\r\n\r\n~~I am sure that clearing would not be missed if this cleaning would be done at the throwing of that exception.~~\r\n~~Could you please check whether it can be moved there?~~\r\n\r\n",
+        "createdAt" : "2021-03-06T03:48:54Z",
+        "updatedAt" : "2021-03-06T04:30:20Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ec90cc18-27c8-4cb1-aca0-2667ad8f1710",
+        "parentId" : "ce0b45ac-a33c-4b68-b2e0-e63096ae4ce0",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "Now I see why you cannot move the clearing there! \r\nStill the clearing itself is needed to be done.",
+        "createdAt" : "2021-03-06T04:28:52Z",
+        "updatedAt" : "2021-03-06T04:28:52Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5c20f53e-6f08-4301-b245-929de8fb4045",
+        "parentId" : "ce0b45ac-a33c-4b68-b2e0-e63096ae4ce0",
+        "authorId" : "c52c39ef-2b7f-4855-a2f1-2a2e50a719ae",
+        "body" : "yes, we only need to clear `mapStatuses` in `MapOutputTrackerWorker` , will add that",
+        "createdAt" : "2021-03-06T06:46:27Z",
+        "updatedAt" : "2021-03-06T07:07:28Z",
+        "lastEditedBy" : "c52c39ef-2b7f-4855-a2f1-2a2e50a719ae",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "fe693eb2d7c22d2be1344214e3d3f073be643eb4",
+    "line" : 41,
+    "diffHunk" : "@@ -1,1 +851,855 @@  override def getAllMapOutputStatuses(shuffleId: Int): Array[MapStatus] = {\n    logDebug(s\"Fetching all output statuses for shuffle $shuffleId\")\n    val statuses = getStatuses(shuffleId, conf)\n    MapOutputTracker.checkMapStatuses(statuses, shuffleId)\n    statuses"
+  },
+  {
+    "id" : "5b054599-caf5-42ce-8b41-e3efffd79851",
+    "prId" : 30004,
+    "prUrl" : "https://github.com/apache/spark/pull/30004#pullrequestreview-605748307",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "81f9a57f-3ba5-49ad-b95d-bf9a14dbd3a7",
+        "parentId" : null,
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "I see your intention by calling this `clone` here but I do not think this is enough.\r\nAs the `MapStatus` is trait and not a case class in addition its implementations are mutable with a lot of `var` fields.\r\n\r\nThe `clone` on the `Array` is not a deep copy.",
+        "createdAt" : "2021-03-06T04:11:31Z",
+        "updatedAt" : "2021-03-06T04:11:31Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a6c70705-e20d-42cd-99c7-28daf408ae9b",
+        "parentId" : "81f9a57f-3ba5-49ad-b95d-bf9a14dbd3a7",
+        "authorId" : "c52c39ef-2b7f-4855-a2f1-2a2e50a719ae",
+        "body" : "Yes, got your point. How about change this method to `getAllMapOutputStatusMetadata` to only return the metadada?\r\n\r\n\r\n",
+        "createdAt" : "2021-03-06T06:35:37Z",
+        "updatedAt" : "2021-03-06T07:07:28Z",
+        "lastEditedBy" : "c52c39ef-2b7f-4855-a2f1-2a2e50a719ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "78c72ac1-d996-4836-be73-3cbb9516006b",
+        "parentId" : "81f9a57f-3ba5-49ad-b95d-bf9a14dbd3a7",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "It could not be enough if the metadata can mutate. But as I see we could solve all the problems with immutable metadata easily. So to be on the safe side please document we require the metadata to be immutable and introduce an `updateMetadata(meta: Option[Serializable])` method in `MapStatus`. Then we will be safe and all the use cases are covered.\r\n\r\n(And you can use a case class for the Uber RSS's `MapTaskRssInfo`)",
+        "createdAt" : "2021-03-06T10:55:52Z",
+        "updatedAt" : "2021-03-06T10:55:52Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "fe693eb2d7c22d2be1344214e3d3f073be643eb4",
+    "line" : 26,
+    "diffHunk" : "@@ -1,1 +790,794 @@        shuffleStatus.withMapStatuses { statuses =>\n          MapOutputTracker.checkMapStatuses(statuses, shuffleId)\n          statuses.clone\n        }\n      case None => Array.empty"
+  },
+  {
+    "id" : "a24cf7b5-db44-4db0-839c-8897abf58fa0",
+    "prId" : 30004,
+    "prUrl" : "https://github.com/apache/spark/pull/30004#pullrequestreview-605734036",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e744fc00-24cc-458d-9016-2846d3e17976",
+        "parentId" : null,
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "I think you can extract this `if` into a new method and reuse the method in `convertMapStatuses`.\r\n",
+        "createdAt" : "2021-03-06T04:27:42Z",
+        "updatedAt" : "2021-03-06T04:27:42Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "09f869f3-e966-49ad-a114-ce11efd4b90d",
+        "parentId" : "e744fc00-24cc-458d-9016-2846d3e17976",
+        "authorId" : "c52c39ef-2b7f-4855-a2f1-2a2e50a719ae",
+        "body" : "yes, good suggestion!",
+        "createdAt" : "2021-03-06T06:48:54Z",
+        "updatedAt" : "2021-03-06T07:07:28Z",
+        "lastEditedBy" : "c52c39ef-2b7f-4855-a2f1-2a2e50a719ae",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "fe693eb2d7c22d2be1344214e3d3f073be643eb4",
+    "line" : 57,
+    "diffHunk" : "@@ -1,1 +1044,1048 @@    assert (statuses != null)\n    for (status <- statuses) {\n      if (status == null) {\n        val errorMessage = s\"Missing an output location for shuffle $shuffleId\"\n        logError(errorMessage)"
+  },
+  {
+    "id" : "211a89d8-f789-4f6d-a25b-e044562b8d21",
+    "prId" : 29992,
+    "prUrl" : "https://github.com/apache/spark/pull/29992#pullrequestreview-506063531",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "aa891d72-ca2b-4599-96cc-4225a8f13cc9",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Shall we remove `java.lang.`?",
+        "createdAt" : "2020-10-10T04:01:40Z",
+        "updatedAt" : "2020-10-10T04:01:41Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "1ca46a477020efa4e5bd11e4d55a82ef1e1b2254",
+    "line" : 23,
+    "diffHunk" : "@@ -1,1 +137,141 @@      }\n    } catch {\n      case e: java.lang.NullPointerException =>\n        logWarning(s\"Unable to update map output for ${mapId}, status removed in-flight\")\n    }"
+  },
+  {
+    "id" : "7cb5fd53-d951-4c9e-b2c9-6a626cb5d171",
+    "prId" : 29992,
+    "prUrl" : "https://github.com/apache/spark/pull/29992#pullrequestreview-507945293",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "58721be5-319e-44c2-beab-f3322c341ccf",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Quick question: can we avoid catching `NullPointerException`? It's a bit odd that we catch `NullPointerException`. We could just switch to if-else I guess.",
+        "createdAt" : "2020-10-14T02:09:54Z",
+        "updatedAt" : "2020-10-14T02:09:55Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "1ca46a477020efa4e5bd11e4d55a82ef1e1b2254",
+    "line" : 23,
+    "diffHunk" : "@@ -1,1 +137,141 @@      }\n    } catch {\n      case e: java.lang.NullPointerException =>\n        logWarning(s\"Unable to update map output for ${mapId}, status removed in-flight\")\n    }"
   }
 ]
