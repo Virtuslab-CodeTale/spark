@@ -1,0 +1,145 @@
+[
+  {
+    "id" : "0ec6ce12-7a65-4c6b-bbaa-8ab5bf602eba",
+    "prId" : 32828,
+    "prUrl" : "https://github.com/apache/spark/pull/32828#pullrequestreview-679220046",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d3268ed2-e378-49aa-9169-e994daba5768",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "The reason I suggested to log a warning message here is to help debugging if the problem arises.\r\n\r\nSuppose we see the log message and would like to understand what's happening. Does it give enough information, with other logs? Can we determine the current key from the log context?",
+        "createdAt" : "2021-06-09T01:44:16Z",
+        "updatedAt" : "2021-06-09T01:44:16Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "725cac61-00ad-46db-8978-3da3e7217fa3",
+        "parentId" : "d3268ed2-e378-49aa-9169-e994daba5768",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Hm, as currentKey is an UnsafeRow, I guess it is hard to get understanding from its string output?",
+        "createdAt" : "2021-06-09T02:03:04Z",
+        "updatedAt" : "2021-06-09T02:03:04Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "81099070-f460-4d09-8e43-3c27d086011c",
+        "parentId" : "d3268ed2-e378-49aa-9169-e994daba5768",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "I can log the currentKey if you think it is important to have.",
+        "createdAt" : "2021-06-09T02:25:58Z",
+        "updatedAt" : "2021-06-09T02:25:58Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0eae3629-e61e-45f8-b5ec-e77aed838f14",
+        "parentId" : "d3268ed2-e378-49aa-9169-e994daba5768",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Sigh that's the problem... We won't be able to reproduce a key row from string output.\r\n\r\nProbably we need to think more on this. I don't like to swallow the problem we can catch in prior, but I don't also like the way we log cryptic message to end user, and when they come up with the log message we say \"Sorry we don't have enough information from the log.\". Cryptic log message might be acceptable, but at least we should be able to provide the way how to investigate further.\r\n\r\nThe next possible way may be... having state store reader and scan all state store to find null in value? If we are OK with this one, then it might still make sense to leave this log message.\r\n\r\nLess cryptic, or guide to report to Spark community might be better though. Do we have some way to log an internal error so that community can report it?",
+        "createdAt" : "2021-06-09T03:20:48Z",
+        "updatedAt" : "2021-06-09T03:20:49Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5bb5861a-bfe2-41e2-b525-8d8805b1eaa0",
+        "parentId" : "d3268ed2-e378-49aa-9169-e994daba5768",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Less cryptic approach might be to project unsafe row to internal row. Although it needs extra projection, but I think this is less likely case to happen. So maybe we don't need to worry too much about performance.\r\n\r\nWDYT?",
+        "createdAt" : "2021-06-09T03:55:39Z",
+        "updatedAt" : "2021-06-09T03:55:39Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0eec39ed-7590-47d4-81da-b620c3ea8dcb",
+        "parentId" : "d3268ed2-e378-49aa-9169-e994daba5768",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Oh that's a brilliant idea. Just to make sure we don't miss anything, how it will be printed out? Probably testing with simple but composite row (like row having String, Int, Timestamp, etc.) would be good.",
+        "createdAt" : "2021-06-09T05:12:18Z",
+        "updatedAt" : "2021-06-09T05:12:18Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0f7af67f-7861-4105-82e8-19b9a4d38b82",
+        "parentId" : "d3268ed2-e378-49aa-9169-e994daba5768",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Okay, let me do it and add some tests.",
+        "createdAt" : "2021-06-09T05:25:30Z",
+        "updatedAt" : "2021-06-09T05:25:30Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "14732640b63cad3ab8f50d052c514b98d27f11cc",
+    "line" : 15,
+    "diffHunk" : "@@ -1,1 +277,281 @@          } else {\n            val projectedKey = getInternalRowOfKeyWithIndex(currentKey)\n            logWarning(s\"`keyWithIndexToValue` returns a null value for index ${numValues - 1} \" +\n              s\"at current key $projectedKey.\")\n          }"
+  },
+  {
+    "id" : "59d4da97-83cf-4c53-91a9-8b9965e82cc0",
+    "prId" : 32796,
+    "prUrl" : "https://github.com/apache/spark/pull/32796#pullrequestreview-678741544",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "dad9c2cd-b0c9-42fa-8521-4f50c994e4bb",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Just wondering, would `valuePairAtMaxIndex == null` happen in normal case? I can only imagine the case the iterator is not fully consumed and somehow numValues is not updated.",
+        "createdAt" : "2021-06-08T07:29:37Z",
+        "updatedAt" : "2021-06-08T07:29:37Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "60a3ec2e-2ffd-4eb4-a922-c242750594ca",
+        "parentId" : "dad9c2cd-b0c9-42fa-8521-4f50c994e4bb",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "I guess no, for normal case. Seems better to keep it.",
+        "createdAt" : "2021-06-08T07:49:57Z",
+        "updatedAt" : "2021-06-08T07:49:57Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8e8809c1-b272-4f1a-ab1a-69ea12431f9b",
+        "parentId" : "dad9c2cd-b0c9-42fa-8521-4f50c994e4bb",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Yeah my preference is to fail the query (like raising internal error) on the case of `valuePairAtMaxIndex == null`, so that we can indicate the bad case in prior instead of encountering bad case after state is corrupted.\r\n\r\nIf we would only have the case the value is null as error case, still makes sense to fail the query even for the state created before the fix, but for safety, we could log warning message here. I'm just afraid I'm missing some \"normal\" case where the null value is doable.",
+        "createdAt" : "2021-06-08T08:15:42Z",
+        "updatedAt" : "2021-06-08T08:15:42Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "23c34727-4f09-4f9e-8326-eae3a51f9347",
+        "parentId" : "dad9c2cd-b0c9-42fa-8521-4f50c994e4bb",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "ah, missing latest comment. Let me add a log warning message here in a follow-up.",
+        "createdAt" : "2021-06-08T16:27:36Z",
+        "updatedAt" : "2021-06-08T16:27:37Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a0a8d8e808b1eff35e9cc3bc31a532ddb2aeae2d",
+    "line" : 7,
+    "diffHunk" : "@@ -1,1 +272,276 @@        if (index != numValues - 1) {\n          val valuePairAtMaxIndex = keyWithIndexToValue.get(currentKey, numValues - 1)\n          if (valuePairAtMaxIndex != null) {\n            keyWithIndexToValue.put(currentKey, index, valuePairAtMaxIndex.value,\n              valuePairAtMaxIndex.matched)"
+  }
+]

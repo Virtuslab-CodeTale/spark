@@ -42,5 +42,148 @@
     "commit" : "464b3d34ef6fc29807d7cbd31e6368be1a100f96",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +94,98 @@    partitionSpecs.exists {\n      // shuffle from empty RDD\n      case CoalescedPartitionSpec(0, 0, _) => true\n      case s: CoalescedPartitionSpec => s.endReducerIndex - s.startReducerIndex > 1\n      case _ => false"
+  },
+  {
+    "id" : "e8a6ad16-7465-46f0-b613-5d85a4f86d4e",
+    "prId" : 32872,
+    "prUrl" : "https://github.com/apache/spark/pull/32872#pullrequestreview-706035870",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "fe625ed9-109a-473e-bb2b-55211fe04af2",
+        "parentId" : null,
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "I prefer use `s.startReducerIndex + 1 != s.endReducerIndex` since we have a special case `CoalescedPartitionSpec (0, 0, 0)`",
+        "createdAt" : "2021-07-13T01:14:03Z",
+        "updatedAt" : "2021-07-13T01:14:03Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "93757cb1-f200-4ac4-8af0-4d7cfd38aa2a",
+        "parentId" : "fe625ed9-109a-473e-bb2b-55211fe04af2",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "how can this happen?",
+        "createdAt" : "2021-07-13T12:37:32Z",
+        "updatedAt" : "2021-07-13T12:37:32Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e26167ea-2519-4195-869d-cafd935b0ceb",
+        "parentId" : "fe625ed9-109a-473e-bb2b-55211fe04af2",
+        "authorId" : "9acf210d-4935-4e03-8384-d944eb558b45",
+        "body" : "The intent of this PR is to have`hasCoalesedPartitions` only return true if some partitions were combined - to avoid reporting \"coalesced\" when partition spec looks something like `CoalescePartitionSpec(0, 1), CoalescePartitionSpec(1, 2)`\r\nEven if `CoalescePartitionSpec(0, 0, 0)` is possible, it's not combining anything.",
+        "createdAt" : "2021-07-13T18:20:41Z",
+        "updatedAt" : "2021-07-13T18:21:23Z",
+        "lastEditedBy" : "9acf210d-4935-4e03-8384-d944eb558b45",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e52e455a-1d27-460b-bc80-3616d135782c",
+        "parentId" : "fe625ed9-109a-473e-bb2b-55211fe04af2",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "We coalesce all partitions to an empty partition if the input RDD is empty\r\n```\r\n// If all input RDDs have 0 partition, we create an empty partition for every shuffle reader.\r\nif (validMetrics.isEmpty) {\r\n  return Seq.fill(numShuffles)(Seq(CoalescedPartitionSpec(0, 0, 0)))\r\n}\r\n```",
+        "createdAt" : "2021-07-14T01:27:39Z",
+        "updatedAt" : "2021-07-14T01:27:40Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "855ea8c3-1a89-4646-9497-2f1823edbf94",
+        "parentId" : "fe625ed9-109a-473e-bb2b-55211fe04af2",
+        "authorId" : "9acf210d-4935-4e03-8384-d944eb558b45",
+        "body" : "If you  started with no partitions, you are not coalescing, i.e. you are not combining any partitions.\r\n",
+        "createdAt" : "2021-07-14T02:25:58Z",
+        "updatedAt" : "2021-07-14T02:25:58Z",
+        "lastEditedBy" : "9acf210d-4935-4e03-8384-d944eb558b45",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d2759006-ca6e-4812-aec6-95913ea5f209",
+        "parentId" : "fe625ed9-109a-473e-bb2b-55211fe04af2",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "Start with empty RDD does not mean the partition after shuffle is empty, instead the shuffle partitions is `spark.sql.shuffle.partitions` without AQE. After `CoalesceShufflePartitions`, the shuffle partitions are coalesced from `spark.sql.shuffle.partitions` to one empty partition. So it shouble be coalesced.",
+        "createdAt" : "2021-07-14T02:38:44Z",
+        "updatedAt" : "2021-07-14T02:38:45Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a625a5cd-69d5-45c7-82d0-824c77435ee6",
+        "parentId" : "fe625ed9-109a-473e-bb2b-55211fe04af2",
+        "authorId" : "9acf210d-4935-4e03-8384-d944eb558b45",
+        "body" : "Interesting.  I didn't realize Spark could produce `spark.sql.shuffle.partitions` empty partitions.\r\n",
+        "createdAt" : "2021-07-14T03:59:57Z",
+        "updatedAt" : "2021-07-14T03:59:57Z",
+        "lastEditedBy" : "9acf210d-4935-4e03-8384-d944eb558b45",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4c946280-2041-4aa4-ab89-f96e9b051c33",
+        "parentId" : "fe625ed9-109a-473e-bb2b-55211fe04af2",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "```\r\n// If all input RDDs have 0 partition, we create an empty partition for every shuffle reader.\r\nif (validMetrics.isEmpty) {\r\n  return Seq.fill(numShuffles)(Seq(CoalescedPartitionSpec(0, 0, 0)))\r\n}\r\n```\r\n\r\nShall we use `CoalescedPartitionSpec(0, numReducers, 0)`?",
+        "createdAt" : "2021-07-14T04:41:25Z",
+        "updatedAt" : "2021-07-14T04:41:25Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b2fe306f-fe0c-4234-b897-02b602319db2",
+        "parentId" : "fe625ed9-109a-473e-bb2b-55211fe04af2",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "Although `CoalescedPartitionSpec(0, 0, 0)` looks a little hack but it's safe and effective.\r\n\r\nWe don't know the numReducers if the shuffle comes from `EmptyRDD`, then we can only assume the number is same with `spark.sql.shuffle.partitions`. But sometimes the assuming is not correct, e.g. if serveral `EmptyRDD`s have different pre-shuffle partition numbers.",
+        "createdAt" : "2021-07-14T06:39:31Z",
+        "updatedAt" : "2021-07-14T06:40:31Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e4b499dc-2454-48b5-80b4-de87c6938db2",
+        "parentId" : "fe625ed9-109a-473e-bb2b-55211fe04af2",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I see, then I agree `s.startReducerIndex + 1 != s.endReducerIndex` is better.",
+        "createdAt" : "2021-07-14T07:45:13Z",
+        "updatedAt" : "2021-07-14T07:45:13Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "382b06cf-503e-4738-93a7-11630a18c730",
+        "parentId" : "fe625ed9-109a-473e-bb2b-55211fe04af2",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "@ulysses-you can you open a followup PR? This is really a corner case and I'd like to merge this PR first.",
+        "createdAt" : "2021-07-14T07:47:23Z",
+        "updatedAt" : "2021-07-14T07:47:23Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7bd13435-b2f4-495a-9f51-88f249ab1a45",
+        "parentId" : "fe625ed9-109a-473e-bb2b-55211fe04af2",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "@cloud-fan created https://github.com/apache/spark/pull/33342",
+        "createdAt" : "2021-07-14T09:09:09Z",
+        "updatedAt" : "2021-07-14T09:09:09Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4bed38168439d9afb83be89f16bcc20f817eaa45",
+    "line" : 11,
+    "diffHunk" : "@@ -1,1 +93,97 @@  def hasCoalescedPartition: Boolean = {\n    partitionSpecs.exists {\n      case s: CoalescedPartitionSpec => s.endReducerIndex - s.startReducerIndex > 1\n      case _ => false\n    }"
   }
 ]

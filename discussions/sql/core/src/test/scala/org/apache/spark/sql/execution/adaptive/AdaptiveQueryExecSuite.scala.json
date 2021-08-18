@@ -207,5 +207,27 @@
     "commit" : "8e706ae5f289ce9d4f6a7ca624f1d58516a8a177",
     "line" : 41,
     "diffHunk" : "@@ -1,1 +1849,1853 @@\n        withSQLConf(SQLConf.ADVISORY_PARTITION_SIZE_IN_BYTES.key -> \"150\") {\n          // partition size [0,258,72,72,72]\n          checkPartitionNumber(\"SELECT /*+ REBALANCE(c1) */ * FROM v\", 2, 4)\n          // partition size [72,216,216,144,72]"
+  },
+  {
+    "id" : "c605a678-ea1c-4fda-a939-aff15fcccc0c",
+    "prId" : 32872,
+    "prUrl" : "https://github.com/apache/spark/pull/32872#pullrequestreview-703444744",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f692f971-37de-4abc-ba5f-2301221251ef",
+        "parentId" : null,
+        "authorId" : "9acf210d-4935-4e03-8384-d944eb558b45",
+        "body" : "Here, of the 2 CustomShuffleReaderExec nodes one has \r\n[0, 0, 0, 72, 0] in CustomShuffleReader.child._resultOption\r\nand the resulting partitions are\r\n0 = {CoalescedPartitionSpec@16752} \"CoalescedPartitionSpec(3,4,Some(72))\"\r\n1 = {CoalescedPartitionSpec@16752} \"CoalescedPartitionSpec(3,4,Some(72))\"\r\n2 = {CoalescedPartitionSpec@16753} \"CoalescedPartitionSpec(4,5,Some(0))\"\r\n3 = {CoalescedPartitionSpec@16753} \"CoalescedPartitionSpec(4,5,Some(0))\"\r\n\r\n\r\nand the other has [0, 0, 0, 138, 138]\r\nAnd resulting partitions\r\n0 = {PartialReducerPartitionSpec@16800} \"PartialReducerPartitionSpec(3,0,1,72)\"\r\n1 = {PartialReducerPartitionSpec@16801} \"PartialReducerPartitionSpec(3,1,2,66)\"\r\n2 = {PartialReducerPartitionSpec@16802} \"PartialReducerPartitionSpec(4,0,1,66)\"\r\n3 = {PartialReducerPartitionSpec@16803} \"PartialReducerPartitionSpec(4,1,2,72)\"\r\n\r\nso I don't think you can make it coalesce w/o \"disabling\" skew mitigation.  In any case since this fixes the definition of \"coalesced\" I think it's ok to have to adjust a test.",
+        "createdAt" : "2021-07-09T23:40:37Z",
+        "updatedAt" : "2021-07-09T23:40:37Z",
+        "lastEditedBy" : "9acf210d-4935-4e03-8384-d944eb558b45",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4bed38168439d9afb83be89f16bcc20f817eaa45",
+    "line" : 26,
+    "diffHunk" : "@@ -1,1 +1583,1587 @@        assert(smjWithNum.head.isSkewJoin)\n        val customReadersWithNum = collect(smjWithNum.head) {\n          case c: CustomShuffleReaderExec => c\n        }\n        assert(customReadersWithNum.nonEmpty)"
   }
 ]

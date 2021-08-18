@@ -42,5 +42,71 @@
     "commit" : "881d2b2b7246d9453bfa7e074ab19334bf8d9876",
     "line" : 19,
     "diffHunk" : "@@ -1,1 +638,642 @@   * If the underlying subquery hasn't completed yet, this method will throw an exception.\n   */\n  protected[sql] def translateRuntimeFilter(expr: Expression): Option[Filter] = expr match {\n    case in @ InSubqueryExec(e @ PushableColumnAndNestedColumn(name), _, _, _) =>\n      val values = in.values().getOrElse {"
+  },
+  {
+    "id" : "2968395d-4757-4928-84d5-0df68160ac44",
+    "prId" : 32807,
+    "prUrl" : "https://github.com/apache/spark/pull/32807#pullrequestreview-679358394",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e258a08e-dc37-4ad4-bf89-13a03f54766e",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "note that:\r\n1. nestedPredicatePushdownEnabled is always enabled for DS v2 (by default)\r\n2. nestedPredicatePushdownEnabled is never enabled for DS v1\r\n3. nestedPredicatePushdownEnabled is only enabled for file source parquet and orc (by default)\r\n\r\nAfter changing the quoting logic:\r\n1. DS v1 is not affected\r\n2. file source is builtin so we are fine\r\n3. DS v2 will be affected if the column name contains special chars.\r\n\r\nPersonally, I think the new quoting behavior is better (more ANSI SQL), and most v2 implementations won't be affected as they already need to deal with quoted names.",
+        "createdAt" : "2021-06-08T05:01:29Z",
+        "updatedAt" : "2021-06-08T05:01:29Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a604104e-bd95-4f5b-8f0a-4713bcf7345c",
+        "parentId" : "e258a08e-dc37-4ad4-bf89-13a03f54766e",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "cc @dbtsai @viirya ",
+        "createdAt" : "2021-06-08T05:01:45Z",
+        "updatedAt" : "2021-06-08T05:01:45Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3eb26681-7b33-4a8a-ab58-3d57516e6da9",
+        "parentId" : "e258a08e-dc37-4ad4-bf89-13a03f54766e",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "looks good.",
+        "createdAt" : "2021-06-09T07:01:18Z",
+        "updatedAt" : "2021-06-09T07:01:18Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "756d0ca4-7c83-4310-94a4-26708a4bfd92",
+        "parentId" : "e258a08e-dc37-4ad4-bf89-13a03f54766e",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Only exceptional one might be, if a v2 implementation can only handle quoted \"dots\", but not other quoted chars, right? I think it should be rare cases.",
+        "createdAt" : "2021-06-09T07:02:51Z",
+        "updatedAt" : "2021-06-09T07:02:51Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ac171554-ce24-4353-8d17-14fb87a42b90",
+        "parentId" : "e258a08e-dc37-4ad4-bf89-13a03f54766e",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Yea I think that's rare. V2 implementations should already be using a decent parser that recognizes dots and backticks.",
+        "createdAt" : "2021-06-09T08:26:10Z",
+        "updatedAt" : "2021-06-09T08:26:11Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d4d1489594fb1e6a3c54c4ffc1d92511ed874e36",
+    "line" : 16,
+    "diffHunk" : "@@ -1,1 +700,704 @@  def unapply(e: Expression): Option[String] = {\n    import org.apache.spark.sql.connector.catalog.CatalogV2Implicits.MultipartIdentifierHelper\n    if (nestedPredicatePushdownEnabled) {\n      extractNestedCol(e).map(_.quoted)\n    } else {"
   }
 ]

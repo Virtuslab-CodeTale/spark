@@ -108,5 +108,93 @@
     "commit" : "538463a405c2eac1ddfccba8d82ca846f81e5a22",
     "line" : 29,
     "diffHunk" : "@@ -1,1 +255,259 @@      // For the nanosecond part, more than 6 digits is allowed, but will be truncated.\n      segment == 6 || (segment == 0 && digits >= 4 && digits <= maxDigitsYear) ||\n        (segment != 0 && segment != 6 && digits <= 2)\n    }\n    if (s == null || s.trimAll().numBytes() == 0) {"
+  },
+  {
+    "id" : "7b646c32-8e30-4474-b3a2-0cd48658ccd8",
+    "prId" : 32839,
+    "prUrl" : "https://github.com/apache/spark/pull/32839#pullrequestreview-680269083",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2a768081-8606-4263-83e8-cea20f6fa001",
+        "parentId" : null,
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "We know `sec` in advance, so, we can calculate `us` in advance too. Please, fold the arithmetic expression. ",
+        "createdAt" : "2021-06-09T13:24:52Z",
+        "updatedAt" : "2021-06-09T13:24:53Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b135c721-5966-4ada-9156-59040e249ee5",
+        "parentId" : "2a768081-8606-4263-83e8-cea20f6fa001",
+        "authorId" : "87a71d79-d4d2-4f2c-8e9a-be56cf39b035",
+        "body" : "Are you sure? as us might be (secs+1) or secs depend on case",
+        "createdAt" : "2021-06-09T14:16:43Z",
+        "updatedAt" : "2021-06-09T14:16:44Z",
+        "lastEditedBy" : "87a71d79-d4d2-4f2c-8e9a-be56cf39b035",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "006c2a2a-fd5a-4088-92ef-ecd4182191fb",
+        "parentId" : "2a768081-8606-4263-83e8-cea20f6fa001",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "`Math.floorDiv(Long.MinValue, MICROS_PER_SECOND)` is constant, right?",
+        "createdAt" : "2021-06-09T14:33:15Z",
+        "updatedAt" : "2021-06-09T14:33:16Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1e9682f8-95f0-43bb-a03c-f0805ebad831",
+        "parentId" : "2a768081-8606-4263-83e8-cea20f6fa001",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I think it's rare to hit this branch and creating a constant for it is not necessary.",
+        "createdAt" : "2021-06-09T15:20:41Z",
+        "updatedAt" : "2021-06-09T15:20:41Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "042084de-d679-47b9-be06-e17f091003d5",
+        "parentId" : "2a768081-8606-4263-83e8-cea20f6fa001",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "I mostly care of the comparison:\r\n```scala\r\nsecs == Math.floorDiv(Long.MinValue, MICROS_PER_SECOND)\r\n```\r\nwhich is performed per every input. Probably, JVM could optimize it but I would help to it and introduced a constant.",
+        "createdAt" : "2021-06-09T15:40:15Z",
+        "updatedAt" : "2021-06-09T15:40:15Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "de64f3a5-e96b-4cf0-a75f-425caff95432",
+        "parentId" : "2a768081-8606-4263-83e8-cea20f6fa001",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Yea this should be a constant, but after we enter the if branch and reach here, it's rare and I'm OK to not have a constant for `val us = ...`",
+        "createdAt" : "2021-06-09T16:04:36Z",
+        "updatedAt" : "2021-06-09T16:04:36Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ea7821f3-b668-4477-a496-105d8c63acdb",
+        "parentId" : "2a768081-8606-4263-83e8-cea20f6fa001",
+        "authorId" : "87a71d79-d4d2-4f2c-8e9a-be56cf39b035",
+        "body" : "Done, thanks",
+        "createdAt" : "2021-06-10T01:27:27Z",
+        "updatedAt" : "2021-06-10T01:27:27Z",
+        "lastEditedBy" : "87a71d79-d4d2-4f2c-8e9a-be56cf39b035",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "134c356cb004283d477f1ce1a98cff97c194fc3f",
+    "line" : 19,
+    "diffHunk" : "@@ -1,1 +391,395 @@    val secs = instant.getEpochSecond\n    if (secs == MIN_SECONDS) {\n      val us = Math.multiplyExact(secs + 1, MICROS_PER_SECOND)\n      Math.addExact(us, NANOSECONDS.toMicros(instant.getNano) - MICROS_PER_SECOND)\n    } else {"
   }
 ]

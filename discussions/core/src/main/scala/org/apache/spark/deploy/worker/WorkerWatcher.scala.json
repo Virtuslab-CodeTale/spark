@@ -31,5 +31,126 @@
     "commit" : "2af82e5d4b83781194c9f0ebd51ada3be04f9279",
     "line" : 35,
     "diffHunk" : "@@ -1,1 +54,58 @@    if (isTesting) {\n      isShutDown = true\n    } else if (isChildProcessStopping.compareAndSet(false, true)) {\n      // SPARK-35714: avoid the duplicate call of `System.exit` to avoid the dead lock\n      System.exit(-1)"
+  },
+  {
+    "id" : "b2d35375-22c0-40f7-af21-3b9331c1326a",
+    "prId" : 32868,
+    "prUrl" : "https://github.com/apache/spark/pull/32868#pullrequestreview-689713515",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "cf2d27c5-ccaf-431a-90e1-622cc303d704",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "This is more like a temporary workaround: if we hit the dead lock, we exist after 5 seconds. Is there a way to fully eliminate the dead lock so that we never hit it here?\r\n\r\ncc @rednaxelafx @jiangxb1987 @Ngone51 ",
+        "createdAt" : "2021-06-18T07:03:32Z",
+        "updatedAt" : "2021-06-18T07:03:33Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3e1f93fc-9fbb-4db4-a517-d55c89ba42c9",
+        "parentId" : "cf2d27c5-ccaf-431a-90e1-622cc303d704",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Maybe, using a global flag between `WorkerWatcher` and `CoarseGrainedExecutorBackend` to indicate whether `System.exit` has been called? ",
+        "createdAt" : "2021-06-18T07:38:05Z",
+        "updatedAt" : "2021-06-18T07:38:05Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dafc88c7-6037-4e46-ab20-d1c6b2aa3891",
+        "parentId" : "cf2d27c5-ccaf-431a-90e1-622cc303d704",
+        "authorId" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "body" : "Discussed with @Ngone51 offline, we can set a flag in `CoarseGrainedExecutorBackend`, and check that flag in `WorkerWatcher`.",
+        "createdAt" : "2021-06-21T05:42:16Z",
+        "updatedAt" : "2021-06-21T05:42:16Z",
+        "lastEditedBy" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "17a4aff9-e27f-4755-b10a-d5211ba3e8c3",
+        "parentId" : "cf2d27c5-ccaf-431a-90e1-622cc303d704",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Great! please open a PR and we can start review.",
+        "createdAt" : "2021-06-21T07:00:03Z",
+        "updatedAt" : "2021-06-21T07:00:03Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "45499c0f-695d-4cbc-960e-6ac747483a4d",
+        "parentId" : "cf2d27c5-ccaf-431a-90e1-622cc303d704",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "+1 for fixing this specific issue better.\r\nNote that in general case, these sorts of interactions while in shutdown hooks, are painful: we would need to be careful with all `exit` calls.\r\n\r\nProbably add something in `Utils` for `exit` - which checks `inShutdown` and avoids making System.exit call entirely ? (and require all exit calls to go through Utils)",
+        "createdAt" : "2021-06-21T15:01:01Z",
+        "updatedAt" : "2021-06-21T15:03:19Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cbe6b796-b6ef-4126-994a-5b85cc477e71",
+        "parentId" : "cf2d27c5-ccaf-431a-90e1-622cc303d704",
+        "authorId" : "fecf3ff1-4b27-41ed-94ab-8f127b556108",
+        "body" : "@cloud-fan @Ngone51 Sorry, I did not find a good solution for this issue.",
+        "createdAt" : "2021-06-22T09:04:20Z",
+        "updatedAt" : "2021-06-22T09:04:20Z",
+        "lastEditedBy" : "fecf3ff1-4b27-41ed-94ab-8f127b556108",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3a44a9c5-1e49-4bdc-9832-9cd46d3453c8",
+        "parentId" : "cf2d27c5-ccaf-431a-90e1-622cc303d704",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "> Probably add something in Utils for exit - which checks `inShutdown` and avoids making System.exit call entirely ? (and require all exit calls to go through Utils)\r\n\r\nThat would mitigate the issue. But seems like `System.exit` and shutdownhook are not executed atomically, so the race condition would still exist, right? ",
+        "createdAt" : "2021-06-22T14:26:16Z",
+        "updatedAt" : "2021-06-22T14:26:16Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0ed321ae-5685-4ec9-92c9-2168bb15b0cc",
+        "parentId" : "cf2d27c5-ccaf-431a-90e1-622cc303d704",
+        "authorId" : "fecf3ff1-4b27-41ed-94ab-8f127b556108",
+        "body" : "A simplified code:\r\n```\r\n    Runtime.getRuntime().addShutdownHook(new Thread(() -> {\r\n      System.exit(-1);\r\n    }));\r\n    System.exit(-2);\r\n```\r\n\r\nAnd I prefer to add `inShutdown` flag in `SignalUtils.ActionHandler` as it's a jvm flag.",
+        "createdAt" : "2021-06-22T15:05:33Z",
+        "updatedAt" : "2021-06-22T15:05:33Z",
+        "lastEditedBy" : "fecf3ff1-4b27-41ed-94ab-8f127b556108",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d5c5793c-35ec-400f-b32a-f8e5706caa57",
+        "parentId" : "cf2d27c5-ccaf-431a-90e1-622cc303d704",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "I don't understand the code. Would it result in an endless loop since `System.exit(-1)` invokes shutdownhook too?",
+        "createdAt" : "2021-06-22T16:00:56Z",
+        "updatedAt" : "2021-06-22T16:00:56Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a5c2ad94-18b2-41ba-a1bc-f0cd3b068468",
+        "parentId" : "cf2d27c5-ccaf-431a-90e1-622cc303d704",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "BTW, I have submitted the new PR(https://github.com/apache/spark/pull/33028). Please help review. And we can have more discussion there.",
+        "createdAt" : "2021-06-22T16:07:03Z",
+        "updatedAt" : "2021-06-22T16:07:03Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3b38ae861b0bf8127a2f8c621630932affb49b03",
+    "line" : 23,
+    "diffHunk" : "@@ -1,1 +55,59 @@      isShutDown = true\n    } else {\n      ThreadUtils.awaitResult(Future {\n        System.exit(-1)\n      }, 5.seconds)"
   }
 ]

@@ -1,0 +1,134 @@
+[
+  {
+    "id" : "412d09e8-6adb-41eb-a4a0-ecfacb3152e9",
+    "prId" : 32862,
+    "prUrl" : "https://github.com/apache/spark/pull/32862#pullrequestreview-681021650",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8d164c7d-a6eb-4e5a-ab49-f16e603cedc6",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "are there more boundary nodes? how about `QueryStageExec`?",
+        "createdAt" : "2021-06-10T16:43:39Z",
+        "updatedAt" : "2021-06-10T16:43:39Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "57ba5c9c2187a2cde4eec1ef6eadb40ba4c73208",
+    "line" : 15,
+    "diffHunk" : "@@ -1,1 +97,101 @@    val metrics = plan.collectWithSubqueries {\n      case collector: CollectMetricsExec => Map(collector.name -> collector.collectedMetrics)\n      case tableScan: InMemoryTableScanExec =>\n        CollectMetricsExec.collect(tableScan.relation.cachedPlan)\n      case adaptivePlan: AdaptiveSparkPlanExec =>"
+  },
+  {
+    "id" : "914a1472-a9fd-4e72-80e2-52166abea02d",
+    "prId" : 32786,
+    "prUrl" : "https://github.com/apache/spark/pull/32786#pullrequestreview-677931864",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "820d3ddb-d5dc-442e-92d7-4a24f8c9cd05",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Reading the comments above, our goal is to only send back the accumulator updates to the driver side when the task completes, and the approach we took is to create a temp task local accumulator and set it to the real accumulator when the task ends.\r\n\r\nI think there are three options:\r\n1. allow merging accumulators in the executor side. But the consequence is not very clear.\r\n2. find a way to share this temp task local accumulator between different partitions that run in the same task.\r\n3. improve the accumulator framework to support \"no update via heartbeat\" feature natively, so that we don't need the temp task local accumulator.",
+        "createdAt" : "2021-06-07T15:36:44Z",
+        "updatedAt" : "2021-06-07T15:36:44Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8d8c49ad-38e9-4505-8a53-d9ee2e2018b7",
+        "parentId" : "820d3ddb-d5dc-442e-92d7-4a24f8c9cd05",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Maybe we can try option 1 first, as it's the simplest. We just need to update the `withSQLConf` function a little bit\r\n```\r\n  private[this] def withSQLConf[T](body: => T): T = {\r\n    if (conf != null) {\r\n      SQLConf.withExistingConf(conf)(body)\r\n    } else {\r\n      body\r\n    }\r\n  }\r\n```",
+        "createdAt" : "2021-06-07T15:43:02Z",
+        "updatedAt" : "2021-06-07T15:43:03Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ed240b3b-cb4c-45d3-8d50-9deda948340a",
+        "parentId" : "820d3ddb-d5dc-442e-92d7-4a24f8c9cd05",
+        "authorId" : "3a227965-84e0-47cf-9974-11293764f028",
+        "body" : "About No. 2 above, `TaskContext` is apparently task local and can be shared among partitions even if a task can handle multiple partitions. So, I wonder a simple way is to have a general purpose task local storage in `TaskContext` and use it for task local accumulator.\r\n\r\nNo. 3 is too expensive to solve this problem isn't it?",
+        "createdAt" : "2021-06-07T16:00:53Z",
+        "updatedAt" : "2021-06-07T16:00:53Z",
+        "lastEditedBy" : "3a227965-84e0-47cf-9974-11293764f028",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e2eec322-54c3-48c0-9fb6-ddd89c25a590",
+        "parentId" : "820d3ddb-d5dc-442e-92d7-4a24f8c9cd05",
+        "authorId" : "3a227965-84e0-47cf-9974-11293764f028",
+        "body" : "> Maybe we can try option 1 first, as it's the simplest. We just need to update the withSQLConf function a little bit\r\n\r\nHmm,  it seems the simplest way if we can.",
+        "createdAt" : "2021-06-07T16:03:42Z",
+        "updatedAt" : "2021-06-07T16:03:42Z",
+        "lastEditedBy" : "3a227965-84e0-47cf-9974-11293764f028",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dc6c51eb-2ec4-4006-99b9-426457176272",
+        "parentId" : "820d3ddb-d5dc-442e-92d7-4a24f8c9cd05",
+        "authorId" : "3a227965-84e0-47cf-9974-11293764f028",
+        "body" : "@cloud-fan I found we can't call `merge` from executor side. In this function, `mergeProjection` is referred and it is defined as follows.\r\nhttps://github.com/apache/spark/blob/33f26275f4d65f54e68f38ba0d795396a5a4d2f4/sql/core/src/main/scala/org/apache/spark/sql/execution/AggregatingAccumulator.scala#L87-L89\r\n\r\nIn this lazy val, `mergeExpressions` is referred but it's null in executor side.\r\nhttps://github.com/apache/spark/blob/33f26275f4d65f54e68f38ba0d795396a5a4d2f4/sql/core/src/main/scala/org/apache/spark/sql/execution/AggregatingAccumulator.scala#L36-L37\r\n\r\nSo, if we call `merge` from executor side, NPE is thrown.",
+        "createdAt" : "2021-06-07T16:36:33Z",
+        "updatedAt" : "2021-06-07T16:36:34Z",
+        "lastEditedBy" : "3a227965-84e0-47cf-9974-11293764f028",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1e01141e-1e0e-45a7-a2d4-27a62e65a643",
+        "parentId" : "820d3ddb-d5dc-442e-92d7-4a24f8c9cd05",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Let's remove `@transient`?",
+        "createdAt" : "2021-06-07T16:42:13Z",
+        "updatedAt" : "2021-06-07T16:42:14Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "76d03c69-58a7-4ba3-b012-c77012234b61",
+        "parentId" : "820d3ddb-d5dc-442e-92d7-4a24f8c9cd05",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "> So, I wonder a simple way is to have a general purpose task local storage in TaskContext and use it for task local accumulator.\r\n\r\nIt needs a bit API design for the task local storage.",
+        "createdAt" : "2021-06-07T16:42:56Z",
+        "updatedAt" : "2021-06-07T16:42:57Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4461fdeb-39c8-44c0-a730-889030cbf0c2",
+        "parentId" : "820d3ddb-d5dc-442e-92d7-4a24f8c9cd05",
+        "authorId" : "3a227965-84e0-47cf-9974-11293764f028",
+        "body" : "> Let's remove @transient?\r\n\r\nIs it acceptable? Anyway I'll try it.",
+        "createdAt" : "2021-06-07T16:59:35Z",
+        "updatedAt" : "2021-06-07T16:59:36Z",
+        "lastEditedBy" : "3a227965-84e0-47cf-9974-11293764f028",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "eb15aaaa-3dc0-482f-a4fe-8e1ee03ec56d",
+        "parentId" : "820d3ddb-d5dc-442e-92d7-4a24f8c9cd05",
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "It is acceptable, just tried to trim down the accumulator as much as possible.",
+        "createdAt" : "2021-06-07T22:15:20Z",
+        "updatedAt" : "2021-06-07T22:15:53Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d5ec37757a88d0e6812fbbd5b551b26144f90ef0",
+    "line" : 1,
+    "diffHunk" : "@@ -1,1 +67,71 @@      // heartbeat:\n      // - Correctness issues due to partially completed/visible updates.\n      // - Performance issues due to excessive serialization.\n      val updater = collector.copyAndReset()\n      TaskContext.get().addTaskCompletionListener[Unit] { _ =>"
+  }
+]
