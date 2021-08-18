@@ -20,5 +20,49 @@
     "commit" : "7612695c78456155a95ad4f7d54ef70e53f88921",
     "line" : 25,
     "diffHunk" : "@@ -1,1 +74,78 @@ * Preprocess [[CreateTable]], to do some normalization and checking.\n */\nobject PreprocessTableCreation extends Rule[LogicalPlan] {\n  // catalog is a def and not a val/lazy val as the latter would introduce a circular reference\n  private def catalog = SparkSession.active.sessionState.catalog"
+  },
+  {
+    "id" : "1818aa26-9e34-4735-bd6b-7b3669f993cf",
+    "prId" : 28833,
+    "prUrl" : "https://github.com/apache/spark/pull/28833#pullrequestreview-440721670",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "107f2be0-cf6e-4a61-a254-e855122a49a7",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Is this needed? I think the changes in `ResolveCatalogs` and `ResolveSessionCatalog` should cover all the commands.",
+        "createdAt" : "2020-07-01T04:40:56Z",
+        "updatedAt" : "2020-07-08T00:27:04Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "58d28d99-4846-4adc-a253-8854cd43ecea",
+        "parentId" : "107f2be0-cf6e-4a61-a254-e855122a49a7",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "Without this, \"CREATE TABLE t1 USING PARQUET AS SELECT null as null_col\" in Spark will throw `Parquet data source does not support null data type.` instead of `Cannot create tables with VOID type`\r\n\r\nComparing the error message from Hive `SemanticException [Error 10305]: CREATE-TABLE-AS-SELECT creates a VOID type, please use CAST to specify the type, near field: col`, it's confused. So better to keep it.",
+        "createdAt" : "2020-07-01T06:46:25Z",
+        "updatedAt" : "2020-07-08T00:27:04Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b40e40bc-5a03-4542-a14a-1fe747eac63f",
+        "parentId" : "107f2be0-cf6e-4a61-a254-e855122a49a7",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "@cloud-fan \r\n> Without this, \"CREATE TABLE t1 USING PARQUET AS SELECT null as null_col\" in Spark will throw `Parquet data source does not support null data type.` instead of `Cannot create tables with VOID type`\r\n\r\nSorry, above description is incorrect. Without this, CTAS for Hive table `CREATE TABLE t2 AS SELECT null as null_col` will pass. No exception throws.\r\n\r\nSeems Hive table (non-parquet/orc format) doesn't go through `ResolveSessionCatalog`",
+        "createdAt" : "2020-07-01T09:54:56Z",
+        "updatedAt" : "2020-07-08T00:27:04Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9ad57d17bac47ea0f801004ec0aba9197e631bc7",
+    "line" : 12,
+    "diffHunk" : "@@ -1,1 +294,298 @@      sparkSession.sessionState.conf.caseSensitiveAnalysis)\n\n    assertNoNullTypeInSchema(schema)\n\n    val normalizedPartCols = normalizePartitionColumns(schema, table)"
   }
 ]

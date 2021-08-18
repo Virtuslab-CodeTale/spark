@@ -185,5 +185,104 @@
     "commit" : "e970cb10147fb64533f5088edc3a448b5ef198cf",
     "line" : 23,
     "diffHunk" : "@@ -1,1 +94,98 @@   * @return the ids of the executors acknowledged by the cluster manager to be removed.\n   */\n  def decommissionExecutors(\n    executorsAndDecomInfo: Array[(String, ExecutorDecommissionInfo)],\n    adjustTargetNumExecutors: Boolean): Seq[String] = {"
+  },
+  {
+    "id" : "144dc5c0-3583-4897-a31c-3b29c8d333cb",
+    "prId" : 28818,
+    "prUrl" : "https://github.com/apache/spark/pull/28818#pullrequestreview-452863156",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1393972c-b5d5-4406-97ef-b5120787557e",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Why is `adjustTargetNumExecutors` defaulting to true here ? This would mean that all schedulers would try to replinish the executor when asked to `DecommissionExecutor(...)` -- for example by the Master or when an executor gets a SIGPWR. \r\n\r\nI think it shouldn't be the default -- it should atleast be configurable. It only makes sense to have `adjustTargetNumExecutors=true` when called from `org.apache.spark.streaming.scheduler.ExecutorAllocationManager#killExecutor` (ie when it is truly called from dynamic allocation codepath and we have decided that we want to replinish the executor). ",
+        "createdAt" : "2020-07-10T00:32:31Z",
+        "updatedAt" : "2020-07-23T21:35:22Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "353c510c-4ca7-454d-9bb2-ae293e711370",
+        "parentId" : "1393972c-b5d5-4406-97ef-b5120787557e",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "If you look above there is a configurable call. This matches how `killExecutor` is implemented down on line 124.",
+        "createdAt" : "2020-07-21T19:38:57Z",
+        "updatedAt" : "2020-07-23T21:35:22Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4a1fca33-13eb-4966-8311-20059ddf4e7e",
+        "parentId" : "1393972c-b5d5-4406-97ef-b5120787557e",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Can you please point me to where is the configurable call ? I don't see a config check in the code paths that call this method.\r\n\r\nIt's fine for killExecutor to unconditionally adjust the target number of executors because it is only called in the dynamic allocation codepath, but decommissionExecutor would be called from many other codepaths as well (for example when the driver gets a DecommissionExecutor message) -- and thus I think it should just assume that it should replenish the executor.",
+        "createdAt" : "2020-07-21T20:37:56Z",
+        "updatedAt" : "2020-07-23T21:35:22Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "374c0258-9215-41a9-91e5-9f8f3dfc8ea1",
+        "parentId" : "1393972c-b5d5-4406-97ef-b5120787557e",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Look on line 95 of this file. I think we should match the semantics of `killExecutor` as much as possible. If there's a place where we don't want it we can use `decommissionExecutors`",
+        "createdAt" : "2020-07-21T20:39:36Z",
+        "updatedAt" : "2020-07-23T21:35:22Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "36646902-9a0a-4d7f-b9b7-2b5ff6be3bcc",
+        "parentId" : "1393972c-b5d5-4406-97ef-b5120787557e",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Hmm, Should we rename decommissionExecutor (singular) to decommissionAndKillExecutor to reflect its purpose better ? It would be too easy to confuse it with decommissionExecutors (on line 95 of this file which allows to not replenish the target number of executors).\r\n\r\nDo you want to make the change to the callers of decommissionExecutor in this PR and switch them to `decommissioExecutors(Seq(executorId), false)` instead. The ones I am most concerned about are:\r\n\r\n- The handling of message DecommissionExecutor (both sync and async variants) in CoarseGrainedSchedulerBackend\r\n- StandaloneSchedulerBackend.executorDecommissioned\r\n\r\nIn both the above cases, I think we may not _always_ want replenishing. For example, in the standalone case, when the Worker gets a SIGPWR -- do we want to replenish the executors on the remaining workers (ie oversubscribe the remaining workers) ? Similarly when an executor gets a SIGPWR, do we want to put that load on the remaining executors ? I think the answer to both should be NO unless we are doing a dynamic allocation.\r\n\r\nPersonally I am fine with any choice of naming here as long as the semantics are not silently changed under the cover, as is the case presently. ",
+        "createdAt" : "2020-07-21T20:54:11Z",
+        "updatedAt" : "2020-07-23T21:35:22Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "eb98b66c-e52e-4164-8466-95070a7c3a04",
+        "parentId" : "1393972c-b5d5-4406-97ef-b5120787557e",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "It's a new function, what are we changing?",
+        "createdAt" : "2020-07-21T21:13:08Z",
+        "updatedAt" : "2020-07-23T21:35:22Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "006766eb-da35-4547-9edf-31d949a8dc5c",
+        "parentId" : "1393972c-b5d5-4406-97ef-b5120787557e",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "ExecutorAllocationClient is a base class of CoarseGrainedSchedulerBackend. We moved decommissionExecutor from the latter class to the former and as such it is not a new function. Since CoarseGrainedSchedulerBackend no longer overrides decommissionExecutor, ExecutorAllocationClient.decommissionExecutor will be called when CoarseGrainedSchedulerBackend gets a DecommissionExecutor message -- and the semantics of that codepath have been changed to unconditionally impose adjustTargetNumExecutors=true.",
+        "createdAt" : "2020-07-21T21:25:14Z",
+        "updatedAt" : "2020-07-23T21:35:22Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f8eeb82a-b70b-43aa-bd29-72c6b14edb0d",
+        "parentId" : "1393972c-b5d5-4406-97ef-b5120787557e",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "cool, I'll update the previous calls to `decommissioExecutor`",
+        "createdAt" : "2020-07-21T22:06:09Z",
+        "updatedAt" : "2020-07-23T21:35:22Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f921ddd3913d8b749abd2d8de645e5d098d73823",
+    "line" : 44,
+    "diffHunk" : "@@ -1,1 +115,119 @@    val decommissionedExecutors = decommissionExecutors(\n      Seq((executorId, decommissionInfo)),\n      adjustTargetNumExecutors = true)\n    decommissionedExecutors.nonEmpty && decommissionedExecutors(0).equals(executorId)\n  }"
   }
 ]

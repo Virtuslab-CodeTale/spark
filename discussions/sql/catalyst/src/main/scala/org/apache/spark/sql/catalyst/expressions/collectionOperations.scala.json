@@ -581,5 +581,324 @@
     "commit" : "8c4ffaa75552987d9303b2ee3186fdc8abf14c68",
     "line" : 14,
     "diffHunk" : "@@ -1,1 +2623,2627 @@\n      } else if (stepMonths == 0 && stepDays == 0 && scale == 1) {\n        // Adding pure microseconds to timestamp start/end\n        backedSequenceImpl.eval(start, stop, fromLong(stepMicros))\n"
+  },
+  {
+    "id" : "9963cb2a-e1b9-48db-862a-33f7652a8cd7",
+    "prId" : 28856,
+    "prUrl" : "https://github.com/apache/spark/pull/28856#pullrequestreview-434992770",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4c79d635-9193-4688-9511-565fc559cf1f",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "it looks like the step should not be physical seconds, but logical interval. cc @MaxGekk ",
+        "createdAt" : "2020-06-18T12:04:29Z",
+        "updatedAt" : "2020-06-22T15:01:55Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "299415b6-a3b3-403d-be14-2eb5183a3e94",
+        "parentId" : "4c79d635-9193-4688-9511-565fc559cf1f",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "The current implementation is strange mix, it seems. There are following options:\r\n1. Step is an interval of (months, days, micros):\r\n    1. If start point is TimestampType, we should convert it to local date-time in the session time zone, and add the interval by time components. The intermediate local timestamps should be converted back to micros using the session time zone but we should keep adding the interval to local timestamp \"accumulator\".\r\n    2. The same for dates - convert `start` to a local date. Time zone shouldn't involved here.\r\n\r\n2. If the step is a duration in micros or days (this is not our case)\r\n    1. start is TimestampType, we shouldn't convert it to local timestamp, and just add micros to instants. So, time zone will be not involved here.\r\n    2. start is DateType, just add number of days. The same as for timestamps, time zone is not involved here.\r\n",
+        "createdAt" : "2020-06-18T16:49:59Z",
+        "updatedAt" : "2020-06-22T15:01:55Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bbb1b8f1-e6f6-40b9-b329-00b713706d1e",
+        "parentId" : "4c79d635-9193-4688-9511-565fc559cf1f",
+        "authorId" : "919368dc-8bac-4d8f-9fa6-be962263fc1e",
+        "body" : "hi @cloud-fan，as  @MaxGekk  explain here, I am not sure if this patch looks ok，I am willing to `add more documents to TemporalSequenceImpl`but I am not sure if  we can follow this way or refactor a little.",
+        "createdAt" : "2020-06-22T14:42:35Z",
+        "updatedAt" : "2020-06-22T15:19:02Z",
+        "lastEditedBy" : "919368dc-8bac-4d8f-9fa6-be962263fc1e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6a341bff3cbd6196cd1d742d9b66818185b68e4e",
+    "line" : 11,
+    "diffHunk" : "@@ -1,1 +2624,2628 @@        // To estimate the resulted array length we need to make assumptions\n        // about a month length in days and a day length in microseconds\n        val intervalStepInMicros =\n          stepMicros + stepMonths * microsPerMonth + stepDays * microsPerDay\n"
+  },
+  {
+    "id" : "6f8d6e3c-7942-4b97-83b4-25578c6d4a01",
+    "prId" : 28856,
+    "prUrl" : "https://github.com/apache/spark/pull/28856#pullrequestreview-433781687",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d53a4adf-2f20-4510-b732-b59a7f600812",
+        "parentId" : null,
+        "authorId" : "919368dc-8bac-4d8f-9fa6-be962263fc1e",
+        "body" : "We could get date from `Math.round(t / scale.toFloat)`, if the target is timestamp,  the former ` fromLong(t / scale)` could be used.",
+        "createdAt" : "2020-06-19T03:36:53Z",
+        "updatedAt" : "2020-06-22T15:01:55Z",
+        "lastEditedBy" : "919368dc-8bac-4d8f-9fa6-be962263fc1e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6a341bff3cbd6196cd1d742d9b66818185b68e4e",
+    "line" : 36,
+    "diffHunk" : "@@ -1,1 +2649,2653 @@            fromLong(t)\n          } else {\n            fromLong(Math.round(t / scale.toFloat))\n          }\n          i += 1"
+  },
+  {
+    "id" : "c4ea403e-821c-443a-97d2-d307b0072a5e",
+    "prId" : 28856,
+    "prUrl" : "https://github.com/apache/spark/pull/28856#pullrequestreview-435037571",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9df96b69-0eb4-4b63-84fe-a50f7866986b",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "can you explain a bit more? It's hard to understand this change without any comment.",
+        "createdAt" : "2020-06-22T08:25:46Z",
+        "updatedAt" : "2020-06-22T15:01:55Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "971f738a-a674-442f-babc-052052589355",
+        "parentId" : "9df96b69-0eb4-4b63-84fe-a50f7866986b",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "Yeh, please, explain why if `scale` != 1, `start` and `stop` contain days.",
+        "createdAt" : "2020-06-22T08:36:43Z",
+        "updatedAt" : "2020-06-22T15:01:55Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "49715d41-4357-4f9e-845e-61d2b54cada3",
+        "parentId" : "9df96b69-0eb4-4b63-84fe-a50f7866986b",
+        "authorId" : "919368dc-8bac-4d8f-9fa6-be962263fc1e",
+        "body" : "Because when `scale` != 1，it is converted to day count，so we may need to use zone info to translate into microseconds to get a correct result，rather than just multiply `MICROS_PER_DAY` which ignore timezone.",
+        "createdAt" : "2020-06-22T13:33:38Z",
+        "updatedAt" : "2020-06-22T15:01:56Z",
+        "lastEditedBy" : "919368dc-8bac-4d8f-9fa6-be962263fc1e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "97c304b5-cb51-45e3-8b27-a8b0bfe7e259",
+        "parentId" : "9df96b69-0eb4-4b63-84fe-a50f7866986b",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "> Because when scale != 1，it is converted to day count\r\n\r\nHow can we tell it?",
+        "createdAt" : "2020-06-22T13:41:58Z",
+        "updatedAt" : "2020-06-22T15:01:56Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "819ef44d-f2cd-496e-af88-5b3814fbe3ae",
+        "parentId" : "9df96b69-0eb4-4b63-84fe-a50f7866986b",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "maybe we should add more documents to `TemporalSequenceImpl` first, to understand what it is doing",
+        "createdAt" : "2020-06-22T13:42:46Z",
+        "updatedAt" : "2020-06-22T15:01:56Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7e0cedf6-6a99-4bbe-9a7a-3c26f08572a4",
+        "parentId" : "9df96b69-0eb4-4b63-84fe-a50f7866986b",
+        "authorId" : "919368dc-8bac-4d8f-9fa6-be962263fc1e",
+        "body" : "Done, maybe we can pass the scale through constructor：\r\nprivate class TemporalSequenceImpl[T: ClassTag]\r\n      (dt: IntegralType, **scale: Long**, fromLong: Long => T, zoneId: ZoneId)",
+        "createdAt" : "2020-06-22T15:28:56Z",
+        "updatedAt" : "2020-06-22T15:28:56Z",
+        "lastEditedBy" : "919368dc-8bac-4d8f-9fa6-be962263fc1e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6a341bff3cbd6196cd1d742d9b66818185b68e4e",
+    "line" : 22,
+    "diffHunk" : "@@ -1,1 +2633,2637 @@        else {\n          (daysToMicros(num.toInt(start), zoneId),\n            daysToMicros(num.toInt(stop), zoneId))\n        }\n"
+  },
+  {
+    "id" : "d45ced4d-a8b1-4dd8-a057-ac79e48f835a",
+    "prId" : 28856,
+    "prUrl" : "https://github.com/apache/spark/pull/28856#pullrequestreview-434921382",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b9d9e2d2-cd7b-4e29-b9b4-68d1d59e3c04",
+        "parentId" : null,
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "Don't think this is correct, see my comment https://github.com/apache/spark/pull/28856/files#r442366706 but it is at least backward compatible?",
+        "createdAt" : "2020-06-22T08:38:15Z",
+        "updatedAt" : "2020-06-22T15:01:56Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cda8dc1a-a527-409d-bd72-665bcfeaedd5",
+        "parentId" : "b9d9e2d2-cd7b-4e29-b9b4-68d1d59e3c04",
+        "authorId" : "919368dc-8bac-4d8f-9fa6-be962263fc1e",
+        "body" : "Maybe we could separate this into different methods ?",
+        "createdAt" : "2020-06-22T13:27:43Z",
+        "updatedAt" : "2020-06-22T15:01:56Z",
+        "lastEditedBy" : "919368dc-8bac-4d8f-9fa6-be962263fc1e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6a341bff3cbd6196cd1d742d9b66818185b68e4e",
+    "line" : 18,
+    "diffHunk" : "@@ -1,1 +2629,2633 @@        // Date to timestamp is not equal from GMT and Chicago timezones\n        val (startMicros, stopMicros) = if (scale == 1) {\n          (num.toLong(start), num.toLong(stop))\n        }\n        else {"
+  },
+  {
+    "id" : "bd1741c7-9fca-4b68-b044-ce56aca14033",
+    "prId" : 28856,
+    "prUrl" : "https://github.com/apache/spark/pull/28856#pullrequestreview-436746823",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a5029ea8-0701-4829-8f50-77f9f40aea95",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "if start/end is date, can the step by seconds/minutes/hours?",
+        "createdAt" : "2020-06-23T06:06:21Z",
+        "updatedAt" : "2020-06-23T06:06:21Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "950f180c-e18b-42bb-b281-1b9de4fd61a1",
+        "parentId" : "a5029ea8-0701-4829-8f50-77f9f40aea95",
+        "authorId" : "919368dc-8bac-4d8f-9fa6-be962263fc1e",
+        "body" : "Yes, seems we can, the result as follows：\r\n`scala> sql(\"select explode(sequence(cast('2011-03-01' as date), cast('2011-05-01' as date), interval 1 hour))\").count\r\nres19: Long = 1465\r\n\r\nscala> sql(\"select explode(sequence(cast('2011-03-01' as date), cast('2011-05-01' as date), interval 1 minute))\").count\r\nres20: Long = 87841\r\n\r\nscala> sql(\"select explode(sequence(cast('2011-03-01' as date), cast('2011-05-01' as date), interval 1 second))\").count\r\nres21: Long = 5270401\r\nscala> sql(\"select explode(sequence(cast('2011-03-01' as date), cast('2011-05-01' as date), interval 1 minute))\").head(3)\r\nres25: Array[org.apache.spark.sql.Row] = Array([2011-03-01], [2011-03-01], [2011-03-01])\r\n\r\nscala> sql(\"select explode(sequence(cast('2011-03-01' as date), cast('2011-05-01' as date), interval 1 second))\").head(3)\r\n\r\nres26: Array[org.apache.spark.sql.Row] = Array([2011-03-01], [2011-03-01], [2011-03-01])\r\n\r\nscala> sql(\"select explode(sequence(cast('2011-03-01' as date), cast('2011-05-01' as date), interval 1 minute))\").head(3)\r\nres27: Array[org.apache.spark.sql.Row] = Array([2011-03-01], [2011-03-01], [2011-03-01])\r\n\r\nscala> sql(\"select explode(sequence(cast('2011-03-01' as date), cast('2011-05-01' as date), interval 1 hour))\").head(3)\r\nres28: Array[org.apache.spark.sql.Row] = Array([2011-03-01], [2011-03-01], [2011-03-01])\r\n`",
+        "createdAt" : "2020-06-23T08:18:23Z",
+        "updatedAt" : "2020-06-23T08:23:02Z",
+        "lastEditedBy" : "919368dc-8bac-4d8f-9fa6-be962263fc1e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "40e4586b-61e8-4f1d-bf0c-95d77ca347c3",
+        "parentId" : "a5029ea8-0701-4829-8f50-77f9f40aea95",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "does pgsql support it?",
+        "createdAt" : "2020-06-23T09:11:37Z",
+        "updatedAt" : "2020-06-23T09:11:37Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "daf1ede1-2611-4688-a709-b199e7fb8413",
+        "parentId" : "a5029ea8-0701-4829-8f50-77f9f40aea95",
+        "authorId" : "919368dc-8bac-4d8f-9fa6-be962263fc1e",
+        "body" : "Seems pgsql can only support int as follows：\r\npostgres= create sequence seq_test;\r\nCREATE SEQUENCE\r\npostgres= select nextval('seq_test');\r\n       1\r\n(1 行记录)\r\npostgres= select nextval('seq_test');\r\n       2\r\n(1 行记录)\r\n",
+        "createdAt" : "2020-06-23T15:06:02Z",
+        "updatedAt" : "2020-06-23T15:06:02Z",
+        "lastEditedBy" : "919368dc-8bac-4d8f-9fa6-be962263fc1e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "55dcb157-40ae-4048-8566-670baa2c1acf",
+        "parentId" : "a5029ea8-0701-4829-8f50-77f9f40aea95",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Actually this function is from presto: https://prestodb.io/docs/current/functions/array.html\r\n\r\nCan you check the behavior of presto? It looks confusing to use time fields as the step for date start/stop.",
+        "createdAt" : "2020-06-24T06:27:14Z",
+        "updatedAt" : "2020-06-24T06:27:15Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8d391b13-9eb6-4a37-b2a4-cc4f93b70414",
+        "parentId" : "a5029ea8-0701-4829-8f50-77f9f40aea95",
+        "authorId" : "919368dc-8bac-4d8f-9fa6-be962263fc1e",
+        "body" : "Base `presto-server-0.236`：\r\npresto> select sequence(date('2011-03-01'),date('2011-03-02'),interval '1' hour);\r\nQuery 20200624_122744_00002_pehix failed: sequence step must be a day interval if start and end values are dates\r\npresto> select sequence(date('2011-03-01'),date('2011-03-02'),interval '1' day);\r\n          _col0           \r\n [2011-03-01, 2011-03-02] \r\n(1 row)\r\nQuery 20200624_122757_00003_pehix, FINISHED, 1 node\r\nSplits: 17 total, 17 done (100.00%)\r\n0:00 [0 rows, 0B] [0 rows/s, 0B/s]\r\npresto> select sequence(date('2011-03-01'),date('2011-03-02'),interval '1' month);\r\n    _col0     \r\n [2011-03-01] \r\n(1 row)\r\n\r\nQuery 20200624_122806_00004_pehix, FINISHED, 1 node\r\nSplits: 17 total, 17 done (100.00%)\r\n0:00 [0 rows, 0B] [0 rows/s, 0B/s]\r\npresto> select sequence(date('2011-03-01'),date('2011-03-02'),interval '1' year);\r\n    _col0     \r\n [2011-03-01] \r\n(1 row)\r\nQuery 20200624_122810_00005_pehix, FINISHED, 1 node\r\nSplits: 17 total, 17 done (100.00%)\r\n0:00 [0 rows, 0B] [0 rows/s, 0B/s]",
+        "createdAt" : "2020-06-24T12:30:10Z",
+        "updatedAt" : "2020-06-24T12:37:17Z",
+        "lastEditedBy" : "919368dc-8bac-4d8f-9fa6-be962263fc1e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a443a5f9-3d76-4259-8f7f-08933484ece4",
+        "parentId" : "a5029ea8-0701-4829-8f50-77f9f40aea95",
+        "authorId" : "919368dc-8bac-4d8f-9fa6-be962263fc1e",
+        "body" : "@cloud-fan Done, It seems can be sequence `day`,`month`,`year` when start and end are `DateType` in presto.",
+        "createdAt" : "2020-06-24T12:33:07Z",
+        "updatedAt" : "2020-06-24T12:36:52Z",
+        "lastEditedBy" : "919368dc-8bac-4d8f-9fa6-be962263fc1e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5190ba46-76ce-47ff-8f8b-b1d72ad4d3f1",
+        "parentId" : "a5029ea8-0701-4829-8f50-77f9f40aea95",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I think the presto behavior makes sense. Can we send a PR to follow it first? e.g. throw an exception if the step is time fields while start/end is date. This can also simplify the implementation.",
+        "createdAt" : "2020-06-24T15:03:58Z",
+        "updatedAt" : "2020-06-24T15:03:58Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "00329047-2473-4760-8557-5c9575ef72f1",
+        "parentId" : "a5029ea8-0701-4829-8f50-77f9f40aea95",
+        "authorId" : "919368dc-8bac-4d8f-9fa6-be962263fc1e",
+        "body" : "Ok, I will do it tomorrow.",
+        "createdAt" : "2020-06-24T15:12:43Z",
+        "updatedAt" : "2020-06-24T15:12:43Z",
+        "lastEditedBy" : "919368dc-8bac-4d8f-9fa6-be962263fc1e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6a341bff3cbd6196cd1d742d9b66818185b68e4e",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +2591,2595 @@\n  // To generate time sequences, we use scale 1 in TemporalSequenceImpl\n  // for `TimestampType`, while MICROS_PER_DAY for `DateType`\n  private class TemporalSequenceImpl[T: ClassTag]\n      (dt: IntegralType, scale: Long, fromLong: Long => T, zoneId: ZoneId)"
+  },
+  {
+    "id" : "20154db1-2e23-49fb-a132-0bd0388f31e2",
+    "prId" : 28856,
+    "prUrl" : "https://github.com/apache/spark/pull/28856#pullrequestreview-442818523",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f31fc7f0-d34c-4b91-8f04-fa10a66398cc",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Why do these codes depend on few specific timezones? Also, other comments look valid here. We should take the timezone into account for timestamps too",
+        "createdAt" : "2020-07-06T05:30:46Z",
+        "updatedAt" : "2020-07-06T05:30:46Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "87f1b7f8-33aa-4283-98b1-0d28f1511dfc",
+        "parentId" : "f31fc7f0-d34c-4b91-8f04-fa10a66398cc",
+        "authorId" : "919368dc-8bac-4d8f-9fa6-be962263fc1e",
+        "body" : "Seems the date if different from west to east, when it is date, we might need to consider to zone info to convert to time stamp, if it is already a time stamp, not a date here, we may ignore the zone because the time stamp is already consider it.",
+        "createdAt" : "2020-07-06T07:01:36Z",
+        "updatedAt" : "2020-07-06T07:01:36Z",
+        "lastEditedBy" : "919368dc-8bac-4d8f-9fa6-be962263fc1e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6a341bff3cbd6196cd1d742d9b66818185b68e4e",
+    "line" : 16,
+    "diffHunk" : "@@ -1,1 +2627,2631 @@          stepMicros + stepMonths * microsPerMonth + stepDays * microsPerDay\n\n        // Date to timestamp is not equal from GMT and Chicago timezones\n        val (startMicros, stopMicros) = if (scale == 1) {\n          (num.toLong(start), num.toLong(stop))"
   }
 ]

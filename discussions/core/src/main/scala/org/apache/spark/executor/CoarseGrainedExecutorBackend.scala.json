@@ -394,5 +394,181 @@
     "commit" : "88060be29d84e9d26a14d35c33f906a3f49434ef",
     "line" : 15,
     "diffHunk" : "@@ -1,1 +168,172 @@        if (decommissioned) {\n          val msg = \"Asked to launch a task while decommissioned.\"\n          logError(msg)\n          driver match {\n            case Some(endpoint) =>"
+  },
+  {
+    "id" : "65480401-c27b-4c96-b6f7-9c121a87d829",
+    "prId" : 28817,
+    "prUrl" : "https://github.com/apache/spark/pull/28817#pullrequestreview-430179466",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "26e99481-f231-4013-bdad-1632cbeb5d42",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Should this variable be marked volatile ?",
+        "createdAt" : "2020-06-13T23:15:05Z",
+        "updatedAt" : "2020-06-14T01:11:18Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e3f0e33e-279b-45c6-9b51-fc433be5ac26",
+        "parentId" : "26e99481-f231-4013-bdad-1632cbeb5d42",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "I don't think so, this will only be accessed in one thread.",
+        "createdAt" : "2020-06-14T00:53:52Z",
+        "updatedAt" : "2020-06-14T01:11:18Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a2c055715ccf2992e399cef3768b1299c24d9a82",
+    "line" : 22,
+    "diffHunk" : "@@ -1,1 +263,267 @@  }\n\n  private var previousAllBlocksMigrated = false\n  private def shutdownIfDone(): Unit = {\n    val numRunningTasks = executor.numRunningTasks"
+  },
+  {
+    "id" : "ae6e9787-0356-4bc2-b361-2dff792b0720",
+    "prId" : 28817,
+    "prUrl" : "https://github.com/apache/spark/pull/28817#pullrequestreview-430179435",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "569da528-b5a1-448e-87d9-b42e069e84c2",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "I think this logic of previousAllBlocks and allBlocks migrated is a bit confusing. Its not clear why the previous state has to be considered. I wonder if the following code can make this \"history\" aspect a bit clearer:\r\n\r\n```\r\nval allBlocksMigrated = !env.conf.get(STORAGE_DECOMMISSION_ENABLED) ||\r\n      env.blockManager.decommissionManager.map(_.allBlocksMigrated).orElse(false)\r\nval exitCondition = allBlocksMigrated && numRunningTasks == 0\r\nif (exitCondition) { exitExecutor(...) }\r\n```\r\n\r\nAlso, should we really be checking for numRunningTasks here ? What if some race condition caused some tasks to be scheduled onto us while we were marked for decom ?\r\n\r\nFinally, should there be a timeout for how much time the executor will stay alive in decommissioned state ? ",
+        "createdAt" : "2020-06-13T23:23:18Z",
+        "updatedAt" : "2020-06-14T01:11:18Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "75d133b2-98b8-4bf0-a862-6f9676f0d0fc",
+        "parentId" : "569da528-b5a1-448e-87d9-b42e069e84c2",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "If a task is scheduled before we are asked to decom. You can verify this is covered by taking the logic out and watching the tests fail :) (There's an ungly thread sleep in the tests to make this possible).\r\n\r\nSince the block migrations are not atomic, I do think we need the 2x logic, unfortunately, think of this situation:\r\n1) Task launches on executor\r\n2) Executor asked to decomission\r\n3) All blocks currently stored on executor are migrated\r\n4) Task stores a block\r\n5) We check numTasks & see all blocks are migrated, then exit without migrating the block stored by task #4.\r\n\r\nNow that being said that's probably a corner case, and arguably not super important since we're really only doing best effort, but I think for the overhead of one extra boolean it's worth it to cover this corner case.",
+        "createdAt" : "2020-06-14T00:52:41Z",
+        "updatedAt" : "2020-06-14T01:11:18Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a2c055715ccf2992e399cef3768b1299c24d9a82",
+    "line" : 45,
+    "diffHunk" : "@@ -1,1 +283,287 @@      }\n    } else {\n      // If there's a running task it could store blocks.\n      previousAllBlocksMigrated = false\n    }"
+  },
+  {
+    "id" : "0687f2e6-47ab-485c-968b-d4f5b0a9abb6",
+    "prId" : 28817,
+    "prUrl" : "https://github.com/apache/spark/pull/28817#pullrequestreview-431059147",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5197f6e6-0023-4724-838d-522ac0b1b299",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "`exitExecutor` asynchronously sends RemoveExecutor to the driver. Does that actually make it to the driver ? There is also this question about if we should be using the same `Shutdown`/`StopExecutor` codepath for doing the stopping ? (But althought it seems that we do want to intimate to the driver that the executor is being removed). \r\n\r\nInterestingly, the driver does indeed respond back with a `StopExecutor` and does trigger the clean shutdown path in the executor, but again I wonder if it is too late for it. Perhaps we shouldn't be calling `System.exit` here ?\r\n\r\nAlso, as currently written, this `exitExecutor` could cause job failures: Since the `TaskSchedulerImpl` will treat the `ExecutorLossReason` send by the executor to the driver as an `exitCausedByApp` and thus penalize the task. Instead, I think we shouldn't penalize the running job on a planned executor decommission. One workaround might be to actually respond back to the driver with `ExecutorDecommission` (which is not used elsewhere currently) and then handle that specifically in the `TaskSchedulerImpl`'s determination of `exitCausedByApp`.",
+        "createdAt" : "2020-06-14T00:19:30Z",
+        "updatedAt" : "2020-06-14T01:11:18Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3ee16ffe-c3bb-46e0-bf76-714a7bc9d13f",
+        "parentId" : "5197f6e6-0023-4724-838d-522ac0b1b299",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "So it's my understanding the `TaskSchedulerImpl` shouldn't have any job failures because we've waited for all the tasks on the executor to finish before calling this code path. Unless is there something I've missed there?\r\n\r\nI think swapping out exit executor for instead telling the driver to stop the executor and avoiding the `system.exit` makes sense either way though.",
+        "createdAt" : "2020-06-14T01:04:35Z",
+        "updatedAt" : "2020-06-14T01:11:18Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a745f4f0-7dc2-472f-91f6-5b06d2e203d7",
+        "parentId" : "5197f6e6-0023-4724-838d-522ac0b1b299",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "I was talking about the case where we get shot down before we had a chance to cleanly exit on line 276. Say for example, some time out expires and the executor/node is brought down. \r\n\r\nAre `decom.sh` and `decommission-slave.sh` expected to wait until the executor/worker process has properly shut down ? I think they have some timeouts in them to kill the executor ? Or consider a spot kill scenario where you got some warning (like 2 minutes) and then the machine is yanked out. \r\n\r\nIn this case, the executor will eventually be marked loss via a heartbeat/timeout. And that loss would be deemed as the fault of the task, and could cause job failures. I am wondering if we can fix that scenario of an unclean exit ? \r\n\r\nOne workaround I suggested above was to send a message to the driver saying that the executor is going to go away soon. When that happens (in a clean or unclean way), that loss shouldn't be attributed to the task. \r\n\r\nPerhaps this unclean executor loss/timeout handling is follow up work ? We (or rather I) can create Jira's for this under the parent ticket :-). ",
+        "createdAt" : "2020-06-14T03:46:51Z",
+        "updatedAt" : "2020-06-14T03:46:51Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8d593592-c51e-4a9f-acd0-a1f6479cba2b",
+        "parentId" : "5197f6e6-0023-4724-838d-522ac0b1b299",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Sure, although I _think_ this behaviour is covered by the changes in https://github.com/apache/spark/pull/26440/files (we only increment failures if the executors previous state was not decommissioning).",
+        "createdAt" : "2020-06-14T18:50:17Z",
+        "updatedAt" : "2020-06-14T18:50:17Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "34b1b3ae-0b02-4a17-ad5c-d80eabe5929a",
+        "parentId" : "5197f6e6-0023-4724-838d-522ac0b1b299",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Can you please double check that ? I couldn't find this behavior when scouring TaskSchedulerImpl,  and TaskSetManager. The only place we check for an executor being decommissioned in that PR is when scheduling tasks (in CoarseGrainedSchedulerBackend#isExecutorActive). Thanks !",
+        "createdAt" : "2020-06-14T19:12:07Z",
+        "updatedAt" : "2020-06-14T19:12:07Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5c34fe6a-e175-4b5b-b598-6c07172ce9c3",
+        "parentId" : "5197f6e6-0023-4724-838d-522ac0b1b299",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Can you point to where in TaskSchedulerImpl it's going to fail the job? `core/src/main/scala/org/apache/spark/deploy/master/Master.scala` is where the current code is, but there might be an additional case that needs to be covered.",
+        "createdAt" : "2020-06-15T19:41:14Z",
+        "updatedAt" : "2020-06-15T19:41:14Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8d4769a6-5b7e-4f15-9b7b-117a23c6f114",
+        "parentId" : "5197f6e6-0023-4724-838d-522ac0b1b299",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "https://github.com/apache/spark/blob/a2c055715ccf2992e399cef3768b1299c24d9a82/core/src/main/scala/org/apache/spark/scheduler/TaskSetManager.scala#L980\r\n\r\nIn this match block, we will hit the default case which will treat the failure as having been caused by the app and thus penalize it. \r\n\r\nThis routine is called from `TaskScheduler.executorLost`",
+        "createdAt" : "2020-06-15T20:02:05Z",
+        "updatedAt" : "2020-06-15T20:02:06Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a6e13f0f-e600-4557-aad3-3d7c290f1f77",
+        "parentId" : "5197f6e6-0023-4724-838d-522ac0b1b299",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Thanks :) If you want to make a PR for that I'd be happy to review/merge since I think that would not depend on any of the in-flight PRs just the current code in master.",
+        "createdAt" : "2020-06-15T22:39:20Z",
+        "updatedAt" : "2020-06-15T22:39:20Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f64d47be-ac14-4ad6-ba67-6af319be6fe9",
+        "parentId" : "5197f6e6-0023-4724-838d-522ac0b1b299",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Absolutely !. Thanks",
+        "createdAt" : "2020-06-15T23:28:19Z",
+        "updatedAt" : "2020-06-15T23:28:19Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a2c055715ccf2992e399cef3768b1299c24d9a82",
+    "line" : 34,
+    "diffHunk" : "@@ -1,1 +275,279 @@        if (allBlocksMigrated && previousAllBlocksMigrated) {\n          logInfo(\"No running tasks, all blocks migrated, stopping.\")\n          exitExecutor(0, \"Finished decommissioning\", notifyDriver = true)\n        }\n        previousAllBlocksMigrated = allBlocksMigrated"
   }
 ]

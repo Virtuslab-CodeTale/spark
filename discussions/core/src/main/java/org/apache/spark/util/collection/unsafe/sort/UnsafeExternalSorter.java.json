@@ -152,5 +152,137 @@
     "commit" : "e514327b4e071f0e4c8e3402cbf03d54c83ab8a4",
     "line" : 30,
     "diffHunk" : "@@ -1,1 +528,532 @@    public long spill() throws IOException {\n      synchronized (this) {\n        if (inMemSorter == null || numRecords <= 0) {\n          return 0L;\n        }"
+  },
+  {
+    "id" : "ff124520-739e-4226-afe2-16a22c546e84",
+    "prId" : 28780,
+    "prUrl" : "https://github.com/apache/spark/pull/28780#pullrequestreview-435402299",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a2f17dc5-8cbe-4387-b5b9-ccc7b2f17023",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Why didn't you set this value in the caller side (`UnsafeKVExternalSorter`)?",
+        "createdAt" : "2020-06-10T09:34:55Z",
+        "updatedAt" : "2020-06-10T09:34:56Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "91af3e99-c042-4417-a18c-cfc522f3938a",
+        "parentId" : "a2f17dc5-8cbe-4387-b5b9-ccc7b2f17023",
+        "authorId" : "31f9c2ba-7775-44e4-b6fa-5e9ab26c8dff",
+        "body" : "I have no strong preference on this.  One benefits is that others who calls `createWithExistingInMemorySorter` will not forget to update memory spilled any more. (though only `UnsafeKVExternalSorter` used this function currently)",
+        "createdAt" : "2020-06-10T12:17:40Z",
+        "updatedAt" : "2020-06-10T12:17:41Z",
+        "lastEditedBy" : "31f9c2ba-7775-44e4-b6fa-5e9ab26c8dff",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "62e933eb-b077-4610-a51f-436e996d3ec6",
+        "parentId" : "a2f17dc5-8cbe-4387-b5b9-ccc7b2f17023",
+        "authorId" : "31f9c2ba-7775-44e4-b6fa-5e9ab26c8dff",
+        "body" : "cc @maropu @cloud-fan ",
+        "createdAt" : "2020-06-15T11:26:09Z",
+        "updatedAt" : "2020-06-15T11:26:10Z",
+        "lastEditedBy" : "31f9c2ba-7775-44e4-b6fa-5e9ab26c8dff",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "39a609fc-ed54-4590-ac53-1484ce05950b",
+        "parentId" : "a2f17dc5-8cbe-4387-b5b9-ccc7b2f17023",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Is it the same to use `inMemorySorter.getMemoryUsage`?\r\n\r\nAlso, shall we update `sorter.totalSpillBytes`?",
+        "createdAt" : "2020-06-22T06:15:39Z",
+        "updatedAt" : "2020-06-22T06:15:46Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9affd9ab-bd4a-4ae5-a137-3d7a2a59cfef",
+        "parentId" : "a2f17dc5-8cbe-4387-b5b9-ccc7b2f17023",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Or, if we can do `final long spillSize = freeMemory() + inMemorySorter.getMemoryUsage()` in `sorter.spill()`? \r\n\r\nSeem like the size of inMemorySorter is included in log info by `getMemoryUsage()`, while `spillSize` doesn't.",
+        "createdAt" : "2020-06-22T06:36:12Z",
+        "updatedAt" : "2020-06-22T06:37:42Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "25b7d686-405f-4716-9ede-9cffe6b0673a",
+        "parentId" : "a2f17dc5-8cbe-4387-b5b9-ccc7b2f17023",
+        "authorId" : "31f9c2ba-7775-44e4-b6fa-5e9ab26c8dff",
+        "body" : "> Is it the same to use `inMemorySorter.getMemoryUsage`?\r\n> \r\n> Also, shall we update `sorter.totalSpillBytes`?\r\n\r\n1. It's not the same with `inMemorySorter.getMemoryUsage`.\r\n\r\nWhen we insert a record into `UnsafeExternalSorter`, the record itself is copied to sorter's `allocatedPages`, and stores the memory address into `InMemorySorter`. So when we spill it, the memory size is the sum of `inMemorySorter.getMemoryUsage` \r\n and `allocatePages`, that's what it does in `UnsafeExternalSorter.spill`.\r\n\r\nBut when we do `sorter.spill`  in `UnsafeExternalSorter.createWithExistingInMemorySorter`,  the sorter's `allocatedPages` is empty since we didn't copy any records to it. The memory address in `inMemorySorter` points to the memory pages in `BytesToBytesMap`.\r\n\r\nThe passed parameter denotes the size of memory pages in `BytesToBytesMap`.\r\n\r\n2. yes, seems we also need to update `sorter.totalSpillBytes`",
+        "createdAt" : "2020-06-22T09:53:17Z",
+        "updatedAt" : "2020-06-22T09:53:18Z",
+        "lastEditedBy" : "31f9c2ba-7775-44e4-b6fa-5e9ab26c8dff",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f56615a1-d3c4-450f-b49a-f61af3bad099",
+        "parentId" : "a2f17dc5-8cbe-4387-b5b9-ccc7b2f17023",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "I see, thanks for your explanation.",
+        "createdAt" : "2020-06-23T02:46:14Z",
+        "updatedAt" : "2020-06-23T02:46:14Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "247ebaf3188ddd5f5522749ab19e057711486aec",
+    "line" : 11,
+    "diffHunk" : "@@ -1,1 +111,115 @@        pageSizeBytes, numElementsForSpillThreshold, inMemorySorter, false /* ignored */);\n    sorter.spill(Long.MAX_VALUE, sorter);\n    taskContext.taskMetrics().incMemoryBytesSpilled(existingMemoryConsumption);\n    // The external sorter will be used to insert records, in-memory sorter is not needed.\n    sorter.inMemSorter = null;"
+  },
+  {
+    "id" : "19b7c2c9-c5bf-40a5-982b-f20937b23a82",
+    "prId" : 28780,
+    "prUrl" : "https://github.com/apache/spark/pull/28780#pullrequestreview-434780134",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "bf5cfddc-b1c3-41d0-86e1-2727a4d8baec",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "just for reference, where do we update the disk spill metrics?",
+        "createdAt" : "2020-06-22T07:47:53Z",
+        "updatedAt" : "2020-06-22T07:47:53Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6ab7d11d-2f44-4c08-8ed7-e994a7a5dffb",
+        "parentId" : "bf5cfddc-b1c3-41d0-86e1-2727a4d8baec",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "You can see it at the end of `sorter.spill()`.",
+        "createdAt" : "2020-06-22T09:46:47Z",
+        "updatedAt" : "2020-06-22T09:46:48Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "35b3043c-c1c6-436c-9617-8ea1249d9f1c",
+        "parentId" : "bf5cfddc-b1c3-41d0-86e1-2727a4d8baec",
+        "authorId" : "31f9c2ba-7775-44e4-b6fa-5e9ab26c8dff",
+        "body" : "At the end of `sorter.spill`,  it increase memory bytes spilled and disk bytes spilled. \r\nBut the size of memory bytes spilled is not correct because the real data pages are not `UnsafeExternalSorter.allocatedPages`, but `BytesToBytesMap.dataPages`,  as explained here https://github.com/apache/spark/pull/28780#discussion_r443445290, but the disk bytes spilled is correct because it's the real size write to disk.",
+        "createdAt" : "2020-06-22T10:03:32Z",
+        "updatedAt" : "2020-06-22T10:03:32Z",
+        "lastEditedBy" : "31f9c2ba-7775-44e4-b6fa-5e9ab26c8dff",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "247ebaf3188ddd5f5522749ab19e057711486aec",
+    "line" : 11,
+    "diffHunk" : "@@ -1,1 +111,115 @@        pageSizeBytes, numElementsForSpillThreshold, inMemorySorter, false /* ignored */);\n    sorter.spill(Long.MAX_VALUE, sorter);\n    taskContext.taskMetrics().incMemoryBytesSpilled(existingMemoryConsumption);\n    // The external sorter will be used to insert records, in-memory sorter is not needed.\n    sorter.inMemSorter = null;"
   }
 ]

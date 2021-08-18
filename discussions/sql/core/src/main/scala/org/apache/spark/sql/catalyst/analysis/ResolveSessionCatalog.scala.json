@@ -427,5 +427,148 @@
     "commit" : "3fa76cfaf7aaca5c5d2ca8ad2743bdefae208b61",
     "line" : 47,
     "diffHunk" : "@@ -1,1 +136,140 @@              }\n          }\n          // Add Hive type 'string' and 'void' to metadata.\n          val cleanedDataType =\n            HiveVoidType.replaceVoidType(HiveStringType.replaceCharType(dataType))"
+  },
+  {
+    "id" : "e1326666-6e75-450a-a375-f2fa6b299da8",
+    "prId" : 28833,
+    "prUrl" : "https://github.com/apache/spark/pull/28833#pullrequestreview-440729404",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8a883cbc-be51-4215-9549-37bdbe3082ad",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "It seems that we have a check for `ReplaceTableStatement`, but not for `ReplaceTableAsSelectStatement`. Is it okay?",
+        "createdAt" : "2020-07-01T07:34:54Z",
+        "updatedAt" : "2020-07-08T00:27:04Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f20715e8-5aac-4bf8-8d31-1c5f90356601",
+        "parentId" : "8a883cbc-be51-4215-9549-37bdbe3082ad",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "Yes. `case CreateTableAsSelectStatement` is not cover either. ",
+        "createdAt" : "2020-07-01T09:09:16Z",
+        "updatedAt" : "2020-07-08T00:27:04Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "83b7332c-f1d7-4483-96a0-e2253a836741",
+        "parentId" : "8a883cbc-be51-4215-9549-37bdbe3082ad",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "I will check the new REPLACE syntax with UT.",
+        "createdAt" : "2020-07-01T09:16:07Z",
+        "updatedAt" : "2020-07-08T00:27:04Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5ab10db9-60d5-4048-a256-69a199512754",
+        "parentId" : "8a883cbc-be51-4215-9549-37bdbe3082ad",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "By my testing, `ReplaceTableAsSelectStatement` should also check the assertion. I will change it.",
+        "createdAt" : "2020-07-01T10:01:25Z",
+        "updatedAt" : "2020-07-08T00:27:04Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0f8998d6-73f4-4256-a6df-ed0b14e60a13",
+        "parentId" : "8a883cbc-be51-4215-9549-37bdbe3082ad",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "done",
+        "createdAt" : "2020-07-01T10:05:12Z",
+        "updatedAt" : "2020-07-08T00:27:04Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9ad57d17bac47ea0f801004ec0aba9197e631bc7",
+    "line" : 46,
+    "diffHunk" : "@@ -1,1 +327,331 @@    case c @ ReplaceTableStatement(\n         SessionCatalogAndTable(catalog, tbl), _, _, _, _, _, _, _, _, _) =>\n      assertNoNullTypeInSchema(c.tableSchema)\n      val provider = c.provider.getOrElse(conf.defaultDataSourceName)\n      if (!isV2Provider(provider)) {"
+  },
+  {
+    "id" : "358542cc-30a5-44dc-8cc0-1902c298feb7",
+    "prId" : 28833,
+    "prUrl" : "https://github.com/apache/spark/pull/28833#pullrequestreview-635339687",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6d2773c0-ec74-4bee-bd37-c55292a20991",
+        "parentId" : null,
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "It would be great if we could add a legacy flag for such behavior change in future. This changes the behavior for both v1 and v2 Catalogs in order to fix a compatibility issue with Hive Metastore. But Hive Metastore is not the only Catalog Spark supports since we have opened the Catalog APIs in DSv2.",
+        "createdAt" : "2021-04-13T17:50:23Z",
+        "updatedAt" : "2021-04-13T17:50:24Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6c377bfd-1872-4017-b0c2-8b0bae8e215d",
+        "parentId" : "6d2773c0-ec74-4bee-bd37-c55292a20991",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I don't know any database that supports creating tables with null/void type column, so this change is not for hive compatibility but for reasonable SQL semantic.\r\n\r\nI agree this is a breaking change that should be at least put in the migration guide. A legacy config can also be added but I can't find a reasonable use case for a null type column.\r\n\r\n",
+        "createdAt" : "2021-04-14T03:49:54Z",
+        "updatedAt" : "2021-04-14T03:49:55Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3e53ccca-94a9-4928-82ce-8c71d50f8163",
+        "parentId" : "6d2773c0-ec74-4bee-bd37-c55292a20991",
+        "authorId" : "a80e0991-f7b1-415a-8d2e-ab615cc6ef4a",
+        "body" : "> I don't know any database that supports creating tables with null/void type column, so this change is not for hive compatibility but for reasonable SQL semantic.\r\n> \r\n> I agree this is a breaking change that should be at least put in the migration guide. A legacy config can also be added but I can't find a reasonable use case for a null type column.\r\n\r\nI think the main reason why you would want to support it is when people are using tables / views / temp tables to structure existing workloads. We support NullType type in CTEs, but in the case where people want to reuse the same CTE in multiple queries (i.e., multi-output workloads), they have no choice but to use views or temporary tables. (With DataFrames they'd still be able to reuse the same dataframe for multiple outputs, but in SQL that doesn't work.)\r\n\r\nOne typical use case where you use CTEs to structure your code is if you have multiple sources with different structures that you then UNION ALL together into a single dataset. It is not uncommon for each of the sources to have certain columns that don't apply, and then you write explicit NULLs there. It would be pretty annoying if you had to write explicit casts of those NULLs to the right type in all of those cases.\r\n",
+        "createdAt" : "2021-04-14T07:29:21Z",
+        "updatedAt" : "2021-04-14T07:29:22Z",
+        "lastEditedBy" : "a80e0991-f7b1-415a-8d2e-ab615cc6ef4a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5cf9935e-9820-4522-96be-c882dcf35ddb",
+        "parentId" : "6d2773c0-ec74-4bee-bd37-c55292a20991",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "@bart-samwel this makes sense, shall we also support `CREATE TABLE t(c VOID)`? Your case seems like CTAS only.",
+        "createdAt" : "2021-04-14T07:41:00Z",
+        "updatedAt" : "2021-04-14T07:41:01Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2785cebd-f06e-4d35-9fa6-9d396cd9a635",
+        "parentId" : "6d2773c0-ec74-4bee-bd37-c55292a20991",
+        "authorId" : "a80e0991-f7b1-415a-8d2e-ab615cc6ef4a",
+        "body" : "> @bart-samwel this makes sense, shall we also support `CREATE TABLE t(c VOID)`? Your case seems like CTAS only.\r\n\r\nI think the `CREATE TABLE` case with explicit types is not very useful, but it could be useful if there were tools that get a table's schema and then try to recreate it, e.g. for mocking purposes. Probably best to be orthogonal here.",
+        "createdAt" : "2021-04-14T08:03:17Z",
+        "updatedAt" : "2021-04-14T08:03:18Z",
+        "lastEditedBy" : "a80e0991-f7b1-415a-8d2e-ab615cc6ef4a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "58d8c357-e284-4d86-8395-824cda4b9cfc",
+        "parentId" : "6d2773c0-ec74-4bee-bd37-c55292a20991",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "@LantaoJin do you have time to fix it? I think we can simply remove the null type check and add a few tests with both in-memory and hive catalog.",
+        "createdAt" : "2021-04-14T08:19:05Z",
+        "updatedAt" : "2021-04-14T08:19:05Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9ad57d17bac47ea0f801004ec0aba9197e631bc7",
+    "line" : 28,
+    "diffHunk" : "@@ -1,1 +272,276 @@    case c @ CreateTableStatement(\n         SessionCatalogAndTable(catalog, tbl), _, _, _, _, _, _, _, _, _) =>\n      assertNoNullTypeInSchema(c.tableSchema)\n      val provider = c.provider.getOrElse(conf.defaultDataSourceName)\n      if (!isV2Provider(provider)) {"
   }
 ]

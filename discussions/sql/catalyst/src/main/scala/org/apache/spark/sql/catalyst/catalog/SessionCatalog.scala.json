@@ -427,5 +427,126 @@
     "commit" : "3cf971b5603b236f0a877d4804245742de94cbd5",
     "line" : 23,
     "diffHunk" : "@@ -1,1 +1373,1377 @@    if (!Utils.classIsLoadable(className)) {\n      throw new AnalysisException(s\"Can not load class '$className' when registering \" +\n        s\"the function '${funcDefinition.identifier.unquotedString}', please make sure \" +\n        s\"it is on the classpath\")\n    }"
+  },
+  {
+    "id" : "8e6d3ac9-4532-43b7-be21-3ffe15c82181",
+    "prId" : 28852,
+    "prUrl" : "https://github.com/apache/spark/pull/28852#pullrequestreview-439324427",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e7d6d5b1-7a68-4d36-a9f2-e6c5770db6f8",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "`cacheTTL=0` means that TTL disabled, too?",
+        "createdAt" : "2020-06-25T22:52:30Z",
+        "updatedAt" : "2020-07-17T04:16:07Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7d9944d5-cf9a-4851-9275-4a8d686a1655",
+        "parentId" : "e7d6d5b1-7a68-4d36-a9f2-e6c5770db6f8",
+        "authorId" : "2e177144-1a17-4ac6-8d65-915343e9f2ea",
+        "body" : "Yes, I think it makes sense: 0 seconds == no TTL",
+        "createdAt" : "2020-06-25T23:05:03Z",
+        "updatedAt" : "2020-07-17T04:16:07Z",
+        "lastEditedBy" : "2e177144-1a17-4ac6-8d65-915343e9f2ea",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b64d0cc6-af26-47ee-8c8a-0dfc6a487243",
+        "parentId" : "e7d6d5b1-7a68-4d36-a9f2-e6c5770db6f8",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Could you update the description in the config?",
+        "createdAt" : "2020-06-25T23:09:23Z",
+        "updatedAt" : "2020-07-17T04:16:07Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c0bd381f-56c7-43e0-a028-e7ee5b44e70e",
+        "parentId" : "e7d6d5b1-7a68-4d36-a9f2-e6c5770db6f8",
+        "authorId" : "2e177144-1a17-4ac6-8d65-915343e9f2ea",
+        "body" : "Updated in https://github.com/apache/spark/pull/28852/commits/18feeb02b11407b9eea1457139a91cb40ddc40cf, now it says: ` This configuration only has an effect when this value having a positive value (> 0)`, I think it's good enough.",
+        "createdAt" : "2020-06-29T16:45:58Z",
+        "updatedAt" : "2020-07-17T04:16:07Z",
+        "lastEditedBy" : "2e177144-1a17-4ac6-8d65-915343e9f2ea",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3e761dcd790b9c30e5cee7bffe916dfc2c82b7a5",
+    "line" : 18,
+    "diffHunk" : "@@ -1,1 +142,146 @@      .maximumSize(cacheSize)\n\n    if (cacheTTL > 0) {\n      builder = builder.expireAfterWrite(cacheTTL, TimeUnit.SECONDS)\n    }"
+  },
+  {
+    "id" : "1dd20f4a-fb4d-48de-809f-cd4d9b7950d0",
+    "prId" : 28852,
+    "prUrl" : "https://github.com/apache/spark/pull/28852#pullrequestreview-450389651",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1aa488da-6228-4a20-bb38-79a991f02cc2",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Not related to this PR. I'm wondering how useful is this cache. The file listing is cached in another place(`FileStatusCache`), and seems this relation cache doesn't give many benefits. cc @viirya @maropu  ",
+        "createdAt" : "2020-07-16T14:26:53Z",
+        "updatedAt" : "2020-07-17T04:16:07Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4fd533b6-be05-4817-911d-958f8d531ed8",
+        "parentId" : "1aa488da-6228-4a20-bb38-79a991f02cc2",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Ah, I see. As you suggested, the most painful part (listed files) has already been cached there. But, it seems some datasources still has somewhat processing costs when resolving a relation (e.g., JDBC datasources send a query to an external database for schema resolution), so I think we need to carefully check performance impacts for removing this cache.\r\n\r\nhttps://github.com/apache/spark/blob/fb519251237892ad474592d19bf4f193e2a9e2b6/sql/core/src/main/scala/org/apache/spark/sql/execution/datasources/DataSourceStrategy.scala#L256",
+        "createdAt" : "2020-07-17T00:33:22Z",
+        "updatedAt" : "2020-07-17T04:16:07Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a05d4237-56d1-462a-80d4-45c76d125008",
+        "parentId" : "1aa488da-6228-4a20-bb38-79a991f02cc2",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "For external data sources, it's common that data are changed outside of Spark. I think it's more important to make sure we get the latest data in a new query. Maybe we should disable this relation cache by default.",
+        "createdAt" : "2020-07-17T04:41:56Z",
+        "updatedAt" : "2020-07-17T04:41:57Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3f7fe21d-dac4-4b93-8a5f-87b3e106d578",
+        "parentId" : "1aa488da-6228-4a20-bb38-79a991f02cc2",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Hmm, I think this cache is still useful for avoiding inferring schema again. This is also an expensive operation.",
+        "createdAt" : "2020-07-17T05:00:19Z",
+        "updatedAt" : "2020-07-17T05:00:19Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "214206cc-2a32-4476-aa81-99879cc1ec56",
+        "parentId" : "1aa488da-6228-4a20-bb38-79a991f02cc2",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "ah that's a good point. We should probably investigate how to design the data source API so that sources don't need to infer schema can skip this cache. It's hard to use the JDBC data source as we need to run REFRESH TABLE (or wait for TTL after this PR) once the table is changed outside of spark (which is common to JDBC source).",
+        "createdAt" : "2020-07-17T05:54:04Z",
+        "updatedAt" : "2020-07-17T05:54:05Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3e761dcd790b9c30e5cee7bffe916dfc2c82b7a5",
+    "line" : 10,
+    "diffHunk" : "@@ -1,1 +135,139 @@  }\n\n  private val tableRelationCache: Cache[QualifiedTableName, LogicalPlan] = {\n    val cacheSize = conf.tableRelationCacheSize\n    val cacheTTL = conf.metadataCacheTTL"
   }
 ]

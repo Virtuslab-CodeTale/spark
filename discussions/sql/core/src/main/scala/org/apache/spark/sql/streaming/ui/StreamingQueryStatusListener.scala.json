@@ -1,0 +1,145 @@
+[
+  {
+    "id" : "2ccba48a-f8db-40c5-be1a-bf413993ebc9",
+    "prId" : 28781,
+    "prUrl" : "https://github.com/apache/spark/pull/28781#pullrequestreview-427872118",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a93c0119-22a8-4f1b-baa0-addb6b8bb5d1",
+        "parentId" : null,
+        "authorId" : "49d9f262-8467-4955-9309-d5e793a4e15e",
+        "body" : "The unique id of streaming query process info in kvstore. It contains `runId`, `batchId` and `timestamp`. We use `timestamp` to distinguish the empty process report which has the same `batchId`",
+        "createdAt" : "2020-06-10T09:28:00Z",
+        "updatedAt" : "2020-12-02T03:57:49Z",
+        "lastEditedBy" : "49d9f262-8467-4955-9309-d5e793a4e15e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e2758d76a05a9793147b95d83e63118eee5f2d4f",
+    "line" : 204,
+    "diffHunk" : "@@ -1,1 +159,163 @@      batchId: Long,\n      timestamp: String): String = {\n    s\"${runId}_${batchId}_$timestamp\"\n  }\n}"
+  },
+  {
+    "id" : "31c4ffd3-a796-4a93-bcb2-ef0171decf17",
+    "prId" : 28781,
+    "prUrl" : "https://github.com/apache/spark/pull/28781#pullrequestreview-436409536",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4e37bcc7-f593-4f06-9d0a-3ba99495a08f",
+        "parentId" : null,
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "I am not very familiar with Streaming. But for the progress event in history server, is it possible to avoid some unnecessary update in kvstore?",
+        "createdAt" : "2020-06-24T07:56:31Z",
+        "updatedAt" : "2020-12-02T03:57:49Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e2758d76a05a9793147b95d83e63118eee5f2d4f",
+    "line" : 104,
+    "diffHunk" : "@@ -1,1 +92,96 @@    val progressIds = queryToProgress.get(runId)\n    progressIds.enqueue(getUniqueId(runId, batchId, timestamp))\n    store.write(new StreamingQueryProgressWrapper(event.progress))\n    while (progressIds.length > streamingProgressRetention) {\n      val uniqueId = progressIds.dequeue"
+  },
+  {
+    "id" : "08a64325-0673-492a-9a06-6a4e71e9534b",
+    "prId" : 28781,
+    "prUrl" : "https://github.com/apache/spark/pull/28781#pullrequestreview-513360966",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "db4793d5-f3fd-49da-898a-3b7a4cd50f32",
+        "parentId" : null,
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "What's the time complexity of this operation and the one below? Any chance it will be O(number of all query progresses)?",
+        "createdAt" : "2020-09-28T00:29:40Z",
+        "updatedAt" : "2020-12-02T03:57:49Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "73cab68c-4842-4f79-98b9-96f2cbdd045e",
+        "parentId" : "db4793d5-f3fd-49da-898a-3b7a4cd50f32",
+        "authorId" : "49d9f262-8467-4955-9309-d5e793a4e15e",
+        "body" : "The inactive queries should be limited in product, and there should not be inactive query to delete in every trigger interval. Then we use the `removeAllByIndexValues` to delete all query progresses in batch way.",
+        "createdAt" : "2020-10-21T07:00:57Z",
+        "updatedAt" : "2020-12-02T03:57:49Z",
+        "lastEditedBy" : "49d9f262-8467-4955-9309-d5e793a4e15e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e2758d76a05a9793147b95d83e63118eee5f2d4f",
+    "line" : 57,
+    "diffHunk" : "@@ -1,1 +64,68 @@      .take(numInactiveQueries - inactiveQueryStatusRetention)\n    val runIds = toDelete.map { e =>\n      store.delete(e.getClass, e.runId)\n      e.runId.toString\n    }"
+  },
+  {
+    "id" : "6e12db19-d1a4-4260-a91b-adf3f6897266",
+    "prId" : 28781,
+    "prUrl" : "https://github.com/apache/spark/pull/28781#pullrequestreview-541710443",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6af61729-d483-4211-8f1c-e931f7cd4ce9",
+        "parentId" : null,
+        "authorId" : "49d9f262-8467-4955-9309-d5e793a4e15e",
+        "body" : "logic update: use `STREAMING_UI_RETAINED_QUERIES ` to clean inactive query.",
+        "createdAt" : "2020-12-01T09:36:21Z",
+        "updatedAt" : "2020-12-02T03:57:49Z",
+        "lastEditedBy" : "49d9f262-8467-4955-9309-d5e793a4e15e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e2758d76a05a9793147b95d83e63118eee5f2d4f",
+    "line" : 53,
+    "diffHunk" : "@@ -1,1 +60,64 @@    if (numInactiveQueries <= inactiveQueryStatusRetention) {\n      return\n    }\n    val toDelete = inactiveQueries.sortBy(_.endTimestamp.get)\n      .take(numInactiveQueries - inactiveQueryStatusRetention)"
+  },
+  {
+    "id" : "9319004c-9357-453c-bf56-95ebcdd4865c",
+    "prId" : 28781,
+    "prUrl" : "https://github.com/apache/spark/pull/28781#pullrequestreview-541710443",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6432e7f5-0cca-4fed-aad4-aa01dfef4a22",
+        "parentId" : null,
+        "authorId" : "49d9f262-8467-4955-9309-d5e793a4e15e",
+        "body" : "add new logic: clean earliest inactive query first.",
+        "createdAt" : "2020-12-01T09:36:24Z",
+        "updatedAt" : "2020-12-02T03:57:49Z",
+        "lastEditedBy" : "49d9f262-8467-4955-9309-d5e793a4e15e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e2758d76a05a9793147b95d83e63118eee5f2d4f",
+    "line" : 55,
+    "diffHunk" : "@@ -1,1 +62,66 @@    }\n    val toDelete = inactiveQueries.sortBy(_.endTimestamp.get)\n      .take(numInactiveQueries - inactiveQueryStatusRetention)\n    val runIds = toDelete.map { e =>\n      store.delete(e.getClass, e.runId)"
+  },
+  {
+    "id" : "c2a93cf4-b7af-4915-a06e-a90e371ef8f2",
+    "prId" : 28781,
+    "prUrl" : "https://github.com/apache/spark/pull/28781#pullrequestreview-541710443",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4834510a-c877-4120-b5fc-eed42f9979ca",
+        "parentId" : null,
+        "authorId" : "49d9f262-8467-4955-9309-d5e793a4e15e",
+        "body" : "adding `endTimestamp` to help to clean inactive queries.",
+        "createdAt" : "2020-12-01T09:38:02Z",
+        "updatedAt" : "2020-12-02T03:57:49Z",
+        "lastEditedBy" : "49d9f262-8467-4955-9309-d5e793a4e15e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e2758d76a05a9793147b95d83e63118eee5f2d4f",
+    "line" : 137,
+    "diffHunk" : "@@ -1,1 +123,127 @@    val exception: Option[String],\n    @KVIndexParam(\"startTimestamp\") val startTimestamp: Long,\n    val endTimestamp: Option[Long] = None)\n\n/**"
+  }
+]

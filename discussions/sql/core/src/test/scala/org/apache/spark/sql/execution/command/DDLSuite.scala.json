@@ -471,5 +471,115 @@
     "commit" : "a2df53b48db372ed8f9a303cd8c0c499e33f3adf",
     "line" : 48,
     "diffHunk" : "@@ -1,1 +3146,3150 @@        val fs = tablePath.getFileSystem(hadoopConf)\n        val trashRoot = fs.getTrashRoot(tablePath)\n        assert(!fs.exists(trashRoot))\n        try {\n          hadoopConf.set(trashIntervalKey, \"0\")"
+  },
+  {
+    "id" : "ad3d7547-2d95-4408-beb4-9a1eaf5f5052",
+    "prId" : 28840,
+    "prUrl" : "https://github.com/apache/spark/pull/28840#pullrequestreview-449417149",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "60d6a5d1-be14-48b2-a204-39d55a8ceb8d",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "It's a bit weird if we don't fail invalid functions when creating, but fail when refreshing it. How hard is it to make `REFRESH TABLE` lazy?",
+        "createdAt" : "2020-07-14T12:57:57Z",
+        "updatedAt" : "2020-07-21T12:12:06Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e429f22a-b951-4100-a65e-8e8c363593d7",
+        "parentId" : "60d6a5d1-be14-48b2-a204-39d55a8ceb8d",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "I don't know why we not check function during create. It seems no use to create a not exists function but can produce some problem like typo.\r\n\r\nThe same command, Hive failed directly `create function f1 as 'test.non.exists.udf'`.",
+        "createdAt" : "2020-07-14T13:42:59Z",
+        "updatedAt" : "2020-07-21T12:12:06Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7bb5e205-15fe-4fbd-81a6-f8553e581820",
+        "parentId" : "60d6a5d1-be14-48b2-a204-39d55a8ceb8d",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "We can fix CREATE FUNCTION later and update this test.",
+        "createdAt" : "2020-07-14T14:20:58Z",
+        "updatedAt" : "2020-07-21T12:12:06Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3ee2bcff-47cc-420f-8cf5-28bf376c8881",
+        "parentId" : "60d6a5d1-be14-48b2-a204-39d55a8ceb8d",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "or is it because you are calling the internal API not the `CREATE FUNCTION` command?",
+        "createdAt" : "2020-07-14T14:21:34Z",
+        "updatedAt" : "2020-07-21T12:12:06Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dd426386-8394-45bc-9f87-959801f5a6d7",
+        "parentId" : "60d6a5d1-be14-48b2-a204-39d55a8ceb8d",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "If we make `REFRESH FUNCTION` lazy as `CREATE FUNCTION`, something like this\r\n```\r\nif (catalog.isRegisteredFunction(identifier)) {\r\n  catalog.unregisterFunction(identifier)\r\n}\r\nif (!catalog.isPersistentFunction(identifier)) {\r\n  throw new NoSuchFunctionException(identifier.database.get, functionName)\r\n}\r\n```\r\n\r\nThe different thing is we don't register/check function and the register/check action happened when user query with this function like `select func(f)`.\r\n\r\nI think it might be better to do the function check right now.",
+        "createdAt" : "2020-07-14T23:58:52Z",
+        "updatedAt" : "2020-07-21T12:12:06Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "07e905f5-7174-465c-babe-41d12425677e",
+        "parentId" : "60d6a5d1-be14-48b2-a204-39d55a8ceb8d",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Maybe we should make `CREATE FUNCTION` not lazy, in a new PR.",
+        "createdAt" : "2020-07-15T18:45:51Z",
+        "updatedAt" : "2020-07-21T12:12:06Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ecf21d1f-e396-4bc3-a579-689f6661414d",
+        "parentId" : "60d6a5d1-be14-48b2-a204-39d55a8ceb8d",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "ok, I will try it after this pr finished.",
+        "createdAt" : "2020-07-15T23:49:31Z",
+        "updatedAt" : "2020-07-21T12:12:06Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b18437c5998f5df50172732015f66b33c3908d2a",
+    "line" : 49,
+    "diffHunk" : "@@ -1,1 +3065,3069 @@\n      val function = CatalogFunction(func, \"test.non.exists.udf\", Seq.empty)\n      spark.sessionState.catalog.createFunction(function, false)\n      assert(!spark.sessionState.catalog.isRegisteredFunction(func))\n      val err = intercept[AnalysisException] {"
+  },
+  {
+    "id" : "c0bb9ee5-58c0-4142-86a0-587516d348b4",
+    "prId" : 28840,
+    "prUrl" : "https://github.com/apache/spark/pull/28840#pullrequestreview-468103817",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5ee27f44-ae36-4a72-8e14-d0da54c4ebdc",
+        "parentId" : null,
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "This is the only positive test case. Could you think more and try to cover more cases?\r\n\r\n",
+        "createdAt" : "2020-08-16T23:21:31Z",
+        "updatedAt" : "2020-08-16T23:21:31Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b18437c5998f5df50172732015f66b33c3908d2a",
+    "line" : 38,
+    "diffHunk" : "@@ -1,1 +3054,3058 @@      sql(\"CREATE FUNCTION func1 AS 'test.org.apache.spark.sql.MyDoubleAvg'\")\n      assert(!spark.sessionState.catalog.isRegisteredFunction(func))\n      sql(\"REFRESH FUNCTION func1\")\n      assert(spark.sessionState.catalog.isRegisteredFunction(func))\n"
   }
 ]

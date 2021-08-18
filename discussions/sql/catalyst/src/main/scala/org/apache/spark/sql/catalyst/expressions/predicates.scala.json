@@ -141,5 +141,49 @@
     "commit" : "6fe106ce84e83641d66d572c45050b25761bbf3d",
     "line" : 7,
     "diffHunk" : "@@ -1,1 +210,214 @@   * @param condition Condition to be converted into CNF.\n   * @param groupExpsFunc A method for grouping intermediate results so that the final result can be\n   *                      shorter.\n   * @return the CNF result as sequence of disjunctive expressions. If the number of expressions\n   *         exceeds threshold on converting `Or`, `Seq.empty` is returned."
+  },
+  {
+    "id" : "8ee55bd4-769a-4779-bdc0-34b718ef36a3",
+    "prId" : 28805,
+    "prUrl" : "https://github.com/apache/spark/pull/28805#pullrequestreview-429497738",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "838aa0c8-a38d-4c81-b076-23585c61d74f",
+        "parentId" : null,
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "Too many duplicate code here. Maybe you can organize code:\r\n```scala\r\n  def conjunctiveNormalFormAndGroupExpsByQualifier(condition: Expression): Seq[Expression] = {\r\n    conjunctiveNormalForm(condition,\r\n      (expressions: Seq[Expression]) =>\r\n        expressions.groupBy(_.references.map(_.qualifier)).map(_._2.reduceLeft(And)).toSeq)\r\n  }\r\n\r\n  def conjunctiveNormalFormAndGroupExpsByReference(condition: Expression): Seq[Expression] = {\r\n    conjunctiveNormalForm(condition,\r\n      (expressions: Seq[Expression]) =>\r\n        expressions.groupBy(_.references).map(_._2.reduceLeft(And)).toSeq)\r\n  }\r\n\r\n  def conjunctiveNormalForm(\r\n      condition: Expression,\r\n      groupExpsFunc: Seq[Expression] => Seq[Expression] = _.toSeq): Seq[Expression] = {\r\n    val postOrderNodes = postOrderTraversal(condition)\r\n    val resultStack = new mutable.Stack[Seq[Expression]]\r\n    val maxCnfNodeCount = SQLConf.get.maxCnfNodeCount\r\n    // Bottom up approach to get CNF of sub-expressions\r\n    while (postOrderNodes.nonEmpty) {\r\n      val cnf = postOrderNodes.pop() match {\r\n        case _: And =>\r\n          val right = resultStack.pop()\r\n          val left = resultStack.pop()\r\n          left ++ right\r\n        case _: Or =>\r\n          val right = groupExpsFunc(resultStack.pop())\r\n          val left = groupExpsFunc(resultStack.pop())\r\n          // Stop the loop whenever the result exceeds the `maxCnfNodeCount`\r\n          if (left.size * right.size > maxCnfNodeCount) {\r\n            logInfo(s\"As the result size exceeds the threshold $maxCnfNodeCount. \" +\r\n              \"The CNF conversion is skipped and returning Seq.empty now. To avoid this, you can \" +\r\n              s\"raise the limit ${SQLConf.MAX_CNF_NODE_COUNT.key}.\")\r\n            return Seq.empty\r\n          } else {\r\n            for { x <- left; y <- right } yield Or(x, y)\r\n          }\r\n        case other => other :: Nil\r\n      }\r\n      resultStack.push(cnf)\r\n    }\r\n    if (resultStack.length != 1) {\r\n      logWarning(\"The length of CNF conversion result stack is supposed to be 1. There might \" +\r\n        \"be something wrong with CNF conversion.\")\r\n      return Seq.empty\r\n    }\r\n    resultStack.top\r\n  }\r\n```",
+        "createdAt" : "2020-06-12T06:43:35Z",
+        "updatedAt" : "2020-07-01T08:39:56Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e2777c99144f91b463924530a0a89e6f1a39ab66",
+    "line" : 59,
+    "diffHunk" : "@@ -1,1 +283,287 @@        expressions.groupBy(e => AttributeSet(e.references)).map(_._2.reduceLeft(And)).toSeq)\n  }\n\n  /**\n   * Iterative post order traversal over a binary tree built by And/Or clauses with two stacks."
+  },
+  {
+    "id" : "8440493b-b7db-4b03-9fdd-a5312391ef79",
+    "prId" : 28805,
+    "prUrl" : "https://github.com/apache/spark/pull/28805#pullrequestreview-440478325",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "92a12dc8-fb27-4476-90e0-32748694aaa7",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "nit format:\r\n```\r\n    conjunctiveNormalForm(condition, (expressions: Seq[Expression]) =>\r\n        expressions.groupBy(_.references.map(_.qualifier)).map(_._2.reduceLeft(And)).toSeq)\r\n```",
+        "createdAt" : "2020-07-01T00:52:11Z",
+        "updatedAt" : "2020-07-01T08:39:56Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e2777c99144f91b463924530a0a89e6f1a39ab66",
+    "line" : 39,
+    "diffHunk" : "@@ -1,1 +263,267 @@  def CNFWithGroupExpressionsByQualifier(condition: Expression): Seq[Expression] = {\n    conjunctiveNormalForm(condition, (expressions: Seq[Expression]) =>\n        expressions.groupBy(_.references.map(_.qualifier)).map(_._2.reduceLeft(And)).toSeq)\n  }\n"
   }
 ]
