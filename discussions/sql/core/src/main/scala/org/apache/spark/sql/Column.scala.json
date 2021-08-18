@@ -284,5 +284,115 @@
     "commit" : "4bc0e269df9320e9bb9244afb58b6d1fbbf0e95e",
     "line" : 10,
     "diffHunk" : "@@ -1,1 +832,836 @@    if (exprValues.size > SQLConf.get.optimizerInSetConversionThreshold) {\n      val elemType = exprValues.headOption.map(_.dataType).getOrElse(NullType)\n      InSet(expr, exprValues.map(_.eval()).toSet, elemType)\n    } else {\n      In(expr, exprValues)"
+  },
+  {
+    "id" : "bcee7095-198d-4401-9f23-cd787ccaf26d",
+    "prId" : 27066,
+    "prUrl" : "https://github.com/apache/spark/pull/27066#pullrequestreview-440954876",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "80a64780-e08f-4a7f-82f5-acdce8680f69",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "field name can't be an empty string. Shall we throw exception here?",
+        "createdAt" : "2020-07-01T14:23:24Z",
+        "updatedAt" : "2020-07-03T12:43:28Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "96d80071-8746-47ad-adae-3f074b78019b",
+        "parentId" : "80a64780-e08f-4a7f-82f5-acdce8680f69",
+        "authorId" : "6fc88871-fca6-485c-a47e-5e17709c7b68",
+        "body" : "I consider this to be resolved given the results of the discussion [here](https://github.com/apache/spark/pull/27066#discussion_r448416127). ",
+        "createdAt" : "2020-07-01T15:03:02Z",
+        "updatedAt" : "2020-07-03T12:43:28Z",
+        "lastEditedBy" : "6fc88871-fca6-485c-a47e-5e17709c7b68",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4315e9244829cc41ffcf224f29f8fdcbcd88b981",
+    "line" : 43,
+    "diffHunk" : "@@ -1,1 +911,915 @@\n    val nameParts = if (fieldName.isEmpty) {\n      fieldName :: Nil\n    } else {\n      CatalystSqlParser.parseMultipartIdentifier(fieldName)"
+  },
+  {
+    "id" : "ced324f8-b0b9-4b58-836b-bc281d99d2cd",
+    "prId" : 27066,
+    "prUrl" : "https://github.com/apache/spark/pull/27066#pullrequestreview-460126058",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "cedfdef5-9ee5-4547-9d74-a8c1d221e5ff",
+        "parentId" : null,
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "Have any of you try to run these examples? The optimizer ConstantFolding rule will break these examples. ",
+        "createdAt" : "2020-08-03T01:50:33Z",
+        "updatedAt" : "2020-08-03T01:50:33Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7ed5fca5-d49c-45b7-849c-dadd235b5043",
+        "parentId" : "cedfdef5-9ee5-4547-9d74-a8c1d221e5ff",
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "cc @fqaiser94 @dbtsai @cloud-fan ",
+        "createdAt" : "2020-08-03T01:51:31Z",
+        "updatedAt" : "2020-08-03T01:51:31Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "17cd21ab-63d9-4ef2-9e95-90886406ed90",
+        "parentId" : "cedfdef5-9ee5-4547-9d74-a8c1d221e5ff",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "weird, we have tests to cover these examples. @fqaiser94 can you take a look?",
+        "createdAt" : "2020-08-03T03:00:10Z",
+        "updatedAt" : "2020-08-03T03:00:10Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "62b15c4d-3bd5-421d-aa97-bfa6562e920c",
+        "parentId" : "cedfdef5-9ee5-4547-9d74-a8c1d221e5ff",
+        "authorId" : "6fc88871-fca6-485c-a47e-5e17709c7b68",
+        "body" : "I failed to write a test case to cover this scenario, my bad. \r\nAnd yea, I just tried this example again, and I can see that it fails. \r\nThe issue is that I `override foldable` for this `Unevaluable` Expression. And so, when `foldable` returns true, Spark tries to evaluate the expression and it fails at that point. \r\nI kind-of realized this as well recently and in my PR for `dropFields` [here](https://github.com/apache/spark/pull/29322/files#diff-c1758d627a06084e577be0d33d47f44eL566), I've fixed the issue (basically i just don't `override foldable` anymore, which by default returns `false`). \r\nI guess I should submit a follow-up PR to fix this immediately with associated unit tests? ",
+        "createdAt" : "2020-08-03T03:32:45Z",
+        "updatedAt" : "2020-08-03T03:34:21Z",
+        "lastEditedBy" : "6fc88871-fca6-485c-a47e-5e17709c7b68",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "36fb9fb6-1cb7-4847-85b7-d1e9ccd8b1ed",
+        "parentId" : "cedfdef5-9ee5-4547-9d74-a8c1d221e5ff",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Yes, please",
+        "createdAt" : "2020-08-03T03:52:25Z",
+        "updatedAt" : "2020-08-03T03:52:25Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b20fc39a-9eea-4b46-8897-5d8b8b8db3a7",
+        "parentId" : "cedfdef5-9ee5-4547-9d74-a8c1d221e5ff",
+        "authorId" : "6fc88871-fca6-485c-a47e-5e17709c7b68",
+        "body" : "Thanks for raising the issue @gatorsmile \r\nI've created a [JIRA](https://issues.apache.org/jira/browse/SPARK-32521) and [PR](https://github.com/apache/spark/pull/29338) to address the issue. ",
+        "createdAt" : "2020-08-03T15:31:46Z",
+        "updatedAt" : "2020-08-03T15:31:46Z",
+        "lastEditedBy" : "6fc88871-fca6-485c-a47e-5e17709c7b68",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4315e9244829cc41ffcf224f29f8fdcbcd88b981",
+    "line" : 10,
+    "diffHunk" : "@@ -1,1 +878,882 @@   * {{{\n   *   val df = sql(\"SELECT named_struct('a', 1, 'b', 2) struct_col\")\n   *   df.select($\"struct_col\".withField(\"c\", lit(3)))\n   *   // result: {\"a\":1,\"b\":2,\"c\":3}\n   *"
   }
 ]

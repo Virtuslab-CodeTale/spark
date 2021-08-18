@@ -20,5 +20,148 @@
     "commit" : "b2ec121a0330b6022398cfa91ae1fdd621148c52",
     "line" : 29,
     "diffHunk" : "@@ -1,1 +223,227 @@      .map { case ((v, w), norm) => new VectorWithNorm(v, norm, w) }\n\n    if (handlePersistence) {\n      vectors.persist(StorageLevel.MEMORY_AND_DISK)\n    } else {"
+  },
+  {
+    "id" : "37816c6a-f951-4093-b734-72ebec60c52c",
+    "prId" : 27052,
+    "prUrl" : "https://github.com/apache/spark/pull/27052#pullrequestreview-337397502",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ad1210cd-84c8-4b58-a869-f2824898c6fb",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "I guess we can remove the two warnings in this method? it's not a big deal now if the source data is uncached.",
+        "createdAt" : "2019-12-30T15:52:13Z",
+        "updatedAt" : "2019-12-30T16:38:07Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0653bc56-0a05-4dca-8369-e1b369cb4ea9",
+        "parentId" : "ad1210cd-84c8-4b58-a869-f2824898c6fb",
+        "authorId" : "75554730-8183-463c-bf1d-7cd5b4e9f22b",
+        "body" : "Done",
+        "createdAt" : "2019-12-30T15:55:59Z",
+        "updatedAt" : "2019-12-30T16:38:07Z",
+        "lastEditedBy" : "75554730-8183-463c-bf1d-7cd5b4e9f22b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "96083a79-ce76-43c3-a7fc-b03b547b7714",
+        "parentId" : "ad1210cd-84c8-4b58-a869-f2824898c6fb",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "what about caching norms if data is already cached? like this:\r\n\r\n```scala\r\nval handlePersistence = data.getStorageLevel == StorageLevel.NONE\r\nval norms = ...\r\nval zippedData = if (handlePersistence) {\r\n   data.zip(norms).map { case ((v, w), norm) =>\r\n      (new VectorWithNorm(v, norm), w)\r\n    }.persist(StorageLevel.MEMORY_AND_DISK)\r\n} else {\r\n     norms.persist(StorageLevel.MEMORY_AND_DISK)\r\n     data.zip(norms).map { case ((v, w), norm) =>\r\n        (new VectorWithNorm(v, norm), w)\r\n     }\r\n}\r\n\r\n...\r\n\r\n\r\nif (handlePersistence) {\r\n   zippedData.unpersist()\r\n} else {\r\n   norms.unpersist()\r\n}\r\n\r\n```",
+        "createdAt" : "2019-12-31T05:07:42Z",
+        "updatedAt" : "2019-12-31T05:07:42Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "23121731-e710-4df9-9603-6bd80211933a",
+        "parentId" : "ad1210cd-84c8-4b58-a869-f2824898c6fb",
+        "authorId" : "75554730-8183-463c-bf1d-7cd5b4e9f22b",
+        "body" : "> what about caching norms if data is already cached?\r\n\r\nWon't this lead to double caching problem which we are trying to avoid?",
+        "createdAt" : "2019-12-31T06:43:07Z",
+        "updatedAt" : "2019-12-31T06:45:15Z",
+        "lastEditedBy" : "75554730-8183-463c-bf1d-7cd5b4e9f22b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "42ecbdf7-e685-45d2-b323-d1eb515b3037",
+        "parentId" : "ad1210cd-84c8-4b58-a869-f2824898c6fb",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Yeah I thought that was your point. If zippedData were expensive, I'd agree that caching the intermediate values too is worthwhile, and we do that in some places. Here it's not, and the original behavior was to always cache internally, so I guess this is less of a change. This at least skips it where it can be inexpensively computed",
+        "createdAt" : "2019-12-31T15:26:58Z",
+        "updatedAt" : "2019-12-31T15:26:59Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7af278569dd22baf2d35810cb87541a9b635dfe4",
+    "line" : 25,
+    "diffHunk" : "@@ -1,1 +231,235 @@    if (data.getStorageLevel == StorageLevel.NONE) {\n      zippedData.persist(StorageLevel.MEMORY_AND_DISK)\n    }\n    val model = runAlgorithmWithWeight(zippedData, instr)\n    zippedData.unpersist()"
+  },
+  {
+    "id" : "90eb3f13-1755-405e-9f7f-a3a401501736",
+    "prId" : 27052,
+    "prUrl" : "https://github.com/apache/spark/pull/27052#pullrequestreview-466033194",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a49ff0e4-835a-4e67-9587-8cfbe7a6ab8b",
+        "parentId" : null,
+        "authorId" : "6a78a957-a12e-4610-a351-547484ae8419",
+        "body" : "Hi, I was testing spark kmeans. There should be an issue that no matter we persist the parent RDD, here the data.getStorageLevel will always be NONE due to the following operation, this will cause double caching.\r\n\r\n```\r\ndef run(data: RDD[Vector]): KMeansModel = {\r\n    val instances: RDD[(Vector, Double)] = data.map {\r\n      case (point) => (point, 1.0)\r\n    }\r\n    runWithWeight(instances, None)\r\n}\r\n```",
+        "createdAt" : "2020-08-12T15:33:27Z",
+        "updatedAt" : "2020-08-12T15:33:27Z",
+        "lastEditedBy" : "6a78a957-a12e-4610-a351-547484ae8419",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7af278569dd22baf2d35810cb87541a9b635dfe4",
+    "line" : 21,
+    "diffHunk" : "@@ -1,1 +229,233 @@    }\n\n    if (data.getStorageLevel == StorageLevel.NONE) {\n      zippedData.persist(StorageLevel.MEMORY_AND_DISK)\n    }"
+  },
+  {
+    "id" : "c7017c38-f5b5-4227-b64d-1f4065121d2e",
+    "prId" : 27035,
+    "prUrl" : "https://github.com/apache/spark/pull/27035#pullrequestreview-337162965",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ae76971c-77a8-4edb-aa24-0fa67cf7e879",
+        "parentId" : null,
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "I am neutral on adding weight in `VectorWithNorm`, then what about also using it in KMeans?\r\nfor example: `val zippedData: RDD[(VectorWithNorm, Double)]` => `val zippedData: RDD[VectorWithNorm]`",
+        "createdAt" : "2019-12-29T06:54:44Z",
+        "updatedAt" : "2020-01-07T19:10:27Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "21b9751a-2905-4e1b-a432-56f0ec5edafa",
+        "parentId" : "ae76971c-77a8-4edb-aa24-0fa67cf7e879",
+        "authorId" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "body" : "I will update KMean code. Thanks!",
+        "createdAt" : "2019-12-30T16:29:49Z",
+        "updatedAt" : "2020-01-07T19:10:27Z",
+        "lastEditedBy" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6ca078ec59b1818500d5b86dd2ca7a80eb670808",
+    "line" : 68,
+    "diffHunk" : "@@ -1,1 +510,514 @@ * A vector with its norm for fast distance computation.\n */\nprivate[clustering] class VectorWithNorm(\n    val vector: Vector,\n    val norm: Double,"
+  },
+  {
+    "id" : "99230c61-34d4-4da6-bf05-af211207fff6",
+    "prId" : 27014,
+    "prUrl" : "https://github.com/apache/spark/pull/27014#pullrequestreview-336463715",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4098d87d-9af0-469a-9116-a28cc739ed53",
+        "parentId" : null,
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "Keep in line with other intermediate RDDs persisted in KMeans",
+        "createdAt" : "2019-12-26T09:05:27Z",
+        "updatedAt" : "2019-12-26T09:05:27Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "cf5d705c4f966fbae441184b56fd8ce02bdb0ce7",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +233,237 @@      (new VectorWithNorm(v, norm), w)\n    }\n    zippedData.persist(StorageLevel.MEMORY_AND_DISK)\n    val model = runAlgorithmWithWeight(zippedData, instr)\n    zippedData.unpersist()"
   }
 ]

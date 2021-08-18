@@ -1164,5 +1164,170 @@
     "commit" : "2e2302f594fe4be55ef1ba79c0375b2838211320",
     "line" : 33,
     "diffHunk" : "@@ -1,1 +189,193 @@      // to prune it.\n      val requiredAttrs = AttributeSet(g.requiredChildOutput)\n      NestedColumnAliasing.getAliasSubMap(g.generator.children, requiredAttrs).map {\n        case (nestedFieldToAlias, attrToAliases) =>\n          pruneGenerate(g, nestedFieldToAlias, attrToAliases)"
+  },
+  {
+    "id" : "cc2d6e18-474e-49dd-8e0f-019ecc013de5",
+    "prId" : 27056,
+    "prUrl" : "https://github.com/apache/spark/pull/27056#pullrequestreview-338237233",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0ab8cccf-9039-4ce7-9ced-2c5e71f5f829",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "This code seems be copied from `NestedColumnAliasing`. I think we can reuse the methods like `getAliasSubMap`.",
+        "createdAt" : "2020-01-03T19:29:08Z",
+        "updatedAt" : "2020-01-03T19:29:08Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "bb77e86f66a91ebb701222d358af4e37c99180d4",
+    "line" : 69,
+    "diffHunk" : "@@ -1,1 +208,212 @@          }\n      }\n      val newProjectList: Seq[NamedExpression] =\n        aliasSub.flatten.toSeq ++ otherRootReferences.flatMap(_.references)\n      Some(a.copy(child = Project(newProjectList, child)))"
+  },
+  {
+    "id" : "8f37edc1-3b89-4818-80a8-e02b8b154c3a",
+    "prId" : 26978,
+    "prUrl" : "https://github.com/apache/spark/pull/26978#pullrequestreview-346950423",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "10348d0c-9d4b-400e-b321-a24d87bd5f79",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "@viirya . Is this `SQLConf.get.nestedPruningOnExpressions || SQLConf.get.nestedSchemaPruningEnabled` safe?\r\n`SQLConf.get.nestedSchemaPruningEnabled=true` does not enable the old `// prune unrequired nested fields` code path, but now it seems it does.",
+        "createdAt" : "2020-01-14T22:44:23Z",
+        "updatedAt" : "2020-01-24T22:56:29Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d49687a4-2c75-498a-aab7-5f64a230be08",
+        "parentId" : "10348d0c-9d4b-400e-b321-a24d87bd5f79",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "The logic of nested column pruning is not different between `nestedPruningOnExpressions` and `nestedSchemaPruningEnabled`. They both need to prune nested columns at top Project and Generate.\r\n\r\nThe difference is when `nestedSchemaPruningEnabled` is on, nested columns will be pruned further at datasource scan node (by other rule).\r\n\r\nIt is also not different than `nestedSchemaPruningEnabled` and `nestedPruningOnExpressions` are both on (we did this now in master). Because when `nestedPruningOnExpressions` is on, nested columns are pruned through Project + Generate, then `nestedSchemaPruningEnabled` is on so it gets pruned at scan node.\r\n\r\n\r\n\r\n\r\n\r\n\r\n",
+        "createdAt" : "2020-01-16T21:57:12Z",
+        "updatedAt" : "2020-01-24T22:56:29Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "41aa24d7-b416-4280-9462-c620922e0cdd",
+        "parentId" : "10348d0c-9d4b-400e-b321-a24d87bd5f79",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "One reason to add `nestedSchemaPruningEnabled` here is, we cannot just push through Generate (the next patten case) without this Project + Generate case.\r\n\r\nIf so, we will hit a failure query plan that there is nested column accessor on top Project which is not pruned through, but the other nested column at Generate is pruned through it to its child. Then the nested column accessor on the top Project is unresolvable.\r\n\r\nE.g.:\r\n```\r\n!Project [a.b, col]\r\n  + Generate [explode(gen_alias#123), col]\r\n    + Project [a.c as gen_alias#123]\r\n       + Scan [a:<c:array<int>>]\r\n```",
+        "createdAt" : "2020-01-16T22:03:22Z",
+        "updatedAt" : "2020-01-24T22:56:29Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9331ce6f-a5f1-44e6-8ddd-b289826f2d7a",
+        "parentId" : "10348d0c-9d4b-400e-b321-a24d87bd5f79",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "(oh, this part looks complicated..) If we keep the current condition (nestedSchemaPruningEnabled + nestedPruningOnExpressions), IMO better to leave the comment above in the code side.",
+        "createdAt" : "2020-01-16T23:41:25Z",
+        "updatedAt" : "2020-01-24T22:56:29Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "51e96c34-0ae7-4750-b23b-915297a05209",
+        "parentId" : "10348d0c-9d4b-400e-b321-a24d87bd5f79",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Thanks! Added few doc.",
+        "createdAt" : "2020-01-18T00:02:17Z",
+        "updatedAt" : "2020-01-24T22:56:29Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "131ce9b2-b12c-412f-89e0-e97941491bed",
+        "parentId" : "10348d0c-9d4b-400e-b321-a24d87bd5f79",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "@viirya . It seems that we are going to lose the ability to disable one of them safely after this PR. Are we still able to use one of them independently?",
+        "createdAt" : "2020-01-18T08:23:44Z",
+        "updatedAt" : "2020-01-24T22:56:29Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ada9babd-2121-47f9-8823-4383e3803fe3",
+        "parentId" : "10348d0c-9d4b-400e-b321-a24d87bd5f79",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "`nestedSchemaPruningEnabled` covers `nestedPruningOnExpressions` here.\r\n\r\nIf `nestedSchemaPruningEnabled` is enabled, I think we should push down it through Project + Generate even `nestedPruningOnExpressions` is disabled. If not, nested column won't pushed down to scan node.\r\n\r\nYou still can disable `nestedSchemaPruningEnabled` and only use `nestedPruningOnExpressions`. Which means it only pushes down through Project + Generate (and not to scan node in the end).",
+        "createdAt" : "2020-01-22T01:03:47Z",
+        "updatedAt" : "2020-01-24T22:56:29Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0e776f94-6f71-4abc-becc-705f9160034d",
+        "parentId" : "10348d0c-9d4b-400e-b321-a24d87bd5f79",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "For the following, is this a new bug? Or, the side-effect of code sharing?\r\n> If nestedSchemaPruningEnabled is enabled, I think we should push down it through Project + Generate even nestedPruningOnExpressions is disabled. If not, nested column won't pushed down to scan node.",
+        "createdAt" : "2020-01-22T21:21:19Z",
+        "updatedAt" : "2020-01-24T22:56:29Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c34c730b-9172-4ced-9d85-5c939074418e",
+        "parentId" : "10348d0c-9d4b-400e-b321-a24d87bd5f79",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Do we have a test coverage for both `true and false` and `false and true` combination?",
+        "createdAt" : "2020-01-22T21:22:13Z",
+        "updatedAt" : "2020-01-24T22:56:29Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "da082f10-09bd-42d2-aa4c-eb99206f0f05",
+        "parentId" : "10348d0c-9d4b-400e-b321-a24d87bd5f79",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Oh, I think this is good point. I will add test for such configs combination.",
+        "createdAt" : "2020-01-22T21:39:23Z",
+        "updatedAt" : "2020-01-24T22:56:29Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a7131e41-89af-4e1c-a18d-f192fa8c4086",
+        "parentId" : "10348d0c-9d4b-400e-b321-a24d87bd5f79",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "> For the following, is this a new bug? Or, the side-effect of code sharing?\r\n> \r\n> > If nestedSchemaPruningEnabled is enabled, I think we should push down it through Project + Generate even nestedPruningOnExpressions is disabled. If not, nested column won't pushed down to scan node.\r\n\r\nWe don't push nested column pruning through (optional )Project + Generate currently. This PR mainly tackle this to add support.",
+        "createdAt" : "2020-01-22T21:43:54Z",
+        "updatedAt" : "2020-01-24T22:56:29Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "264e465c-c7bc-4be1-bfb0-503d9e5b8e5e",
+        "parentId" : "10348d0c-9d4b-400e-b321-a24d87bd5f79",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Ya. You are right~\r\n> We don't push nested column pruning through (optional )Project + Generate currently. This PR mainly tackle this to add support.",
+        "createdAt" : "2020-01-22T22:31:07Z",
+        "updatedAt" : "2020-01-24T22:56:29Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "35b32ec3eb72629ffcfbc7ab736fe536b0055fd2",
+    "line" : 17,
+    "diffHunk" : "@@ -1,1 +169,173 @@    // file format readers if it is supported.\n    case Project(projectList, g: Generate) if (SQLConf.get.nestedPruningOnExpressions ||\n        SQLConf.get.nestedSchemaPruningEnabled) && canPruneGenerator(g.generator) =>\n      // On top on `Generate`, a `Project` that might have nested column accessors.\n      // We try to get alias maps for both project list and generator's children expressions."
   }
 ]

@@ -2891,5 +2891,192 @@
     "commit" : "5773296dc92497ad2ee0014fed0ad4376109e7d0",
     "line" : 108,
     "diffHunk" : "@@ -1,1 +1062,1066 @@              outerAggExpr.aggregateFunction match {\n                case _: Max | _: Min | _: Sum =>\n                  // look for the expressions in the inner aggregate that produce\n                  // the columns used by the outer aggregate\n                  val resolvedInnerExprs = childAggExprs.filter("
+  },
+  {
+    "id" : "59abb38b-82b5-4a88-8fce-fdadf830756f",
+    "prId" : 27077,
+    "prUrl" : "https://github.com/apache/spark/pull/27077#pullrequestreview-340316650",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "11d7f62a-9057-4549-a45a-44b66e21f36a",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "How about the case , `global sort => project/filter => local sort`?",
+        "createdAt" : "2020-01-08T07:55:52Z",
+        "updatedAt" : "2020-01-12T10:12:25Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "51975dae-07b1-43f0-95d2-28334f019b2b",
+        "parentId" : "11d7f62a-9057-4549-a45a-44b66e21f36a",
+        "authorId" : "b47e5162-4228-4a66-81f1-71f3e0489170",
+        "body" : "New UT added for this.",
+        "createdAt" : "2020-01-09T06:50:40Z",
+        "updatedAt" : "2020-01-12T10:12:25Z",
+        "lastEditedBy" : "b47e5162-4228-4a66-81f1-71f3e0489170",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "92dce7e96d60b667961c9af12e716b83237d8ca8",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +990,994 @@  private def recursiveRemoveSort(parent: Sort, plan: LogicalPlan): LogicalPlan = plan match {\n    case s @ Sort(_, _, child) =>\n      if (parent.global == s.global) {\n        recursiveRemoveSort(s, child)\n      } else {"
+  },
+  {
+    "id" : "f9732e85-32d8-409d-9f37-61ceb36eade1",
+    "prId" : 27066,
+    "prUrl" : "https://github.com/apache/spark/pull/27066#pullrequestreview-441158706",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "bf51795d-503c-430f-ad72-09c528c8e207",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "nit: let's avoid unnecessary change.",
+        "createdAt" : "2020-07-01T14:21:15Z",
+        "updatedAt" : "2020-07-03T12:43:28Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5e973b40-f06d-4662-9275-5047d348a700",
+        "parentId" : "bf51795d-503c-430f-ad72-09c528c8e207",
+        "authorId" : "6fc88871-fca6-485c-a47e-5e17709c7b68",
+        "body" : "done. ",
+        "createdAt" : "2020-07-01T19:59:29Z",
+        "updatedAt" : "2020-07-03T12:43:29Z",
+        "lastEditedBy" : "6fc88871-fca6-485c-a47e-5e17709c7b68",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4315e9244829cc41ffcf224f29f8fdcbcd88b981",
+    "line" : 15,
+    "diffHunk" : "@@ -1,1 +206,210 @@    Batch(\"NormalizeFloatingNumbers\", Once, NormalizeFloatingNumbers) :+\n    Batch(\"ReplaceWithFieldsExpression\", Once, ReplaceWithFieldsExpression)\n\n    // remove any batches with no rules. this may happen when subclasses do not add optional rules.\n    batches.filter(_.rules.nonEmpty)"
+  },
+  {
+    "id" : "689115bb-7d07-4a6f-8072-b26623538c54",
+    "prId" : 27048,
+    "prUrl" : "https://github.com/apache/spark/pull/27048#pullrequestreview-337538553",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "27245980-00eb-4852-ab5c-6012f8a6b850",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "how about limit -> project -> union?",
+        "createdAt" : "2020-01-02T05:32:47Z",
+        "updatedAt" : "2020-01-02T05:32:47Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "07a4890f-b720-4563-a6b2-e17b8c056e4c",
+        "parentId" : "27245980-00eb-4852-ab5c-6012f8a6b850",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "It pushed.  When execute `explain extended select c from test union all select c from test limit 1`, the optimized plan is \r\n```\r\nGlobalLimit 1\r\n+- LocalLimit 1\r\n   +- Union\r\n      :- LocalLimit 1\r\n      :  +- Relation[c#50] parquet\r\n      +- LocalLimit 1\r\n         +- Relation[c#50] parquet\r\n```\r\n\r\nThe difference is another optimizer `PushProjectionThroughUnion` has pushed down `Project`.",
+        "createdAt" : "2020-01-02T06:02:59Z",
+        "updatedAt" : "2020-01-02T06:03:00Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "70ea37154f114b3b9028a48d56d331dad24c5633",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +497,501 @@      LocalLimit(exp, newJoin)\n    // Pushdown limit to outer join through projects if projects are deterministic.\n    case l @ LocalLimit(exp, proj @ Project(projs, join @ Join(left, right, joinType, _, _))) =>\n      if (projs.forall(_.deterministic)) {\n        val newJoin = joinType match {"
+  },
+  {
+    "id" : "57a3bde6-d4ed-401b-9e69-6be0522c977e",
+    "prId" : 26978,
+    "prUrl" : "https://github.com/apache/spark/pull/26978#pullrequestreview-342867536",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ffd13dd4-c843-4b73-8681-f0d831b7aad4",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "@maropu @dongjoon-hyun The cases of Generate (Project + Generate) has its speciality. Added few comment explaining it.",
+        "createdAt" : "2020-01-14T01:55:37Z",
+        "updatedAt" : "2020-01-24T22:56:29Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2993b498-9ea5-413a-9e97-c894f3928809",
+        "parentId" : "ffd13dd4-c843-4b73-8681-f0d831b7aad4",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "We already have tests for that case? Probably, [the test](https://github.com/apache/spark/pull/26978/files#diff-957112380b0a2ef014abc8227d0b70acR272) fails without this code change?",
+        "createdAt" : "2020-01-14T03:47:27Z",
+        "updatedAt" : "2020-01-24T22:56:29Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c3622e66-b986-409a-9297-73b49f871202",
+        "parentId" : "ffd13dd4-c843-4b73-8681-f0d831b7aad4",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Above test failures in ColumnPruningSuite are due to this.",
+        "createdAt" : "2020-01-14T04:58:15Z",
+        "updatedAt" : "2020-01-24T22:56:29Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "eafc1164-4527-417f-9eb0-52a602a2f2b8",
+        "parentId" : "ffd13dd4-c843-4b73-8681-f0d831b7aad4",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Ah, I see.",
+        "createdAt" : "2020-01-14T05:13:21Z",
+        "updatedAt" : "2020-01-24T22:56:29Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b5bddce7-20af-44b8-b9a2-76e2c83a0023",
+        "parentId" : "ffd13dd4-c843-4b73-8681-f0d831b7aad4",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Now I add one end-to-end test case in SchemaPruningSuite too.",
+        "createdAt" : "2020-01-14T08:02:08Z",
+        "updatedAt" : "2020-01-24T22:56:29Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "15ce7b79-4667-4385-95c8-82d7c34bf4f9",
+        "parentId" : "ffd13dd4-c843-4b73-8681-f0d831b7aad4",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Thanks!",
+        "createdAt" : "2020-01-14T08:03:53Z",
+        "updatedAt" : "2020-01-24T22:56:29Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fe39a8c8-5429-4dd4-bedb-a4db7c8b5461",
+        "parentId" : "ffd13dd4-c843-4b73-8681-f0d831b7aad4",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Got it. Also, thanks you adding more test coverage for nested fields.",
+        "createdAt" : "2020-01-14T22:00:05Z",
+        "updatedAt" : "2020-01-24T22:56:29Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "35b32ec3eb72629ffcfbc7ab736fe536b0055fd2",
+    "line" : 43,
+    "diffHunk" : "@@ -1,1 +613,617 @@      // Otherwise by transforming down to Generate, it could be pruned individually,\n      // and causes nested column on top Project unable to resolve.\n      GeneratorNestedColumnAliasing.unapply(currP).getOrElse(currP)\n\n    // prune unrequired nested fields from `Generate`."
   }
 ]

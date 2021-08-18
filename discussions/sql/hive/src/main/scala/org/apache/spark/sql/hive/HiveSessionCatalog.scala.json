@@ -42,5 +42,192 @@
     "commit" : "0e3dca1ea3228747a43d573075bc6162cc76d475",
     "line" : 11,
     "diffHunk" : "@@ -1,1 +97,101 @@              udfExpr.get.asInstanceOf[HiveGenericUDTF].elementSchema\n            } catch {\n              case exception: Exception =>\n                logInfo(s\"HiveGenericUDTF initialize(ObjectInspector[] args) is deprecated, and\" +\n                  s\" we will suit the latest version of initialize(StructObjectInspector argOIs).\")"
+  },
+  {
+    "id" : "c127f45b-a0cf-48f0-aaa2-17c7bacf56ee",
+    "prId" : 27025,
+    "prUrl" : "https://github.com/apache/spark/pull/27025#pullrequestreview-336934992",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2493a20d-87e9-4467-8d37-52f708ad037c",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "We don't need to check in the current class loader first?",
+        "createdAt" : "2019-12-28T09:10:39Z",
+        "updatedAt" : "2019-12-30T11:12:11Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "676e483d-ce09-4eb3-b692-59dc3f746bf7",
+        "parentId" : "2493a20d-87e9-4467-8d37-52f708ad037c",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "I've sought the existing usages of `Utils.withContextClassLoader` and they don't check the current classloader and just call it. Is this in critical path?",
+        "createdAt" : "2019-12-28T10:33:10Z",
+        "updatedAt" : "2019-12-30T11:12:11Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4cbd2dbd-1927-4943-bb28-cda878297130",
+        "parentId" : "2493a20d-87e9-4467-8d37-52f708ad037c",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "I just thought that, since the current master search classes in `IMainTranslatingClassLoader` first, its better to keep the current behaivour then add a class loader if it fails. But, its ok to wait for other reviewr's comments.",
+        "createdAt" : "2019-12-28T10:49:32Z",
+        "updatedAt" : "2019-12-30T11:12:11Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "949c906c-6777-4c78-8788-68037632d24a",
+        "parentId" : "2493a20d-87e9-4467-8d37-52f708ad037c",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "I can't imagine clazz is loaded from other than one of three cases - 1. available in classpath 2. class dynamically loaded (spark-shell, and more?) 3. JAR dynamically loaded - and if I understand correctly, Spark classpath (and Hive dependencies as well if Hive is enabled) is available for the classloader which loads the clazz for all three cases. This means clazz is the only one we need to make sure the current context classloader can load it.",
+        "createdAt" : "2019-12-29T00:28:10Z",
+        "updatedAt" : "2019-12-30T11:12:11Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "39a2171d361f38b54640c07ccb8990aa4c204238",
+    "line" : 32,
+    "diffHunk" : "@@ -1,1 +69,73 @@    // Current thread context classloader may not be the one loaded the class. Need to switch\n    // context classloader to initialize instance properly.\n    Utils.withContextClassLoader(clazz.getClassLoader) {\n      Try(super.makeFunctionExpression(name, clazz, input)).getOrElse {\n        var udfExpr: Option[Expression] = None"
+  },
+  {
+    "id" : "f3912249-067b-40ea-b2ee-87fa810307e6",
+    "prId" : 27025,
+    "prUrl" : "https://github.com/apache/spark/pull/27025#pullrequestreview-337157993",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3852ee5f-9c91-4a0c-b4cb-e9f87a54923c",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "is it guaranteed that `clazz.getClassLoader` is the `sharedState.jarClassLoader`?",
+        "createdAt" : "2019-12-30T14:53:09Z",
+        "updatedAt" : "2019-12-30T14:53:09Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "abfe1e84-3a1b-4141-960a-4c14feb48fb5",
+        "parentId" : "3852ee5f-9c91-4a0c-b4cb-e9f87a54923c",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "If the class is from classpath (not loaded from addJar), it would be spark ClassLoader instead of jarClassLoader, though jarClassLoader may be able to load it as it contains Spark classloader. So just changing to jarClassLoader may work in most cases, but this would also work for the classloader which dynamically loads the classes, as we're using classloader which \"loaded\" the class we want to instantiate.",
+        "createdAt" : "2019-12-30T16:14:23Z",
+        "updatedAt" : "2019-12-30T16:14:23Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "39a2171d361f38b54640c07ccb8990aa4c204238",
+    "line" : 32,
+    "diffHunk" : "@@ -1,1 +69,73 @@    // Current thread context classloader may not be the one loaded the class. Need to switch\n    // context classloader to initialize instance properly.\n    Utils.withContextClassLoader(clazz.getClassLoader) {\n      Try(super.makeFunctionExpression(name, clazz, input)).getOrElse {\n        var udfExpr: Option[Expression] = None"
+  },
+  {
+    "id" : "6700a367-a5ff-479c-9e80-6ed69aaeb8fa",
+    "prId" : 27025,
+    "prUrl" : "https://github.com/apache/spark/pull/27025#pullrequestreview-384500937",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1cb16dca-ef16-40f6-8971-541d60b7d2db",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Found a potential problem: here we call `HiveSimpleUDF.dateType` (which is a lazy val), to force to load the class with the corrected class loader.\r\n\r\nHowever, if the expression gets transformed later, which copies `HiveSimpleUDF`, then calling  `HiveSimpleUDF.dataType` will re-trigger the class loading, and at that time there is no guarantee that the corrected classloader is used.\r\n\r\nI think we should materialize the loaded class in `HiveSimpleUDF`.\r\n\r\n@HeartSaVioR can you take a look?",
+        "createdAt" : "2020-03-24T16:49:56Z",
+        "updatedAt" : "2020-03-24T16:49:56Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "29094a59-11bc-491c-a4e4-950da974326e",
+        "parentId" : "1cb16dca-ef16-40f6-8971-541d60b7d2db",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Thanks for pinging me.\r\n\r\nCould you please confirm my understanding? Actually my knowledge to resolve this issue came from debugging (like, reverse-engineering) so I'm not sure I get it 100%.\r\n\r\nIf my understanding is correct, this seems to be the simple reproducer - could you please confirm I understand correctly?\r\n\r\n```\r\n// uses classloader which loads clazz\r\nval udf = HiveSimpleUDF(name, new HiveFunctionWrapper(clazz.getName), input)\r\nudf.dataType\r\nval newUdf = udf.makeCopy(Array.empty)\r\n// change classloader which doesn't load clazz\r\nnewUdf.dataType\r\n```\r\n",
+        "createdAt" : "2020-03-25T03:35:02Z",
+        "updatedAt" : "2020-03-25T03:35:02Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "925487b8-39a0-45a2-b847-e9eb90ed6c76",
+        "parentId" : "1cb16dca-ef16-40f6-8971-541d60b7d2db",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "yup, `HiveSimpleUDF` needs to load class when `dataType` is first called. So even if we load the class here in `HiveSessionCatalog`, but once `HiveSimpleUDF` is copied during transformation, it needs to load class again.",
+        "createdAt" : "2020-03-25T03:59:52Z",
+        "updatedAt" : "2020-03-25T03:59:52Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cd06b4ae-6a6c-48c6-aad1-afb17246c5ea",
+        "parentId" : "1cb16dca-ef16-40f6-8971-541d60b7d2db",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "I figured out above code doesn't give error - HiveFunctionWrapper stores `instance` which is copied in `makeCopy()` - so once the instance is created it doesn't seems to require changing classloader.\r\n\r\nThat said, below code gives error:\r\n\r\n```\r\n// uses classloader which loads clazz\r\nval udf = HiveGenericUDTF(name, new HiveFunctionWrapper(clazz.getName), input)\r\n// make sure HiveFunctionWrapper.createFunction is not called here\r\n\r\n// change classloader which doesn't load clazz\r\nval newUdf = udf.makeCopy(udf.productIterator.map(_.asInstanceOf[AnyRef]).toArray)\r\nnewUdf.dataType\r\n``` \r\n\r\nInterestingly, like below, if we do makeCopy with classloader which loads clazz, it also doesn't give any error:\r\n\r\n```\r\n// uses classloader which loads clazz\r\nval udf = HiveGenericUDTF(name, new HiveFunctionWrapper(clazz.getName), input)\r\n// make sure HiveFunctionWrapper.createFunction is not called here\r\n\r\nval newUdf = udf.makeCopy(udf.productIterator.map(_.asInstanceOf[AnyRef]).toArray)\r\n// change classloader which doesn't load clazz\r\nnewUdf.dataType\r\n```\r\n\r\nwe force call `.dataType` after creating HiveXXXUDF, so if my understanding is correct it won't matter.\r\n\r\nCould you please check whether my observation is correct, or please let me know if I'm missing something?",
+        "createdAt" : "2020-03-28T03:25:21Z",
+        "updatedAt" : "2020-03-28T04:24:19Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8ceed184-ed22-4458-ac2c-c338ef6f8baa",
+        "parentId" : "1cb16dca-ef16-40f6-8971-541d60b7d2db",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "The experimental UT code I used is below (added to SQLQuerySuite.scala) :\r\n\r\n```\r\ntest(\"SPARK-26560 ...experimenting Wenchen's comment...\") {\r\n    // force to use Spark classloader as other test (even in other test suites) may change the\r\n    // current thread's context classloader to jar classloader\r\n    Utils.withContextClassLoader(Utils.getSparkClassLoader) {\r\n      withUserDefinedFunction(\"udtf_count3\" -> false) {\r\n        val sparkClassLoader = Thread.currentThread().getContextClassLoader\r\n\r\n        // This jar file should not be placed to the classpath; GenericUDTFCount3 is slightly\r\n        // modified version of GenericUDTFCount2 in hive/contrib, which emits the count for\r\n        // three times.\r\n        val jarPath = \"src/test/noclasspath/TestUDTF-spark-26560.jar\"\r\n        val jarURL = s\"file://${System.getProperty(\"user.dir\")}/$jarPath\"\r\n\r\n        val className = \"org.apache.hadoop.hive.contrib.udtf.example.GenericUDTFCount3\"\r\n        sql(\r\n          s\"\"\"\r\n             |CREATE FUNCTION udtf_count3\r\n             |AS '$className'\r\n             |USING JAR '$jarURL'\r\n          \"\"\".stripMargin)\r\n\r\n        assert(Thread.currentThread().getContextClassLoader eq sparkClassLoader)\r\n\r\n        // JAR will be loaded at first usage, and it will change the current thread's\r\n        // context classloader to jar classloader in sharedState.\r\n        // See SessionState.addJar for details.\r\n        sql(\"SELECT udtf_count3(a) FROM (SELECT 1 AS a FROM src LIMIT 3) t\")\r\n\r\n        assert(Thread.currentThread().getContextClassLoader ne sparkClassLoader)\r\n        assert(Thread.currentThread().getContextClassLoader eq\r\n          spark.sqlContext.sharedState.jarClassLoader)\r\n\r\n        // uses classloader which loads clazz\r\n        val name = \"default.udtf_count3\"\r\n\r\n        val input = Array(AttributeReference(\"a\", IntegerType, nullable = false)())\r\n        val udf = HiveGenericUDTF(name, new HiveFunctionWrapper(className), input)\r\n        // FIXME: uncommenting below line will lead test passing\r\n//        udf.dataType\r\n\r\n        // Roll back to the original classloader and run query again. Without this line, the test\r\n        // would pass, as thread's context classloader is changed to jar classloader. But thread\r\n        // context classloader can be changed from others as well which would fail the query; one\r\n        // example is spark-shell, which thread context classloader rolls back automatically. This\r\n        // mimics the behavior of spark-shell.\r\n        Thread.currentThread().setContextClassLoader(sparkClassLoader)\r\n\r\n        // FIXME: doing this \"within\" the context classloader which loads the UDF class will\r\n        //   lead test passing even we comment out udf.dataType\r\n        val newUdf = udf.makeCopy(udf.productIterator.map(_.asInstanceOf[AnyRef]).toArray)\r\n\r\n        newUdf.dataType\r\n      }\r\n    }\r\n  }\r\n```",
+        "createdAt" : "2020-03-28T04:27:01Z",
+        "updatedAt" : "2020-03-28T04:27:01Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "03d128b3-dd3c-45fb-a204-8672633a8e49",
+        "parentId" : "1cb16dca-ef16-40f6-8971-541d60b7d2db",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "OK let me put my findings: If you look at `HiveFunctionWrapper.createFunction`, it says we don't cache the instance for Simple UDF\r\n```\r\n    def createFunction[UDFType <: AnyRef](): UDFType = {\r\n      if (instance != null) {\r\n        instance.asInstanceOf[UDFType]\r\n      } else {\r\n        val func = Utils.getContextOrSparkClassLoader\r\n          .loadClass(functionClassName).newInstance.asInstanceOf[UDFType]\r\n        if (!func.isInstanceOf[UDF]) {\r\n          // We cache the function if it's no the Simple UDF,\r\n          // as we always have to create new instance for Simple UDF\r\n          instance = func\r\n        }\r\n        func\r\n      }\r\n    }\r\n```\r\nI don't know the history but I assume \"we always have to create new instance for Simple UDF\" is correct. I think what we can do is to cache the loaded `Class` as well as the instance.",
+        "createdAt" : "2020-03-30T04:41:05Z",
+        "updatedAt" : "2020-03-30T04:41:05Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2969178c-83b0-47ec-93be-1256ba4dc29b",
+        "parentId" : "1cb16dca-ef16-40f6-8971-541d60b7d2db",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Oh OK. I missed the case we don't cache the function. Thanks for the pointer!\r\nI'll try to reproduce the finding, and fix it without touching assumption.",
+        "createdAt" : "2020-03-31T03:16:32Z",
+        "updatedAt" : "2020-03-31T03:16:32Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7228c06a-6762-4e30-bcad-c22eb0b72330",
+        "parentId" : "1cb16dca-ef16-40f6-8971-541d60b7d2db",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "#28079",
+        "createdAt" : "2020-03-31T08:17:47Z",
+        "updatedAt" : "2020-03-31T08:17:48Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "39a2171d361f38b54640c07ccb8990aa4c204238",
+    "line" : 41,
+    "diffHunk" : "@@ -1,1 +78,82 @@          if (classOf[UDF].isAssignableFrom(clazz)) {\n            udfExpr = Some(HiveSimpleUDF(name, new HiveFunctionWrapper(clazz.getName), input))\n            udfExpr.get.dataType // Force it to check input data types.\n          } else if (classOf[GenericUDF].isAssignableFrom(clazz)) {\n            udfExpr = Some(HiveGenericUDF(name, new HiveFunctionWrapper(clazz.getName), input))"
   }
 ]

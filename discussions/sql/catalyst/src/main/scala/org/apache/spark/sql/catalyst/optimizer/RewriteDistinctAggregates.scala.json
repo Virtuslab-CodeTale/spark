@@ -328,5 +328,126 @@
     "commit" : "20ad143c620ef75e8d446f8f1e595992a1959b4a",
     "line" : 82,
     "diffHunk" : "@@ -1,1 +149,153 @@ *      output = ['key, 'cat1_cnt, 'total])\n *     Project(\n *        projectionList = ['key, if ('id > 1) 'cat1 else null, cast('value as bigint)]\n *        output = ['key, '_gen_attr_1, '_gen_attr_2])\n *       LocalTableScan [...]"
+  },
+  {
+    "id" : "e651ef67-5e89-41cd-83e8-6408b66980cd",
+    "prId" : 26997,
+    "prUrl" : "https://github.com/apache/spark/pull/26997#pullrequestreview-336281653",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "82c2b1b0-3e20-497c-b8d4-d67ee8f2f5a7",
+        "parentId" : null,
+        "authorId" : "39fe625f-8c54-48bc-ac6f-7279921adf02",
+        "body" : "are you trying to filter? exprs.filter(_. isDistinct_ does the job!",
+        "createdAt" : "2019-12-24T21:06:57Z",
+        "updatedAt" : "2020-01-02T12:13:13Z",
+        "lastEditedBy" : "39fe625f-8c54-48bc-ac6f-7279921adf02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "27237a72-bf9e-49eb-b8d9-8ab0434f88a6",
+        "parentId" : "82c2b1b0-3e20-497c-b8d4-d67ee8f2f5a7",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "All of them are not `AggregateExpr`, so we need to pick up `AggregateExpr`s from `exprs` first, then apply  cast&filter.",
+        "createdAt" : "2019-12-25T00:57:05Z",
+        "updatedAt" : "2020-01-02T12:13:13Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f4eccd04d9833448c71f6820c3852ce0c635e3b2",
+    "line" : 7,
+    "diffHunk" : "@@ -1,1 +105,109 @@    val distinctAggs = exprs.flatMap { _.collect {\n      case ae: AggregateExpression if ae.isDistinct => ae\n    }}\n    // We need at least two distinct aggregates for this rule because aggregation\n    // strategy can handle a single distinct group."
+  },
+  {
+    "id" : "82c8da9a-a80c-4c02-9175-82052d68f9b4",
+    "prId" : 26997,
+    "prUrl" : "https://github.com/apache/spark/pull/26997#pullrequestreview-337612513",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d5a6f58a-a8e8-42fc-9e27-5bcd53396a02",
+        "parentId" : null,
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "Let's add a comment that this can produce false positives, i.e. `sum(distinct a)` & `count(distinct a)`",
+        "createdAt" : "2019-12-30T12:02:56Z",
+        "updatedAt" : "2020-01-02T12:13:13Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "afedd1bc-f8af-486d-9568-22fde1308393",
+        "parentId" : "d5a6f58a-a8e8-42fc-9e27-5bcd53396a02",
+        "authorId" : "39fe625f-8c54-48bc-ac6f-7279921adf02",
+        "body" : "suggest to add unit tests for each case of 0, 1, 2, 2+",
+        "createdAt" : "2019-12-30T17:02:58Z",
+        "updatedAt" : "2020-01-02T12:13:13Z",
+        "lastEditedBy" : "39fe625f-8c54-48bc-ac6f-7279921adf02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9f07eac3-fbfc-4110-9603-3ebcbdb93f28",
+        "parentId" : "d5a6f58a-a8e8-42fc-9e27-5bcd53396a02",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "It's hard to check if a rule is applied and does nothing, or a rule is not applied. I'm OK with this simple change.",
+        "createdAt" : "2020-01-02T08:35:16Z",
+        "updatedAt" : "2020-01-02T12:13:13Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2202c52d-10aa-484a-a523-f9aa6e361359",
+        "parentId" : "d5a6f58a-a8e8-42fc-9e27-5bcd53396a02",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "@hvanhovell sure, I'll update the comment.",
+        "createdAt" : "2020-01-02T11:01:07Z",
+        "updatedAt" : "2020-01-02T12:13:13Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f4eccd04d9833448c71f6820c3852ce0c635e3b2",
+    "line" : 8,
+    "diffHunk" : "@@ -1,1 +106,110 @@      case ae: AggregateExpression if ae.isDistinct => ae\n    }}\n    // We need at least two distinct aggregates for this rule because aggregation\n    // strategy can handle a single distinct group.\n    // This check can produce false-positives, e.g., SUM(DISTINCT a) & COUNT(DISTINCT a)."
+  },
+  {
+    "id" : "fe6d5b56-3fcc-4870-803d-8ad92eaba655",
+    "prId" : 26997,
+    "prUrl" : "https://github.com/apache/spark/pull/26997#pullrequestreview-337612828",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a7c0c22b-abb8-4587-a249-e0f8cecf1e19",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Is this used for skipping `distinctAggGroups` check? Looks okay.",
+        "createdAt" : "2019-12-30T17:17:41Z",
+        "updatedAt" : "2020-01-02T12:13:13Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "df560f1b-571b-4b50-9765-d9a68300f751",
+        "parentId" : "a7c0c22b-abb8-4587-a249-e0f8cecf1e19",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "yea, you're right.",
+        "createdAt" : "2020-01-02T11:02:17Z",
+        "updatedAt" : "2020-01-02T12:13:13Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f4eccd04d9833448c71f6820c3852ce0c635e3b2",
+    "line" : 16,
+    "diffHunk" : "@@ -1,1 +113,117 @@\n  def apply(plan: LogicalPlan): LogicalPlan = plan transformUp {\n    case a: Aggregate if mayNeedtoRewrite(a.aggregateExpressions) => rewrite(a)\n  }\n"
   }
 ]

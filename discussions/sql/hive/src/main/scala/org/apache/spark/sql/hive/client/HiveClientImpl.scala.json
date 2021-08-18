@@ -394,5 +394,115 @@
     "commit" : "c45489ad5b8ddd53d5e81fbba4cd08c0b4fd9850",
     "line" : 17,
     "diffHunk" : "@@ -1,1 +1227,1231 @@\n  // Visible for testing.\n  private[hive] val HIVE_METASTORE_GENERATED_PROPERTIES: Set[String] = Set(\n    hive_metastoreConstants.DDL_TIME,\n    // at org.apache.hadoop.hive.ql.exec.DDLTask.updateModifiedParameters()"
+  },
+  {
+    "id" : "89e6926d-97ba-44f7-bae2-e812894d159f",
+    "prId" : 27041,
+    "prUrl" : "https://github.com/apache/spark/pull/27041#pullrequestreview-342803015",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c1596c24-b503-4795-824a-192f054546c6",
+        "parentId" : null,
+        "authorId" : "56b136f7-d485-4c54-b8df-91c9cec8c43d",
+        "body" : "Seems we should update https://github.com/apache/spark/pull/27041/files#diff-6fd847124f8eae45ba2de1cf7d6296feR170-R179 and also explain why extraConfig is at the end.",
+        "createdAt" : "2020-01-14T19:26:03Z",
+        "updatedAt" : "2020-02-18T15:07:02Z",
+        "lastEditedBy" : "56b136f7-d485-4c54-b8df-91c9cec8c43d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9570fd2b-0a3d-4622-96f3-8f8583604c5b",
+        "parentId" : "c1596c24-b503-4795-824a-192f054546c6",
+        "authorId" : "2c1bd8aa-c665-4159-a689-57743063347c",
+        "body" : "@yhuai Sure, I have updated the PR with reasonable pointers for the order. Does it suffice it now.?",
+        "createdAt" : "2020-01-14T19:38:39Z",
+        "updatedAt" : "2020-02-18T15:07:02Z",
+        "lastEditedBy" : "2c1bd8aa-c665-4159-a689-57743063347c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cb16b834-b329-4c57-9c6e-c7e204b69f3c",
+        "parentId" : "c1596c24-b503-4795-824a-192f054546c6",
+        "authorId" : "56b136f7-d485-4c54-b8df-91c9cec8c43d",
+        "body" : "Thank you. As getConfSystemProperties will get all of hive confs that are in the system properties, it is possible that we will pull in a config that is not set by `--hiveconf`. Seems we are introducing a behavior change? Can you explain the impact of this change and why this change is fine?",
+        "createdAt" : "2020-01-14T19:55:37Z",
+        "updatedAt" : "2020-02-18T15:07:02Z",
+        "lastEditedBy" : "56b136f7-d485-4c54-b8df-91c9cec8c43d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5d7045b5-5e4d-4e7c-a37e-5556e9874b38",
+        "parentId" : "c1596c24-b503-4795-824a-192f054546c6",
+        "authorId" : "2c1bd8aa-c665-4159-a689-57743063347c",
+        "body" : "Sure, even without my changes in this PR, the `HiveConf` always considers the hive confs in system properties which were not set via `--hiveconf` as part of `HiveConf` constructor i.e Refer https://github.com/apache/hive/blob/rel/release-2.3.5/common/src/java/org/apache/hadoop/hive/conf/HiveConf.java#L4079 (same behaviour for hive 1.2.1 as well) hence, this do not change any flow",
+        "createdAt" : "2020-01-14T20:01:55Z",
+        "updatedAt" : "2020-02-18T15:07:02Z",
+        "lastEditedBy" : "2c1bd8aa-c665-4159-a689-57743063347c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3718df989c02641f864432b246313a158a11b9e6",
+    "line" : 20,
+    "diffHunk" : "@@ -1,1 +191,195 @@    val overriddenHiveProps = HiveConf.getConfSystemProperties.asScala\n    val confMap = (hadoopConf.iterator().asScala.map(kv => kv.getKey -> kv.getValue) ++\n      sparkConf.getAll.toMap ++ overriddenHiveProps ++ extraConfig).toMap\n    confMap.foreach { case (k, v) => hiveConf.set(k, v) }\n    SQLConf.get.redactOptions(confMap).foreach { case (k, v) =>"
+  },
+  {
+    "id" : "30a2d6b3-df28-49e6-9404-475363254566",
+    "prId" : 27041,
+    "prUrl" : "https://github.com/apache/spark/pull/27041#pullrequestreview-360415248",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f073b573-fbf1-491d-b136-a4917f43ec0e",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "so we totally ignore the --hive-conf previously?",
+        "createdAt" : "2020-02-18T05:26:29Z",
+        "updatedAt" : "2020-02-18T15:07:02Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2d1f08bb-2dfc-4811-8b9d-3b0d11416dd2",
+        "parentId" : "f073b573-fbf1-491d-b136-a4917f43ec0e",
+        "authorId" : "2c1bd8aa-c665-4159-a689-57743063347c",
+        "body" : "it was handled as --hiveconf as part of HiveConf constructor i.e Refer https://github.com/apache/hive/blob/rel/release-2.3.5/common/src/java/org/apache/hadoop/hive/conf/HiveConf.java#L4079 , \r\ni.e first it loads hive-site and then it adds --hiveconf  properties on top. \r\n\r\nBut in spark we again add hadoopConf on top of it hence overwriting HiveConf order",
+        "createdAt" : "2020-02-18T05:31:20Z",
+        "updatedAt" : "2020-02-18T15:07:02Z",
+        "lastEditedBy" : "2c1bd8aa-c665-4159-a689-57743063347c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9a63eca8-0050-4f45-b0f3-db9fd920007d",
+        "parentId" : "f073b573-fbf1-491d-b136-a4917f43ec0e",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Can you add more code comment to convince people that `HiveConf.getConfSystemProperties` contains only the --hiveconf?",
+        "createdAt" : "2020-02-18T05:46:05Z",
+        "updatedAt" : "2020-02-18T15:07:02Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "34ce4b74-01bc-4bfd-bdfe-4a7f6312c9e3",
+        "parentId" : "f073b573-fbf1-491d-b136-a4917f43ec0e",
+        "authorId" : "2c1bd8aa-c665-4159-a689-57743063347c",
+        "body" : "@cloud-fan updated. is the comment adequate now?",
+        "createdAt" : "2020-02-18T15:08:27Z",
+        "updatedAt" : "2020-02-18T15:08:40Z",
+        "lastEditedBy" : "2c1bd8aa-c665-4159-a689-57743063347c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3718df989c02641f864432b246313a158a11b9e6",
+    "line" : 17,
+    "diffHunk" : "@@ -1,1 +189,193 @@    // which were considered on creation of HiveConf constructor\n    // Refer: org.apache.hadoop.hive.conf.HiveConf#applySystemProperties\n    val overriddenHiveProps = HiveConf.getConfSystemProperties.asScala\n    val confMap = (hadoopConf.iterator().asScala.map(kv => kv.getKey -> kv.getValue) ++\n      sparkConf.getAll.toMap ++ overriddenHiveProps ++ extraConfig).toMap"
   }
 ]

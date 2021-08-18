@@ -119,5 +119,38 @@
     "commit" : "8ac7e5aba2f0e75cb7717eeb561903c9acda9830",
     "line" : 31,
     "diffHunk" : "@@ -1,1 +269,273 @@        pruneFilterProject(\n          projectList,\n          filters.filter(f => f.references.isEmpty || !f.references.subsetOf(partitionKeyIds)),\n          identity[Seq[Expression]],\n          HiveTableScanExec(_, relation, partitionKeyFilters.toSeq)(sparkSession)) :: Nil"
+  },
+  {
+    "id" : "17bde5c5-985a-478e-83da-fe1c3c1510f7",
+    "prId" : 27055,
+    "prUrl" : "https://github.com/apache/spark/pull/27055#pullrequestreview-354500942",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5fa98067-2b88-480a-be8e-e60f5c50f744",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "I think we just need this change that skips `DetermineTableStats when Hive will be converted later.",
+        "createdAt" : "2020-02-03T19:31:45Z",
+        "updatedAt" : "2020-02-03T19:31:45Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1bfddf8c-cf98-40d1-84e4-0b044e61b736",
+        "parentId" : "5fa98067-2b88-480a-be8e-e60f5c50f744",
+        "authorId" : "2e5e2a86-4faf-484a-9251-577e584e1564",
+        "body" : "@viirya I agree that doing size estimation on demand and disregarding catalog statistics is expensive, what I actually want to do is skip the `fallBackToHdfs` code path for datasource tables and do size estimation in `HadoopFsRelation`. \r\nMaybe we should also add a config similar to `fallBackToHdfs` in `HadoopFsRelation`? we just do real scans when the config is true. Otherwise, we just use the stats in CatalogTable to compute the `sizeInBytes`.\r\nWhy I think we should move this size estimation to `HadoopFsRelation` for datasource table is that we can do better estimation for datasource table like parquet. see  [SPARK-30712](https://issues.apache.org/jira/browse/SPARK-30712)",
+        "createdAt" : "2020-02-06T14:41:56Z",
+        "updatedAt" : "2020-02-06T14:41:57Z",
+        "lastEditedBy" : "2e5e2a86-4faf-484a-9251-577e584e1564",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c5297d48fce32b584718c04b85dd06a293bc2c2b",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +141,145 @@    case relation: HiveTableRelation\n      if DDLUtils.isHiveTable(relation.tableMeta) && relation.tableMeta.stats.isEmpty &&\n        !RelationConversions.isConvertible(relation) =>\n      hiveTableWithStats(relation)\n"
   }
 ]

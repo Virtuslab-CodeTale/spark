@@ -141,5 +141,203 @@
     "commit" : "4bc0e269df9320e9bb9244afb58b6d1fbbf0e95e",
     "line" : 20,
     "diffHunk" : "@@ -1,1 +881,885 @@  }\n\n  test(\"SPARK-31553: isInCollection for collection sizes above a threshold\") {\n    val threshold = 100\n    withSQLConf(SQLConf.OPTIMIZER_INSET_CONVERSION_THRESHOLD.key -> threshold.toString) {"
+  },
+  {
+    "id" : "14ca1181-89aa-4314-86a7-7eb71133c005",
+    "prId" : 27066,
+    "prUrl" : "https://github.com/apache/spark/pull/27066#pullrequestreview-442120216",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3d2508d5-0ffa-4c54-af69-e94b866e508f",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I'm confused. We do support\r\n```\r\n     val df = sql(\"SELECT named_struct('a', 1, 'b', 2, 'b', 3) struct_col\")\r\n     df.select($\"struct_col\".withField(\"b\", lit(100)))\r\n     // result: {\"a\":1,\"b\":100,\"b\":100}\r\n```",
+        "createdAt" : "2020-07-01T14:46:16Z",
+        "updatedAt" : "2020-07-03T12:43:28Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "141e4df1-9082-4204-b199-018cd383032a",
+        "parentId" : "3d2508d5-0ffa-4c54-af69-e94b866e508f",
+        "authorId" : "6fc88871-fca6-485c-a47e-5e17709c7b68",
+        "body" : "Your example is different from the test case. \r\nIn the test case, there are two fields named \"a\" inside of the top level column and one of them is not a StructType. ",
+        "createdAt" : "2020-07-01T15:08:00Z",
+        "updatedAt" : "2020-07-03T12:43:29Z",
+        "lastEditedBy" : "6fc88871-fca6-485c-a47e-5e17709c7b68",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e31872b5-8789-49d8-bb74-e2089624a06a",
+        "parentId" : "3d2508d5-0ffa-4c54-af69-e94b866e508f",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "So the root field to be replaced can have same-name fields at the same level, but the intermediate struct-type fields must have a unique name? Maybe we should put an example in `functions.withFields` to demonstrate it.",
+        "createdAt" : "2020-07-02T02:57:17Z",
+        "updatedAt" : "2020-07-03T12:43:29Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "669f05d7-2e8f-4261-9e5c-ff25e5885a31",
+        "parentId" : "3d2508d5-0ffa-4c54-af69-e94b866e508f",
+        "authorId" : "6fc88871-fca6-485c-a47e-5e17709c7b68",
+        "body" : "Done. ",
+        "createdAt" : "2020-07-03T03:04:45Z",
+        "updatedAt" : "2020-07-03T12:43:29Z",
+        "lastEditedBy" : "6fc88871-fca6-485c-a47e-5e17709c7b68",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4315e9244829cc41ffcf224f29f8fdcbcd88b981",
+    "line" : 97,
+    "diffHunk" : "@@ -1,1 +1017,1021 @@\n      structLevel2.withColumn(\"a\", 'a.withField(\"a.b\", lit(2)))\n    }.getMessage should include(\"Ambiguous reference to fields\")\n  }\n"
+  },
+  {
+    "id" : "a6661abf-3aee-456d-b7ef-2b9c50312b65",
+    "prId" : 27066,
+    "prUrl" : "https://github.com/apache/spark/pull/27066#pullrequestreview-440949687",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "baaf4e02-d3ec-41da-ad28-95c510d40c4e",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I'm not sure if we should support it. Do you have a use case?",
+        "createdAt" : "2020-07-01T14:47:09Z",
+        "updatedAt" : "2020-07-03T12:43:28Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a867dd37-2613-4b4d-9d88-1aca186e8754",
+        "parentId" : "baaf4e02-d3ec-41da-ad28-95c510d40c4e",
+        "authorId" : "6fc88871-fca6-485c-a47e-5e17709c7b68",
+        "body" : "I don't have a use case to support this behaviour. \r\nThe main reason I decided to allow this behaviour is to keep in line with the behaviour of other similar functions. \r\nFor example, `Dataset.withColumn` allows you to create columns with empty string as a name. \r\n```\r\nscala> Seq(1).toDF(\"col1\").withColumn(\"\", lit(2)).printSchema\r\nroot\r\n |-- col1: integer (nullable = false)\r\n |-- : integer (nullable = false)\r\n```\r\nSimilarly, `org.apache.spark.sql.functions.struct` allows you to create a struct with fields which have empty string as a name. \r\n```\r\nscala> Seq(1).toDF(\"col1\").withColumn(\"col2\", struct(lit(1).as(\"a\"), lit(2).as(\"\"))).printSchema\r\nroot\r\n |-- col1: integer (nullable = false)\r\n |-- col2: struct (nullable = false)\r\n |    |-- a: integer (nullable = false)\r\n |    |-- : integer (nullable = false)\r\n```\r\n",
+        "createdAt" : "2020-07-01T14:50:39Z",
+        "updatedAt" : "2020-07-03T12:43:28Z",
+        "lastEditedBy" : "6fc88871-fca6-485c-a47e-5e17709c7b68",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2df01fd2-4737-4f00-ba25-edac0e3f7d7d",
+        "parentId" : "baaf4e02-d3ec-41da-ad28-95c510d40c4e",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "ok makes sense",
+        "createdAt" : "2020-07-01T14:57:27Z",
+        "updatedAt" : "2020-07-03T12:43:28Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4315e9244829cc41ffcf224f29f8fdcbcd88b981",
+    "line" : 100,
+    "diffHunk" : "@@ -1,1 +1020,1024 @@  }\n\n  test(\"withField should add field with no name\") {\n    checkAnswerAndSchema(\n      structLevel1.withColumn(\"a\", $\"a\".withField(\"\", lit(4))),"
+  },
+  {
+    "id" : "13a745ee-24ac-44dd-b9f0-df6de9f5bc6f",
+    "prId" : 27066,
+    "prUrl" : "https://github.com/apache/spark/pull/27066#pullrequestreview-441162437",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9c3f0ea3-8c89-453c-8783-8a40899bea8e",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "It's hard to tell if the replace happens, as the type is the same. Shall we test with `'a.withField(\"b\", lit(\"2\"))`? Then we can verify it if the type changes.",
+        "createdAt" : "2020-07-01T14:50:03Z",
+        "updatedAt" : "2020-07-03T12:43:28Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a6ff66bb-a7a4-4ef6-8908-d95e97adcfcd",
+        "parentId" : "9c3f0ea3-8c89-453c-8783-8a40899bea8e",
+        "authorId" : "6fc88871-fca6-485c-a47e-5e17709c7b68",
+        "body" : "The nullability also changes but you're right, it would be clearer if the type also changed. Done. ",
+        "createdAt" : "2020-07-01T20:05:56Z",
+        "updatedAt" : "2020-07-03T12:43:29Z",
+        "lastEditedBy" : "6fc88871-fca6-485c-a47e-5e17709c7b68",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4315e9244829cc41ffcf224f29f8fdcbcd88b981",
+    "line" : 236,
+    "diffHunk" : "@@ -1,1 +1156,1160 @@      StructType(Seq(\n        StructField(\"a\", StructType(Seq(\n          StructField(\"a\", IntegerType, nullable = false),\n          StructField(\"b\", StringType, nullable = false),\n          StructField(\"c\", IntegerType, nullable = false))),"
+  },
+  {
+    "id" : "2386fa97-89dc-45ac-b97d-f56623f463b3",
+    "prId" : 27066,
+    "prUrl" : "https://github.com/apache/spark/pull/27066#pullrequestreview-441162583",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b9868473-e9b0-404e-8bf8-59e91b1102db",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "ditto",
+        "createdAt" : "2020-07-01T14:50:16Z",
+        "updatedAt" : "2020-07-03T12:43:28Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0c28808e-1e10-4312-8a1b-775be79bef77",
+        "parentId" : "b9868473-e9b0-404e-8bf8-59e91b1102db",
+        "authorId" : "6fc88871-fca6-485c-a47e-5e17709c7b68",
+        "body" : "done. ",
+        "createdAt" : "2020-07-01T20:06:14Z",
+        "updatedAt" : "2020-07-03T12:43:29Z",
+        "lastEditedBy" : "6fc88871-fca6-485c-a47e-5e17709c7b68",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4315e9244829cc41ffcf224f29f8fdcbcd88b981",
+    "line" : 249,
+    "diffHunk" : "@@ -1,1 +1169,1173 @@        Seq(StructField(\"a\", StructType(Seq(\n          StructField(\"a\", StructType(Seq(\n            StructField(\"a\", IntegerType, nullable = false),\n            StructField(\"b\", StringType, nullable = false),\n            StructField(\"c\", IntegerType, nullable = false))),"
+  },
+  {
+    "id" : "adc2d526-fb1e-4ae7-8776-47dc8dc55887",
+    "prId" : 27066,
+    "prUrl" : "https://github.com/apache/spark/pull/27066#pullrequestreview-440952815",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ae4dffc0-fc80-4025-ba2d-5f78ebb6d47b",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "When we merge `WithField` expressions, do we remove useless fields? e.g. the first `withField(\"b\", lit(2))` becomes useless.",
+        "createdAt" : "2020-07-01T14:52:19Z",
+        "updatedAt" : "2020-07-03T12:43:28Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f7ac7bdd-cd01-40a1-b2b4-8ca280b6c187",
+        "parentId" : "ae4dffc0-fc80-4025-ba2d-5f78ebb6d47b",
+        "authorId" : "6fc88871-fca6-485c-a47e-5e17709c7b68",
+        "body" : "Useless fields are removed when the `addOrReplace` method is called inside of `WithFields` Expression. ",
+        "createdAt" : "2020-07-01T15:00:39Z",
+        "updatedAt" : "2020-07-03T12:43:28Z",
+        "lastEditedBy" : "6fc88871-fca6-485c-a47e-5e17709c7b68",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4315e9244829cc41ffcf224f29f8fdcbcd88b981",
+    "line" : 338,
+    "diffHunk" : "@@ -1,1 +1258,1262 @@  test(\"withField should replace fields in struct in given order\") {\n    checkAnswerAndSchema(\n      structLevel1.withColumn(\"a\", 'a.withField(\"b\", lit(2)).withField(\"b\", lit(20))),\n      Row(Row(1, 20, 3)) :: Nil,\n      StructType(Seq("
   }
 ]
