@@ -53,5 +53,93 @@
     "commit" : "2aebf0516f146456e4567612db8823fc3407641b",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +231,235 @@      // some resolved logical plans can have unresolved references,\n      // e.g., outer references in `ExistenceJoin`.\n      p.output.filter(_.resolved).map { a => (a.exprId, a.dataType.asNullable) }\n    }.flatten\n"
+  },
+  {
+    "id" : "8fcf916a-c702-4322-941a-bd917474c128",
+    "prId" : 29585,
+    "prUrl" : "https://github.com/apache/spark/pull/29585#pullrequestreview-481374976",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8fcac769-1874-45cd-8bf5-c40b90ea163f",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "shall we check the physical plan as well?",
+        "createdAt" : "2020-08-31T05:52:37Z",
+        "updatedAt" : "2020-09-29T12:28:36Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5c38c9bf-4bbe-402b-a420-51cf6f5ac5f9",
+        "parentId" : "8fcac769-1874-45cd-8bf5-c40b90ea163f",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Currently, `RuleExecutor` is not used for transforming physical plans now: https://github.com/apache/spark/blob/a1e459ed9f6777fb8d5a2d09fda666402f9230b9/sql/core/src/main/scala/org/apache/spark/sql/execution/QueryExecution.scala#L363-L367\r\n\r\nIs it okay to replace the code above with `RuleExecutor` in this PR?",
+        "createdAt" : "2020-08-31T06:09:37Z",
+        "updatedAt" : "2020-09-29T12:28:36Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4c5b518f-d0bf-46dd-9f5c-f3a9f2344ab1",
+        "parentId" : "8fcac769-1874-45cd-8bf5-c40b90ea163f",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "I think we in general won't change output in physical plan?",
+        "createdAt" : "2020-08-31T17:44:41Z",
+        "updatedAt" : "2020-09-29T12:28:36Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3c2baae6-b56d-49d8-8c9c-ae325f9b970c",
+        "parentId" : "8fcac769-1874-45cd-8bf5-c40b90ea163f",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Ah, I see. Nice suggestion. Looked around the related code, I think it is not easy to catch all the ill-formed case as you said, but IMO most common patterns to cause duplicate `ExprId`s are a reuse of the `ExprId`s of references, e.g., `a#1 + 1 as a#1` as you pointed above. So, how about just checking this reuse pattern in the plan integrity check?  https://github.com/apache/spark/pull/29585/files#diff-27c76f96a7b2733ecfd6f46a1716e153R238",
+        "createdAt" : "2020-09-02T23:13:01Z",
+        "updatedAt" : "2020-09-29T12:28:36Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e3c87429e7e6f463c4e7740c7a42e8b2def528b0",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +205,209 @@}\n\nobject LogicalPlanIntegrity {\n\n  private def canGetOutputAttrs(p: LogicalPlan): Boolean = {"
+  },
+  {
+    "id" : "d0daadc9-0391-40e8-9330-28e0cf27660c",
+    "prId" : 29585,
+    "prUrl" : "https://github.com/apache/spark/pull/29585#pullrequestreview-484094505",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f8a0096d-d354-43d5-8a71-4fbb983d3b30",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "what will happen if we can `output`? runtime failure?",
+        "createdAt" : "2020-09-08T08:46:37Z",
+        "updatedAt" : "2020-09-29T12:28:36Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "98e70778-93fa-4a10-9af2-f31240a6aef2",
+        "parentId" : "f8a0096d-d354-43d5-8a71-4fbb983d3b30",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Some existing tests failed with the assertion below;\r\nhttps://github.com/apache/spark/blob/e7d9a245656655e7bb1df3e04df30eb3cc9e23ad/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/expressions/subquery.scala#L229\r\n",
+        "createdAt" : "2020-09-08T12:45:14Z",
+        "updatedAt" : "2020-09-29T12:28:36Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e3c87429e7e6f463c4e7740c7a42e8b2def528b0",
+    "line" : 11,
+    "diffHunk" : "@@ -1,1 +211,215 @@      e.collectFirst {\n        // We cannot call `output` in plans with a `ScalarSubquery` expr having no column,\n        // so, we filter out them in advance.\n        case s: ScalarSubquery if s.plan.schema.fields.isEmpty => true\n      }.isDefined"
   }
 ]

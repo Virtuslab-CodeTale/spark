@@ -372,5 +372,93 @@
     "commit" : "1385f2b5963a6ec88dc9d9881f2a4bdd5c735e7a",
     "line" : 46,
     "diffHunk" : "@@ -1,1 +419,423 @@        | select key, value from testData\n        |\"\"\".stripMargin)\n    checkAnswer(unionDF, unionSQLResult)\n  }\n"
+  },
+  {
+    "id" : "72743839-bfd4-43cc-8da7-3bf4901703e9",
+    "prId" : 29587,
+    "prUrl" : "https://github.com/apache/spark/pull/29587#pullrequestreview-487265161",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1e3a219e-46c9-4241-9c87-87077179a672",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Could you add some tests for case-sensitivity here, too?",
+        "createdAt" : "2020-09-09T01:36:27Z",
+        "updatedAt" : "2020-10-16T19:47:41Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b200ed07-e1ff-4b36-bc68-74de98bbe6c2",
+        "parentId" : "1e3a219e-46c9-4241-9c87-87077179a672",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Added.",
+        "createdAt" : "2020-09-13T00:36:19Z",
+        "updatedAt" : "2020-10-16T19:47:41Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3d907d07233851d6169533d0475c5a53b02cb4a7",
+    "line" : 4,
+    "diffHunk" : "@@ -1,1 +537,541 @@    }\n  }\n\n  test(\"SPARK-32376: Make unionByName null-filling behavior work with struct columns - simple\") {\n    val df1 = Seq(((1, 2, 3), 0), ((2, 3, 4), 1), ((3, 4, 5), 2)).toDF(\"a\", \"idx\")"
+  },
+  {
+    "id" : "b864b03d-6c51-461c-b148-080784e682ca",
+    "prId" : 29587,
+    "prUrl" : "https://github.com/apache/spark/pull/29587#pullrequestreview-489402196",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "731ceba6-76e4-4ada-8ac9-47410145e9ba",
+        "parentId" : null,
+        "authorId" : "6fc88871-fca6-485c-a47e-5e17709c7b68",
+        "body" : "What if there are missing nested columns only on one side and fields are not sorted by name (in ascending order) on the other side? \r\n\r\nFor example: \r\n```\r\ntest(\"failing test?\") {\r\n  withSQLConf(SQLConf.UNION_BYNAME_STRUCT_SUPPORT_ENABLED.key -> \"true\") {\r\n    val nestedStructType1 = StructType(Seq(\r\n      StructField(\"b\", StringType)))\r\n    val nestedStructValues1 = Row(\"b\")\r\n\r\n    val nestedStructType2 = StructType(Seq(\r\n      StructField(\"b\", StringType),\r\n      StructField(\"a\", StringType)))\r\n    val nestedStructValues2 = Row(\"b\", \"a\")\r\n\r\n    val df1: DataFrame = spark.createDataFrame(\r\n      sparkContext.parallelize(Row(nestedStructValues1) :: Nil),\r\n      StructType(Seq(StructField(\"topLevelCol\", nestedStructType1))))\r\n\r\n    val df2: DataFrame = spark.createDataFrame(\r\n      sparkContext.parallelize(Row(nestedStructValues2) :: Nil),\r\n      StructType(Seq(StructField(\"topLevelCol\", nestedStructType2))))\r\n\r\n    df1.unionByName(df2, allowMissingColumns = true).show(false)\r\n  }\r\n}\r\n```\r\nGives me the following error: \r\n```\r\n[info] - failing test? *** FAILED *** (3 seconds, 719 milliseconds)\r\n[info]   org.apache.spark.sql.AnalysisException: Union can only be performed on tables with the compatible column types. struct<b:string,a:string> <> struct<a:string,b:string> at the first column of the second table;;\r\n[info] 'Union false, false\r\n[info] :- Project [with_fields(topLevelCol#1, a, null, true) AS topLevelCol#6]\r\n[info] :  +- LogicalRDD [topLevelCol#1], false\r\n[info] +- Project [topLevelCol#4]\r\n[info]    +- LogicalRDD [topLevelCol#4], false\r\n```\r\nIs this expected behaviour? I feel this should be supported but CMIIW. \r\n",
+        "createdAt" : "2020-09-14T17:23:05Z",
+        "updatedAt" : "2020-10-16T19:47:41Z",
+        "lastEditedBy" : "6fc88871-fca6-485c-a47e-5e17709c7b68",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ba5b8c3d-2abf-44fe-8855-1c51e863d08f",
+        "parentId" : "731ceba6-76e4-4ada-8ac9-47410145e9ba",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Good catch! Thanks. I missed this kind of case. I will update this to fix it.",
+        "createdAt" : "2020-09-14T17:39:36Z",
+        "updatedAt" : "2020-10-16T19:47:41Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f9ae1b69-8f2b-4051-8829-39956b122dc0",
+        "parentId" : "731ceba6-76e4-4ada-8ac9-47410145e9ba",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Fixed this case. Thanks.",
+        "createdAt" : "2020-09-15T01:17:28Z",
+        "updatedAt" : "2020-10-16T19:47:41Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4ac62447-b8fc-4d55-9e0b-8afe01b18fad",
+        "parentId" : "731ceba6-76e4-4ada-8ac9-47410145e9ba",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Ah, I see and I missed the case. Nice catch.",
+        "createdAt" : "2020-09-16T08:39:27Z",
+        "updatedAt" : "2020-10-16T19:47:41Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3d907d07233851d6169533d0475c5a53b02cb4a7",
+    "line" : 185,
+    "diffHunk" : "@@ -1,1 +718,722 @@case class UnionClass2(a: Int, c: String)\ncase class UnionClass3(a: Int, b: Long)\ncase class UnionClass4(A: Int, b: Long)"
   }
 ]

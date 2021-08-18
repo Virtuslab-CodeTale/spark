@@ -1,0 +1,57 @@
+[
+  {
+    "id" : "7299ec0c-183c-478f-9ea0-528f9a13bc3c",
+    "prId" : 29585,
+    "prUrl" : "https://github.com/apache/spark/pull/29585#pullrequestreview-498997678",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e3134bd6-4d94-4b1f-99c9-70ed6847952c",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "why does it break the check?",
+        "createdAt" : "2020-09-29T13:18:31Z",
+        "updatedAt" : "2020-09-29T13:18:31Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ed7cd202-49c2-41fd-96e0-876d6b213c12",
+        "parentId" : "e3134bd6-4d94-4b1f-99c9-70ed6847952c",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "That's because the the same `a.exprId` value has the two different types: int and long. So, the check fails.",
+        "createdAt" : "2020-09-29T14:13:27Z",
+        "updatedAt" : "2020-09-29T14:13:27Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "05308457-f9dd-47a0-889d-fc0e7a20ca7e",
+        "parentId" : "e3134bd6-4d94-4b1f-99c9-70ed6847952c",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "`a.exprId` is from `t.output`, which should be two different expr ids?",
+        "createdAt" : "2020-09-29T15:39:18Z",
+        "updatedAt" : "2020-09-29T15:39:18Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "826e86be-4860-467a-8d78-e606e2b75b7e",
+        "parentId" : "e3134bd6-4d94-4b1f-99c9-70ed6847952c",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "This is the same case with `Union`;\r\n```\r\nOutputTestPlan(output=[c0#1(long), c1#2(long)])\r\n+- LogicalRelation [a#1(int), b#2(int)]\r\n```\r\nThen, [the integrity check](https://github.com/apache/spark/pull/29585/files#diff-27c76f96a7b2733ecfd6f46a1716e153R244) fails as follows;\r\n```\r\nexprId=1 => int, long\r\nexprId=2 => int, long\r\n```\r\nIn this case, we need to reassign these IDs like this;\r\n```\r\nOutputTestPlan(output=[c0#3(long), c1#4(long)])\r\n+- LogicalRelation [a#1(int), b#2(int)]\r\n\r\nexprId=1 => int\r\nexprId=2 => int\r\nexprId=3 => long\r\nexprId=4 => long\r\n```",
+        "createdAt" : "2020-09-29T23:41:45Z",
+        "updatedAt" : "2020-09-29T23:43:19Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e3c87429e7e6f463c4e7740c7a42e8b2def528b0",
+    "line" : 37,
+    "diffHunk" : "@@ -1,1 +35,39 @@    assert(hasUniqueExprIdsForOutput(OutputTestPlan(t, t.output)))\n    assert(!hasUniqueExprIdsForOutput(OutputTestPlan(t, t.output.zipWithIndex.map {\n      case (a, i) => AttributeReference(s\"c$i\", LongType)(a.exprId)\n    })))\n  }"
+  }
+]

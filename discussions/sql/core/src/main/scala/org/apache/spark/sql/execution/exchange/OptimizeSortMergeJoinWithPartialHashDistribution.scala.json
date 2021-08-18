@@ -1,0 +1,123 @@
+[
+  {
+    "id" : "fe805b7f-68fa-45f7-93af-d54285cc31ec",
+    "prId" : 29655,
+    "prUrl" : "https://github.com/apache/spark/pull/29655#pullrequestreview-483778912",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ff97f7ac-9e6b-40ee-bb40-993cb0bc3be8",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "We cannot implement this optimization in `EnsureRequirements` instead? Any reason to apply this rule after `EnsureRequirements` insert shuffles?",
+        "createdAt" : "2020-09-07T21:46:50Z",
+        "updatedAt" : "2020-09-07T21:46:51Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "761c3da1-0b2b-453b-91d8-f6c729dbb4e3",
+        "parentId" : "ff97f7ac-9e6b-40ee-bb40-993cb0bc3be8",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Also, could you add fine-grained tests for this rule?",
+        "createdAt" : "2020-09-07T21:47:53Z",
+        "updatedAt" : "2020-09-07T21:47:53Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1e0d9432-3b37-4bce-b977-8e235c68852e",
+        "parentId" : "ff97f7ac-9e6b-40ee-bb40-993cb0bc3be8",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "To do this inside `EnsureRequirements.ensureDistributionAndOrdering`, it would require a new `Partitioning` and `Distribution` that know both sides of join, so I didn't go that route. Doing this outside would be less intrusive, I thought. But please let me know if doing this inside `EnsureRequirements` makes more sense. Thanks.\r\n\r\nThis is done after `EnsureRequirements` since reordering keys may eliminate shuffles in which case this rule is not applied.",
+        "createdAt" : "2020-09-08T03:55:04Z",
+        "updatedAt" : "2020-09-08T03:55:04Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "1b5c4e963f0562c38f52f55703efad2c9056a12f",
+    "line" : 39,
+    "diffHunk" : "@@ -1,1 +37,41 @@ * because rows are sorted before join logic is applied.\n */\ncase class OptimizeSortMergeJoinWithPartialHashDistribution(conf: SQLConf) extends Rule[SparkPlan] {\n  def apply(plan: SparkPlan): SparkPlan = {\n    if (!conf.optimizeSortMergeJoinWithPartialHashDistribution) {"
+  },
+  {
+    "id" : "3187afe4-241c-4633-a5e8-94b5bd6fb517",
+    "prId" : 29655,
+    "prUrl" : "https://github.com/apache/spark/pull/29655#pullrequestreview-487209256",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e113e88b-4557-405e-8412-e8d110370426",
+        "parentId" : null,
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "nit: why we can't just pattern matching `ShuffleExchangeExec(_, leftChild, _)` here? It seems to be looking simpler to me.",
+        "createdAt" : "2020-09-12T06:43:02Z",
+        "updatedAt" : "2020-09-12T07:09:49Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "1b5c4e963f0562c38f52f55703efad2c9056a12f",
+    "line" : 51,
+    "diffHunk" : "@@ -1,1 +49,53 @@            lChild,\n            lChildOutputPartitioning: HashPartitioning),\n          _),\n        rSort @ SortExec(_, _,\n          ExtractShuffleExchangeExecChild("
+  },
+  {
+    "id" : "201cde52-39fd-40d5-a20f-6a2b3c938b2c",
+    "prId" : 29655,
+    "prUrl" : "https://github.com/apache/spark/pull/29655#pullrequestreview-487352157",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f4bddef5-fae9-4fb1-9a87-cc1d2c877733",
+        "parentId" : null,
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "sorry if I miss anything, but I feel this might not be correct. We should make sure the `leftPartitioning.expressions` and `rightPartitioning.expressions` has same size, and the order of expressions matters, right?\r\n\r\n`expressions` size is different, so we should not remove shuffle:\r\n```\r\nt1 has 1024 buckets on column (a)\r\nt2 has 1024 buckets on columns (a, b)\r\n\r\nSELECT *\r\nFROM t1\r\nJOIN t2\r\nON t1.a = t2.a AND t1.b = t2.b\r\n```\r\n\r\n`expressions` size is same, but order is wrong, so we should not remove shuffle:\r\n\r\n```\r\nt1 has 1024 buckets on column (a, b)\r\nt2 has 1024 buckets on columns (b, a)\r\n\r\nSELECT *\r\nFROM t1\r\nJOIN t2\r\nON t1.a = t2.a AND AND t1.a = t2.b AND t1.b = t2.a AND t1.b = t2.b\r\n```",
+        "createdAt" : "2020-09-12T06:58:55Z",
+        "updatedAt" : "2020-09-12T07:09:49Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a107c499-fd12-43a5-b738-99844be473f2",
+        "parentId" : "f4bddef5-fae9-4fb1-9a87-cc1d2c877733",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "Thanks. I agree with your concerns for both cases. But, for the first example, only one side will be shuffled, so the rule should not kick in. For the second example,  we have `t1.a = t2.b AND t1.b = t2.a` which matches the bucket ordering, so this should be also fine.\r\n",
+        "createdAt" : "2020-09-12T17:33:05Z",
+        "updatedAt" : "2020-09-12T17:33:06Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4a84dbe8-dd4b-43d6-a972-45a5e3948bce",
+        "parentId" : "f4bddef5-fae9-4fb1-9a87-cc1d2c877733",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "Sorry if I miss anything:\r\n\r\n> But, for the first example, only one side will be shuffled, so the rule should not kick in.\r\n\r\nIf the number of buckets for `t1` is less than number of shuffle partitions, shouldn't it shuffle both sides ? (in [`EnsureRequirements`](https://github.com/apache/spark/blob/master/sql/core/src/main/scala/org/apache/spark/sql/execution/exchange/EnsureRequirements.scala#L96)). So the rule kicks in here and removes both shuffles, but we shouldn't remove any shuffle here.\r\n\r\n> For the second example, we have t1.a = t2.b AND t1.b = t2.a which matches the bucket ordering, so this should be also fine.\r\n\r\nI think it's unsafe if we do not shuffle both sides. `HashPartitioning(Seq(a, b))` and `HashPartitioning(Seq(b, a))` are not same thing, e.g. for tuple (a: 1, b: 2) it will be assigned to different buckets given current `Murmur3Hash` implementation.",
+        "createdAt" : "2020-09-13T21:00:52Z",
+        "updatedAt" : "2020-09-13T21:00:52Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "57c2505f-4bfe-43b7-b179-7b846287373a",
+        "parentId" : "f4bddef5-fae9-4fb1-9a87-cc1d2c877733",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "> If the number of buckets for `t1` is less than number of shuffle partitions, shouldn't it shuffle both sides ? (in [`EnsureRequirements`](https://github.com/apache/spark/blob/master/sql/core/src/main/scala/org/apache/spark/sql/execution/exchange/EnsureRequirements.scala#L96)). So the rule kicks in here and removes both shuffles, but we shouldn't remove any shuffle here.\r\n\r\nYou are right. Thanks for the catch!\r\n\r\n> I think it's unsafe if we do not shuffle both sides. `HashPartitioning(Seq(a, b))` and `HashPartitioning(Seq(b, a))` are not same thing, e.g. for tuple (a: 1, b: 2) it will be assigned to different buckets given current `Murmur3Hash` implementation.\r\n\r\nYes, I understand they produce different hash values. However, it has the join condition `t1.a = t2.b AND t1.b = t2.a`. On the other hand, this rule will not be applied if the condition was `t1.a = t2.a AND t1.b = t2.b`. Please let me know if I missed something. Thanks!",
+        "createdAt" : "2020-09-13T23:53:39Z",
+        "updatedAt" : "2020-09-15T17:04:27Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "1b5c4e963f0562c38f52f55703efad2c9056a12f",
+    "line" : 81,
+    "diffHunk" : "@@ -1,1 +79,83 @@            .map(_.exists(_.semanticEquals(re)))\n            .getOrElse(false)\n        }\n  }\n"
+  }
+]

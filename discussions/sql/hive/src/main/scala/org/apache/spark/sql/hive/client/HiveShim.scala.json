@@ -471,5 +471,170 @@
     "commit" : "a186127197321f4dd3c52ac69784f44e938c5823",
     "line" : 122,
     "diffHunk" : "@@ -1,1 +784,788 @@          ExtractAttribute(SupportedAttribute(name), dt1), ExtractableLiteral(rawValue, dt2))\n          if dt1.isInstanceOf[IntegralType] && dt2.isInstanceOf[StringType] =>\n        fixValue(rawValue, dt1).map { value =>\n          s\"$name ${op.symbol} $value\"\n        }"
+  },
+  {
+    "id" : "fe55e4d9-490a-43fb-ad0b-08586ac1d171",
+    "prId" : 29649,
+    "prUrl" : "https://github.com/apache/spark/pull/29649#pullrequestreview-483109769",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "656c8706-1b77-4a7b-b1f6-3a99cf7c321a",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "What if a different database has the same name of table?",
+        "createdAt" : "2020-09-06T00:43:20Z",
+        "updatedAt" : "2020-09-06T00:43:20Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d5b64025-092a-4212-9fef-065efe27eb0d",
+        "parentId" : "656c8706-1b77-4a7b-b1f6-3a99cf7c321a",
+        "authorId" : "f2e3e1f3-82a3-4b68-a0c2-2f7fdf58cf35",
+        "body" : "This should not be a problem, reason as per below\r\n\r\nSpark prefixes the database name to the table name, so hive can resolve the database from tablename\r\n\r\n**Spark Code** https://github.com/apache/spark/blob/master/sql/hive/src/main/scala/org/apache/spark/sql/hive/client/HiveClientImpl.scala#L855-L873\r\n\r\n![image](https://user-images.githubusercontent.com/35216143/92318002-31032500-f024-11ea-80eb-ad38db0f9a05.png)\r\n\r\n**Hive Code**\r\n\r\n![image](https://user-images.githubusercontent.com/35216143/92318067-b1c22100-f024-11ea-84b9-636f08176d15.png)\r\n\r\nhttps://github.com/apache/hive/blob/rel/release-3.1.0/ql/src/java/org/apache/hadoop/hive/ql/exec/Utilities.java#L2145-L2169\r\n\r\n![image](https://user-images.githubusercontent.com/35216143/92318098-0ebdd700-f025-11ea-89f7-da8d45893d7c.png)\r\n\r\n\r\nP.S : Above mentioned logic is already working with Hive-2.1 support",
+        "createdAt" : "2020-09-06T04:12:33Z",
+        "updatedAt" : "2020-09-06T04:12:34Z",
+        "lastEditedBy" : "f2e3e1f3-82a3-4b68-a0c2-2f7fdf58cf35",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8d45542e915bea1b321f42988b407091065a2539",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +1330,1334 @@    val session = SparkSession.getActiveSession\n    assert(session.nonEmpty)\n    val table = hive.getTable(tableName)\n    val loadFileType = if (replace) {\n      clazzLoadFileType.getEnumConstants.find(_.toString.equalsIgnoreCase(\"REPLACE_ALL\"))"
+  },
+  {
+    "id" : "9b465b8a-9cc9-46fe-8242-07d246c5c4ab",
+    "prId" : 29649,
+    "prUrl" : "https://github.com/apache/spark/pull/29649#pullrequestreview-483249799",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "95f29c98-e41a-4649-8792-a402ea7f1779",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "just for curiosity, why can't we use `hive.getTable(dbName, tblName)` here? It looks weird that the `loadPartition` method in `HiveShim` takes a single `tableName` parameter which is a qualified name.",
+        "createdAt" : "2020-09-07T04:59:04Z",
+        "updatedAt" : "2020-09-07T04:59:05Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "88cdf728-7f91-4986-87fa-ce10794f19b7",
+        "parentId" : "95f29c98-e41a-4649-8792-a402ea7f1779",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "We can use. The problem is when we get the `database` here from `session.get.sessionState.catalog.getCurrentDatabase `.",
+        "createdAt" : "2020-09-07T05:01:21Z",
+        "updatedAt" : "2020-09-07T05:01:22Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "613a748b-b360-4285-86ce-b6d7ffa622d3",
+        "parentId" : "95f29c98-e41a-4649-8792-a402ea7f1779",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "If the question is why `Shim.loadPartition` doesn't take database as an argument, yes I think we can change to take. But looks like it's to match with `Hive.loadPartition`'s signature.",
+        "createdAt" : "2020-09-07T05:13:36Z",
+        "updatedAt" : "2020-09-07T05:13:36Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4f21183a-289e-48e7-b0d6-9f42cacd87a2",
+        "parentId" : "95f29c98-e41a-4649-8792-a402ea7f1779",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "The `Hive.loadPartition` API we are using here takes a `Table` instance as a parameter, not a single table name.",
+        "createdAt" : "2020-09-07T05:16:32Z",
+        "updatedAt" : "2020-09-07T05:16:32Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c3616745-b385-4e4e-81b0-580634d8a31c",
+        "parentId" : "95f29c98-e41a-4649-8792-a402ea7f1779",
+        "authorId" : "f2e3e1f3-82a3-4b68-a0c2-2f7fdf58cf35",
+        "body" : "`Hive.loadPartition` for Hive-3.1.x it takes `Table`, but other Hive version such as 2.1.x takes `tablename` as `string`\r\n\r\nHive-3.1.0\r\n```\r\n  public Partition loadPartition(Path loadPath, Table tbl, Map<String, String> partSpec,\r\n      LoadFileType loadFileType, boolean inheritTableSpecs, boolean isSkewedStoreAsSubdir,\r\n      boolean isSrcLocal, boolean isAcidIUDoperation, boolean hasFollowingStatsTask, Long writeId,\r\n      int stmtId, boolean isInsertOverwrite)\r\n```\r\n\r\nHive-2.1.0\r\n\r\n```\r\n  public void loadPartition(Path loadPath, String tableName,\r\n      Map<String, String> partSpec, boolean replace,\r\n      boolean inheritTableSpecs, boolean isSkewedStoreAsSubdir,\r\n      boolean isSrcLocal, boolean isAcid, boolean hasFollowingStatsTask)\r\n```",
+        "createdAt" : "2020-09-07T05:22:06Z",
+        "updatedAt" : "2020-09-07T05:22:06Z",
+        "lastEditedBy" : "f2e3e1f3-82a3-4b68-a0c2-2f7fdf58cf35",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dde4d59e-66f5-4ab0-9c6a-9e1ed0598a5e",
+        "parentId" : "95f29c98-e41a-4649-8792-a402ea7f1779",
+        "authorId" : "f2e3e1f3-82a3-4b68-a0c2-2f7fdf58cf35",
+        "body" : "> If the question is why `Shim.loadPartition` doesn't take database as an argument, yes I think we can change to take. But looks like it's to match with `Hive.loadPartition`'s signature.\r\n\r\n+1 for this ,  I will update the API signature to take the database name",
+        "createdAt" : "2020-09-07T05:27:10Z",
+        "updatedAt" : "2020-09-07T05:27:11Z",
+        "lastEditedBy" : "f2e3e1f3-82a3-4b68-a0c2-2f7fdf58cf35",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b075d1ff-35e8-4af0-a936-64cb6d19c32d",
+        "parentId" : "95f29c98-e41a-4649-8792-a402ea7f1779",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "I think it's okay to don't change at least in this PR since this PR will likely be ported back. Minimised change here looks good.",
+        "createdAt" : "2020-09-07T05:28:46Z",
+        "updatedAt" : "2020-09-07T05:28:47Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8d45542e915bea1b321f42988b407091065a2539",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +1330,1334 @@    val session = SparkSession.getActiveSession\n    assert(session.nonEmpty)\n    val table = hive.getTable(tableName)\n    val loadFileType = if (replace) {\n      clazzLoadFileType.getEnumConstants.find(_.toString.equalsIgnoreCase(\"REPLACE_ALL\"))"
+  },
+  {
+    "id" : "1060eca6-bfeb-4645-899d-b0893fc92d67",
+    "prId" : 29649,
+    "prUrl" : "https://github.com/apache/spark/pull/29649#pullrequestreview-487206335",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "122dc639-894a-4076-baf1-c0e65562b549",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "In this case, it seems that we can remove the above two lines together, doesn't it?",
+        "createdAt" : "2020-09-11T15:59:18Z",
+        "updatedAt" : "2020-09-11T15:59:19Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1df6f0ee-ed0b-4d59-b8e4-fdcbae71cabb",
+        "parentId" : "122dc639-894a-4076-baf1-c0e65562b549",
+        "authorId" : "f2e3e1f3-82a3-4b68-a0c2-2f7fdf58cf35",
+        "body" : "Ah!! sorry, I missed that will raise follow-up",
+        "createdAt" : "2020-09-12T05:38:05Z",
+        "updatedAt" : "2020-09-12T05:38:05Z",
+        "lastEditedBy" : "f2e3e1f3-82a3-4b68-a0c2-2f7fdf58cf35",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "61967174-dafd-4f2c-9bbe-e7736914cde0",
+        "parentId" : "122dc639-894a-4076-baf1-c0e65562b549",
+        "authorId" : "f2e3e1f3-82a3-4b68-a0c2-2f7fdf58cf35",
+        "body" : "I raised the follow-up PR  [29736](https://github.com/apache/spark/pull/29736). Sorry for the trouble",
+        "createdAt" : "2020-09-12T05:47:33Z",
+        "updatedAt" : "2020-09-12T05:47:33Z",
+        "lastEditedBy" : "f2e3e1f3-82a3-4b68-a0c2-2f7fdf58cf35",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8d45542e915bea1b321f42988b407091065a2539",
+    "line" : 3,
+    "diffHunk" : "@@ -1,1 +1329,1333 @@      isSrcLocal: Boolean): Unit = {\n    val session = SparkSession.getActiveSession\n    assert(session.nonEmpty)\n    val table = hive.getTable(tableName)\n    val loadFileType = if (replace) {"
   }
 ]

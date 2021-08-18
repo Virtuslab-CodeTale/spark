@@ -1,0 +1,123 @@
+[
+  {
+    "id" : "8a1a4482-1f94-46c9-b9ac-1a0d43fd7db3",
+    "prId" : 29589,
+    "prUrl" : "https://github.com/apache/spark/pull/29589#pullrequestreview-485671105",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "644140ef-5079-46a5-ae85-52a8bde9e5f8",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Looks the added test can pass without this fix (I think [the comment](https://github.com/apache/spark/pull/29589#discussion_r482989813) seems to be related to this issue). Could you check this again? @wzhfy ",
+        "createdAt" : "2020-09-07T08:24:20Z",
+        "updatedAt" : "2020-09-07T09:49:29Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9f58d5eb-b48c-406e-b701-dbcceb98e323",
+        "parentId" : "644140ef-5079-46a5-ae85-52a8bde9e5f8",
+        "authorId" : "78cb7df6-a1c6-4bcb-99c1-16fd18fb32f7",
+        "body" : "sure, I'll check",
+        "createdAt" : "2020-09-08T01:36:47Z",
+        "updatedAt" : "2020-09-08T01:36:47Z",
+        "lastEditedBy" : "78cb7df6-a1c6-4bcb-99c1-16fd18fb32f7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8087c4c9-57a8-4c1e-89fe-24d5bd281e90",
+        "parentId" : "644140ef-5079-46a5-ae85-52a8bde9e5f8",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Thanks!",
+        "createdAt" : "2020-09-08T01:38:09Z",
+        "updatedAt" : "2020-09-08T01:38:10Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "58f5ed4e-5544-4cc9-aab7-d3cd6e37d71a",
+        "parentId" : "644140ef-5079-46a5-ae85-52a8bde9e5f8",
+        "authorId" : "78cb7df6-a1c6-4bcb-99c1-16fd18fb32f7",
+        "body" : "@maropu I think you are right. Sorry I misunderstood your comment previously.\r\nBecause in `SubqueryBroadcastExec.relationFuture`, what it really calls is `child.executeBroadcast[HashedRelation]().value`, it should use \"broadcast-exchange\" threads.\r\n\r\nAs a result, it seems that propagation for thread local properties in `SubqueryBroadcastExec` is not necessary, they will be propagated by broadcast threads anyway.\r\n\r\nBTW, the current test case is also not reasonable, since the udf is not evaluated in the broadcasted part. I moved it to a broadcast filter (like below) and found the above problem. Thanks for pointing this out!\r\n```\r\n  test(\"SPARK-32748: propagate local properties to dynamic pruning thread\") {\r\n    val factTable = \"fact_local_prop_dpp\"\r\n    val dimTable = \"dim_local_prop_dpp\"\r\n    val filteringValue = 3\r\n\r\n    def checkPropertyValueByUdfResult(\r\n        propKey: String,\r\n        propValue: String,\r\n        expectedResultCount: Int): Unit = {\r\n      spark.sparkContext.setLocalProperty(propKey, propValue)\r\n      val df = sql(\r\n        s\"\"\"\r\n           |SELECT f.id\r\n           |FROM $factTable f\r\n           |INNER JOIN $dimTable s\r\n           |ON f.id = s.id\r\n           |AND compare_property_value(s.value, '$propKey', '$propValue') = $filteringValue\r\n          \"\"\".stripMargin)\r\n\r\n      val subqueryBroadcastSeq = df.queryExecution.executedPlan.flatMap {\r\n        case s: FileSourceScanExec => s.partitionFilters.collect {\r\n          case DynamicPruningExpression(InSubqueryExec(_, b: SubqueryBroadcastExec, _, _)) => b\r\n        }\r\n        case _ => Nil\r\n      }\r\n      assert(subqueryBroadcastSeq.nonEmpty,\r\n        s\"Should trigger DPP with a reused broadcast exchange:\\n${df.queryExecution}\")\r\n\r\n      assert(df.collect().length == expectedResultCount)\r\n    }\r\n\r\n    withTable(factTable, dimTable) {\r\n      spark.range(10).select($\"id\", $\"id\".as(\"value\"))\r\n        .write.partitionBy(\"id\").mode(\"overwrite\").saveAsTable(factTable)\r\n      spark.range(5).select($\"id\", $\"id\".as(\"value\"))\r\n        .write.mode(\"overwrite\").saveAsTable(dimTable)\r\n\r\n      withSQLConf(\r\n        StaticSQLConf.BROADCAST_EXCHANGE_MAX_THREAD_THRESHOLD.key -> \"1\",\r\n        SQLConf.DYNAMIC_PARTITION_PRUNING_ENABLED.key -> \"true\",\r\n        SQLConf.DYNAMIC_PARTITION_PRUNING_REUSE_BROADCAST_ONLY.key -> \"true\") {\r\n\r\n        try {\r\n          spark.udf.register(\r\n            \"compare_property_value\",\r\n            (input: Int, propKey: String, propValue: String) => {\r\n              if (TaskContext.get().getLocalProperty(propKey) == propValue) {\r\n                filteringValue\r\n              } else {\r\n                input\r\n              }\r\n            }\r\n          )\r\n          val propKey = \"spark.sql.subquery.broadcast.prop.key\"\r\n\r\n          // set local property and assert\r\n          val propValue1 = UUID.randomUUID().toString()\r\n          checkPropertyValueByUdfResult(propKey, propValue1, expectedResultCount = 5)\r\n\r\n          // change local property and re-assert\r\n          val propValue2 = UUID.randomUUID().toString()\r\n          checkPropertyValueByUdfResult(propKey, propValue2, expectedResultCount = 5)\r\n        } finally {\r\n          spark.sessionState.catalog.dropTempFunction(\"compare_property_value\", true)\r\n        }\r\n      }\r\n    }\r\n  }\r\n```\r\n",
+        "createdAt" : "2020-09-08T05:25:40Z",
+        "updatedAt" : "2020-09-08T05:31:17Z",
+        "lastEditedBy" : "78cb7df6-a1c6-4bcb-99c1-16fd18fb32f7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c2309974-51b6-4396-b51b-e5f68efb2192",
+        "parentId" : "644140ef-5079-46a5-ae85-52a8bde9e5f8",
+        "authorId" : "78cb7df6-a1c6-4bcb-99c1-16fd18fb32f7",
+        "body" : "@maropu @cloud-fan So should we revert this pr? And raise a separate jira for configuring the number of subquery broadcast threads (maybe use a different config name other than `StaticSQLConf.BROADCAST_EXCHANGE_MAX_THREAD_THRESHOLD`)?\r\n```\r\nobject SubqueryBroadcastExec {\r\n  private[execution] val executionContext = ExecutionContext.fromExecutorService(\r\n    ThreadUtils.newDaemonCachedThreadPool(\"dynamic-pruning\",\r\n      SQLConf.get.getConf(StaticSQLConf.BROADCAST_EXCHANGE_MAX_THREAD_THRESHOLD)))\r\n}\r\n```",
+        "createdAt" : "2020-09-08T05:27:59Z",
+        "updatedAt" : "2020-09-08T05:28:17Z",
+        "lastEditedBy" : "78cb7df6-a1c6-4bcb-99c1-16fd18fb32f7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "727305d5-39fe-4701-a707-25162c99cef9",
+        "parentId" : "644140ef-5079-46a5-ae85-52a8bde9e5f8",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "oh, then please revert it.\r\n\r\nI don't think we need a separate config. The thread pool here is used to wait for the broadcast to finish, seems better to have same number of slots compared to broadcast exchange thread pool.",
+        "createdAt" : "2020-09-08T06:03:01Z",
+        "updatedAt" : "2020-09-08T06:03:02Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c7f0db6d-2678-482f-8328-b17ec2bacd2f",
+        "parentId" : "644140ef-5079-46a5-ae85-52a8bde9e5f8",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "sgtm",
+        "createdAt" : "2020-09-08T06:03:34Z",
+        "updatedAt" : "2020-09-08T06:03:35Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c10f92f1-68d0-41a5-9337-6a606ddd73e7",
+        "parentId" : "644140ef-5079-46a5-ae85-52a8bde9e5f8",
+        "authorId" : "78cb7df6-a1c6-4bcb-99c1-16fd18fb32f7",
+        "body" : "> I don't think we need a separate config. The thread pool here is used to wait for the broadcast to finish, seems better to have same number of slots compared to broadcast exchange thread pool.\r\n\r\n@cloud-fan  The previous number of subquery broadcast threads is 16, while the default number of broadcast exchange threads is 128.",
+        "createdAt" : "2020-09-08T06:41:24Z",
+        "updatedAt" : "2020-09-08T06:41:24Z",
+        "lastEditedBy" : "78cb7df6-a1c6-4bcb-99c1-16fd18fb32f7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bdc01432-d6d0-47f1-8c9e-046baa637529",
+        "parentId" : "644140ef-5079-46a5-ae85-52a8bde9e5f8",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "let's open a new PR to change the number of threads and discuss there. 16 threads probably are fine, too.",
+        "createdAt" : "2020-09-08T06:58:16Z",
+        "updatedAt" : "2020-09-08T06:58:16Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d60cf1ec-ce0c-4406-8247-5c5cf6f7ca2b",
+        "parentId" : "644140ef-5079-46a5-ae85-52a8bde9e5f8",
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "It would be good if we can set this flag.\r\n\r\n@wzhfy @maropu @cloud-fan sorry if I am late to the party. We should consider keeping this. It is generally good practice to use a narrow waist for these things in the code. It will save someone in the future some time debugging why his change is not working :).",
+        "createdAt" : "2020-09-10T07:53:35Z",
+        "updatedAt" : "2020-09-10T07:53:35Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "aabc23f054d2d988d50c123269046f9cd8453af8",
+    "line" : 28,
+    "diffHunk" : "@@ -1,1 +67,71 @@    // relationFuture is used in \"doExecute\". Therefore we can get the execution id correctly here.\n    val executionId = sparkContext.getLocalProperty(SQLExecution.EXECUTION_ID_KEY)\n    SQLExecution.withThreadLocalCaptured[Array[InternalRow]](\n      sqlContext.sparkSession,\n      SubqueryBroadcastExec.executionContext) {"
+  }
+]

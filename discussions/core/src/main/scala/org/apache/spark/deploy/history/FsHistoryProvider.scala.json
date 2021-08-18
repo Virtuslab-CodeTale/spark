@@ -97,5 +97,71 @@
     "commit" : "0efba0ad3972f3031d5d4c4a14c88d0e3c8f37e7",
     "line" : 4,
     "diffHunk" : "@@ -1,1 +539,543 @@              } catch {\n                case _: FileNotFoundException => false\n                case NonFatal(e) =>\n                  logWarning(s\"Error while reading new log ${reader.rootPath}\", e)\n                  false"
+  },
+  {
+    "id" : "a3ed4ec9-fd79-4728-9529-b8cc1604fd5e",
+    "prId" : 29630,
+    "prUrl" : "https://github.com/apache/spark/pull/29630#pullrequestreview-481622962",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "24b75032-3396-4677-904f-6f37e43400f4",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "This is playing as a \"lock\" for the log file. You can see where the lock flag is accessed or/and modified.",
+        "createdAt" : "2020-09-03T08:41:43Z",
+        "updatedAt" : "2020-09-03T08:41:43Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5cce482ac0a623aaa9d4657995bb2f5574a9a9a4",
+    "line" : 7,
+    "diffHunk" : "@@ -1,1 +474,478 @@      val updated = Option(fs.globStatus(new Path(logDir + \"/*\"))).map(_.toSeq).getOrElse(Nil)\n        .filter { entry => isAccessible(entry.getPath) }\n        .filter { entry => !isProcessing(entry.getPath) }\n        .flatMap { entry => EventLogFileReader(fs, entry) }\n        .filter { reader =>"
+  },
+  {
+    "id" : "46f99457-622b-417a-85fd-bc5afbae26b2",
+    "prId" : 29630,
+    "prUrl" : "https://github.com/apache/spark/pull/29630#pullrequestreview-484304220",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "84700f66-ae0c-4871-9b4e-f3f03b27ad3a",
+        "parentId" : null,
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "yeah I don't quite get this, you are requiring all the directories to be under a single directory, I guess that makes this logic easier, but at the same time why the restriction and not have a list?  If we are going to support multiple directories and make sure it works I don't see the reason to have this restriction.  What if people have multiple clusters writing to different HDFS filesystems for instance.  \r\n\r\nI agree with @HeartSaVioR if we are going to support multiple directories we need to have a thorough look at all the logic here to make sure no other problems. I guess in this case you are using a single filesystem?\r\n\r\nI think we need to flush out more of the overall goals and design first",
+        "createdAt" : "2020-09-03T13:32:52Z",
+        "updatedAt" : "2020-09-03T13:32:52Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "89c68049-79e7-4af0-95b9-190e542c3145",
+        "parentId" : "84700f66-ae0c-4871-9b4e-f3f03b27ad3a",
+        "authorId" : "8b74a389-1f07-40ba-bd69-8c2de0d3c8bb",
+        "body" : "Yes, we are using a single file system in this case. This feature is useful when using external file systems for log data because then multiple directories will correspond to multiple clusters.\r\n\r\nWe could have a list too. Looking into that option.",
+        "createdAt" : "2020-09-03T17:57:17Z",
+        "updatedAt" : "2020-09-03T17:57:17Z",
+        "lastEditedBy" : "8b74a389-1f07-40ba-bd69-8c2de0d3c8bb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b99542b9-2be4-4344-a654-84b8de4caa28",
+        "parentId" : "84700f66-ae0c-4871-9b4e-f3f03b27ad3a",
+        "authorId" : "8b74a389-1f07-40ba-bd69-8c2de0d3c8bb",
+        "body" : "The reason we chose to go with glob-pattern is that our service creates short-lived YARN clusters on which Spark applications are run. Log data goes to directories in a remote file-system. Since the number of these clusters can be really large, glob pattern would better fit our use-case, than a static list would.",
+        "createdAt" : "2020-09-08T16:23:51Z",
+        "updatedAt" : "2020-09-08T16:23:52Z",
+        "lastEditedBy" : "8b74a389-1f07-40ba-bd69-8c2de0d3c8bb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5cce482ac0a623aaa9d4657995bb2f5574a9a9a4",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +472,476 @@      logDebug(s\"Scanning $logDir with lastScanTime==$lastScanTime\")\n\n      val updated = Option(fs.globStatus(new Path(logDir + \"/*\"))).map(_.toSeq).getOrElse(Nil)\n        .filter { entry => isAccessible(entry.getPath) }\n        .filter { entry => !isProcessing(entry.getPath) }"
   }
 ]

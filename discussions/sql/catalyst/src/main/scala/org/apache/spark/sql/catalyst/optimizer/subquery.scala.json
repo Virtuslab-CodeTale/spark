@@ -196,5 +196,137 @@
     "commit" : "b92852d16d85fc79af1d1fa4f62cef6e6181bf48",
     "line" : 2,
     "diffHunk" : "@@ -1,1 +327,331 @@      rewriteSubQueries(f, Seq(a, a.child))\n    // Only a few unary nodes (Project/Filter/Aggregate) can contain subqueries.\n    case q: UnaryNode =>\n      rewriteSubQueries(q, q.children)\n    case s: SupportsSubquery =>"
+  },
+  {
+    "id" : "153736b7-ac7f-4914-bc53-f4dd40f69768",
+    "prId" : 29585,
+    "prUrl" : "https://github.com/apache/spark/pull/29585#pullrequestreview-490556051",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "43a7b83c-5bbd-45c3-949d-f8b965aa28a3",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "why do we need a new expr id here?",
+        "createdAt" : "2020-09-17T12:31:35Z",
+        "updatedAt" : "2020-09-29T12:28:36Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6b763ca8-ffc9-4faf-8b9e-f95a50e20b5a",
+        "parentId" : "43a7b83c-5bbd-45c3-949d-f8b965aa28a3",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Rewritten expressions in a parent node, `Aggregate` or `Project`, need to refer to an attribute with `newExprId` in this child `Project`. The rewritten exprs are generated in `extractCorrelatedScalarSubqueries`:\r\nhttps://github.com/apache/spark/pull/29585/files#diff-597bd2d5f41c767bfbca973b9c0c4766R343-R353",
+        "createdAt" : "2020-09-17T12:49:11Z",
+        "updatedAt" : "2020-09-29T12:28:36Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e3c87429e7e6f463c4e7740c7a42e8b2def528b0",
+    "line" : 41,
+    "diffHunk" : "@@ -1,1 +525,529 @@          // CASE 1: Subquery guaranteed not to have the COUNT bug\n          Project(\n            currentChild.output :+ Alias(origOutput, origOutput.name)(exprId = newExprId),\n            Join(currentChild, query, LeftOuter, conditions.reduceOption(And), JoinHint.NONE))\n        } else {"
+  },
+  {
+    "id" : "fccff45a-5f75-49e8-9f2b-0143d202d5d2",
+    "prId" : 29585,
+    "prUrl" : "https://github.com/apache/spark/pull/29585#pullrequestreview-490718130",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "90313836-726e-40c5-9fab-bea6ce685d3a",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Can we just let `Alias` to generate a new expr id here?",
+        "createdAt" : "2020-09-17T12:33:39Z",
+        "updatedAt" : "2020-09-29T12:28:36Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f5edc05c-6396-48f5-be1d-452a0a857a20",
+        "parentId" : "90313836-726e-40c5-9fab-bea6ce685d3a",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "We might be able to do so, but we need more logic so that a parent node, `Aggregate` and `Project`, can refer to an attribute with a newly-generated expr ID (This topic is related to the comment: \r\nhttps://github.com/apache/spark/pull/29585/files#r490216289).\r\n\r\nIn the current master, the parent node just refer to an attribute with the expr Id of the original output (`origOutput.exprId`) because `origOutput.exprId` is reused in this `Project`. If we generate a new expr Id here, we need to rewrite the parent node later by using the generated expr ID.\r\n\r\nIf necessary, I will try this approach tomorrow, so please let me know.\r\n",
+        "createdAt" : "2020-09-17T15:25:17Z",
+        "updatedAt" : "2020-09-29T12:28:36Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e3c87429e7e6f463c4e7740c7a42e8b2def528b0",
+    "line" : 50,
+    "diffHunk" : "@@ -1,1 +550,554 @@                  If(IsNull(alwaysTrueRef),\n                    resultWithZeroTups.get,\n                    aggValRef), origOutput.name)(exprId = newExprId),\n              Join(currentChild,\n                Project(query.output :+ alwaysTrueExpr, query),"
+  },
+  {
+    "id" : "68d91442-8d5b-416f-abb1-d0680bdddf03",
+    "prId" : 29585,
+    "prUrl" : "https://github.com/apache/spark/pull/29585#pullrequestreview-491198972",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4e32379e-8428-421b-a40c-1e9348db4de5",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "we need more comments to explain what's going on here: we will rewrite the subqueries later and reference their results here by a new attribute.",
+        "createdAt" : "2020-09-17T16:05:14Z",
+        "updatedAt" : "2020-09-29T12:28:36Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d55f90ca-f41f-43cb-90a7-cf117d2c021e",
+        "parentId" : "4e32379e-8428-421b-a40c-1e9348db4de5",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "BTW I feel it's more natural to replace attributes after the subquery rewriting, instead of generating the expr id here.",
+        "createdAt" : "2020-09-17T16:06:26Z",
+        "updatedAt" : "2020-09-29T12:28:36Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a2245062-7f74-4fdf-8d10-23c0bf7c6214",
+        "parentId" : "4e32379e-8428-421b-a40c-1e9348db4de5",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "> BTW I feel it's more natural to replace attributes after the subquery rewriting, instead of generating the expr id here.\r\n\r\nYea, that refactoring looks reasonable and the current logic (top-down rewriting) looks a bit weird. But, I wanna keep the current logic in this PR in order to avoid making new bugs. Is it okay to do it in a separate PR?",
+        "createdAt" : "2020-09-18T00:34:55Z",
+        "updatedAt" : "2020-09-29T12:28:36Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d757e073-e859-489b-9843-4b335997fd78",
+        "parentId" : "4e32379e-8428-421b-a40c-1e9348db4de5",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Added comments there.",
+        "createdAt" : "2020-09-18T00:54:12Z",
+        "updatedAt" : "2020-09-29T12:28:36Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f71ea96b-5047-4114-9377-52112b316171",
+        "parentId" : "4e32379e-8428-421b-a40c-1e9348db4de5",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "If it's top-down now, let's defer to change it and fix it in a new PR.",
+        "createdAt" : "2020-09-18T07:01:23Z",
+        "updatedAt" : "2020-09-29T12:28:36Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e3c87429e7e6f463c4e7740c7a42e8b2def528b0",
+    "line" : 21,
+    "diffHunk" : "@@ -1,1 +352,356 @@        val newExprId = NamedExpression.newExprId\n        subqueries += s -> newExprId\n        s.plan.output.head.withExprId(newExprId)\n    }\n    newExpression.asInstanceOf[E]"
   }
 ]

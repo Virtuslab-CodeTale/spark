@@ -1967,5 +1967,71 @@
     "commit" : "05ae9ecb42986c51bfd85979a5d4d4449f586cf2",
     "line" : 18,
     "diffHunk" : "@@ -1,1 +1131,1135 @@    case f @ Filter(condition, project @ Project(fields, grandChild))\n      if fields.forall(_.deterministic) && canPushThroughCondition(grandChild, condition) &&\n        fields.flatMap(extractExpensiveExprs(_)).isEmpty =>\n      val aliasMap = getAliasMap(project)\n      project.copy(child = Filter(replaceAlias(condition, aliasMap), grandChild))"
+  },
+  {
+    "id" : "b08326a7-f0c6-4e96-bd82-be7773a2053b",
+    "prId" : 29673,
+    "prUrl" : "https://github.com/apache/spark/pull/29673#pullrequestreview-484055826",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6cb70d4c-76bb-4ccb-b148-dd01ef371676",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "can we add a comment to say: this batch must be run after \"Decimal Optimizations\", as \"Decimal Optimizations\" may change the aggregate distinct column?",
+        "createdAt" : "2020-09-08T11:51:25Z",
+        "updatedAt" : "2020-09-11T00:37:38Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8510ff92177554d9e87bd2e30e6fa9e43f89b8e3",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +198,202 @@    // This batch must run after \"Decimal Optimizations\", as that one may change the\n    // aggregate distinct column\n    Batch(\"Distinct Aggregate Rewrite\", Once,\n      RewriteDistinctAggregates) :+\n    Batch(\"Object Expressions Optimization\", fixedPoint,"
+  },
+  {
+    "id" : "7a01fa85-cb84-4ab1-acb9-9aad50295d3e",
+    "prId" : 29585,
+    "prUrl" : "https://github.com/apache/spark/pull/29585#pullrequestreview-484132264",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f07cc162-5d15-4f1a-b963-e6200f970cc9",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "`d.output` is actually `child.output`, but `newAgg.output` may have different number of columns if `keys.isEmpty`. how about\r\n```\r\nif (keys.isEmpty) {\r\n  Aggregate(Seq(Literal(1)), aggCols, child)\r\n} else {\r\n  val newAgg  = ...\r\n  ...\r\n}\r\n```",
+        "createdAt" : "2020-09-08T08:35:48Z",
+        "updatedAt" : "2020-09-29T12:28:36Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b23bf163-2b74-4116-a57e-f6b49912c5ab",
+        "parentId" : "f07cc162-5d15-4f1a-b963-e6200f970cc9",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Looks the length of `Aggregate.output` is `aggCols.length` and `aggCols.length` is the same with `Deduplicate.child.length`?",
+        "createdAt" : "2020-09-08T13:04:26Z",
+        "updatedAt" : "2020-09-29T12:28:36Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c3a6775c-c2b3-4193-8345-64d05b55dbba",
+        "parentId" : "f07cc162-5d15-4f1a-b963-e6200f970cc9",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "ah sorry, it's the grouping key, nvm.",
+        "createdAt" : "2020-09-08T13:21:18Z",
+        "updatedAt" : "2020-09-29T12:28:36Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e3c87429e7e6f463c4e7740c7a42e8b2def528b0",
+    "line" : 45,
+    "diffHunk" : "@@ -1,1 +1603,1607 @@      val nonemptyKeys = if (keys.isEmpty) Literal(1) :: Nil else keys\n      val newAgg = Aggregate(nonemptyKeys, aggCols, child)\n      val attrMapping = d.output.zip(newAgg.output)\n      newAgg -> attrMapping\n  }"
   }
 ]

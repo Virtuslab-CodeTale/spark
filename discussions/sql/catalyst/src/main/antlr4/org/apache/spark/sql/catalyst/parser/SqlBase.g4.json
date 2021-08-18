@@ -361,5 +361,93 @@
     "commit" : "bfc03afaf9fc0974cb218b3b3121829ae9e5c413",
     "line" : 20,
     "diffHunk" : "@@ -1,1 +603,607 @@\ngroupingAnalytics\n    : (ROLLUP | CUBE | GROUPING SETS)  '(' groupingSet (',' groupingSet)* ')'\n    ;\n"
+  },
+  {
+    "id" : "654b9e56-a8bd-40d4-90dc-32e5013b63e0",
+    "prId" : 29627,
+    "prUrl" : "https://github.com/apache/spark/pull/29627#pullrequestreview-481431562",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f3ec5958-e0c9-4fea-b056-c1c5674370f9",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "can you explain how the bug triggers?",
+        "createdAt" : "2020-09-02T13:42:25Z",
+        "updatedAt" : "2020-09-03T06:32:19Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2518ece7-981b-4046-8964-0c3c8afaeb0d",
+        "parentId" : "f3ec5958-e0c9-4fea-b056-c1c5674370f9",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "OK, I will update pr description after ci passes",
+        "createdAt" : "2020-09-02T13:51:04Z",
+        "updatedAt" : "2020-09-03T06:32:19Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4ececc25-69fd-40d0-8f81-b936cb9624d8",
+        "parentId" : "f3ec5958-e0c9-4fea-b056-c1c5674370f9",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "Before this PR, these cases will be captured by grammar rule `multiUnitsInterval` but not `typedLiteral`, e.g. for interval '1 day' day, the value is `1 day` and the unit is day， which actually should be parsed as `((interval 1 day) as day)`\r\n\r\nIn this PR, I add a new rule \"INTERVAL STRING AS? identifier? \" to handle interval typed literals(maybe aliasing) and 1-stingvalue-unit interval together and before the rule `multiUnitsInterval`.\r\n\r\nwhen the \"AS\" key is not null, the `STRING` must be the whole context of the interval whether it is valid or not, the identifier should be the alias name or else the \"AS\" itself as alias name.\r\n\r\nwhen the \"AS\" key is null\r\n    1 and when the `STRING` contains any alphabet, we can assume that the  `STRING` is the whole context of the interval whether it is valid or not. the identifier part will be alias name if present\r\n    2 and when the `STRING` contains no alphabet, e.g. '1' day, '-1' day, '\\t1' day, so the identifier here should be the unit part whether it is valid or not.\r\n\r\nAlso updated in PR desc.",
+        "createdAt" : "2020-09-02T14:15:52Z",
+        "updatedAt" : "2020-09-03T06:32:19Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d4b90d4b-f9bd-4b7f-99d0-f1cadbd0d9b9",
+        "parentId" : "f3ec5958-e0c9-4fea-b056-c1c5674370f9",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "can you check `interval '1 day' day` in other systems? To see if they also treat '1 day' as the number of days and fail.",
+        "createdAt" : "2020-09-02T16:19:20Z",
+        "updatedAt" : "2020-09-03T06:32:19Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cd22d626-549d-439d-ad05-3918bf0e8472",
+        "parentId" : "f3ec5958-e0c9-4fea-b056-c1c5674370f9",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "```\r\npostgres=# select interval '1 day' day;\r\n interval\r\n----------\r\n 1 day\r\n(1 row)\r\n\r\npostgres=# select interval '1' day day;\r\nERROR:  syntax error at or near \"day\"\r\nLINE 1: select interval '1' day day;\r\n                                ^\r\npostgres=# select interval '1' day;\r\n interval\r\n----------\r\n 1 day\r\n(1 row)\r\n```\r\n\r\n\r\n\r\n",
+        "createdAt" : "2020-09-03T01:58:07Z",
+        "updatedAt" : "2020-09-03T06:32:19Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7141f28c-3d5e-42e8-8453-8768a4790f27",
+        "parentId" : "f3ec5958-e0c9-4fea-b056-c1c5674370f9",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "```sql\r\npresto> select interval '1 day' day;\r\nQuery 20200903_015817_00008_gec8v failed: Invalid INTERVAL DAY value: 1 day\r\n\r\npresto> select interval '1' day day;\r\n      day\r\n----------------\r\n 1 00:00:00.000\r\n(1 row)\r\n\r\nQuery 20200903_015821_00009_gec8v, FINISHED, 1 node\r\nSplits: 17 total, 17 done (100.00%)\r\n0:00 [0 rows, 0B] [0 rows/s, 0B/s]\r\n\r\npresto> select interval '1' day;\r\n     _col0\r\n----------------\r\n 1 00:00:00.000\r\n(1 row)\r\n\r\nQuery 20200903_015825_00010_gec8v, FINISHED, 1 node\r\nSplits: 17 total, 17 done (100.00%)\r\n0:00 [0 rows, 0B] [0 rows/s, 0B/s]\r\n\r\npresto>\r\n```",
+        "createdAt" : "2020-09-03T01:58:53Z",
+        "updatedAt" : "2020-09-03T06:32:19Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "34c3801a-52fa-4857-b6ab-9f9ce17792ba",
+        "parentId" : "f3ec5958-e0c9-4fea-b056-c1c5674370f9",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "presto does not support typed literal for intervals",
+        "createdAt" : "2020-09-03T02:01:14Z",
+        "updatedAt" : "2020-09-03T06:32:19Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "0ea121ee778243fb229ddbf70474c9dc37159e11",
+    "line" : 4,
+    "diffHunk" : "@@ -1,1 +819,823 @@constant\n    : NULL                                                                                     #nullLiteral\n    | INTERVAL STRING AS? identifier?                                                          #maybeAliasedIntervalLiteral\n    | interval                                                                                 #intervalLiteral\n    | identifier STRING                                                                        #typeConstructor"
   }
 ]

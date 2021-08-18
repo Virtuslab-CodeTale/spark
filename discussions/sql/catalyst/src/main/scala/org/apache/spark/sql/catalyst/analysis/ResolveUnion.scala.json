@@ -251,5 +251,489 @@
     "commit" : "eb8ddfb432ee120ba617b71f77a0f3f71d56e01c",
     "line" : 181,
     "diffHunk" : "@@ -1,1 +104,108 @@              if allowMissingCol && !source.sameType(target) =>\n            // We have two structs with different types, so make sure the two structs have their\n            // fields in the same order by using `target`'s fields and then inluding any remaining\n            // in `foundAttr`.\n            aliased += foundAttr"
+  },
+  {
+    "id" : "4c9dae40-526a-4a4b-a48d-dd7db2c9027d",
+    "prId" : 29587,
+    "prUrl" : "https://github.com/apache/spark/pull/29587#pullrequestreview-481495533",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "28ec24fd-f119-4c6a-bf6c-3c94bf97c212",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "nit:\r\n```\r\n      if (leftProjectList.length != left.output.length ||\r\n          leftProjectList.map(_.toAttribute) != left.output) {\r\n```\r\n?",
+        "createdAt" : "2020-09-03T05:04:46Z",
+        "updatedAt" : "2020-10-16T19:47:41Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ea249419-a830-42b9-b1a5-10797b4815ff",
+        "parentId" : "28ec24fd-f119-4c6a-bf6c-3c94bf97c212",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Doesn't `leftProjectList.map(_.toAttribute) != left.output` already cover `leftProjectList.length != left.output.length`?",
+        "createdAt" : "2020-09-03T05:07:44Z",
+        "updatedAt" : "2020-10-16T19:47:41Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3d907d07233851d6169533d0475c5a53b02cb4a7",
+    "line" : 225,
+    "diffHunk" : "@@ -1,1 +231,235 @@      // Add missing (nested) fields to left plan.\n      val (leftProjectList, _) = compareAndAddFields(rightChild, left, allowMissingCol)\n      if (leftProjectList.map(_.toAttribute) != left.output) {\n        Project(leftProjectList, left)\n      } else {"
+  },
+  {
+    "id" : "fe2ad167-f1f7-4607-be5e-50d86c1caee5",
+    "prId" : 29587,
+    "prUrl" : "https://github.com/apache/spark/pull/29587#pullrequestreview-487261836",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "cb230fc7-7a5f-4294-b53d-4f9c050ae568",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "To make the logic simpler, could we filter out all the unsupported case (e.g., `nested struct in array`) here? This is it like this;\r\n```\r\n          case (source: StructType, target: StructType)\r\n              if allowMissingCol && canMergeSchemas(source, target) =>\r\n```",
+        "createdAt" : "2020-09-09T01:30:50Z",
+        "updatedAt" : "2020-10-16T19:47:41Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3205cb9d-9e33-440c-aecb-09d8d7b48b04",
+        "parentId" : "cb230fc7-7a5f-4294-b53d-4f9c050ae568",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Hmm, I'm not sure where we can simplify the logic? By adding `canMergeSchemas`, doesn't it look more complicated?",
+        "createdAt" : "2020-09-11T04:12:42Z",
+        "updatedAt" : "2020-10-16T19:47:41Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bb3fdb31-69dd-46ec-a29c-fd92dfddd6e7",
+        "parentId" : "cb230fc7-7a5f-4294-b53d-4f9c050ae568",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "I read [the comment](https://github.com/apache/spark/pull/29587/files#diff-4d656d696512d6bcb03a48f7e0af6251R109-R111) and I thought first that all the unsupported cases are handled in the line 108-112. But, it also means unsupported cases if `addFields` returning  `None`? This might be a issue that can be fixed just by improving comments though.",
+        "createdAt" : "2020-09-11T08:34:18Z",
+        "updatedAt" : "2020-10-16T19:47:41Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "33028d0a-3554-4fa4-aa58-513ac8d5b225",
+        "parentId" : "cb230fc7-7a5f-4294-b53d-4f9c050ae568",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "I see. I will add more comments explaining this.",
+        "createdAt" : "2020-09-12T23:09:44Z",
+        "updatedAt" : "2020-10-16T19:47:41Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3d907d07233851d6169533d0475c5a53b02cb4a7",
+    "line" : 173,
+    "diffHunk" : "@@ -1,1 +182,186 @@        (foundDt, lattr.dataType) match {\n          case (source: StructType, target: StructType)\n              if allowMissingCol && !source.sameType(target) =>\n            // Having an output with same name, but different struct type.\n            // We need to add missing fields. Note that if there are deeply nested structs such as"
+  },
+  {
+    "id" : "d2f955e6-7edc-42b3-95d8-fe2a0c4c3658",
+    "prId" : 29587,
+    "prUrl" : "https://github.com/apache/spark/pull/29587#pullrequestreview-487277120",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d008ee4c-758c-403f-b311-1bc3aad5c311",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Shall we declare a `val` for `found.get` after this line? Then, we can use it at line 98, 106, 107, 108, 109, 117.",
+        "createdAt" : "2020-09-13T05:50:58Z",
+        "updatedAt" : "2020-10-16T19:47:41Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3d907d07233851d6169533d0475c5a53b02cb4a7",
+    "line" : 168,
+    "diffHunk" : "@@ -1,1 +177,181 @@    val rightProjectList = leftOutputAttrs.map { lattr =>\n      val found = rightOutputAttrs.find { rattr => resolver(lattr.name, rattr.name) }\n      if (found.isDefined) {\n        val foundAttr = found.get\n        val foundDt = foundAttr.dataType"
+  },
+  {
+    "id" : "36bc86ec-03d3-40e7-a3a9-43b630a39d58",
+    "prId" : 29587,
+    "prUrl" : "https://github.com/apache/spark/pull/29587#pullrequestreview-487427813",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9190cf08-0f8a-41ca-98a8-71566dfe50d2",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Although we have a rich comment in the function body, could you add a function description to give a general idea?",
+        "createdAt" : "2020-09-14T04:09:37Z",
+        "updatedAt" : "2020-10-16T19:47:41Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d8080d57-40a9-4417-9acf-c01ae2c9936e",
+        "parentId" : "9190cf08-0f8a-41ca-98a8-71566dfe50d2",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Added.",
+        "createdAt" : "2020-09-14T05:38:55Z",
+        "updatedAt" : "2020-10-16T19:47:41Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3d907d07233851d6169533d0475c5a53b02cb4a7",
+    "line" : 153,
+    "diffHunk" : "@@ -1,1 +165,169 @@   * method will try to add missing (nested) fields into the right attribute with null values.\n   */\n  private def compareAndAddFields(\n      left: LogicalPlan,\n      right: LogicalPlan,"
+  },
+  {
+    "id" : "80efefc2-db96-426d-aaa8-b3ffdfe112f8",
+    "prId" : 29587,
+    "prUrl" : "https://github.com/apache/spark/pull/29587#pullrequestreview-489761830",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5af553b9-f759-44a6-be5a-e7c05d77df56",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "There are functions having the same names, so could we assign different names? I think its a bit confusing.",
+        "createdAt" : "2020-09-16T08:29:59Z",
+        "updatedAt" : "2020-10-16T19:47:41Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3adc2921-4dbe-4b83-8411-c52052affb61",
+        "parentId" : "5af553b9-f759-44a6-be5a-e7c05d77df56",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "sure, let me think about better method names.",
+        "createdAt" : "2020-09-16T15:45:06Z",
+        "updatedAt" : "2020-10-16T19:47:41Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3d907d07233851d6169533d0475c5a53b02cb4a7",
+    "line" : 25,
+    "diffHunk" : "@@ -1,1 +37,41 @@   * This method sorts columns recursively in a struct expression based on column names.\n   */\n  private def sortStructFields(expr: Expression): Expression = {\n    val existingExprs = expr.dataType.asInstanceOf[StructType].fieldNames.zipWithIndex.map {\n      case (name, i) =>"
+  },
+  {
+    "id" : "91063504-6362-4d1f-a651-abd2a7aea2cc",
+    "prId" : 29587,
+    "prUrl" : "https://github.com/apache/spark/pull/29587#pullrequestreview-492164518",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9db5f54a-6e0c-4ef4-8b6c-9133a35932a4",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "We don't need to sort names recursively for nested struct cases?",
+        "createdAt" : "2020-09-16T08:35:56Z",
+        "updatedAt" : "2020-10-16T19:47:41Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a282efb0-501c-46cb-9b13-e26b0d5592b4",
+        "parentId" : "9db5f54a-6e0c-4ef4-8b6c-9133a35932a4",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Oh, we need this to make sure two sides have consistent schema. For example the test case from @fqaiser94 in https://github.com/apache/spark/pull/29587#discussion_r488100532, when we add field to one side, another side still needs to sort its column, otherwise there is inconsistency.",
+        "createdAt" : "2020-09-16T15:47:40Z",
+        "updatedAt" : "2020-10-16T19:47:41Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c998ea6a-1e0c-460c-b7af-3007b045602b",
+        "parentId" : "9db5f54a-6e0c-4ef4-8b6c-9133a35932a4",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "@maropu I got you point when I was fixing the performance issue. Yeah, we should. I fixed it in latest commit. Thanks.",
+        "createdAt" : "2020-09-20T01:03:50Z",
+        "updatedAt" : "2020-10-16T19:47:41Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3d907d07233851d6169533d0475c5a53b02cb4a7",
+    "line" : 103,
+    "diffHunk" : "@@ -1,1 +115,119 @@    // \"a int, c string, b long\", which are not compatible.\n    if (missingFieldsOpt.isEmpty) {\n      sortStructFields(col)\n    } else {\n      missingFieldsOpt.map { s =>"
+  },
+  {
+    "id" : "3adebdb3-f1bc-444c-b148-b95d97b3a2b2",
+    "prId" : 29587,
+    "prUrl" : "https://github.com/apache/spark/pull/29587#pullrequestreview-492164490",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "667bf20f-ad98-4499-beba-a4c72b9a1545",
+        "parentId" : null,
+        "authorId" : "6fc88871-fca6-485c-a47e-5e17709c7b68",
+        "body" : "I'm not sure this will scale well. Here's a currently failing test for me: \r\n```\r\n  def nestedDf(depth: Int, numColsAtEachDepth: Int): DataFrame = {\r\n    val initialNestedStructType = StructType(\r\n      (0 to numColsAtEachDepth).map(i =>\r\n        StructField(s\"nested${depth}Col$i\", IntegerType, nullable = false))\r\n    )\r\n    val initialNestedValues = Row(0 to numColsAtEachDepth: _*)\r\n\r\n    var depthCounter = depth - 1\r\n    var structType = initialNestedStructType\r\n    var struct = initialNestedValues\r\n    while (depthCounter != 0) {\r\n      struct = Row((struct +: (1 to numColsAtEachDepth)): _*)\r\n      structType = StructType(\r\n        StructField(s\"nested${depthCounter}Col0\", structType, nullable = false) +:\r\n          (1 to numColsAtEachDepth).map(i =>\r\n            StructField(s\"nested${depthCounter}Col$i\", IntegerType, nullable = false))\r\n      )\r\n      depthCounter -= 1\r\n    }\r\n\r\n    val df: DataFrame = spark.createDataFrame(\r\n      sparkContext.parallelize(Row(struct) :: Nil),\r\n      StructType(Seq(StructField(\"nested0Col0\", structType))))\r\n\r\n    df\r\n  }\r\n\r\n  test(\"check performance with lots of nested columns at different depths\") {\r\n    withSQLConf(SQLConf.UNION_BYNAME_STRUCT_SUPPORT_ENABLED.key -> \"true\") {\r\n      val df1: DataFrame = nestedDf(depth = 10, numColsAtEachDepth = 1)\r\n      val df2: DataFrame = nestedDf(depth = 10, numColsAtEachDepth = 20)\r\n      val res = df1.unionByName(df2, allowMissingColumns = true)\r\n      res.explain(true)\r\n    }\r\n  }\r\n```\r\nfails with this exception after a long time: \r\n```\r\n[info] org.apache.spark.sql.DataFrameSetOperationsSuite *** ABORTED *** (3 minutes, 35 seconds)\r\n[info]   java.lang.OutOfMemoryError: GC overhead limit exceeded\r\n```\r\n\r\nNot sure but I think the plans being generated might be too big. The generated physical plans don't look particularly well optimized to me for simpler scenarios: \r\n```\r\n  test(\"check physical plan for simple scenario\") {\r\n    withSQLConf(SQLConf.UNION_BYNAME_STRUCT_SUPPORT_ENABLED.key -> \"true\") {\r\n      val df1: DataFrame = nestedDf(depth = 2, numColsAtEachDepth = 1)\r\n      val df2: DataFrame = nestedDf(depth = 2, numColsAtEachDepth = 2)\r\n      val res = df1.unionByName(df2, allowMissingColumns = true)\r\n      res.explain(true)\r\n    }\r\n  }\r\n```\r\ngives me this plan: \r\n```\r\n== Parsed Logical Plan ==\r\n'Union true, true\r\n:- LogicalRDD [nested0Col0#1], false\r\n+- LogicalRDD [nested0Col0#4], false\r\n\r\n== Analyzed Logical Plan ==\r\nnested0Col0: struct<nested1Col0:struct<nested2Col0:int,nested2Col1:int,nested2Col2:int>,nested1Col1:int,nested1Col2:int>\r\nUnion false, false\r\n:- Project [if (isnull(if (isnull(nested0Col0#1)) null else named_struct(nested1Col0, if (isnull(nested0Col0#1.nested1Col0)) null else named_struct(nested2Col0, knownnotnull(nested0Col0#1.nested1Col0).nested2Col0, nested2Col1, knownnotnull(nested0Col0#1.nested1Col0).nested2Col1, nested2Col2, null), nested1Col1, knownnotnull(nested0Col0#1).nested1Col1))) null else named_struct(nested1Col0, knownnotnull(if (isnull(nested0Col0#1)) null else named_struct(nested1Col0, if (isnull(nested0Col0#1.nested1Col0)) null else named_struct(nested2Col0, knownnotnull(nested0Col0#1.nested1Col0).nested2Col0, nested2Col1, knownnotnull(nested0Col0#1.nested1Col0).nested2Col1, nested2Col2, null), nested1Col1, knownnotnull(nested0Col0#1).nested1Col1)).nested1Col0, nested1Col1, knownnotnull(if (isnull(nested0Col0#1)) null else named_struct(nested1Col0, if (isnull(nested0Col0#1.nested1Col0)) null else named_struct(nested2Col0, knownnotnull(nested0Col0#1.nested1Col0).nested2Col0, nested2Col1, knownnotnull(nested0Col0#1.nested1Col0).nested2Col1, nested2Col2, null), nested1Col1, knownnotnull(nested0Col0#1).nested1Col1)).nested1Col1, nested1Col2, null) AS nested0Col0#7]\r\n:  +- LogicalRDD [nested0Col0#1], false\r\n+- Project [if (isnull(nested0Col0#4)) null else named_struct(nested1Col0, knownnotnull(nested0Col0#4).nested1Col0, nested1Col1, knownnotnull(nested0Col0#4).nested1Col1, nested1Col2, knownnotnull(nested0Col0#4).nested1Col2) AS nested0Col0#6]\r\n   +- LogicalRDD [nested0Col0#4], false\r\n\r\n== Optimized Logical Plan ==\r\nUnion false, false\r\n:- Project [if (isnull(if (isnull(nested0Col0#1)) null else named_struct(nested1Col0, if (isnull(nested0Col0#1.nested1Col0)) null else named_struct(nested2Col0, knownnotnull(nested0Col0#1.nested1Col0).nested2Col0, nested2Col1, knownnotnull(nested0Col0#1.nested1Col0).nested2Col1, nested2Col2, null), nested1Col1, knownnotnull(nested0Col0#1).nested1Col1))) null else named_struct(nested1Col0, knownnotnull(if (isnull(nested0Col0#1)) null else named_struct(nested1Col0, if (isnull(nested0Col0#1.nested1Col0)) null else named_struct(nested2Col0, knownnotnull(nested0Col0#1.nested1Col0).nested2Col0, nested2Col1, knownnotnull(nested0Col0#1.nested1Col0).nested2Col1, nested2Col2, null), nested1Col1, knownnotnull(nested0Col0#1).nested1Col1)).nested1Col0, nested1Col1, knownnotnull(if (isnull(nested0Col0#1)) null else named_struct(nested1Col0, if (isnull(nested0Col0#1.nested1Col0)) null else named_struct(nested2Col0, knownnotnull(nested0Col0#1.nested1Col0).nested2Col0, nested2Col1, knownnotnull(nested0Col0#1.nested1Col0).nested2Col1, nested2Col2, null), nested1Col1, knownnotnull(nested0Col0#1).nested1Col1)).nested1Col1, nested1Col2, null) AS nested0Col0#7]\r\n:  +- LogicalRDD [nested0Col0#1], false\r\n+- Project [if (isnull(nested0Col0#4)) null else named_struct(nested1Col0, knownnotnull(nested0Col0#4).nested1Col0, nested1Col1, knownnotnull(nested0Col0#4).nested1Col1, nested1Col2, knownnotnull(nested0Col0#4).nested1Col2) AS nested0Col0#6]\r\n   +- LogicalRDD [nested0Col0#4], false\r\n\r\n== Physical Plan ==\r\nUnion\r\n:- *(1) Project [if (isnull(if (isnull(nested0Col0#1)) null else named_struct(nested1Col0, if (isnull(nested0Col0#1.nested1Col0)) null else named_struct(nested2Col0, knownnotnull(nested0Col0#1.nested1Col0).nested2Col0, nested2Col1, knownnotnull(nested0Col0#1.nested1Col0).nested2Col1, nested2Col2, null), nested1Col1, knownnotnull(nested0Col0#1).nested1Col1))) null else named_struct(nested1Col0, knownnotnull(if (isnull(nested0Col0#1)) null else named_struct(nested1Col0, if (isnull(nested0Col0#1.nested1Col0)) null else named_struct(nested2Col0, knownnotnull(nested0Col0#1.nested1Col0).nested2Col0, nested2Col1, knownnotnull(nested0Col0#1.nested1Col0).nested2Col1, nested2Col2, null), nested1Col1, knownnotnull(nested0Col0#1).nested1Col1)).nested1Col0, nested1Col1, knownnotnull(if (isnull(nested0Col0#1)) null else named_struct(nested1Col0, if (isnull(nested0Col0#1.nested1Col0)) null else named_struct(nested2Col0, knownnotnull(nested0Col0#1.nested1Col0).nested2Col0, nested2Col1, knownnotnull(nested0Col0#1.nested1Col0).nested2Col1, nested2Col2, null), nested1Col1, knownnotnull(nested0Col0#1).nested1Col1)).nested1Col1, nested1Col2, null) AS nested0Col0#7]\r\n:  +- *(1) Scan ExistingRDD[nested0Col0#1]\r\n+- *(2) Project [if (isnull(nested0Col0#4)) null else named_struct(nested1Col0, knownnotnull(nested0Col0#4).nested1Col0, nested1Col1, knownnotnull(nested0Col0#4).nested1Col1, nested1Col2, knownnotnull(nested0Col0#4).nested1Col2) AS nested0Col0#6]\r\n   +- *(2) Scan ExistingRDD[nested0Col0#4]\r\n```",
+        "createdAt" : "2020-09-16T14:07:51Z",
+        "updatedAt" : "2020-10-16T19:47:41Z",
+        "lastEditedBy" : "6fc88871-fca6-485c-a47e-5e17709c7b68",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8245ce3c-fac2-453d-9da6-1e6ddaaa830d",
+        "parentId" : "667bf20f-ad98-4499-beba-a4c72b9a1545",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Well, I currently extract the evaluation expr out from `WithFields`, otherwise it is more complicated...I think if you use `WithFields` to manually change such deep structure, there might be same scale issue.",
+        "createdAt" : "2020-09-16T15:41:07Z",
+        "updatedAt" : "2020-10-16T19:47:41Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3219da38-6387-4f99-b4c1-1775075fdc8b",
+        "parentId" : "667bf20f-ad98-4499-beba-a4c72b9a1545",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Let me think how we can improve it..",
+        "createdAt" : "2020-09-16T15:43:04Z",
+        "updatedAt" : "2020-10-16T19:47:41Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d93b7e37-a63d-4fd6-9574-c09217b10c27",
+        "parentId" : "667bf20f-ad98-4499-beba-a4c72b9a1545",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Improved in latest commit.",
+        "createdAt" : "2020-09-20T01:02:47Z",
+        "updatedAt" : "2020-10-16T19:47:41Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3d907d07233851d6169533d0475c5a53b02cb4a7",
+    "line" : 199,
+    "diffHunk" : "@@ -1,1 +211,215 @@\n    (rightProjectList, aliased.toSeq)\n  }\n\n  private def unionTwoSides("
+  },
+  {
+    "id" : "bbfbae10-d3c8-48a6-959d-7eae96585a2e",
+    "prId" : 29587,
+    "prUrl" : "https://github.com/apache/spark/pull/29587#pullrequestreview-502617619",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "64320b1c-3439-4bcc-88d9-3d2aa83b80df",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "If this case means a program bug, the message should include `Please file a bug report ...` like the others?\r\nhttps://github.com/apache/spark/blob/fab53212cb110a81696cee8546c35095332f6e09/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/analysis/Analyzer.scala#L2747-L2748",
+        "createdAt" : "2020-10-05T02:32:11Z",
+        "updatedAt" : "2020-10-16T19:47:41Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4d59ec54-2c90-4f27-941a-5656368662f2",
+        "parentId" : "64320b1c-3439-4bcc-88d9-3d2aa83b80df",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Okay, I will revise the error message here. Thanks.",
+        "createdAt" : "2020-10-06T03:06:30Z",
+        "updatedAt" : "2020-10-16T19:47:41Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1c1861c0-b04d-431f-84fc-e602b8b2951a",
+        "parentId" : "64320b1c-3439-4bcc-88d9-3d2aa83b80df",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Revised.",
+        "createdAt" : "2020-10-06T06:29:03Z",
+        "updatedAt" : "2020-10-16T19:47:41Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3d907d07233851d6169533d0475c5a53b02cb4a7",
+    "line" : 71,
+    "diffHunk" : "@@ -1,1 +83,87 @@          val newStruct = CreateNamedStruct(sorted)\n          newStruct\n        case other =>\n          throw new IllegalStateException(s\"`UpdateFields` has incorrect expression: $other. \" +\n            \"Please file a bug report with this error message, stack trace, and the query.\")"
+  },
+  {
+    "id" : "c4148c4d-4e56-4d57-b732-c05b6204e30d",
+    "prId" : 29587,
+    "prUrl" : "https://github.com/apache/spark/pull/29587#pullrequestreview-502552770",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b4b2793b-c26a-4141-8e52-ef3944f583a2",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "nit: `private`. Btw, all the transformations in this method will be moved into an optimizer rule in followup? We normally add tests when adding a new rule, but this PR does not have any test for them.",
+        "createdAt" : "2020-10-05T02:40:32Z",
+        "updatedAt" : "2020-10-16T19:47:41Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "05533c50-5794-46e5-b730-6b4eb3895540",
+        "parentId" : "b4b2793b-c26a-4141-8e52-ef3944f583a2",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Yeah, actually there is #29812 for that, but is stuck by other PR that is refactoring `WithFields`.",
+        "createdAt" : "2020-10-06T03:05:56Z",
+        "updatedAt" : "2020-10-16T19:47:41Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3d907d07233851d6169533d0475c5a53b02cb4a7",
+    "line" : 77,
+    "diffHunk" : "@@ -1,1 +89,93 @@  }\n\n  def simplifyWithFields(expr: Expression): Expression = {\n    expr.transformUp {\n      case UpdateFields(UpdateFields(struct, fieldOps1), fieldOps2) =>"
+  },
+  {
+    "id" : "48f1bbff-b508-4b47-9a32-ac25f111442c",
+    "prId" : 29587,
+    "prUrl" : "https://github.com/apache/spark/pull/29587#pullrequestreview-508682834",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ca55402a-9501-45f0-a989-0e9699fa7ef0",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Is it important to have this optimization inside this analyzer rule?",
+        "createdAt" : "2020-10-14T08:38:41Z",
+        "updatedAt" : "2020-10-16T19:47:41Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f2e94248-0e34-4c5f-84da-b11b007b7d88",
+        "parentId" : "ca55402a-9501-45f0-a989-0e9699fa7ef0",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Yea. Without optimizing the expressions, we cannot scale up well for deeply nested schema, e.g. the added test `SPARK-32376: Make unionByName null-filling behavior work with struct columns - deep expr`. in `DataFrameSetOperationsSuite`.",
+        "createdAt" : "2020-10-14T16:02:28Z",
+        "updatedAt" : "2020-10-16T19:47:41Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8cfc54b2-c68a-4254-a573-b4b96f586f5b",
+        "parentId" : "ca55402a-9501-45f0-a989-0e9699fa7ef0",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Actually I plan to move this optimization out of `ResolveUnion` into a separate rule in analyzer in #29812. For complex deeply nested schema, it is easier to write inefficient expression tree that is very slow in analysis phase. For the test case in this PR, it is unable to evaluate the query at all, but after adding this optimization, it can normally evaluate.",
+        "createdAt" : "2020-10-14T19:58:21Z",
+        "updatedAt" : "2020-10-16T19:47:41Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3d907d07233851d6169533d0475c5a53b02cb4a7",
+    "line" : 79,
+    "diffHunk" : "@@ -1,1 +91,95 @@  def simplifyWithFields(expr: Expression): Expression = {\n    expr.transformUp {\n      case UpdateFields(UpdateFields(struct, fieldOps1), fieldOps2) =>\n        UpdateFields(struct, fieldOps1 ++ fieldOps2)\n    }"
+  },
+  {
+    "id" : "1ddf9be2-32be-47e7-8cfc-27f443e7c7a2",
+    "prId" : 29587,
+    "prUrl" : "https://github.com/apache/spark/pull/29587#pullrequestreview-508197203",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "800549d9-19b8-45b1-84ba-2ca4da9682f9",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "is this behavior consistent with top-level columns?",
+        "createdAt" : "2020-10-14T08:41:29Z",
+        "updatedAt" : "2020-10-16T19:47:41Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "07a3bd9c-5331-4162-8441-26db35e81f08",
+        "parentId" : "800549d9-19b8-45b1-84ba-2ca4da9682f9",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "I think this is related to the comment: https://github.com/apache/spark/pull/29587#discussion_r502837273",
+        "createdAt" : "2020-10-14T10:13:22Z",
+        "updatedAt" : "2020-10-16T19:47:41Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3d907d07233851d6169533d0475c5a53b02cb4a7",
+    "line" : 101,
+    "diffHunk" : "@@ -1,1 +113,117 @@    // E.g., we want to union two structs \"a int, b long\" and \"a int, c string\".\n    // If we don't sort, we will have \"a int, b long, c string\" and\n    // \"a int, c string, b long\", which are not compatible.\n    if (missingFieldsOpt.isEmpty) {\n      sortStructFields(col)"
+  },
+  {
+    "id" : "a6fca4ec-05b7-415a-b9ca-e08edec762ff",
+    "prId" : 29587,
+    "prUrl" : "https://github.com/apache/spark/pull/29587#pullrequestreview-509559363",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4ed1d6b0-bbc1-4f7e-aa38-dfe88e9c3dd8",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "what if `byName` is true but `allowMissingCol` is false?",
+        "createdAt" : "2020-10-14T08:47:19Z",
+        "updatedAt" : "2020-10-16T19:47:41Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a6b04eb1-6450-42d1-812f-33882cbd5622",
+        "parentId" : "4ed1d6b0-bbc1-4f7e-aa38-dfe88e9c3dd8",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "If `allowMissingCol` is false, we don't compare and add top-level/nested columns. If two sides have inconsistent schema, the union doesn't pass analysis.",
+        "createdAt" : "2020-10-14T16:07:06Z",
+        "updatedAt" : "2020-10-16T19:47:41Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "358c4e7e-057d-4798-8534-2420b77fc631",
+        "parentId" : "4ed1d6b0-bbc1-4f7e-aa38-dfe88e9c3dd8",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "The top-level columns support `byName` and `allowMissingCol` individually, shall we do it for nested columns as well? Or we plan to do it in followup?",
+        "createdAt" : "2020-10-15T06:58:05Z",
+        "updatedAt" : "2020-10-16T19:47:41Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6a7337bd-ad6d-4ff1-b141-85eef1a9dada",
+        "parentId" : "4ed1d6b0-bbc1-4f7e-aa38-dfe88e9c3dd8",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Good question. `byName` support actually means we need to adjust columns between two sides to have a consistent schema. It could be top-level or nested column cases.\r\n\r\nSo it is actually the same issue as https://github.com/apache/spark/pull/29587#discussion_r502837273, a.k.a adjusting the nested columns to have a more natural schema. As replied in the discussion, I plan to do it in followup.",
+        "createdAt" : "2020-10-15T16:27:03Z",
+        "updatedAt" : "2020-10-16T19:47:41Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3d907d07233851d6169533d0475c5a53b02cb4a7",
+    "line" : 142,
+    "diffHunk" : "@@ -1,1 +154,158 @@          }\n        case dt =>\n          UpdateFields(currCol, field.name, Literal(null, dt))\n      }\n    }"
   }
 ]
