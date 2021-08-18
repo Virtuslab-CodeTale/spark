@@ -196,5 +196,82 @@
     "commit" : "5c76b9d700d834182760906577951bcaed49d147",
     "line" : 13,
     "diffHunk" : "@@ -1,1 +65,69 @@      lastInequalityInferred = inferInequalityConstraints(constraints ++ inferred)\n      inferred ++= lastInequalityInferred\n    } while (lastInequalityInferred.nonEmpty)\n    inferred\n  }"
+  },
+  {
+    "id" : "61688e14-2575-4835-b4e1-1b788d0631da",
+    "prId" : 27252,
+    "prUrl" : "https://github.com/apache/spark/pull/27252#pullrequestreview-357863555",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "bd8c6787-5b21-49f3-8ddd-3f0a652cc70b",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "according to https://github.com/apache/spark/pull/27252/files#r378111623\r\n\r\nIf we have `cast(a, dt) = b` and `b = 1`, we can definitely infer `cast(a, dt) = 1`.\r\nIf we have `cast(a, dt) = b` and `a = 1`, seems we can also infer `cast(1, dt) = b`.\r\n\r\nBut I'm a bit unsure about how to do it. We may need a variant of `replaceConstraints`, which holds an expression builder \"e => cast(e, dt) = b\". It looks for attribute `a`, and replace it with `cast(1, dt) = b`",
+        "createdAt" : "2020-02-12T11:09:46Z",
+        "updatedAt" : "2020-02-12T16:34:01Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a53f3b9e-fef5-47c1-ab9e-2098a6f03c4a",
+        "parentId" : "bd8c6787-5b21-49f3-8ddd-3f0a652cc70b",
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "I don't think we need to touch `replaceConstraints` at all. Please check https://github.com/apache/spark/pull/27518 that will do the trick because `a = 1` will be \"substituted\" into `cast(a, dt) = b` as a new `cast(1, dt) = b` constraint.",
+        "createdAt" : "2020-02-12T11:32:14Z",
+        "updatedAt" : "2020-02-12T16:34:01Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2275981e-dd18-469d-9483-3aad141acb57",
+        "parentId" : "bd8c6787-5b21-49f3-8ddd-3f0a652cc70b",
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "I think both this PR and https://github.com/apache/spark/pull/27518 are beneficial. But I would use `val originalLeft = testRelation1.where('a < 1).subquery('left)` in test cases of this one instead of `val originalLeft = testRelation1.where('a === 1).subquery('left)` to avoid confusion. ",
+        "createdAt" : "2020-02-12T11:38:52Z",
+        "updatedAt" : "2020-02-12T16:34:01Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c618d076-21e6-4c1a-babc-e697079eb8ca",
+        "parentId" : "bd8c6787-5b21-49f3-8ddd-3f0a652cc70b",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "@cloud-fan This PR support `cast(1, dt) = b` before: \r\nhttps://github.com/apache/spark/compare/048a0ecc65763c6feaa939938e2dec6f4040d939..7dcfe915087dbe274b470928600197745a645f5e\r\n\r\nI removed it because:\r\n1. It may be broken the plan. [This is](https://github.com/apache/spark/compare/048a0ecc65763c6feaa939938e2dec6f4040d939..7dcfe915087dbe274b470928600197745a645f5e#diff-b40fcb6ac9b2e94b410f39a94a97e822R91-R93) how I handled it before.\r\n2. For `cast(a, dt) = b`, we support inferring many predicates, for example: `a > 1`, `a < 1`, `a in (2, 3)`. I'm not sure if it's safe.\r\n\r\nHow about only supporting `cast(a, dt) = 1` now?\r\n\r\n@peter-toth I'd like to support these cases in https://github.com/apache/spark/pull/27518:\r\n```\r\na < b && b < c infer a < c\r\na < b && b <= c infer a < c\r\na < b && b = c infer a < c\r\n...\r\n```",
+        "createdAt" : "2020-02-12T13:27:36Z",
+        "updatedAt" : "2020-02-12T16:34:01Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "39214b4e-1470-40a8-9664-8bfef25f6994",
+        "parentId" : "bd8c6787-5b21-49f3-8ddd-3f0a652cc70b",
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "@wangyum I see, but I think currently you are doing something very different in https://github.com/apache/spark/pull/27518 see details here: https://github.com/apache/spark/pull/27518#issuecomment-585251432\r\n\r\nI would suggest keeping your https://github.com/apache/spark/pull/27518 in its current form (but amending its title) and open a new one to address inequalities.\r\n",
+        "createdAt" : "2020-02-12T15:15:37Z",
+        "updatedAt" : "2020-02-12T16:34:01Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6567a782-c99e-4a2a-b0b8-ef2dd7731f52",
+        "parentId" : "bd8c6787-5b21-49f3-8ddd-3f0a652cc70b",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "> How about only supporting cast(a, dt) = 1 now?\r\n\r\n+1 for supporting the limited case only in this pr. Since this part of optimization can affect many queries, I think we need exhaustive discussions and tests for supporting wider cases.",
+        "createdAt" : "2020-02-12T23:31:11Z",
+        "updatedAt" : "2020-02-12T23:31:12Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4b14b3f619af56babc981e729f43e165369cad01",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +71,75 @@        inferredConstraints ++= replaceConstraints(candidateConstraints, r, l)\n      case eq @ EqualTo(l @ Cast(_: Attribute, _, _), r: Attribute) =>\n        inferredConstraints ++= replaceConstraints(predicates - eq, r, l)\n      case eq @ EqualTo(l: Attribute, r @ Cast(_: Attribute, _, _)) =>\n        inferredConstraints ++= replaceConstraints(predicates - eq, l, r)"
   }
 ]

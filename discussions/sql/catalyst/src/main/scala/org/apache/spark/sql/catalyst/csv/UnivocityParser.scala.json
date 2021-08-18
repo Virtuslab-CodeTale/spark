@@ -306,5 +306,126 @@
     "commit" : "16db32f50449bb4bb721101c709ea56cc305d324",
     "line" : 7,
     "diffHunk" : "@@ -1,1 +178,182 @@      nullSafeDatum(d, name, nullable, options) { datum =>\n        try {\n          timestampFormatter.parse(datum)\n        } catch {\n          case NonFatal(e) =>"
+  },
+  {
+    "id" : "722a199e-cc2f-49e0-a584-0fc451d48724",
+    "prId" : 27239,
+    "prUrl" : "https://github.com/apache/spark/pull/27239#pullrequestreview-344713346",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "db8ba8f9-fb9a-4f37-b760-14f99042319d",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "if the first column is corrupted, and the predicate is `first_col is null`, what will happen?",
+        "createdAt" : "2020-01-17T13:18:46Z",
+        "updatedAt" : "2020-01-17T13:18:46Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "aeec3ee7-c9ac-4d6c-b027-17e7f4895150",
+        "parentId" : "db8ba8f9-fb9a-4f37-b760-14f99042319d",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "There are 3 cases:\r\n1. Univocity parser is not able to parse its input. For example, it faced to wrong Unicode symbol. In that case, it return `null` in `tokens`, and `BadRecordException` will be raised here https://github.com/apache/spark/blob/4e50f0291f032b4a5c0b46ed01fdef14e4cbb050/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/csv/UnivocityParser.scala#L229-L232\r\n2. Univocity parser returns `null` in the first token. In this case, we will try to convert `null` to desired type according to `requiredSchema`. Most likely, the conversion raises an exception which  is will be converted `BadRecordException` here https://github.com/apache/spark/blob/4e50f0291f032b4a5c0b46ed01fdef14e4cbb050/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/csv/UnivocityParser.scala#L277 and here https://github.com/apache/spark/blob/4e50f0291f032b4a5c0b46ed01fdef14e4cbb050/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/csv/UnivocityParser.scala#L286\r\n  2.1 If conversion doesn't fail, the `is null` filter will be applied to the value and row could be passed to upper layer.\r\n3. Univocity parser returns a valid string at index 0 in `tokens` but conversion fails at https://github.com/apache/spark/blob/4e50f0291f032b4a5c0b46ed01fdef14e4cbb050/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/csv/UnivocityParser.scala#L267 with some exception. Similar situation to 2. The exception will be handled, and transformed to `BadRecordException`.\r\n\r\nNew implementation with filters pushdown does not change the behavior in those cases.",
+        "createdAt" : "2020-01-17T16:57:28Z",
+        "updatedAt" : "2020-01-17T16:57:29Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "fd480946d75605cde6be99debde6fb19ed37c0f0",
+    "line" : 64,
+    "diffHunk" : "@@ -1,1 +257,261 @@      try {\n        if (!skipRow) {\n          row(i) = valueConverters(i).apply(getToken(tokens, i))\n          if (csvFilters.skipRow(row, i)) {\n            skipRow = true"
+  },
+  {
+    "id" : "99b27b6b-269f-4bd6-a2be-31761ad2fa70",
+    "prId" : 27239,
+    "prUrl" : "https://github.com/apache/spark/pull/27239#pullrequestreview-345097953",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "75a2340b-81bc-4bb2-a16b-0371a7573a02",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Do we need this `checkedTokens` now?",
+        "createdAt" : "2020-01-20T05:32:12Z",
+        "updatedAt" : "2020-01-20T05:32:12Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "badcdc74-e843-44bd-b944-1224da9848e9",
+        "parentId" : "75a2340b-81bc-4bb2-a16b-0371a7573a02",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "It seems not. The `if` can be replaced by:\r\n```scala\r\n    var badRecordException: Option[Throwable] = if (tokens.length != parsedSchema.length) {\r\n      // If the number of tokens doesn't match the schema, we should treat it as a malformed record.\r\n      Some(new RuntimeException(\"Malformed CSV record\"))\r\n    } else None\r\n```\r\nLet me do that in a follow up PR.",
+        "createdAt" : "2020-01-20T06:19:56Z",
+        "updatedAt" : "2020-01-20T06:19:56Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fd45b7fb-ccf3-4047-92fd-b38afa6565d6",
+        "parentId" : "75a2340b-81bc-4bb2-a16b-0371a7573a02",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Oops, I already did at https://github.com/apache/spark/pull/27287. Let me address this comment there.",
+        "createdAt" : "2020-01-20T06:23:45Z",
+        "updatedAt" : "2020-01-20T06:23:46Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "fd480946d75605cde6be99debde6fb19ed37c0f0",
+    "line" : 15,
+    "diffHunk" : "@@ -1,1 +240,244 @@      // However, we still have chance to parse some of the tokens, by adding extra null tokens in\n      // the tail if the number is smaller, or by dropping extra tokens if the number is larger.\n      checkedTokens = if (parsedSchema.length > tokens.length) {\n        tokens ++ new Array[String](parsedSchema.length - tokens.length)\n      } else {"
+  },
+  {
+    "id" : "565555e1-96aa-48e4-bcab-d74c087df7f1",
+    "prId" : 27239,
+    "prUrl" : "https://github.com/apache/spark/pull/27239#pullrequestreview-345087168",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1e5dee87-d48e-4fa7-bd6b-31810f7fdd36",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "nit:\r\n\r\n```scala\r\nif (skipRow) {\r\n  row.setNullAt(i)\r\n} else {\r\n  row(i) = valueConverters(i).apply(getToken(tokens, i))\r\n  if (csvFilters.skipRow(row, i)) {\r\n    skipRow = true\r\n  }\r\n}",
+        "createdAt" : "2020-01-20T05:36:07Z",
+        "updatedAt" : "2020-01-20T05:36:07Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "fd480946d75605cde6be99debde6fb19ed37c0f0",
+    "line" : 63,
+    "diffHunk" : "@@ -1,1 +256,260 @@    while (i < requiredSchema.length) {\n      try {\n        if (!skipRow) {\n          row(i) = valueConverters(i).apply(getToken(tokens, i))\n          if (csvFilters.skipRow(row, i)) {"
+  },
+  {
+    "id" : "ccb24339-7862-4743-a6dd-c3d64417cb9c",
+    "prId" : 27239,
+    "prUrl" : "https://github.com/apache/spark/pull/27239#pullrequestreview-345093019",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b89359ef-4d85-4af7-87cc-b09eb939d0c0",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Previously we rely on `null`s already exiting in the array. Now we rely on `java.lang.ArrayIndexOutOfBoundsException`. I don't particularly like this approach .. but I'm good as it does simplify the codes.",
+        "createdAt" : "2020-01-20T06:03:50Z",
+        "updatedAt" : "2020-01-20T06:03:50Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "fd480946d75605cde6be99debde6fb19ed37c0f0",
+    "line" : 78,
+    "diffHunk" : "@@ -1,1 +266,270 @@        }\n      } catch {\n        case NonFatal(e) =>\n          badRecordException = badRecordException.orElse(Some(e))\n          row.setNullAt(i)"
   }
 ]

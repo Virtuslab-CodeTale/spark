@@ -1714,5 +1714,170 @@
     "commit" : "d3b3c278f92e3e519e94ce6ba0a72ad95bb914c9",
     "line" : 31,
     "diffHunk" : "@@ -1,1 +3083,3087 @@    val ifExists = ctx.EXISTS != null\n    if (ctx.VIEW != null) {\n      AlterTableUnsetProperties(UnresolvedView(identifier), cleanedProperties, ifExists)\n    } else {\n      AlterTableUnsetProperties(UnresolvedTable(identifier), cleanedProperties, ifExists)"
+  },
+  {
+    "id" : "ff1c7897-1df8-4676-99ca-1459d3dc0870",
+    "prId" : 27243,
+    "prUrl" : "https://github.com/apache/spark/pull/27243#pullrequestreview-345022368",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9e1d7045-34e9-4adb-af2a-29ca5fbf91cd",
+        "parentId" : null,
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "I will be making a change to use `UnresolvedTableOrView` so that we can keep the existing error message like `Cannot alter a view with ALTER TABLE. Please use ALTER VIEW instead`.\r\n\r\nIf not, we will just see `v1 is a view not a table`. @cloud-fan, do you agree, or `v1 is a view not a table` is good enough without any 'hints'.",
+        "createdAt" : "2020-01-17T03:41:08Z",
+        "updatedAt" : "2020-01-20T07:17:36Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2596abca-2bff-4ca9-835b-588505939435",
+        "parentId" : "9e1d7045-34e9-4adb-af2a-29ca5fbf91cd",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "`UnresolvedTableOrView` wouldn't work since it can resolve to a temp view. Do you have any suggestion if we need to provide the hint? (btw, the hint is used only for V1 commands)",
+        "createdAt" : "2020-01-17T04:34:13Z",
+        "updatedAt" : "2020-01-20T07:17:36Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "28567c56-c46a-4fe6-9f54-37481c12d0ac",
+        "parentId" : "9e1d7045-34e9-4adb-af2a-29ca5fbf91cd",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I think `v1 is a view not a table` is good enough for now. In the future we can add an error message parameter in `UnresolveTable/View`, so that each command can customize its error message.",
+        "createdAt" : "2020-01-17T05:26:14Z",
+        "updatedAt" : "2020-01-20T07:17:36Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1a9038c3-779f-4587-9ce4-b37442bfff89",
+        "parentId" : "9e1d7045-34e9-4adb-af2a-29ca5fbf91cd",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "or we can do it now, so that we don't need to update a lot of tests in this PR.",
+        "createdAt" : "2020-01-17T05:28:06Z",
+        "updatedAt" : "2020-01-20T07:17:36Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "50ef698c-330f-4c49-b25b-8effc96c2a46",
+        "parentId" : "9e1d7045-34e9-4adb-af2a-29ca5fbf91cd",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "Thanks, I will do it in this PR.\r\n\r\nBut I wasn't sure if the error message parameter would work well because you can't guarantee the error message is mapped to the actual error condition (unless I misunderstood).\r\n\r\nHow about we introduce the \"actual\" resolved plan? For example, in `Analyzer.scala`\r\n```\r\ncase u @ UnresolvedTable(identifier) =>\r\n  lookupTableOrView(identifier).map {\r\n    case v: ResolvedView => u.copy(actual = v)\r\n    case table => table\r\n  }.getOrElse(u)\r\n```\r\nThen, in `CheckAnalysis.checkAnalysis`,\r\n```\r\ncase AlterTable(u @ UnresolvedTable(_, actual: ResolvedView), _) =>\r\n   u.failAnalysis(\"Cannot alter a view with ALTER TABLE. Please use ALTER VIEW instead\")\r\n```\r\n",
+        "createdAt" : "2020-01-17T05:59:05Z",
+        "updatedAt" : "2020-01-20T07:17:36Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "59cd35a4-1e28-4546-9acf-abbe5e111722",
+        "parentId" : "9e1d7045-34e9-4adb-af2a-29ca5fbf91cd",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "yea that also works.\r\n\r\nnit: we should skip relation lookup if the actual plan is already set. Or we can introduce a new node `UnresolvedTableWithViewExists` to explicitly indicate this case.",
+        "createdAt" : "2020-01-17T06:29:17Z",
+        "updatedAt" : "2020-01-20T07:17:36Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "727938a6-81fe-44bd-8c7c-57f576c3f9fb",
+        "parentId" : "9e1d7045-34e9-4adb-af2a-29ca5fbf91cd",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "I went with your suggestion since it was simpler. Thanks!",
+        "createdAt" : "2020-01-19T19:58:05Z",
+        "updatedAt" : "2020-01-20T07:17:36Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "bb21f16203ff1917fae60bcb2e7244aac0eaa8db",
+    "line" : 16,
+    "diffHunk" : "@@ -1,1 +2918,2922 @@  override def visitAddTableColumns(ctx: AddTableColumnsContext): LogicalPlan = withOrigin(ctx) {\n    AlterTableAddColumns(\n      UnresolvedTable(visitMultipartIdentifier(ctx.multipartIdentifier)),\n      ctx.columns.qualifiedColTypeWithPosition.asScala.map(typedVisit[QualifiedColType])\n    )"
+  },
+  {
+    "id" : "5847d26a-46c8-4dd3-a0dd-9f015a35d861",
+    "prId" : 27197,
+    "prUrl" : "https://github.com/apache/spark/pull/27197#pullrequestreview-343000835",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7d321130-9a6d-4b53-9d83-246bf3e85fd8",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "can we update `cleanNamespaceProperties` to use filter as well?",
+        "createdAt" : "2020-01-14T14:33:25Z",
+        "updatedAt" : "2020-01-16T05:29:11Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "436748ed-c120-4984-acd6-74eedca6b567",
+        "parentId" : "7d321130-9a6d-4b53-9d83-246bf3e85fd8",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "done",
+        "createdAt" : "2020-01-15T05:55:41Z",
+        "updatedAt" : "2020-01-16T05:29:11Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "91cc7743e2e4419225803be1cae87f7a93a332e6",
+    "line" : 61,
+    "diffHunk" : "@@ -1,1 +2672,2676 @@    import TableCatalog._\n    val legacyOn = conf.getConf(SQLConf.LEGACY_PROPERTY_NON_RESERVED)\n    properties.filter {\n      case (PROP_PROVIDER, _) if !legacyOn =>\n        throw new ParseException(s\"$PROP_PROVIDER is a reserved table property, please use\" +"
+  },
+  {
+    "id" : "7a0fa951-f55e-4e89-9076-adcbb4d60661",
+    "prId" : 27197,
+    "prUrl" : "https://github.com/apache/spark/pull/27197#pullrequestreview-343686332",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "bc4b124c-f036-42f5-9552-7e550322d3b7",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "we should revert it now.",
+        "createdAt" : "2020-01-16T03:46:58Z",
+        "updatedAt" : "2020-01-16T05:29:11Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "aa19b046-45f5-4143-8190-cf03188804a7",
+        "parentId" : "bc4b124c-f036-42f5-9552-7e550322d3b7",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "I correct the order here,  or maybe we can keep this change?",
+        "createdAt" : "2020-01-16T03:52:39Z",
+        "updatedAt" : "2020-01-16T05:29:11Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fccd58ff-0bf1-426c-9b5b-11d71469c088",
+        "parentId" : "bc4b124c-f036-42f5-9552-7e550322d3b7",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "ah let's keep it.",
+        "createdAt" : "2020-01-16T05:54:30Z",
+        "updatedAt" : "2020-01-16T05:54:30Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "91cc7743e2e4419225803be1cae87f7a93a332e6",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +2400,2404 @@  /**\n   * Type to keep track of table clauses:\n   * (partitioning, bucketSpec, properties, options, location, comment).\n   */\n  type TableClauses = (Seq[Transform], Option[BucketSpec], Map[String, String],"
   }
 ]

@@ -86,5 +86,148 @@
     "commit" : "51f7fc8ed925766d07ef6820439833ce3b1f67e4",
     "line" : 12,
     "diffHunk" : "@@ -1,1 +185,189 @@      // reset active session and local props.\n      sc.setLocalProperties(originalLocalProps)\n      if (originalSession.nonEmpty) {\n        SparkSession.setActiveSession(originalSession.get)\n      } else {"
+  },
+  {
+    "id" : "093110aa-93d3-4a62-bbd5-4eb66e0570e3",
+    "prId" : 27267,
+    "prUrl" : "https://github.com/apache/spark/pull/27267#pullrequestreview-347258863",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "670f9364-33f0-4210-96e9-92602dface13",
+        "parentId" : null,
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "Can you please unset/restore both of them to their old state?",
+        "createdAt" : "2020-01-21T21:28:45Z",
+        "updatedAt" : "2020-01-22T19:31:00Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "459e6fed-8327-4a17-918a-f48a451a687d",
+        "parentId" : "670f9364-33f0-4210-96e9-92602dface13",
+        "authorId" : "2c1bd8aa-c665-4159-a689-57743063347c",
+        "body" : "Do you mean i should clear the thread locals.? as these are worker threads, they do not have any old state as such. For example, when the thread is created first time, it will inherit from parent thread, but when resued, restoring would cause the previous properties to be set which is stale. IMO, setting this on every execution should suffice. Please correct me if wrong",
+        "createdAt" : "2020-01-22T02:28:39Z",
+        "updatedAt" : "2020-01-22T19:31:00Z",
+        "lastEditedBy" : "2c1bd8aa-c665-4159-a689-57743063347c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d3fd0075-cf20-4d97-92d9-6c076c668b05",
+        "parentId" : "670f9364-33f0-4210-96e9-92602dface13",
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "I think we should restore them to their previous state. In this particular case you can hold on to a SparkSession that is no longer in use.",
+        "createdAt" : "2020-01-23T12:28:09Z",
+        "updatedAt" : "2020-01-23T12:28:10Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f1cac4de513dbe698604d6157fc8f663ecf8af72",
+    "line" : 24,
+    "diffHunk" : "@@ -1,1 +178,182 @@    val localProps = Utils.cloneProperties(sc.getLocalProperties)\n    Future {\n      SparkSession.setActiveSession(activeSession)\n      sc.setLocalProperties(localProps)\n      body"
+  },
+  {
+    "id" : "2bd34709-c6f4-4275-b81f-95f5be346559",
+    "prId" : 27267,
+    "prUrl" : "https://github.com/apache/spark/pull/27267#pullrequestreview-346489444",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "99430a1c-6de4-4c51-9be1-9ac3e1241c64",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Shall we have `val sc = sparkSession.sparkContext` here?",
+        "createdAt" : "2020-01-22T06:14:01Z",
+        "updatedAt" : "2020-01-22T19:31:00Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "025db8b7-1cb9-40e9-8e4d-a4a886ebcbb4",
+        "parentId" : "99430a1c-6de4-4c51-9be1-9ac3e1241c64",
+        "authorId" : "2c1bd8aa-c665-4159-a689-57743063347c",
+        "body" : "done",
+        "createdAt" : "2020-01-22T10:37:45Z",
+        "updatedAt" : "2020-01-22T19:31:00Z",
+        "lastEditedBy" : "2c1bd8aa-c665-4159-a689-57743063347c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f1cac4de513dbe698604d6157fc8f663ecf8af72",
+    "line" : 20,
+    "diffHunk" : "@@ -1,1 +174,178 @@  def withThreadLocalCaptured[T](\n      sparkSession: SparkSession, exec: ExecutionContext)(body: => T): Future[T] = {\n    val activeSession = sparkSession\n    val sc = sparkSession.sparkContext\n    val localProps = Utils.cloneProperties(sc.getLocalProperties)"
+  },
+  {
+    "id" : "3630faba-3614-4c1e-9531-6e620b53e522",
+    "prId" : 27267,
+    "prUrl" : "https://github.com/apache/spark/pull/27267#pullrequestreview-360399283",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ed8dea3a-1912-4f19-bc0c-c7920653e342",
+        "parentId" : null,
+        "authorId" : "def2dd9f-ce27-41ce-8156-f8225ddc68a9",
+        "body" : "@hvanhovell two questions:\r\n- Shouldn't we clone`localProps` here? in the sense that what if a concurrent thread modify them?\r\n- Does the order of setting `localProps` and `activeSession` matter?",
+        "createdAt" : "2020-02-18T14:32:13Z",
+        "updatedAt" : "2020-02-18T14:32:14Z",
+        "lastEditedBy" : "def2dd9f-ce27-41ce-8156-f8225ddc68a9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0aec8964-1e28-4841-b8bc-beb764fc2f89",
+        "parentId" : "ed8dea3a-1912-4f19-bc0c-c7920653e342",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "the `localProps` is already a clone: https://github.com/apache/spark/pull/27267/files#diff-ab49028253e599e6e74cc4f4dcb2e3a8R178\r\n\r\nAnd I think the order doesn't matter.",
+        "createdAt" : "2020-02-18T14:50:15Z",
+        "updatedAt" : "2020-02-18T14:50:16Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f1cac4de513dbe698604d6157fc8f663ecf8af72",
+    "line" : 25,
+    "diffHunk" : "@@ -1,1 +179,183 @@    Future {\n      SparkSession.setActiveSession(activeSession)\n      sc.setLocalProperties(localProps)\n      body\n    }(exec)"
+  },
+  {
+    "id" : "a1b90f46-d063-43ee-9b5b-24e7689b4787",
+    "prId" : 27266,
+    "prUrl" : "https://github.com/apache/spark/pull/27266#pullrequestreview-359720602",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d3f46b6e-e0e3-4beb-9a34-99c95109218d",
+        "parentId" : null,
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "Please unset these once we you are done.",
+        "createdAt" : "2020-01-30T13:14:56Z",
+        "updatedAt" : "2020-02-17T14:15:01Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a842c272-4f91-4913-b822-957af6e091ac",
+        "parentId" : "d3f46b6e-e0e3-4beb-9a34-99c95109218d",
+        "authorId" : "2c1bd8aa-c665-4159-a689-57743063347c",
+        "body" : "done, i have rebased to master where this unset was already handled as part of separate JIRA",
+        "createdAt" : "2020-02-17T13:07:35Z",
+        "updatedAt" : "2020-02-17T14:15:01Z",
+        "lastEditedBy" : "2c1bd8aa-c665-4159-a689-57743063347c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2ed76c32f9cc387295d87fce9e7c364d9d724ee7",
+    "line" : 26,
+    "diffHunk" : "@@ -1,1 +178,182 @@      val originalSession = SparkSession.getActiveSession\n      val originalLocalProps = sc.getLocalProperties\n      SparkSession.setActiveSession(activeSession)\n      sc.setLocalProperties(localProps)\n      val res = body"
   }
 ]

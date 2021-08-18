@@ -1,0 +1,123 @@
+[
+  {
+    "id" : "6265afc5-430d-47e6-8cfd-9d80636ca0ec",
+    "prId" : 27252,
+    "prUrl" : "https://github.com/apache/spark/pull/27252#pullrequestreview-356418420",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "eeafa219-bbad-453f-ad47-8d65a5b75f54",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "can we also test that we cast long to int and compare?",
+        "createdAt" : "2020-02-10T15:04:39Z",
+        "updatedAt" : "2020-02-12T16:34:01Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9c2fa844-e269-443d-91e3-f30b746fb893",
+        "parentId" : "eeafa219-bbad-453f-ad47-8d65a5b75f54",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "Yes. https://github.com/apache/spark/pull/27252/commits/8dcd076ba1843289b5775abe002ff0d88f235d8f",
+        "createdAt" : "2020-02-11T05:01:31Z",
+        "updatedAt" : "2020-02-12T16:34:01Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4b14b3f619af56babc981e729f43e165369cad01",
+    "line" : 52,
+    "diffHunk" : "@@ -1,1 +294,298 @@  test(\"Constraints shouldn't be inferred from cast equality constraint(filter lower data type)\") {\n    val testRelation1 = LocalRelation('a.int)\n    val testRelation2 = LocalRelation('b.long)\n    val originalLeft = testRelation1.where('a === 1).subquery('left)\n    val originalRight = testRelation2.subquery('right)"
+  },
+  {
+    "id" : "87850480-32f6-4bc4-9b75-a2c0e58d4b70",
+    "prId" : 27252,
+    "prUrl" : "https://github.com/apache/spark/pull/27252#pullrequestreview-356710107",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "21f430bc-6c0a-4668-86d5-493ebab405d8",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I mean, `\"left.a\".attr === \"right.b\".attr.cast(IntegerType)`, can we test it as well?",
+        "createdAt" : "2020-02-11T14:40:57Z",
+        "updatedAt" : "2020-02-12T16:34:01Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4b14b3f619af56babc981e729f43e165369cad01",
+    "line" : 59,
+    "diffHunk" : "@@ -1,1 +301,305 @@    val right = testRelation2.where(IsNotNull('b)).subquery('right)\n\n    Seq(Some(\"left.a\".attr.cast(LongType) === \"right.b\".attr),\n      Some(\"right.b\".attr === \"left.a\".attr.cast(LongType))).foreach { condition =>\n      testConstraintsAfterJoin(originalLeft, originalRight, left, right, Inner, condition)"
+  },
+  {
+    "id" : "ad3cdb7e-687b-431d-93a6-dec5743d21d2",
+    "prId" : 27252,
+    "prUrl" : "https://github.com/apache/spark/pull/27252#pullrequestreview-357168784",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a7df0311-2a28-4fb6-80b7-08f80bd37365",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "In terms of test coverage, its better to test both cases (left/right-side casts)? I have the same comment in the test below.",
+        "createdAt" : "2020-02-12T03:30:21Z",
+        "updatedAt" : "2020-02-12T23:31:57Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4b14b3f619af56babc981e729f43e165369cad01",
+    "line" : 35,
+    "diffHunk" : "@@ -1,1 +277,281 @@    Seq(Some(\"left.a\".attr.cast(LongType) === \"right.b\".attr),\n      Some(\"right.b\".attr === \"left.a\".attr.cast(LongType))).foreach { condition =>\n      testConstraintsAfterJoin(originalLeft, originalRight, left, right, Inner, condition)\n    }\n"
+  },
+  {
+    "id" : "88a6f977-ba22-40ea-90fd-ac7475af60f3",
+    "prId" : 27252,
+    "prUrl" : "https://github.com/apache/spark/pull/27252#pullrequestreview-357276341",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "20b3a947-d898-48d5-a2b1-8a0d489abe27",
+        "parentId" : null,
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "I might be wrong, but I find these test cases a bit confusing because `left` and `right` have equality filters. Eg. here `'a === 1` in `left` so actually it would be correct to infer `1.cast(LongType) === 'b` for `right`. This PR doesn't do that obviously (https://github.com/apache/spark/pull/27518 will address that) but probably using inequalities (`'a < 1`) would be easier to follow.",
+        "createdAt" : "2020-02-12T08:53:29Z",
+        "updatedAt" : "2020-02-12T16:34:01Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4b14b3f619af56babc981e729f43e165369cad01",
+    "line" : 59,
+    "diffHunk" : "@@ -1,1 +301,305 @@    val right = testRelation2.where(IsNotNull('b)).subquery('right)\n\n    Seq(Some(\"left.a\".attr.cast(LongType) === \"right.b\".attr),\n      Some(\"right.b\".attr === \"left.a\".attr.cast(LongType))).foreach { condition =>\n      testConstraintsAfterJoin(originalLeft, originalRight, left, right, Inner, condition)"
+  },
+  {
+    "id" : "95b431bd-30fb-4af2-b76e-7a7a6627b6d0",
+    "prId" : 27252,
+    "prUrl" : "https://github.com/apache/spark/pull/27252#pullrequestreview-357518139",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0d49bda7-0f68-4ddf-9509-d48dd54cf604",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Let's also test `cast(int)` here. The key is: we should test both left side cast and right side cast, as @maropu said.\r\n\r\n`\"left.a\".attr.cast(LongType) === \"right.b\".attr` and `\"right.b\".attr === \"left.a\".attr.cast(LongType)` only test left side cast (join left side, not EqualTo left side).",
+        "createdAt" : "2020-02-12T14:56:10Z",
+        "updatedAt" : "2020-02-12T16:34:01Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4b14b3f619af56babc981e729f43e165369cad01",
+    "line" : 36,
+    "diffHunk" : "@@ -1,1 +278,282 @@      Some(\"right.b\".attr === \"left.a\".attr.cast(LongType))).foreach { condition =>\n      testConstraintsAfterJoin(originalLeft, originalRight, left, right, Inner, condition)\n    }\n\n    Seq(Some(\"left.a\".attr === \"right.b\".attr.cast(IntegerType)),"
+  }
+]

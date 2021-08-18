@@ -262,5 +262,71 @@
     "commit" : "b71a923e4554e814ee923b64d1b22ce42825378c",
     "line" : 45,
     "diffHunk" : "@@ -1,1 +1188,1192 @@      }\n    }\n\n    createLevelDBStore(dm, appId, attempt, metadata)\n  }"
+  },
+  {
+    "id" : "2fa6637b-5310-4acc-bfd4-39fa6b06d647",
+    "prId" : 27208,
+    "prUrl" : "https://github.com/apache/spark/pull/27208#pullrequestreview-346933689",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "908cef6c-4e31-4e3b-a085-06a9fd8288cc",
+        "parentId" : null,
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "So one thing that feels a tiny bit odd is that when deciding whether to compact, you're actually considering the last log file, which you won't consider during actual compaction, right?\r\n\r\nWouldn't that cause unnecessary (or too aggressive) compaction at the end of the application, when potentially a bunch of jobs finish and \"release\" lots of tasks, inflating the compation scoe?",
+        "createdAt" : "2020-01-22T16:50:59Z",
+        "updatedAt" : "2020-01-28T01:55:03Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b7388159-2d91-42e1-a3e4-6f2e93d6373f",
+        "parentId" : "908cef6c-4e31-4e3b-a085-06a9fd8288cc",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "> So one thing that feels a tiny bit odd is that when deciding whether to compact, you're actually considering the last log file, which you won't consider during actual compaction, right?\r\n> Wouldn't that cause unnecessary (or too aggressive) compaction at the end of the application, when potentially a bunch of jobs finish and \"release\" lots of tasks, inflating the compation scoe?\r\n\r\nThat's the intention that callers of compactor don't care about how many files are actually affected. Callers of compactor just need to know that same list of log files would bring same result, unless it fails and throws exception. How many files are excluded in compaction is just a configuration, and the last log file should be excluded is an implementation detail. (We prevent it in both configuration and compactor via having 1 as min value for max retain log file.)\r\n\r\nCompactor will ignore the last log file in any way as configured, so unless the rare case where the log is rolled just before the app is finished, it won't happen. And most probably end users would avoid to set the value to 1 if they read the doc and understand how it works.",
+        "createdAt" : "2020-01-22T22:00:16Z",
+        "updatedAt" : "2020-01-28T01:55:03Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ddd67885dd2c861481287b127a51c6159c2b8fbf",
+    "line" : 147,
+    "diffHunk" : "@@ -1,1 +825,829 @@                info.lastEvaluatedForCompaction.get < lastIndex) {\n              // haven't tried compaction for this index, do compaction\n              fileCompactor.compact(reader.listEventLogFiles)\n              listing.write(info.copy(lastEvaluatedForCompaction = Some(lastIndex)))\n            }"
+  },
+  {
+    "id" : "f88f30c2-da7d-4165-abf7-b6cc7808d50b",
+    "prId" : 27208,
+    "prUrl" : "https://github.com/apache/spark/pull/27208#pullrequestreview-348364844",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c29efad0-42d2-486b-8197-dd4c8102d77d",
+        "parentId" : null,
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Hmm, perhaps this method could take care of calling `endProcessing` too (e.g. by wrapping the task)? Should be just a small adjustment at the call site.",
+        "createdAt" : "2020-01-23T16:49:35Z",
+        "updatedAt" : "2020-01-28T01:55:03Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "73762bd3-410d-4ada-a88f-a05a663e95f5",
+        "parentId" : "c29efad0-42d2-486b-8197-dd4c8102d77d",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "`finally` statement in `mergeApplicationListing` makes it be complicated, because we should handle the reentrance of lock. (We're submitting another task in the task.)\r\n\r\nIf we move endProcessing from `finally` statement in `mergeApplicationListing` to the end of task here, `processing` on the compaction task would be executed earlier than calling `endProcessing` on the listing task. Marking lock from compaction task would succeed but effectively no-op, and releasing lock from listing task would remove the mark for compaction task as well, which makes the compaction task run without proper lock.\r\n\r\nSo either we need to make lock much smarter, or document the requirement on caller side. I'm feeling that former one is more complicated than latter one.",
+        "createdAt" : "2020-01-26T08:26:49Z",
+        "updatedAt" : "2020-01-28T01:55:03Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ddd67885dd2c861481287b127a51c6159c2b8fbf",
+    "line" : 276,
+    "diffHunk" : "@@ -1,1 +1239,1243 @@  }\n\n  /** NOTE: 'task' should ensure it executes 'endProcessing' at the end */\n  private def submitLogProcessTask(rootPath: Path)(task: Runnable): Unit = {\n    try {"
   }
 ]

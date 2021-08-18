@@ -592,5 +592,346 @@
     "commit" : "15f4c96b06e887913dc3c8ede8d385bfae514db9",
     "line" : 31,
     "diffHunk" : "@@ -1,1 +63,67 @@ * for that ResourceProfile has been idle for K seconds and the number of executors is more\n * then what is needed for that ResourceProfile, meaning there are not enough tasks that could use\n * the executor, then it is removed. Note that an executor caching any data\n * blocks will be removed if it has been idle for more than L seconds.\n *"
+  },
+  {
+    "id" : "a3d79784-d3d7-4218-a491-b0f58e5868a4",
+    "prId" : 27223,
+    "prUrl" : "https://github.com/apache/spark/pull/27223#pullrequestreview-347627795",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d080aced-c731-424a-a535-fcd4114b6b6d",
+        "parentId" : null,
+        "authorId" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "body" : "Why do we want to include `TaskKilled` here? It's not quite straight forward to me",
+        "createdAt" : "2020-01-16T23:21:38Z",
+        "updatedAt" : "2020-01-27T18:47:04Z",
+        "lastEditedBy" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2015c09b-92db-4bca-bbaf-3e31f21f1841",
+        "parentId" : "d080aced-c731-424a-a535-fcd4114b6b6d",
+        "authorId" : "0387304e-5de3-452a-8609-ecd82ff5bfbe",
+        "body" : "Inside the the brackets, there are two things:\r\n```\r\nif (totalPendingTasks() == 0) {\r\n    allocationManager.onSchedulerBacklogged()\r\n}\r\n```\r\nThis one is straightforward. If a task is intentionally killed, then we don't expect this task to be resubmitted again, and we don't need to mark the scheduler as backlogged.\r\n```\r\nif (!taskEnd.taskInfo.speculative) {\r\n    stageAttemptToTaskIndices.get(stageAttempt).foreach {_.remove(taskIndex)}\r\n}\r\n```\r\nIf a non-speculative task is intentionally killed, it means the speculative task has succeeded, and no further task of this task index will be resubmitted. In this case, the task index is completed and we shouldn't remove it from `stageAttemptToTaskIndices`. Otherwise, we will have a pending non-speculative task for the task index.\r\n\r\n",
+        "createdAt" : "2020-01-18T04:10:40Z",
+        "updatedAt" : "2020-01-27T18:47:04Z",
+        "lastEditedBy" : "0387304e-5de3-452a-8609-ecd82ff5bfbe",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9609945b-f09c-4f56-9be1-ada7bdb143cf",
+        "parentId" : "d080aced-c731-424a-a535-fcd4114b6b6d",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "I think it would be good to add a comment under the taskkilled explaining this",
+        "createdAt" : "2020-01-23T22:40:50Z",
+        "updatedAt" : "2020-01-27T18:47:04Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3ea1175a4d7ccf71095a48945fa8946558b83c21",
+    "line" : 69,
+    "diffHunk" : "@@ -1,1 +623,627 @@\n        taskEnd.reason match {\n          case Success | _: TaskKilled =>\n          case _ =>\n            if (totalPendingTasks() == 0) {"
+  },
+  {
+    "id" : "6c48bb70-9f1c-42c7-a712-1fda3269a9e5",
+    "prId" : 27223,
+    "prUrl" : "https://github.com/apache/spark/pull/27223#pullrequestreview-344923379",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "bbb4def6-e182-4ebe-9bee-691741c41711",
+        "parentId" : null,
+        "authorId" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "body" : "thanks for fixing this, we made a mistake previously.",
+        "createdAt" : "2020-01-16T23:22:35Z",
+        "updatedAt" : "2020-01-27T18:47:04Z",
+        "lastEditedBy" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a755b3a6-52ec-4292-be4b-38f0b64c6067",
+        "parentId" : "bbb4def6-e182-4ebe-9bee-691741c41711",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "I think `stageAttemptToSpeculativeTaskIndices` also includes successful finished speculative tasks? Remove a successful speculative task will count it into pending speculative tasks again.",
+        "createdAt" : "2020-01-17T03:08:39Z",
+        "updatedAt" : "2020-01-27T18:47:04Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "610ce72b-cf91-4c73-9dfc-24bdf72df79a",
+        "parentId" : "bbb4def6-e182-4ebe-9bee-691741c41711",
+        "authorId" : "0387304e-5de3-452a-8609-ecd82ff5bfbe",
+        "body" : "Note we already remove pending task `stageAttemptToNumSpeculativeTasks(stageAttempt) -= 1`. @Ngone51 ",
+        "createdAt" : "2020-01-18T03:54:25Z",
+        "updatedAt" : "2020-01-27T18:47:04Z",
+        "lastEditedBy" : "0387304e-5de3-452a-8609-ecd82ff5bfbe",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3ea1175a4d7ccf71095a48945fa8946558b83c21",
+    "line" : 63,
+    "diffHunk" : "@@ -1,1 +617,621 @@        }\n\n        if (taskEnd.taskInfo.speculative) {\n          stageAttemptToSpeculativeTaskIndices.get(stageAttempt).foreach {_.remove{taskIndex}}\n          stageAttemptToNumSpeculativeTasks(stageAttempt) -= 1"
+  },
+  {
+    "id" : "46763235-6654-4457-9dac-f9d94a731aec",
+    "prId" : 27223,
+    "prUrl" : "https://github.com/apache/spark/pull/27223#pullrequestreview-348725284",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2bf85cdb-dcd3-4011-800d-248f35e04e5b",
+        "parentId" : null,
+        "authorId" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "body" : "This could lead to wast of executors ?",
+        "createdAt" : "2020-01-16T23:31:38Z",
+        "updatedAt" : "2020-01-27T18:47:04Z",
+        "lastEditedBy" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "75714705-5843-4e44-83e5-9cb19021573f",
+        "parentId" : "2bf85cdb-dcd3-4011-800d-248f35e04e5b",
+        "authorId" : "0387304e-5de3-452a-8609-ecd82ff5bfbe",
+        "body" : "As specified in the comments, this is to satisfy the locality requirements of speculative tasks. Let's say we have 1 normal task and 1 speculative task (setting is 4 tasks/executor), in this case we should allocate 2 executors instead of 1.",
+        "createdAt" : "2020-01-18T03:50:32Z",
+        "updatedAt" : "2020-01-27T18:47:04Z",
+        "lastEditedBy" : "0387304e-5de3-452a-8609-ecd82ff5bfbe",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "756d808f-e27e-429d-a8f8-99f6cb36e14f",
+        "parentId" : "2bf85cdb-dcd3-4011-800d-248f35e04e5b",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "But this isn't necessarily going to work, it doesn't guarantee that you get an executor on a different host.  I guess it gives it a chance at least. I think the comment needs to be more clear and state that the scheduler logic will only start a speculative task if its on a different host and that this may not work. I now see why that code was added below in the addExecutors, so thanks for pointing it out.\r\nThis also doesn't make sense if we already have more then 1 executor. The numRunningOrPendingTasks already includes speculative tasks, so lets say we have 1000 total tasks and putting 1 task per executor. We are already asking for 1000 executors, so we don't need to add 1 more here that won't be used. Really I think it should only be needed if maxNeeded == 1 and we have speculative tasks. Otherwise we have at least 2 executors so they should be able to run.\r\n\r\n I think we should file another followup jira to perhaps handle speculative tasks differently in cluster manager side",
+        "createdAt" : "2020-01-23T21:42:23Z",
+        "updatedAt" : "2020-01-27T18:47:04Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e3cad486-0f46-451d-8d01-9e9bc7c6c225",
+        "parentId" : "2bf85cdb-dcd3-4011-800d-248f35e04e5b",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "I typoed my example should be 1000 tasks with 2 tasks per executor, would results in 500 executors, we don't need to add one more",
+        "createdAt" : "2020-01-23T23:04:30Z",
+        "updatedAt" : "2020-01-27T18:47:04Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "524a07dd-26d5-4a02-972f-4ac59517f2c2",
+        "parentId" : "2bf85cdb-dcd3-4011-800d-248f35e04e5b",
+        "authorId" : "0387304e-5de3-452a-8609-ecd82ff5bfbe",
+        "body" : "Let's use your 1000 tasks (with 2 tasks/executor) example. The dynamic allocation scheduler currently doesn't track the underlying distribution of tasks on different executors. So it's totally possible that we have 999 tasks running, then on one executor we will have a single task running. And we have a pending speculative task for the same task index as this single task, then the speculative task can't be launched in this case. Doing a \"+1\" is a very simple way to address this situation.",
+        "createdAt" : "2020-01-24T08:56:02Z",
+        "updatedAt" : "2020-01-27T18:47:04Z",
+        "lastEditedBy" : "0387304e-5de3-452a-8609-ecd82ff5bfbe",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ba2443c7-d033-4f1f-8267-0277bc3888f4",
+        "parentId" : "2bf85cdb-dcd3-4011-800d-248f35e04e5b",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "right but you can't guarantee that the +1 will get your speculative task or that the new executor won't end up on the same host. In our example case of all 999 already running it would give it a better chance if the 1 that finished happened to be on the same executor but what are the odds only 1 finished and it finished exactly on the same host?  Generally the reason you speculate is that you are assuming something on that host is wrong or slow so you want to run it somewhere else.  If that is the case that executor is likely to stay loaded up while other ones finish. If you have 500 executors already and your speculation configs are sane, the odds of another task finishing on a different executor are pretty good. If you don't have all your regular tasks finished, they could easily be put on the +1 host as well before your speculative has a chance to be scheduled on it and you could end up with only the 1 your counter part is on.  Since we don't have them integrated well its all just a guess/heuristic.  \r\n\r\nI'm ok with leaving this logic to +1 like you have it (with expanded comment) since that is what it was but at the same time it can be a huge waste or resources. If every application has speculative on and you have 1000 apps running, you could easily be wasting 1000's of containers when you already have enough resources to run within.\r\nWe could definitely come up with better heuristics that don't waste so much but can be done separately.\r\nAlso can you add in a debug log statement here when we do the +1",
+        "createdAt" : "2020-01-24T15:25:22Z",
+        "updatedAt" : "2020-01-27T18:47:04Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2bccf3f7-45ba-42ad-8f24-5b69388812fc",
+        "parentId" : "2bf85cdb-dcd3-4011-800d-248f35e04e5b",
+        "authorId" : "0387304e-5de3-452a-8609-ecd82ff5bfbe",
+        "body" : "Thanks! You have made excellent points: the +1 gives it a better chance but not a guarantee, and the slow hosts are more likely to be loaded up. I'm OK with doing a +1 only when maxNeeded = 1, will address it.",
+        "createdAt" : "2020-01-26T05:08:36Z",
+        "updatedAt" : "2020-01-27T18:47:04Z",
+        "lastEditedBy" : "0387304e-5de3-452a-8609-ecd82ff5bfbe",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "67d6fd04-f86b-4c37-a315-18b5bb78a60d",
+        "parentId" : "2bf85cdb-dcd3-4011-800d-248f35e04e5b",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "another option would be to do the logic for speculative separately instead of lumping it with the normal tasks.  This might be an in between the 2 options. You could for instance calculate how many you need for regular tasks, then calculate separately how many executors for speculative, if  speculative doesn't add another executor on top of the normal tasks then add one.  That would help with us double counting.\r\nI'm fine with any of these as we can follow up to make it smarter in the future. ",
+        "createdAt" : "2020-01-27T14:58:15Z",
+        "updatedAt" : "2020-01-27T18:47:04Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3ea1175a4d7ccf71095a48945fa8946558b83c21",
+    "line" : 13,
+    "diffHunk" : "@@ -1,1 +270,274 @@      // If we have pending speculative tasks and only need a single executor, allocate one more\n      // to satisfy the locality requirements of speculation\n      maxNeeded + 1\n    } else {\n      maxNeeded"
+  },
+  {
+    "id" : "72250c3d-f967-4385-9e7f-897198830ff1",
+    "prId" : 27223,
+    "prUrl" : "https://github.com/apache/spark/pull/27223#pullrequestreview-350438941",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "aae15cc4-f8ca-44c5-aedf-b3bffaa9b2d9",
+        "parentId" : null,
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "one question I actually have here is what happens on a speculative task failure.  The scheduler will try to rerun but we may not be accounting for it if we have removed, I need to look at the scheduler logic a bit more.",
+        "createdAt" : "2020-01-23T22:35:39Z",
+        "updatedAt" : "2020-01-27T18:47:04Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c8d88a2c-8bca-4643-91d8-103f9336240f",
+        "parentId" : "aae15cc4-f8ca-44c5-aedf-b3bffaa9b2d9",
+        "authorId" : "0387304e-5de3-452a-8609-ecd82ff5bfbe",
+        "body" : "When a speculative task fails while the original task is running, it will not be resubmitted (because we have one copy running, see https://github.com/apache/spark/blob/master/core/src/main/scala/org/apache/spark/scheduler/TaskSetManager.scala#L289-L293), but a new speculative task will be launched later in a future speculation check cycle. The code works correctly in this case, as we update both `stageAttemptToSpeculativeTaskIndices` and `stageAttemptToNumSpeculativeTasks`, so this failed speculative task will just behave as it never existed. I can add this to my test case.\r\n\r\n@tgravescs, @jiangxb1987: Note that the current design (with or without this PR) will launch more-than-needed executors when **the original task fails when the speculative task is running**. In this case, the original task will not be resubmitted (same as above because we have one copy running). Speculation check will later launch one more speculative task on the already running speculative task. In this case, **we have 2 speculative tasks for the same task index**. In this case, we will still launch more than needed executors. This is a limitation of the current design unfortunately, as the existing data structures assume we have at most one speculative task running for a task index.",
+        "createdAt" : "2020-01-24T09:24:07Z",
+        "updatedAt" : "2020-01-27T18:47:04Z",
+        "lastEditedBy" : "0387304e-5de3-452a-8609-ecd82ff5bfbe",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b1c5b6ea-d960-4231-b7cf-0966ee7ba4c2",
+        "parentId" : "aae15cc4-f8ca-44c5-aedf-b3bffaa9b2d9",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "thanks for the explanation, its been a while since I looked at the speculative handling in the scheduler.   I think the failed task case with speculative is ok. I think the problem is the scheduler isn't  tracking those task as speculative or not after the initial launch.  I would rather error on the side of asking for to many and the failure case should be less frequent.  that is a lot more complex case along with making the dynamic allocation manager smarter about it.  If you can file that other jira I mentioned above to follow up, if you could put those details in there as well that would be great.",
+        "createdAt" : "2020-01-24T14:54:02Z",
+        "updatedAt" : "2020-01-27T18:47:04Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1c4f719e-e25a-422e-b5f6-09ec6f42234c",
+        "parentId" : "aae15cc4-f8ca-44c5-aedf-b3bffaa9b2d9",
+        "authorId" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "body" : "sorry I don't follow the logic. According to `TSM.dequeueTask()`:\r\n>     // Tries to schedule a regular task first; if it returns None, then schedules\r\n>     // a speculative task\r\nIt would first try to schedule a regular task (which would return None in this case), then it would try to schedule a speculative task. Since we have only the original task running, it shall schedule one speculative task in this case. Am I missing something? I also searched the test case but didn't locate the place describing the behavior.",
+        "createdAt" : "2020-01-29T00:39:56Z",
+        "updatedAt" : "2020-01-29T00:39:57Z",
+        "lastEditedBy" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8ee97b69-c58d-4f18-82b0-e5ca4e7cf4b7",
+        "parentId" : "aae15cc4-f8ca-44c5-aedf-b3bffaa9b2d9",
+        "authorId" : "0387304e-5de3-452a-8609-ecd82ff5bfbe",
+        "body" : "> sorry I don't follow the logic. According to `TSM.dequeueTask()`:\r\n> \r\n> > ```\r\n> > // Tries to schedule a regular task first; if it returns None, then schedules\r\n> > // a speculative task\r\n> > ```\r\n> \r\n> It would first try to schedule a regular task (which would return None in this case), then it would try to schedule a speculative task. Since we have only the original task running, it shall schedule one speculative task in this case. Am I missing something? I also searched the test case but didn't locate the place describing the behavior.\r\n\r\n@jiangxb1987 Let's make sure we are on the same page. I assume you are talking about the case on \"speculation task failure\". As I have explained above, when a speculative task fails, `handleFailedTask` will be invoked, and we will have `addPendingTask(index)` at L894. This will add a pending task for the failed task index (with `speculatable` default to false).\r\n\r\nThen from `TSM.dequeueTask()`, we have a call chain of `dequeueTaskHelper` -> `dequeueTaskFromList`, see https://github.com/apache/spark/blob/master/core/src/main/scala/org/apache/spark/scheduler/TaskSetManager.scala#L289-L293: as we already have one copy running (the original task), the enqueued pending task will not be resubmitted here. Instead, in a future speculation cycle, we will see the original task running too slow and will try to speculate again on the original task from there.\r\n\r\nFrom my understanding, \r\n> // Tries to schedule a regular task first; if it returns None, then schedules\r\n> // a speculative task\r\n\r\nThis is how we are prioritizing speculative vs. non-speculative tasks on receiving an executor. This is orthogonal to what we are discussing here.",
+        "createdAt" : "2020-01-29T04:47:56Z",
+        "updatedAt" : "2020-01-29T04:49:37Z",
+        "lastEditedBy" : "0387304e-5de3-452a-8609-ecd82ff5bfbe",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b7295f48-a523-4fa3-b7e6-8e2b9cc65d1e",
+        "parentId" : "aae15cc4-f8ca-44c5-aedf-b3bffaa9b2d9",
+        "authorId" : "0387304e-5de3-452a-8609-ecd82ff5bfbe",
+        "body" : "I guess you might be questioning on the code itself. As I have explained above, a failed speculative task will not be resubmitted, but instead a new speculative task will be launched in a future speculation cycle.",
+        "createdAt" : "2020-01-29T05:08:32Z",
+        "updatedAt" : "2020-01-29T05:08:32Z",
+        "lastEditedBy" : "0387304e-5de3-452a-8609-ecd82ff5bfbe",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "95e5b111-197a-47ba-b25e-69fc7657f8fb",
+        "parentId" : "aae15cc4-f8ca-44c5-aedf-b3bffaa9b2d9",
+        "authorId" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "body" : "Yes, there seems to be a bug at L894, a failed speculative task should be add to the pendingSpeculatableTasks. But as you explained, your fix is correct here.",
+        "createdAt" : "2020-01-29T21:32:22Z",
+        "updatedAt" : "2020-01-29T21:32:23Z",
+        "lastEditedBy" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3ea1175a4d7ccf71095a48945fa8946558b83c21",
+    "line" : 65,
+    "diffHunk" : "@@ -1,1 +619,623 @@        if (taskEnd.taskInfo.speculative) {\n          stageAttemptToSpeculativeTaskIndices.get(stageAttempt).foreach {_.remove{taskIndex}}\n          stageAttemptToNumSpeculativeTasks(stageAttempt) -= 1\n        }\n"
+  },
+  {
+    "id" : "543b2da2-564c-4518-8bb6-a451314dc3f3",
+    "prId" : 27223,
+    "prUrl" : "https://github.com/apache/spark/pull/27223#pullrequestreview-352028745",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4104c0fa-9a19-4be1-82b5-4794cd7ff8dd",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Previously, we always call `onSchedulerBacklogged` when `totalPendingTasks() == 0` for both speculative and non-speculative tasks. But according to this PR, we should not do this for speculative tasks now. Right? @linzebing ",
+        "createdAt" : "2020-02-03T03:45:38Z",
+        "updatedAt" : "2020-02-03T03:45:39Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ca44fae8-5bcd-4f65-bd48-039d7f67b5c0",
+        "parentId" : "4104c0fa-9a19-4be1-82b5-4794cd7ff8dd",
+        "authorId" : "0387304e-5de3-452a-8609-ecd82ff5bfbe",
+        "body" : "As explained in the comment, if a task is intentionally killed, we should not mark the scheduler as backlogged.\r\n\r\nIf a speculative task fails, while it will not be directly resubmitted, a new speculative task will be launched in next speculation cycle. So it's OK for us to mark the scheduler as backlogged in this case.",
+        "createdAt" : "2020-02-03T05:11:34Z",
+        "updatedAt" : "2020-02-03T05:11:34Z",
+        "lastEditedBy" : "0387304e-5de3-452a-8609-ecd82ff5bfbe",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "aa8cc782-4281-4e30-a40a-300a773d1335",
+        "parentId" : "4104c0fa-9a19-4be1-82b5-4794cd7ff8dd",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "> If a speculative task fails, while it will not be directly resubmitted, a new speculative task will be launched in next speculation cycle. So it's OK for us to mark the scheduler as backlogged in this case.\r\n\r\nHmm...but the new speculative task may not be launched if the normal task finish. And even if it launched, `ExecutorAllocationManager` could still handle it by receiving `SparkListenerSpeculativeTaskSubmitted`. Though, calling `onSchedulerBacklogged` may could reserve executor resource more early to reduce the delay. Fine!",
+        "createdAt" : "2020-02-03T05:27:33Z",
+        "updatedAt" : "2020-02-03T05:27:33Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "acbf8c37-a405-4cba-a946-a85048f109f7",
+        "parentId" : "4104c0fa-9a19-4be1-82b5-4794cd7ff8dd",
+        "authorId" : "0387304e-5de3-452a-8609-ecd82ff5bfbe",
+        "body" : "The speculation interval is default to 100ms, so a new speculative task will launched almost instantly.",
+        "createdAt" : "2020-02-03T05:31:19Z",
+        "updatedAt" : "2020-02-03T05:31:20Z",
+        "lastEditedBy" : "0387304e-5de3-452a-8609-ecd82ff5bfbe",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "87e966bb-1841-42a9-83b4-77916ce26857",
+        "parentId" : "4104c0fa-9a19-4be1-82b5-4794cd7ff8dd",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "make sense.",
+        "createdAt" : "2020-02-03T05:38:41Z",
+        "updatedAt" : "2020-02-03T05:38:41Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3ea1175a4d7ccf71095a48945fa8946558b83c21",
+    "line" : 76,
+    "diffHunk" : "@@ -1,1 +630,634 @@              // mark the scheduler as backlogged again if it's not already marked as such\n              // (SPARK-8366)\n              allocationManager.onSchedulerBacklogged()\n            }\n            if (!taskEnd.taskInfo.speculative) {"
   }
 ]

@@ -2825,5 +2825,71 @@
     "commit" : "5ee3d424b2a9270a3cb910ce363d1ab4c7f81655",
     "line" : 15,
     "diffHunk" : "@@ -1,1 +1807,1811 @@/**\n * Removes Cast expressions from predicates to push down the filters. This will allow filter push\n * down for byte and short columns without explicitly casting literals.\n */\nobject PushDownByteShortWithoutCasting extends Rule[LogicalPlan] {"
+  },
+  {
+    "id" : "8c0de1a2-6db4-42a0-9004-759a6fb4c0da",
+    "prId" : 27224,
+    "prUrl" : "https://github.com/apache/spark/pull/27224#pullrequestreview-343639918",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "bf506b8e-baa4-4145-ac4c-19fd073e6a2c",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "any concern for multiple inner aggregates for now?",
+        "createdAt" : "2020-01-16T01:02:15Z",
+        "updatedAt" : "2020-01-23T23:36:08Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2cfb0388-4452-41cf-be0a-950c7c6a6a36",
+        "parentId" : "bf506b8e-baa4-4145-ac4c-19fd073e6a2c",
+        "authorId" : "88ab38a7-4ab4-463d-ac99-878435e95f58",
+        "body" : "I don't believe there are lots of cases that would be collapsible, there is one case in the tests that is marked as \"this should be collapsible\" along these lines. Are there some in particular you are thinking of?\r\n\r\n```\r\n  // I think this could be collapsed, I would need to make the rule smarter to understand\r\n  // that sums can be added together with the standard scalar expression addition operator\r\n  test(\"Cannot collapse nested Agg references, complex outer agg expression with sums\") {\r\n    val query =\r\n      \"\"\"|SELECT sum(sumEarnings + sumYear), instructor from (\r\n         |   select sum(earnings) as sumEarnings, sum(year) as sumYear, course, instructor FROM courseSalesWider GROUP BY course, instructor\r\n         |) group by instructor\r\n      \"\"\".stripMargin\r\n```\r\n",
+        "createdAt" : "2020-01-16T02:20:31Z",
+        "updatedAt" : "2020-01-23T23:36:08Z",
+        "lastEditedBy" : "88ab38a7-4ab4-463d-ac99-878435e95f58",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5773296dc92497ad2ee0014fed0ad4376109e7d0",
+    "line" : 113,
+    "diffHunk" : "@@ -1,1 +1067,1071 @@                    ex => outerAggExpr.references.exists(_.name == ex.name))\n                  // this rule only handles cases where outer expressions are simple\n                  // and reference a single column from the inner aggregate.\n                  // Possible future enhancement also handle cases like:\n                  // select sum(innerSum1 + innerSum2) from ("
+  },
+  {
+    "id" : "5d6ee0e3-27d3-421f-972d-15ffe889f5cf",
+    "prId" : 27224,
+    "prUrl" : "https://github.com/apache/spark/pull/27224#pullrequestreview-343639331",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "63ec05e8-92e4-4171-9af0-626ad2a2fd70",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Looks like the cases can be optimized by this rule is limited:\r\n\r\n1. Max, Min, Sum only\r\n2. Only one inner aggregate is referred at outer aggregate\r\n3. Outer uses subset grouping expressions of inner\r\n\r\nIs it common to have the cases this rule can optimize?",
+        "createdAt" : "2020-01-16T01:11:00Z",
+        "updatedAt" : "2020-01-23T23:36:08Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c3fd1027-f4ea-4726-8dd2-5a140fcb1fa9",
+        "parentId" : "63ec05e8-92e4-4171-9af0-626ad2a2fd70",
+        "authorId" : "88ab38a7-4ab4-463d-ac99-878435e95f58",
+        "body" : "It does handle the outer aggregate referring to multiple inner aggregates, there are some tests included that show this, but they do need to be referred to by different outer aggregate expressions.\r\n\r\nThe rule is somewhat limited, but these cases come up, especially when it isn't a single person writing the whole query. If you are consuming a view and adding to it, you can be interested in aggregating the same types of columns that the writer of the previous view did, but your view has been rolled up to some granularity, say by region and weekly bucketing, and for your use case you want to just aggregate to straight region level.\r\n\r\nI am happy to try to expand the cases covered by the rule to make it more useful, this is just the set of cases I was able to figure out so far.",
+        "createdAt" : "2020-01-16T02:18:02Z",
+        "updatedAt" : "2020-01-23T23:36:08Z",
+        "lastEditedBy" : "88ab38a7-4ab4-463d-ac99-878435e95f58",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5773296dc92497ad2ee0014fed0ad4376109e7d0",
+    "line" : 108,
+    "diffHunk" : "@@ -1,1 +1062,1066 @@              outerAggExpr.aggregateFunction match {\n                case _: Max | _: Min | _: Sum =>\n                  // look for the expressions in the inner aggregate that produce\n                  // the columns used by the outer aggregate\n                  val resolvedInnerExprs = childAggExprs.filter("
   }
 ]

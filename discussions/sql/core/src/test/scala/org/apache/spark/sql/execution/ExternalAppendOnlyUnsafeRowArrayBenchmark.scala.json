@@ -31,5 +31,60 @@
     "commit" : "d9948cea67539d228c27f04f00e91d174d1cc2d3",
     "line" : 6,
     "diffHunk" : "@@ -1,1 +50,54 @@    // SPARK-34832: Add this configuration to allow `withFakeTaskContext` method\n    // to create `SparkContext` on the executor side.\n    .set(config.EXECUTOR_ALLOW_SPARK_CONTEXT, true)\n\n  private def withFakeTaskContext(f: => Unit): Unit = {"
+  },
+  {
+    "id" : "51fd4834-ad18-45fe-8fd4-7015d9069487",
+    "prId" : 27246,
+    "prUrl" : "https://github.com/apache/spark/pull/27246#pullrequestreview-437158201",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d4175ec0-ddd7-47fc-8ef1-67ce34e82a1d",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "What's a difference with the existing benchmark code? If its almost the same, just re-running them for updating the benchmark numbers looks okay.",
+        "createdAt" : "2020-06-23T23:53:37Z",
+        "updatedAt" : "2020-08-01T17:33:48Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "efe6edf8-f7a7-4b48-be7d-446b5cada32f",
+        "parentId" : "d4175ec0-ddd7-47fc-8ef1-67ce34e82a1d",
+        "authorId" : "39b78cdc-063e-4571-aeca-1b5a0e92b697",
+        "body" : "No, there are not the same. Existing benchmarks read number of rows from the spilled files and iterate over the spilled records. My benchmark simulates left semi join. In that scenario there is no need to read number of records or to iterate over the spilled record. That is the reason why we have \"lazy\" constructor for UnsafeSorterSpillReader to avoid unnecessary reading of data from the file.  That is main point of this PR.",
+        "createdAt" : "2020-06-24T00:55:26Z",
+        "updatedAt" : "2020-08-01T17:33:48Z",
+        "lastEditedBy" : "39b78cdc-063e-4571-aeca-1b5a0e92b697",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2beb7b7b-11c4-4441-8f72-cb859adac391",
+        "parentId" : "d4175ec0-ddd7-47fc-8ef1-67ce34e82a1d",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Could you leave some comments about that here?",
+        "createdAt" : "2020-06-25T01:20:48Z",
+        "updatedAt" : "2020-08-01T17:33:48Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "831c0301-daaa-405d-a8e2-aca93fc9372d",
+        "parentId" : "d4175ec0-ddd7-47fc-8ef1-67ce34e82a1d",
+        "authorId" : "39b78cdc-063e-4571-aeca-1b5a0e92b697",
+        "body" : "During execution of sort-merge join (Left Semi Join ) for each left join row “right matches” are found and stored into ExternalAppendOnlyUnsafeRowArrey object. ExternalAppendOnlyUnsafeRowArrey object with “right matches” is created when first row on left side of the join is processed and then reused if next rows on the left side of join is the same like previous one. In the case of Queries 14a/14b there are millions of rows of “right matches” which could not fit into memory. To run this query spilling is enabled and “right matches rows” data is moved from ExternalAppendOnlyUnsafeRowArrey into UnsafeExternalSorter and then spilled onto the disk. To perform join operation on left join row, you have to create iterator on top of “right matches rows”. The operation of creation of iterator on top of “right matches” is repeated for each processed row on the left side of the join. When million rows are processed on left side of the join, the iterator on top of spilled “right matches” rows is created each time. This means that millions of time iterator on top of right matches (that are spilled on the disk) is created. The current Spark implementation creates iterator on top of spilled rows and producing I/0 because it reads number of rows stored in the spilled files but iteration action on top of iterator is never done during join operation. Iterator is created, never used and then discarded with each processed join row. This will results into millions of I/0s. One I/0 is 2 or 3 millisecond. Hence this PR which creates lazy iterator (\"lazy\" constructor for UnsafeSorterSpillReader), so no I/O is done. Also, my micro-benchmark simulates creation of iterators on top of spilled files which contain “right matches”. Sorry for the long explanation. Not sure if I can make it simpler. I hope it clarifies why I created micro-benchmark this way.\r\n",
+        "createdAt" : "2020-06-25T04:25:06Z",
+        "updatedAt" : "2020-08-01T17:33:48Z",
+        "lastEditedBy" : "39b78cdc-063e-4571-aeca-1b5a0e92b697",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9d5bd99e317d5d0f73b645f8e29276c5d99ed39a",
+    "line" : 34,
+    "diffHunk" : "@@ -1,1 +213,217 @@          false))\n\n      for (_ <- 0L until numIterators) {\n        array.getIterator(0)\n      }"
   }
 ]

@@ -834,5 +834,269 @@
     "commit" : "71bd033bfa58365ceabd108a791fd0748a27e1e0",
     "line" : 4,
     "diffHunk" : "@@ -1,1 +464,468 @@      case If(cond, trueValue, falseValue)\n        if cond.deterministic && trueValue.semanticEquals(falseValue) => trueValue\n      case If(cond, l @ Literal(null, _), FalseLiteral) if !cond.nullable => And(cond, l)\n      case If(cond, l @ Literal(null, _), TrueLiteral) if !cond.nullable => Or(Not(cond), l)\n"
+  },
+  {
+    "id" : "f59960c4-484e-43c8-a217-334d31daaa13",
+    "prId" : 27231,
+    "prUrl" : "https://github.com/apache/spark/pull/27231#pullrequestreview-346159487",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "18b0d932-83c7-4c17-92ad-d08c93f0b511",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "nit: How about this style?\r\n```\r\n  private def isRedundantNullCheck(\r\n      ifNullExpr: Expression,\r\n      ifNotNullExpr: Expression,\r\n      checkedExpr: Expression): Boolean = {\r\n    ifNotNullExpr.isInstanceOf[NullIntolerant] && {\r\n      (ifNullExpr == checkedExpr || ifNullExpr == Literal.create(null, checkedExpr.dataType)) &&\r\n        ifNotNullExpr.children.contains(checkedExpr)\r\n    }\r\n  }\r\n```",
+        "createdAt" : "2020-01-20T04:53:37Z",
+        "updatedAt" : "2020-01-21T20:33:39Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0c0ea147-24ed-42dd-a5e0-eab6cf5db6a1",
+        "parentId" : "18b0d932-83c7-4c17-92ad-d08c93f0b511",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "The first condition `ifNullExpr == checkedExpr` -> `ifNullExpr.semanticEquals(checkedExpr)`? e.g., `if isnull(a + b)  b + a else xxx`",
+        "createdAt" : "2020-01-20T04:56:16Z",
+        "updatedAt" : "2020-01-21T20:33:39Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ace40ff6-db8d-499f-b584-222727647a57",
+        "parentId" : "18b0d932-83c7-4c17-92ad-d08c93f0b511",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "The second condition `ifNullExpr == Literal.create(null, checkedExpr.dataType)` -> `ifNullExpr.foldable && ifNullExpr.eval() == null`?",
+        "createdAt" : "2020-01-20T04:57:52Z",
+        "updatedAt" : "2020-01-21T20:33:39Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "34e33674-973b-431f-b742-3ac424593838",
+        "parentId" : "18b0d932-83c7-4c17-92ad-d08c93f0b511",
+        "authorId" : "b9451478-f7c7-4435-bc9c-f33568f01263",
+        "body" : "Makes sense.",
+        "createdAt" : "2020-01-20T07:04:25Z",
+        "updatedAt" : "2020-01-21T20:33:39Z",
+        "lastEditedBy" : "b9451478-f7c7-4435-bc9c-f33568f01263",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b12b7f37-ef2d-497a-8a27-61dee66f49cc",
+        "parentId" : "18b0d932-83c7-4c17-92ad-d08c93f0b511",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Can you generalize the last condition more? e.g., how about the case, `substring(other_func(title#5), 0, 3)` in the example you described?",
+        "createdAt" : "2020-01-21T01:26:10Z",
+        "updatedAt" : "2020-01-21T20:33:39Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dcdbc3a5-111c-4588-bb25-a770cd5ea57b",
+        "parentId" : "18b0d932-83c7-4c17-92ad-d08c93f0b511",
+        "authorId" : "b9451478-f7c7-4435-bc9c-f33568f01263",
+        "body" : "yes, that should be possible.",
+        "createdAt" : "2020-01-21T20:11:03Z",
+        "updatedAt" : "2020-01-21T20:33:39Z",
+        "lastEditedBy" : "b9451478-f7c7-4435-bc9c-f33568f01263",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "956413fca6ed683be56614756e79c30b56e70930",
+    "line" : 23,
+    "diffHunk" : "@@ -1,1 +454,458 @@        ifNotNullExpr.find(x => x.semanticEquals(checkedExpr)).nonEmpty\n    }\n  }\n\n  def apply(plan: LogicalPlan): LogicalPlan = plan transform {"
+  },
+  {
+    "id" : "50c1862c-99fd-4210-a9d5-f850eeba6fbe",
+    "prId" : 27231,
+    "prUrl" : "https://github.com/apache/spark/pull/27231#pullrequestreview-349143841",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c342d952-0a71-4973-8aa6-98f37541ba3d",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "How about this format?;\r\n```\r\n      // If the null-check is redundant, remove it\r\n      case If(IsNull(child), trueValue, falseValue)\r\n        if isRedundantNullCheck(trueValue, falseValue, child) => falseValue\r\n      case If(IsNotNull(child), trueValue, falseValue)\r\n        if isRedundantNullCheck(falseValue, trueValue, child) => trueValue\r\n```",
+        "createdAt" : "2020-01-21T01:31:12Z",
+        "updatedAt" : "2020-01-21T20:33:39Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4c6c3965-d7be-4a7f-924b-6adb0cb14d97",
+        "parentId" : "c342d952-0a71-4973-8aa6-98f37541ba3d",
+        "authorId" : "b9451478-f7c7-4435-bc9c-f33568f01263",
+        "body" : "Ok",
+        "createdAt" : "2020-01-21T20:19:37Z",
+        "updatedAt" : "2020-01-21T20:33:39Z",
+        "lastEditedBy" : "b9451478-f7c7-4435-bc9c-f33568f01263",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0fbce74f-d6c1-4f67-8478-0a92d3b26109",
+        "parentId" : "c342d952-0a71-4973-8aa6-98f37541ba3d",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Why did you add the inner pattern-matching (`cond match {` )? I think its better to avoid unnecessary pattern matching (In the current fix, all the cases for `If` exprs can be matched in the line 466).",
+        "createdAt" : "2020-01-28T00:57:02Z",
+        "updatedAt" : "2020-01-28T00:57:15Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e5554562-a510-4b97-a28b-43c127f79276",
+        "parentId" : "c342d952-0a71-4973-8aa6-98f37541ba3d",
+        "authorId" : "b9451478-f7c7-4435-bc9c-f33568f01263",
+        "body" : "I see. You are right, i do not need the inner pattern match, i will fix that.",
+        "createdAt" : "2020-01-28T05:58:29Z",
+        "updatedAt" : "2020-01-28T05:58:29Z",
+        "lastEditedBy" : "b9451478-f7c7-4435-bc9c-f33568f01263",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "956413fca6ed683be56614756e79c30b56e70930",
+    "line" : 39,
+    "diffHunk" : "@@ -1,1 +471,475 @@          if isRedundantNullCheck(falseValue, trueValue, child) => trueValue\n        case _ => i\n      }\n\n      case e @ CaseWhen(branches, elseValue) if branches.exists(x => falseOrNullLiteral(x._1)) =>"
+  },
+  {
+    "id" : "017d8922-6737-4852-af0a-6676a32bb7ed",
+    "prId" : 27231,
+    "prUrl" : "https://github.com/apache/spark/pull/27231#pullrequestreview-346161970",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ccb6569c-505f-4bab-9f78-67f73da794ca",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "How about this?\r\n```\r\n      // remove redundant null checks for CaseWhen with one branch\r\n      case CaseWhen(Seq((IsNotNull(child), trueValue)), Some(falseValue))\r\n        if isRedundantNullCheck(falseValue, trueValue, child) => trueValue\r\n      case CaseWhen(Seq((IsNull(child), trueValue)), Some(falseValue))\r\n        if isRedundantNullCheck(trueValue, falseValue, child) => falseValue\r\n      case CaseWhen(Seq((IsNotNull(child), trueValue)), None)\r\n        if isRedundantNullCheck(Literal.create(null, child.dataType), trueValue, child) => trueValue\r\n      case e @ CaseWhen(Seq((IsNull(child), trueValue)), None) =>\r\n        val nullValue = Literal.create(null, child.dataType)\r\n        if (isRedundantNullCheck(trueValue, nullValue, child)) {\r\n          nullValue\r\n        } else {\r\n          e\r\n        }\r\n```",
+        "createdAt" : "2020-01-21T02:06:33Z",
+        "updatedAt" : "2020-01-21T20:33:39Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3926702e-1499-49dd-829c-415d00c6180d",
+        "parentId" : "ccb6569c-505f-4bab-9f78-67f73da794ca",
+        "authorId" : "b9451478-f7c7-4435-bc9c-f33568f01263",
+        "body" : "Alright",
+        "createdAt" : "2020-01-21T20:15:27Z",
+        "updatedAt" : "2020-01-21T20:33:39Z",
+        "lastEditedBy" : "b9451478-f7c7-4435-bc9c-f33568f01263",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "956413fca6ed683be56614756e79c30b56e70930",
+    "line" : 62,
+    "diffHunk" : "@@ -1,1 +528,532 @@        } else {\n          e\n        }\n    }\n  }"
+  },
+  {
+    "id" : "b3bc7474-9321-4e4b-8dfb-c5b945a4c5fe",
+    "prId" : 27231,
+    "prUrl" : "https://github.com/apache/spark/pull/27231#pullrequestreview-355797317",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8ec6bead-bdb5-4d97-b004-a8b08b3a3c38",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "The same logic? https://github.com/apache/spark/blob/master/sql/core/src/main/scala/org/apache/spark/sql/execution/basicPhysicalOperators.scala#L105-L109",
+        "createdAt" : "2020-01-28T00:52:21Z",
+        "updatedAt" : "2020-01-28T00:57:15Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6dbe37b9-b4f6-415d-81e9-73938bfd7f17",
+        "parentId" : "8ec6bead-bdb5-4d97-b004-a8b08b3a3c38",
+        "authorId" : "b9451478-f7c7-4435-bc9c-f33568f01263",
+        "body" : "Actually i think we need slightly different logic. Consider these two examples where `x` will be the null-checked column: \r\n\r\n1. `substring(x, coalesce(a, b), c)`\r\n\r\n2. `substring(coalesce(x, d), a, c)`\r\n\r\nFor 1. we need to be null-intolerant (even though `coalesce` is null-tolerant), so if `x` is null, we replace the `substring` with null value no matter what are the other children. For 2. we need to be null-tolerant and we will not replace the `substring` by null value. So we need to check the expression with respect to the position of `x` (the column that is being null-checked). Does it make sense?",
+        "createdAt" : "2020-01-28T06:38:08Z",
+        "updatedAt" : "2020-01-28T06:38:08Z",
+        "lastEditedBy" : "b9451478-f7c7-4435-bc9c-f33568f01263",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b5f04f95-277f-4cdc-8229-0a70054ad0dc",
+        "parentId" : "8ec6bead-bdb5-4d97-b004-a8b08b3a3c38",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Probably, you meant `FiterExec.isNullIntolerant(ifNotNullExpr) || additional checks for the case having null-tolerant exprs inside ifNotNullExpr`? (`FiterExec.isNullIntolerant` is private though...)",
+        "createdAt" : "2020-02-05T07:01:50Z",
+        "updatedAt" : "2020-02-05T07:01:51Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a878771f-d1e8-41be-917a-cbad0fda99b7",
+        "parentId" : "8ec6bead-bdb5-4d97-b004-a8b08b3a3c38",
+        "authorId" : "b9451478-f7c7-4435-bc9c-f33568f01263",
+        "body" : "Yeah, `FilterExec.isNullIntolerant(ifNotNullExpr)` is a stronger condition than we need so in case there is null-tolerant expr inside we need to check if the null-checked column is in its subtree. Using the logic from `FilterExec.isNullIntolerant` the function could look like this:\r\n```\r\ndef isNullIntolerant(expr: Expression): Boolean = expr match {\r\n  case e: NullIntolerant => e.children.forall(isNullIntolerant)\r\n  case e if e.find(x => x.semanticEquals(checkedExpr)).isEmpty => true\r\n  case _ => false\r\n}\r\n```",
+        "createdAt" : "2020-02-07T06:47:08Z",
+        "updatedAt" : "2020-02-07T06:47:08Z",
+        "lastEditedBy" : "b9451478-f7c7-4435-bc9c-f33568f01263",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5edd0d34-62d0-4da9-b0af-cd3009bf5220",
+        "parentId" : "8ec6bead-bdb5-4d97-b004-a8b08b3a3c38",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Ah, I see. For better code readability, could you split the condition into the two parts as I suggested above? Also, I think its better to leave some comments about why we need more checks there.",
+        "createdAt" : "2020-02-07T06:51:04Z",
+        "updatedAt" : "2020-02-07T06:51:04Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7a2d8bb3-3bbf-4b7a-bdaa-19ff9944271e",
+        "parentId" : "8ec6bead-bdb5-4d97-b004-a8b08b3a3c38",
+        "authorId" : "b9451478-f7c7-4435-bc9c-f33568f01263",
+        "body" : "I agree that the committed code is not very intuitive so i can think of this way which seems to be more readable (added also some comments):\r\n\r\n```\r\nprivate def isRedundantNullCheck(\r\n    ifNullExpr: Expression,\r\n    ifNotNullExpr: Expression,\r\n    checkedExpr: Expression): Boolean = {\r\n  \r\n  // checks if expr is null-intolerant with respect to checkedExpr\r\n  def isNullIntolerant(expr: Expression): Boolean = expr match {\r\n    case e: NullIntolerant => e.children.forall(isNullIntolerant)\r\n    // if some child is null-tolerant but the checkedEpxr is not in its subtree\r\n    // we can still consider the whole expr as null-intolerant \r\n    // with respect to checkedExpr\r\n    case e if e.find(x => x.semanticEquals(checkedExpr)).isEmpty => true\r\n    case _ => false\r\n  }\r\n  \r\n  isNullIntolerant(ifNotNullExpr) && {\r\n    (ifNullExpr.semanticEquals(checkedExpr) ||\r\n      (ifNullExpr.foldable && ifNullExpr.eval() == null)) &&\r\n      // we still need to make sure that checkedExpr is inside ifNotNullExpr\r\n      ifNotNullExpr.find(x => x.semanticEquals(checkedExpr)).nonEmpty\r\n  }\r\n}\r\n```\r\nBut not sure if this is what you had in mind when suggesting to split the condition. Can you think of a better way how to compose this?",
+        "createdAt" : "2020-02-10T06:15:20Z",
+        "updatedAt" : "2020-02-10T06:15:21Z",
+        "lastEditedBy" : "b9451478-f7c7-4435-bc9c-f33568f01263",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "54586ada-a914-433e-a822-a76004c11c3f",
+        "parentId" : "8ec6bead-bdb5-4d97-b004-a8b08b3a3c38",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Hmmm, that still looks complicated.. If we cannot avoid the complexity for the stronger condition, as another option, I think we can cover the simple case (`FiterExec.isNullIntolerant(ifNotNullExpr)`) only in this pr. If necessary, we might be able to optimize the condition in future work. I think keeping the code simple is more important. WDYT?",
+        "createdAt" : "2020-02-10T08:44:19Z",
+        "updatedAt" : "2020-02-10T08:44:19Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5b8a77bf-7022-429e-a819-e733fbabba20",
+        "parentId" : "8ec6bead-bdb5-4d97-b004-a8b08b3a3c38",
+        "authorId" : "b9451478-f7c7-4435-bc9c-f33568f01263",
+        "body" : "Well, the think is that if we use the simple version with `FilterExec.isNullIntolerant(ifNutNullExpr)` we will loose (because of the recursive check) all expressions that contain literals (because literals are null-tolerant), so for example expressions like this `substring(title#5, 0, 3)` will not be included in the optimization (which the jira was targeted for in the first place). So I suggest one of these 2 options:\r\n\r\n1. Use the complex version of the code and thus include more expressions in the optimization\r\n2. Have the code more simple and use the original version before the generalization step, i.e. \r\n```\r\nprivate def isRedundantNullCheck(\r\n    ifNullExpr: Expression,\r\n    ifNotNullExpr: Expression,\r\n    checkedExpr: Expression): Boolean = {\r\n  ifNotNullExpr.isInstanceOf[NullIntolerant] && {\r\n    (ifNullExpr == checkedExpr || ifNullExpr == Literal.create(null, checkedExpr.dataType)) &&\r\n      ifNotNullExpr.children.contains(checkedExpr)\r\n  }\r\n}\r\n```\r\nwhere `checkedExpr` must be direct child and thus we don't have to check the whole subtree for null-intolerance (so expressions that have Literals in the subtree are still included).\r\nI am fine with either of these 2 options. What do you think?",
+        "createdAt" : "2020-02-10T09:42:02Z",
+        "updatedAt" : "2020-02-10T09:42:02Z",
+        "lastEditedBy" : "b9451478-f7c7-4435-bc9c-f33568f01263",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "956413fca6ed683be56614756e79c30b56e70930",
+    "line" : 15,
+    "diffHunk" : "@@ -1,1 +446,450 @@      checkedExpr: Expression): Boolean = {\n    val isNullIntolerant = ifNotNullExpr.find { x =>\n      !x.isInstanceOf[NullIntolerant] && x.find(e => e.semanticEquals(checkedExpr)).nonEmpty\n    }.isEmpty\n"
   }
 ]

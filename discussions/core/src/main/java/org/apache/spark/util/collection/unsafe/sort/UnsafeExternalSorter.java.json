@@ -284,5 +284,82 @@
     "commit" : "247ebaf3188ddd5f5522749ab19e057711486aec",
     "line" : 11,
     "diffHunk" : "@@ -1,1 +111,115 @@        pageSizeBytes, numElementsForSpillThreshold, inMemorySorter, false /* ignored */);\n    sorter.spill(Long.MAX_VALUE, sorter);\n    taskContext.taskMetrics().incMemoryBytesSpilled(existingMemoryConsumption);\n    // The external sorter will be used to insert records, in-memory sorter is not needed.\n    sorter.inMemSorter = null;"
+  },
+  {
+    "id" : "512b6b6b-099f-456f-8089-544d0c6b683c",
+    "prId" : 27246,
+    "prUrl" : "https://github.com/apache/spark/pull/27246#pullrequestreview-425723324",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "03357931-323a-4695-98ff-3c8ee6e5693e",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "```\r\n    @Override\r\n    public void loadNext() throws IOException {\r\n      this.hasNext();\r\n    }\r\n```",
+        "createdAt" : "2020-06-04T00:20:28Z",
+        "updatedAt" : "2020-08-01T17:33:48Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6e209293-d432-4ac4-a6c8-1a277e2ce781",
+        "parentId" : "03357931-323a-4695-98ff-3c8ee6e5693e",
+        "authorId" : "39b78cdc-063e-4571-aeca-1b5a0e92b697",
+        "body" : "Thank you for the suggestion. I will start my feedback with my understanding of your suggestion. Your idea is to reuse the code. You are proposing that content of loadNext() method be replaced by invocation of method hasNext().\r\n\r\nI would kindly suggest if you could look loadNext() method again. Perhaps you missed the fact that last call inside of loadNext()  is “current.loadNext()”. The last call of hasNext() method is “current.hasNext()”. If we follow your recommendation, then we would change behavior of loadNext() method. I think that loadNext() moves to the next element, and hasNext() check if next element exists but it does not move to the next element. I believe that we cannot reuse the code here.\r\n\r\nCould you please let me know if my reasoning make sense. Thank you for your time.",
+        "createdAt" : "2020-06-06T01:42:08Z",
+        "updatedAt" : "2020-08-01T17:33:48Z",
+        "lastEditedBy" : "39b78cdc-063e-4571-aeca-1b5a0e92b697",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b6877359-13b4-40cc-8d47-5dfb6f681c06",
+        "parentId" : "03357931-323a-4695-98ff-3c8ee6e5693e",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Sounds fine.",
+        "createdAt" : "2020-06-06T08:07:15Z",
+        "updatedAt" : "2020-08-01T17:33:48Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9d5bd99e317d5d0f73b645f8e29276c5d99ed39a",
+    "line" : 38,
+    "diffHunk" : "@@ -1,1 +698,702 @@\n    @Override\n    public void loadNext() throws IOException {\n      nextIterator();\n      current.loadNext();"
+  },
+  {
+    "id" : "811ac449-4ad5-49e8-bd18-23b2ae9d947f",
+    "prId" : 27246,
+    "prUrl" : "https://github.com/apache/spark/pull/27246#pullrequestreview-425702972",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e0c94d7d-d9ba-41fa-ae8d-269073d43d1e",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "nit: How about this? (Semantically, `this.current` should be null before `initializeNumRecords` called)\r\n```\r\n    ChainedIterator(Queue<UnsafeSorterIterator> iterators) {\r\n      ...\r\n      this.current = null;\r\n    }\r\n\r\n    private void initializeNumRecords() throws IOException {\r\n      if (numRecords == 0) {\r\n        for (UnsafeSorterIterator iter: iterators) {\r\n          numRecords += iter.getNumRecords();\r\n        }\r\n        this.current = iterators.remove();\r\n      }\r\n    }\r\n```",
+        "createdAt" : "2020-06-04T00:25:34Z",
+        "updatedAt" : "2020-08-01T17:33:48Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "00d8890c-9c3b-42f8-bb36-7da69a099a1b",
+        "parentId" : "e0c94d7d-d9ba-41fa-ae8d-269073d43d1e",
+        "authorId" : "39b78cdc-063e-4571-aeca-1b5a0e92b697",
+        "body" : "Thank you for the suggestion. It make sense. I will do it and test it.",
+        "createdAt" : "2020-06-06T01:43:41Z",
+        "updatedAt" : "2020-08-01T17:33:48Z",
+        "lastEditedBy" : "39b78cdc-063e-4571-aeca-1b5a0e92b697",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9d5bd99e317d5d0f73b645f8e29276c5d99ed39a",
+    "line" : 58,
+    "diffHunk" : "@@ -1,1 +722,726 @@        this.current = iterators.remove();\n      }\n    }\n\n    private void nextIterator() throws IOException {"
   }
 ]
