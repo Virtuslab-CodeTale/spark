@@ -20,5 +20,49 @@
     "commit" : "eeda34a4dca66c9ae747c0f5fa1b963f877f6c87",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +371,375 @@\n          // reads and caches all the files initially\n          assert(HiveCatalogMetrics.METRIC_FILES_DISCOVERED.getCount() == 10)\n\n          HiveCatalogMetrics.reset()"
+  },
+  {
+    "id" : "53edd663-b879-4f38-bd2e-60057ea51638",
+    "prId" : 31066,
+    "prUrl" : "https://github.com/apache/spark/pull/31066#pullrequestreview-569317638",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ce44b360-3e42-453d-a188-447ffcf66b12",
+        "parentId" : null,
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "The problem is in https://github.com/apache/spark/blob/3fdbc48373cdf12b8ba05632bc65ad49b7af1afb/sql/core/src/main/scala/org/apache/spark/sql/internal/CatalogImpl.scala#L517\r\nIt triggers additional files listen. It seems we triggered that everywhere where we replaced `sessionCatalog.refreshTable` by `CatalogImpl.refreshTable()` or added a call to `CatalogImpl.refreshTable()`.\r\n\r\ncc @cloud-fan @HyukjinKwon @sunchao @dongjoon-hyun ",
+        "createdAt" : "2021-01-13T12:51:31Z",
+        "updatedAt" : "2021-01-18T05:44:04Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5958ad11-390c-4e19-bd55-ddda7a8489d5",
+        "parentId" : "ce44b360-3e42-453d-a188-447ffcf66b12",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "can we make it clear that when shall we call `sessionCatalog.refreshTable` and when shall we call `CatalogImpl.refreshTable()`?",
+        "createdAt" : "2021-01-13T13:08:05Z",
+        "updatedAt" : "2021-01-18T05:44:04Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2d14c405-c6c0-48ce-bb3d-ebec50d527b2",
+        "parentId" : "ce44b360-3e42-453d-a188-447ffcf66b12",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "I think there are following cases for `SessionCatalog.refreshTable`:\r\n1. Modification in a table that don't affect table data. For example, updating table stats\r\n2. Table data cache is updated/handled somehow separately like `DROP TABLE` clears the cache or `ALTER TABLE table1 RENAME TO table2` re-creates the cache itself\r\n\r\nOther cases are for `CatalogImpl.refreshTable()`, it seems.",
+        "createdAt" : "2021-01-15T14:41:54Z",
+        "updatedAt" : "2021-01-18T05:44:04Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "0938cc278ee5327ce4b7b8f598daa34dc17d4db4",
+    "line" : 7,
+    "diffHunk" : "@@ -1,1 +407,411 @@          executorPool.awaitTermination(30, TimeUnit.SECONDS)\n          assert(HiveCatalogMetrics.METRIC_FILES_DISCOVERED.getCount() == 100)\n          assert(HiveCatalogMetrics.METRIC_PARALLEL_LISTING_JOB_COUNT.getCount() == 2)\n        }\n      }"
   }
 ]

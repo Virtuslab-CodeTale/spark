@@ -779,5 +779,60 @@
     "commit" : "6bc38f07783c68e51de9eaceb86350a9eb4747a9",
     "line" : 39,
     "diffHunk" : "@@ -1,1 +216,220 @@          }\n\n          // Wait for the materialization of all broadcast stages finish\n          broadcastMaterializationFutures.foreach(ThreadUtils.awaitReady(_, Duration.Inf))\n"
+  },
+  {
+    "id" : "f7098345-850d-47f7-9bc8-2d1bfa21bdcb",
+    "prId" : 30998,
+    "prUrl" : "https://github.com/apache/spark/pull/30998#pullrequestreview-560850290",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6a3266de-f99d-4c55-87d1-6f6c597bc1a6",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Will this workaround be flaky? Does the order of calling `materialize` guarantee that the order of task to be scheduled to run?",
+        "createdAt" : "2021-01-04T07:40:26Z",
+        "updatedAt" : "2021-01-06T08:41:41Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a248321a-d74f-402e-8bd8-fbed459e1dbb",
+        "parentId" : "6a3266de-f99d-4c55-87d1-6f6c597bc1a6",
+        "authorId" : "21ccf86e-7d54-44b8-aa50-2ad0a352ad3b",
+        "body" : "As for flaky, I admit a little bit. \r\nI believe the order of calling `materialize` can guarantee that the order of task to be scheduled in normal circumstances, but, to be honest, this is guarantee is not strict since the submit of broadcast job and shuffle map stage(job) are in different thread. But, at least we reach the same level as non AQE.",
+        "createdAt" : "2021-01-04T08:11:21Z",
+        "updatedAt" : "2021-01-06T08:41:41Z",
+        "lastEditedBy" : "21ccf86e-7d54-44b8-aa50-2ad0a352ad3b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "174c9291-ea2e-485f-9170-791b2886def6",
+        "parentId" : "6a3266de-f99d-4c55-87d1-6f6c597bc1a6",
+        "authorId" : "21ccf86e-7d54-44b8-aa50-2ad0a352ad3b",
+        "body" : "I am also considering a hard guarantee, but it seems the changes are too large.",
+        "createdAt" : "2021-01-04T08:17:17Z",
+        "updatedAt" : "2021-01-06T08:41:41Z",
+        "lastEditedBy" : "21ccf86e-7d54-44b8-aa50-2ad0a352ad3b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c02d064f-dfce-458d-a811-adbdb7b9e508",
+        "parentId" : "6a3266de-f99d-4c55-87d1-6f6c597bc1a6",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Yea, in non-AQE we always run broadcast jobs first.",
+        "createdAt" : "2021-01-04T08:33:13Z",
+        "updatedAt" : "2021-01-06T08:41:41Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7cbeb14272833ac5d7e5aecc81f93c2c3a5cbadf",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +192,196 @@          // SPARK-33933: we should submit tasks of broadcast stages first, to avoid waiting\n          // for tasks to be scheduled and leading to broadcast timeout.\n          val reorderedNewStages = result.newStages\n            .sortWith {\n              case (_: BroadcastQueryStageExec, _: BroadcastQueryStageExec) => false"
   }
 ]

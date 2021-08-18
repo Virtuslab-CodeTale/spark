@@ -317,5 +317,159 @@
     "commit" : "8aa432c8797e2d73c8065376d63474321cecf81a",
     "line" : 4,
     "diffHunk" : "@@ -1,1 +486,490 @@    }\n\n    sparkSession.catalog.refreshTable(table.identifier.quotedString)\n    if (table.stats.nonEmpty) {\n      if (sparkSession.sessionState.conf.autoSizeUpdateEnabled) {"
+  },
+  {
+    "id" : "f1b2cb75-731f-4b93-be74-7ee19d7a24ef",
+    "prId" : 31066,
+    "prUrl" : "https://github.com/apache/spark/pull/31066#pullrequestreview-563224341",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "78303d7d-1efa-40d9-9ceb-76125271c2a5",
+        "parentId" : null,
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "Here, we invoke https://github.com/apache/spark/blob/3fdbc48373cdf12b8ba05632bc65ad49b7af1afb/sql/core/src/main/scala/org/apache/spark/sql/internal/CatalogImpl.scala#L514 instead of https://github.com/apache/spark/blob/cc1d9d25fb4c2e4af912d6f9802de8f351c32deb/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/catalog/SessionCatalog.scala#L990 . The last one doesn't refresh the cache.",
+        "createdAt" : "2021-01-06T12:23:26Z",
+        "updatedAt" : "2021-01-18T05:44:04Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4c44b2c6-d4b7-4d54-a60c-61926207d8a4",
+        "parentId" : "78303d7d-1efa-40d9-9ceb-76125271c2a5",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "@cloud-fan I don't know why we have 2 implementations of `refreshTable()`. I would merge them and call one from another.",
+        "createdAt" : "2021-01-06T12:33:22Z",
+        "updatedAt" : "2021-01-18T05:44:04Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7e1aaf80-1315-4a44-a4a0-cd36a0833e97",
+        "parentId" : "78303d7d-1efa-40d9-9ceb-76125271c2a5",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "yea we should unify these two refreshTable",
+        "createdAt" : "2021-01-06T14:45:05Z",
+        "updatedAt" : "2021-01-18T05:44:04Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a730d63d-1dc5-49b1-a012-96cdc422cf19",
+        "parentId" : "78303d7d-1efa-40d9-9ceb-76125271c2a5",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "+1 for the unification.",
+        "createdAt" : "2021-01-06T17:24:38Z",
+        "updatedAt" : "2021-01-18T05:44:04Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0cd47433-a97b-4ae1-a5a8-9559677c2e4b",
+        "parentId" : "78303d7d-1efa-40d9-9ceb-76125271c2a5",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "I think the former calls the latter which only refreshes metadata cache and is used in multiple other places. ",
+        "createdAt" : "2021-01-06T17:35:32Z",
+        "updatedAt" : "2021-01-18T05:44:04Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "762711cd-8f99-40e4-9134-f495046fc2c0",
+        "parentId" : "78303d7d-1efa-40d9-9ceb-76125271c2a5",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "I wonder what are the use cases when we need to update only meta-data but not cached table data. Looking at the places where `SessionCatalog.refreshTable` is used:\r\n1. https://github.com/apache/spark/blob/c62b84a0432e51fd10e628088ee311dc3be73d2f/sql/hive/src/main/scala/org/apache/spark/sql/hive/execution/InsertIntoHiveTable.scala#L113\r\n2. https://github.com/apache/spark/blob/271c4f6e00b7bc7c47d84a8e59018e84a19c9822/sql/core/src/main/scala/org/apache/spark/sql/DataFrameWriter.scala#L729\r\n3. https://github.com/apache/spark/blob/2ab77d634f2e87b080786f4f39cb17e0994bc550/sql/core/src/main/scala/org/apache/spark/sql/execution/command/ddl.scala#L245\r\n4. https://github.com/apache/spark/blob/ddc0d5148ac6decde160cca847b5db5d6de1be58/sql/core/src/main/scala/org/apache/spark/sql/execution/command/tables.scala#L233\r\n5. https://github.com/apache/spark/blob/ddc0d5148ac6decde160cca847b5db5d6de1be58/sql/core/src/main/scala/org/apache/spark/sql/execution/command/tables.scala#L394\r\n\r\nIn all those ^^ places, updating of cached table data makes sense, IMHO.",
+        "createdAt" : "2021-01-06T18:48:47Z",
+        "updatedAt" : "2021-01-18T05:44:04Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "32901b11-a760-402f-95d9-15ad53d7a7b7",
+        "parentId" : "78303d7d-1efa-40d9-9ceb-76125271c2a5",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "I think there are cases like `alterTableStats` (may be the only one?) which only trigger metadata change. In the above, some already uncache the table data, although via different paths such as `CommandUtils.uncacheTableOrView` or `cacheManager.uncacheQuery`. Also, the other `refreshTable` recaches the target table but sometimes seems we just want to remove the cache but still refreshes the metadata.\r\n\r\nOf course, it will be very helpful if we can simplify the code a bit. It also seems there are still quite a few cases where cache is not properly handled, both in v1 and v2.",
+        "createdAt" : "2021-01-07T05:45:58Z",
+        "updatedAt" : "2021-01-18T05:44:04Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "0938cc278ee5327ce4b7b8f598daa34dc17d4db4",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +677,681 @@    // before Spark 2.1 unless they are converted via `msck repair table`.\n    spark.sessionState.catalog.alterTable(table.copy(tracksPartitionsInCatalog = true))\n    spark.catalog.refreshTable(tableIdentWithDB)\n    logInfo(s\"Recovered all partitions ($total).\")\n    Seq.empty[Row]"
+  },
+  {
+    "id" : "89824a9c-c260-4576-8b00-bb6f132a693b",
+    "prId" : 30983,
+    "prUrl" : "https://github.com/apache/spark/pull/30983#pullrequestreview-560577973",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d439986c-e2f6-426a-8ce0-5f16f7d09986",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "What's the difference to #30983 (corrected: #30979)?",
+        "createdAt" : "2020-12-31T23:30:38Z",
+        "updatedAt" : "2021-01-03T08:33:21Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0c14c521-ca90-463d-b770-e9ba995b99c8",
+        "parentId" : "d439986c-e2f6-426a-8ce0-5f16f7d09986",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "This PR solves **only** the caching issue, please, see the JIRA tickets that have code examples.",
+        "createdAt" : "2020-12-31T23:35:05Z",
+        "updatedAt" : "2021-01-03T08:33:21Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a39c488b-3b51-4588-82c4-790b499f8cc4",
+        "parentId" : "d439986c-e2f6-426a-8ce0-5f16f7d09986",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "#30983 tries to solve slightly another issue - outdated cache + file index after partition dropping. Scope of this PR is SQL only but #30983 has wider scope - interference of Spark SQL and other APIs (Scala API, for instance).",
+        "createdAt" : "2020-12-31T23:41:54Z",
+        "updatedAt" : "2021-01-03T08:33:21Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "434a2669-b201-48be-8ef8-24b31d4c1d24",
+        "parentId" : "d439986c-e2f6-426a-8ce0-5f16f7d09986",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Do I miss the difference? I read the two JIRA tickets, looks like they are the same?\r\n\r\n1. Create partitioned table\r\n2. Cache the table\r\n3. Drop a partition\r\n4. The query of the table doesn't change because the cache is not refreshed\r\n\r\n",
+        "createdAt" : "2021-01-01T04:11:45Z",
+        "updatedAt" : "2021-01-03T08:33:21Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0425412f-ba80-4684-bbdd-a3e47374d649",
+        "parentId" : "d439986c-e2f6-426a-8ce0-5f16f7d09986",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "We can see the problem when we comment the caching:\r\n```scala\r\n  test(\"SPARK-33941: refresh cache after partition dropping\") {\r\n    withNamespaceAndTable(\"ns\", \"tbl\") { t =>\r\n      sql(s\"CREATE TABLE $t (id int, part int) $defaultUsing PARTITIONED BY (part)\")\r\n      sql(s\"INSERT INTO $t PARTITION (part=0) SELECT 0\")\r\n      sql(s\"INSERT INTO $t PARTITION (part=1) SELECT 1\")\r\n      val df = spark.table(t)\r\n      // df.cache()\r\n      df.collect()\r\n      sql(s\"ALTER TABLE $t DROP PARTITION (part=0)\")\r\n      df.collect()\r\n    }\r\n  }\r\n```\r\nthe test fails on the second `df.collect()`:\r\n```\r\njava.io.FileNotFoundException: File file:.../ns.db/tbl/part=0/part-00000-44671e51-2b9a-4049-b449-4ea454abbe77.c000.snappy.parquet does not exist\r\n```\r\n\r\nThe reason of that is in:\r\n1. `val df = spark.table(t)` creates `FileSourceScanExec` in which `inputRDD` has not been materialized yet: https://github.com/apache/spark/blob/a093d6feefb0e086d19c86ae53bf92df12ccf2fa/sql/core/src/main/scala/org/apache/spark/sql/execution/DataSourceScanExec.scala#L398\r\n2. The first `df.collect()` materiazes `inputRDD` -> `createNonBucketedReadRDD()` where `dynamicallySelectedPartitions` are:\r\n    \r\n\r\n- PartitionDirectory([0],WrappedArray(LocatedFileStatus{path=file:../ns.db/tbl/part=0 ...\r\n- PartitionDirectory([1],WrappedArray(LocatedFileStatus{path=file:.../ns.db/tbl/part=1 ...\r\n\r\nIn this ways, `inputRDD` becomes `FileScanRDD` with 2 partitions that pointed out to 2 folders `part=0` and `part=1`\r\n3. `sql(s\"ALTER TABLE $t DROP PARTITION (part=0)\")` deletes the `part=0` folder (and invalidates the cache for partition data after the fix).\r\n4. Since `df` contains the same `FileSourceScanExec` with already materialized `inputRDD`, the second action `df.collect()` tries to read the deleted folder `part=0`. As a consequence of that, we observe the exception: `java.io.FileNotFoundException: File file:.../ns.db/tbl/part=0/... does not exist`\r\n\r\nAs you can see, the problem of SPARK-33941 is not only in caching.",
+        "createdAt" : "2021-01-01T09:03:05Z",
+        "updatedAt" : "2021-01-03T08:33:21Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "021c4ac89b4bfde874bdbaf814e3d7791cb88bc9",
+    "line" : 4,
+    "diffHunk" : "@@ -1,1 +582,586 @@      retainData = retainData)\n\n    sparkSession.catalog.refreshTable(table.identifier.quotedString)\n    CommandUtils.updateTableStats(sparkSession, table)\n"
   }
 ]

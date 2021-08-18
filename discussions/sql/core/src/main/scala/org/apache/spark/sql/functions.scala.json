@@ -141,5 +141,192 @@
     "commit" : "807783b4fc3543c98037ebe8bb4afb75be6af403",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +1415,1419 @@\n  /**\n   * Get the value of the bit (0 or 1) at the specified position.\n   * The positions are numbered from right to left, starting at zero.\n   * The position argument cannot be negative."
+  },
+  {
+    "id" : "80e19b04-d767-4557-b10c-507ca99d42f7",
+    "prId" : 31073,
+    "prUrl" : "https://github.com/apache/spark/pull/31073#pullrequestreview-564829762",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "24f7125d-7e42-4129-aaaf-2bd8c8d3dc48",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Can we expose in SparkR and PySpark too? If you're not used to it, we can run it separately too. cc @zero323 FYI",
+        "createdAt" : "2021-01-07T05:42:10Z",
+        "updatedAt" : "2021-01-26T03:25:46Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "73053f16-dba4-42b9-a4de-0bb5419d1aaf",
+        "parentId" : "24f7125d-7e42-4129-aaaf-2bd8c8d3dc48",
+        "authorId" : "8c82da5a-f351-4a37-a8a9-13809311b07b",
+        "body" : "I recommend creating a JIRA issue for the other langs and keep focusing on one language only. That will make code review easier (for one-language-only eyes like mine).",
+        "createdAt" : "2021-01-08T14:20:14Z",
+        "updatedAt" : "2021-01-26T03:25:46Z",
+        "lastEditedBy" : "8c82da5a-f351-4a37-a8a9-13809311b07b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "45716804-7039-445d-a0b1-d490d565485b",
+        "parentId" : "24f7125d-7e42-4129-aaaf-2bd8c8d3dc48",
+        "authorId" : "e1bdd418-d9b9-4129-91a0-0865740d24d2",
+        "body" : "@zero323 - are you OK if I create a separate JIRA and do a separate pull request to add this function to PySpark & R?  Seems like @HyukjinKwon is open to doing everything in one PR or having separate PRs.  @jaceklaskowski prefers one PR for language.  Just let me know how you'd like me to proceed to keep this moving forward, thanks!",
+        "createdAt" : "2021-01-09T18:28:45Z",
+        "updatedAt" : "2021-01-26T03:25:46Z",
+        "lastEditedBy" : "e1bdd418-d9b9-4129-91a0-0865740d24d2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2195c0f4-4282-43be-bc2e-2554765ea33e",
+        "parentId" : "24f7125d-7e42-4129-aaaf-2bd8c8d3dc48",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Yeah, we can run it separately.",
+        "createdAt" : "2021-01-10T05:19:27Z",
+        "updatedAt" : "2021-01-26T03:25:46Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6c0f6bbd7036851f27b0540fc687508342477c0c",
+    "line" : 18,
+    "diffHunk" : "@@ -1,1 +2856,2860 @@   * @since 3.2.0\n   */\n  def make_interval(\n      years: Column = lit(0),\n      months: Column = lit(0),"
+  },
+  {
+    "id" : "b0990800-aa11-4e29-bca0-0c173a99b9ab",
+    "prId" : 31073,
+    "prUrl" : "https://github.com/apache/spark/pull/31073#pullrequestreview-569893531",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a98fae85-a8b4-409c-9e45-b3591ebad62a",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Can we avoid default argument? This doesn't work in Java.",
+        "createdAt" : "2021-01-07T05:42:28Z",
+        "updatedAt" : "2021-01-26T03:25:46Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9da058b4-7ba9-4988-8aa0-9f8aeeba5290",
+        "parentId" : "a98fae85-a8b4-409c-9e45-b3591ebad62a",
+        "authorId" : "e1bdd418-d9b9-4129-91a0-0865740d24d2",
+        "body" : "@HyukjinKwon - thank you for the code review.  The default arguments allow for this nice syntax:\r\n\r\n```scala\r\ndf.withColumn(\"plus_2_hours\", col(\"first_datetime\") + make_interval(hours = lit(2)))\r\n```\r\n\r\nWithout the default arguments, we'll need to invoke the method with a lot of arguments:\r\n\r\n```scala\r\nval twoHourInterval = make_interval(lit(0), lit(0), lit(0), lit(0), lit(2), lit(0), lit(0))\r\ndf.withColumn(\"plus_2_hours\", col(\"first_datetime\") + twoHourInterval)\r\n```\r\n\r\nWe could overload the method and allow for both syntaxes (using a little trick with the last argument that's optional).\r\n\r\n```scala\r\ndef make_interval(\r\n    years: Column,\r\n    months: Column,\r\n    weeks: Column,\r\n    days: Column,\r\n    hours: Column,\r\n    mins: Column,\r\n    secs: Column,\r\n    failOnError: Boolean): Column = withExpr {\r\n  MakeInterval(\r\n    years.expr, months.expr, weeks.expr, days.expr, hours.expr, mins.expr, secs.expr, failOnError)\r\n}\r\n```\r\n\r\nThis would allow Scala users to either manually list 8 arguments (e.g. `make_interval(lit(0), lit(0), lit(0), lit(0), lit(2), lit(0), lit(0), true)` or use the clean default syntax (e.g. `make_interval(hours = lit(2))`).  Would this give the Java users a usable interface?\r\n\r\nI'm also fine removing the default values if that's what's necessary to make this method compatible with Java.  @MaxGekk - open to your thoughts too cause I know you were originally in favor [of the arguments with default values approach](https://issues.apache.org/jira/browse/SPARK-33995?focusedCommentId=17258718&page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel#comment-17258718).",
+        "createdAt" : "2021-01-07T16:19:14Z",
+        "updatedAt" : "2021-01-26T03:25:46Z",
+        "lastEditedBy" : "e1bdd418-d9b9-4129-91a0-0865740d24d2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "36e858c2-028d-4323-8a6e-8e3ac2a23b93",
+        "parentId" : "a98fae85-a8b4-409c-9e45-b3591ebad62a",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "What kind of issue will we face to? Do we have to specify all arguments when we call such method from Java, or impossible to call it all?",
+        "createdAt" : "2021-01-07T17:21:55Z",
+        "updatedAt" : "2021-01-26T03:25:46Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a33bae5d-c122-4e8a-aef0-b12ea409bbdf",
+        "parentId" : "a98fae85-a8b4-409c-9e45-b3591ebad62a",
+        "authorId" : "e1bdd418-d9b9-4129-91a0-0865740d24d2",
+        "body" : "@MaxGekk - I [added a test](https://github.com/apache/spark/pull/31073/commits/c9492a99ffa8a3ab1380ebde21c1ea200d02c187) to demonstrate that `make_interval` can be called from the Java API (with the Scala method that has default values) when all 7 arguments are passed to the method.  e.g. this Java code works:\r\n\r\n```java\r\nColumn twoYears = make_interval(lit(2), lit(0), lit(0), lit(0), lit(0), lit(0), lit(0));\r\nDataset<Row> df = spark.createDataFrame(rows, schema).withColumn(\"plus_two_years\", col(\"some_date\").plus(twoYears));\r\n```\r\n\r\nSomeone with Java experience should check my result.  If the current implementation with default parameters works with the Java API, then I think it's ok to keep it, especially because it allows for much more elegant Scala code.  ",
+        "createdAt" : "2021-01-07T22:10:04Z",
+        "updatedAt" : "2021-01-26T03:25:46Z",
+        "lastEditedBy" : "e1bdd418-d9b9-4129-91a0-0865740d24d2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "961a681a-e98f-4b7a-a0e9-776123501d8b",
+        "parentId" : "a98fae85-a8b4-409c-9e45-b3591ebad62a",
+        "authorId" : "8c82da5a-f351-4a37-a8a9-13809311b07b",
+        "body" : "> Can we avoid default argument? This doesn't work in Java.\r\n\r\nThat's why I recommend focusing on one language only and think of others later. For Java we might need more functions to look Scala-ish. No idea what R requires.",
+        "createdAt" : "2021-01-08T14:22:12Z",
+        "updatedAt" : "2021-01-26T03:25:46Z",
+        "lastEditedBy" : "8c82da5a-f351-4a37-a8a9-13809311b07b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0c848ef7-fb0b-4e34-be19-d12c06c306f4",
+        "parentId" : "a98fae85-a8b4-409c-9e45-b3591ebad62a",
+        "authorId" : "e1bdd418-d9b9-4129-91a0-0865740d24d2",
+        "body" : "@MaxGekk @HyukjinKwon - Here's where we currently stand on the default arguments issue:\r\n\r\n* Default arguments are not used by other functions in `org.apache.spark.sql.functions`, so exposing a function with default param values isn't consistent with what's been done in the past.\r\n* The default arguments to `make_interval` make the function better for Scala users because it allows for this nice syntax `make_interval(hours = lit(2))`\r\n* Java users can use the `make_interval` function that's defined with the default arguments, [as illustrated in this test](https://github.com/apache/spark/pull/31073/commits/c9492a99ffa8a3ab1380ebde21c1ea200d02c187) as long as they supply all seven arguments\r\n\r\nThere are good arguments to use and to avoid default arguments with `make_interval`.  Can you please let me know your updated thoughts on if you think we should use the default values or not?  Thank you.",
+        "createdAt" : "2021-01-09T19:14:11Z",
+        "updatedAt" : "2021-01-26T03:25:46Z",
+        "lastEditedBy" : "e1bdd418-d9b9-4129-91a0-0865740d24d2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5ea4c10d-ec5a-4aa5-9ecb-3da26fccf725",
+        "parentId" : "a98fae85-a8b4-409c-9e45-b3591ebad62a",
+        "authorId" : "981b170c-729a-429c-b115-0350ea50b32b",
+        "body" : "> That's why I recommend focusing on one language only and think of others later. For Java we might need more functions to look Scala-ish. No idea what R requires.\r\n\r\nWhile I don't see a huge issue with adding Python and R API separately for this specific function, Scala API often sets limits for what is possible on the other side.  Moreover, we seldom extend JVM API just for the sake of guest languages these days. So unless API is trivial (like here) or uses well established interface (like ML model), it's better to design things at the same time.",
+        "createdAt" : "2021-01-15T22:02:17Z",
+        "updatedAt" : "2021-01-26T03:25:46Z",
+        "lastEditedBy" : "981b170c-729a-429c-b115-0350ea50b32b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bc03779e-ef1f-49a0-9e5d-97a4c965dd60",
+        "parentId" : "a98fae85-a8b4-409c-9e45-b3591ebad62a",
+        "authorId" : "e1bdd418-d9b9-4129-91a0-0865740d24d2",
+        "body" : "@zero323 - that's a good point.  I plan on creating additional PRs for some of the other functions that are in the SQL API, but aren't in the Scala/Python APIs yet and I'll just add functions for all the APIs in a single PR going forward.\r\n\r\nDo you have any additional feedback for this PR or think it's good to get merged?",
+        "createdAt" : "2021-01-16T02:37:45Z",
+        "updatedAt" : "2021-01-26T03:25:46Z",
+        "lastEditedBy" : "e1bdd418-d9b9-4129-91a0-0865740d24d2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e01ffe65-69ae-4c25-b3de-4190d6820bdf",
+        "parentId" : "a98fae85-a8b4-409c-9e45-b3591ebad62a",
+        "authorId" : "981b170c-729a-429c-b115-0350ea50b32b",
+        "body" : "LGTM @MrPowers ",
+        "createdAt" : "2021-01-16T10:46:10Z",
+        "updatedAt" : "2021-01-26T03:25:46Z",
+        "lastEditedBy" : "981b170c-729a-429c-b115-0350ea50b32b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6c0f6bbd7036851f27b0540fc687508342477c0c",
+    "line" : 19,
+    "diffHunk" : "@@ -1,1 +2857,2861 @@   */\n  def make_interval(\n      years: Column = lit(0),\n      months: Column = lit(0),\n      weeks: Column = lit(0),"
+  },
+  {
+    "id" : "a13fda87-03bc-48cf-93d5-53b26dea6fa1",
+    "prId" : 31073,
+    "prUrl" : "https://github.com/apache/spark/pull/31073#pullrequestreview-564830531",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a5bd467f-8a6c-4195-a009-b42b3251bbfb",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Can we just match how it's invoked in SQL side? We can have 7 overridden versions or leverage `varargs` like https://github.com/apache/spark/blob/master/sql/core/src/main/scala/org/apache/spark/sql/Dataset.scala#L493-L494",
+        "createdAt" : "2021-01-10T05:35:42Z",
+        "updatedAt" : "2021-01-26T03:25:46Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6c0f6bbd7036851f27b0540fc687508342477c0c",
+    "line" : 27,
+    "diffHunk" : "@@ -1,1 +2865,2869 @@      secs: Column = lit(0)): Column = withExpr {\n    MakeInterval(years.expr, months.expr, weeks.expr, days.expr, hours.expr, mins.expr, secs.expr)\n  }\n\n  /**"
   }
 ]
