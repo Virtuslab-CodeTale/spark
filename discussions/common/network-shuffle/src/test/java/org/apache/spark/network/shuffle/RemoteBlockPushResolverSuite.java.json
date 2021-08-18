@@ -53,5 +53,93 @@
     "commit" : "1019d7a6d83cfd3e1def51c590499985277d59a7",
     "line" : 16,
     "diffHunk" : "@@ -1,1 +1247,1251 @@    // but no blocks pushed for that shuffleMergeId\n    pushResolver.finalizeShuffleMerge(new FinalizeShuffleMerge(testApp, NO_ATTEMPT_ID, 0, 5));\n    closed.acquire();\n    assertFalse(\"MergedBlock meta file for shuffle 0 and shuffleMergeId 4 should be cleaned\"\n      + \" up\", appShuffleInfo.getMergedShuffleMetaFile(0, 4, 0).exists());"
+  },
+  {
+    "id" : "ce327968-9478-481e-a993-4976a8415f66",
+    "prId" : 30433,
+    "prUrl" : "https://github.com/apache/spark/pull/30433#pullrequestreview-547882592",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "690e49cf-b2ae-42e9-8a6f-ed5336880f3d",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "What's the expected behavior for those deferred blocks after exceeding the IO exception threshold? Seem like we don't any strategy for those blocks yet.",
+        "createdAt" : "2020-12-08T07:04:16Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "26b68e48-a1bf-46e7-bde5-2ac264bff14c",
+        "parentId" : "690e49cf-b2ae-42e9-8a6f-ed5336880f3d",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "The deferred blocks are just dereferenced. This is same as what happens when the server responds with the `TooLate` response.\r\n```\r\n    private void incrementIOExceptionsAndAbortIfNecessary() {\r\n      // Update the count of IOExceptions\r\n      partitionInfo.incrementIOExceptions();\r\n      if (partitionInfo.shouldAbort(mergeManager.ioExceptionsThresholdDuringMerge)) {\r\n        deferredBufs = null;\r\n        throw new RuntimeException(String.format(\"%s when merging %s\",\r\n          ErrorHandler.BlockPushErrorHandler.IOEXCEPTIONS_EXCEEDED_THRESHOLD_PREFIX,\r\n          streamId));\r\n      }\r\n    }\r\n```",
+        "createdAt" : "2020-12-08T18:04:01Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ad636d9a-173a-463b-87b3-d03b7f0800a2",
+        "parentId" : "690e49cf-b2ae-42e9-8a6f-ed5336880f3d",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "It's `deferredBufs` rather than deferred blocks, right? I actually mean those blocks which are waiting for the partition lock at the same time.",
+        "createdAt" : "2020-12-09T02:02:57Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "67da3b6c-b659-44e4-8c87-c5a17025eecc",
+        "parentId" : "690e49cf-b2ae-42e9-8a6f-ed5336880f3d",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "Yes, I meant `deferredBufs`.",
+        "createdAt" : "2020-12-09T02:10:52Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3580c3ab-3173-48bf-b91c-8435a823595d",
+        "parentId" : "690e49cf-b2ae-42e9-8a6f-ed5336880f3d",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "> I actually mean those blocks which are waiting for the partition lock at the same time.\r\n\r\nI see. That's a good point. The server would attempt to merge them. If they don't see any IOExceptions, which is unlikely, they will be merged. Do you think we should check before writing them?",
+        "createdAt" : "2020-12-09T02:15:10Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a92cbaff-8442-4d1f-bf21-852773acb25f",
+        "parentId" : "690e49cf-b2ae-42e9-8a6f-ed5336880f3d",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "> Do you think we should check before writing them?\r\n\r\nI think so. And stop writing when the partition already hits IO exceptions threshold.",
+        "createdAt" : "2020-12-09T04:11:27Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "db046ad2-391b-4d81-9ac9-0f55b4f2ee34",
+        "parentId" : "690e49cf-b2ae-42e9-8a6f-ed5336880f3d",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "I have updated the PR to fail any pending blocks immediately (before attempting to write) if the shuffle partition has hit the IOException threshold. PTAL\r\n\r\n> And stop writing when the partition already hits IO exceptions threshold.\r\n\r\nThis should already be happening. Not sure what you mean. ",
+        "createdAt" : "2020-12-09T06:47:02Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f48d52f68e52b63742e7cce5dbb4fbcc89845402",
+    "line" : 189,
+    "diffHunk" : "@@ -1,1 +580,584 @@        t.getMessage());\n      throw t;\n    }\n  }\n"
   }
 ]

@@ -53,5 +53,71 @@
     "commit" : "401f22b22306c8fdd98b4dfa3e56fe1c5fec4c00",
     "line" : 39,
     "diffHunk" : "@@ -1,1 +63,67 @@      partSpecs: Seq[PartitionSpec],\n      partSchema: StructType,\n      checkSpec: TablePartitionSpec => Unit = _ => ()): Seq[ResolvedPartitionSpec] =\n    partSpecs.map {\n      case unresolvedPartSpec: UnresolvedPartitionSpec =>"
+  },
+  {
+    "id" : "09d24451-1005-4abb-b4ae-46d4a5aa330d",
+    "prId" : 30474,
+    "prUrl" : "https://github.com/apache/spark/pull/30474#pullrequestreview-537318129",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "671fba83-5de7-42de-9f65-10405bd136ff",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Is this matched to the V1 partitioning type coercion? I remember it has a bit different rules, see `PartitioningUtils.inferPartitionColumnValue`.",
+        "createdAt" : "2020-11-24T01:23:43Z",
+        "updatedAt" : "2020-11-24T01:23:43Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bad09015-62a9-4810-b1da-fe8d7cc48a16",
+        "parentId" : "671fba83-5de7-42de-9f65-10405bd136ff",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "We don't have unified tests for V1 and V2 `ALTER TABLE .. ADD/DROP PARTITION` at the moment. I plan to do that soon. As soon as we have such tests we will see the differences and fix them.\r\n\r\nFor now, I just try to make implementation simpler - cast partition values according to the partition schema.",
+        "createdAt" : "2020-11-24T05:36:29Z",
+        "updatedAt" : "2020-11-24T05:36:29Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "108f9696-4f59-4e3f-9e56-2dd60f254eca",
+        "parentId" : "671fba83-5de7-42de-9f65-10405bd136ff",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "I think V1 does the same, see https://github.com/apache/spark/blob/dfa6fb46f4238792bff6a0201da201be1b42620e/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/catalog/interface.scala#L149-L165\r\n\r\nLet me extract the code to `PartitioningUtils`, and re-use it in V2.",
+        "createdAt" : "2020-11-24T06:22:59Z",
+        "updatedAt" : "2020-11-24T06:23:00Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "982b4750-f82a-4265-b62d-f9eb11ef4e15",
+        "parentId" : "671fba83-5de7-42de-9f65-10405bd136ff",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Gotya",
+        "createdAt" : "2020-11-24T06:45:05Z",
+        "updatedAt" : "2020-11-24T06:45:05Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "21dee836-db02-47d1-a82d-2b71a10411de",
+        "parentId" : "671fba83-5de7-42de-9f65-10405bd136ff",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "I reused the code from DSv1 https://github.com/apache/spark/pull/30482 and fixed an issue. @HyukjinKwon Please, review it.",
+        "createdAt" : "2020-11-24T09:52:43Z",
+        "updatedAt" : "2020-11-24T09:53:04Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d0108e097ccbd0531f5189750c129855c97f7378",
+    "line" : 41,
+    "diffHunk" : "@@ -1,1 +67,71 @@    val partValues = partSchema.map { part =>\n      val raw = normalizedSpec.get(part.name).orNull\n      Cast(Literal.create(raw, StringType), part.dataType, Some(conf.sessionLocalTimeZone)).eval()\n    }\n    InternalRow.fromSeq(partValues)"
   }
 ]

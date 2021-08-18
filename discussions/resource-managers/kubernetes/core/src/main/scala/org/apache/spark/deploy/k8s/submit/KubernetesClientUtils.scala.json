@@ -1,0 +1,90 @@
+[
+  {
+    "id" : "41911a66-db74-41e1-81c1-f8e63343d81b",
+    "prId" : 30472,
+    "prUrl" : "https://github.com/apache/spark/pull/30472#pullrequestreview-560271417",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ed0e8e05-a448-4520-ba62-87a65c44155a",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "This seems to introduce a bug because we will consider file name later by `truncatedMapSize = truncatedMapSize + (fileName.length + fileContent.length)`. Please see [this comment](https://github.com/apache/spark/pull/30472#discussion_r550364758).\r\n```scala\r\nscala> Seq(\"b\" -> 1, \"abcdef\" -> 1).sortBy(f => f._1).sortBy(f => f._2)\r\nres14: Seq[(String, Int)] = List((abcdef,1), (b,1))\r\n\r\nscala> Seq(\"b\" -> 1, \"abcdef\" -> 1).sortBy(f => f._1).sortBy(f => f._2).map(f => f._1.length + f._2)\r\nres15: Seq[Int] = List(7, 2)\r\n```",
+        "createdAt" : "2020-12-31T00:32:27Z",
+        "updatedAt" : "2021-01-06T05:10:00Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e36d0840-a9ac-484f-a9a3-fc2c1807df0c",
+        "parentId" : "ed0e8e05-a448-4520-ba62-87a65c44155a",
+        "authorId" : "79d368bd-8aec-43ce-bcd3-764c21bb93d5",
+        "body" : "Values are actually sum total of the size of filename and it's content. Two items with same size (i.e. `\"b\" ->10 and \"abcdef\" ->10` ) would mean, that if first one did not fit, next one won't fit either. Anyway, I have addressed it, by -- update the `truncateMapSize` iff `truncateMap` is updated.",
+        "createdAt" : "2020-12-31T06:17:38Z",
+        "updatedAt" : "2021-01-06T05:10:00Z",
+        "lastEditedBy" : "79d368bd-8aec-43ce-bcd3-764c21bb93d5",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a42f82d40337a3b171196e6a97b9f76c8977a08b",
+    "line" : 40,
+    "diffHunk" : "@@ -1,1 +98,102 @@    val fileToFileSizePairs = confFiles.map(f => (f, f.getName.length + f.length()))\n    // sort first by name and then by length, so that during tests we have consistent results.\n    fileToFileSizePairs.sortBy(f => f._1).sortBy(f => f._2).map(_._1)\n  }\n"
+  },
+  {
+    "id" : "7a265e43-9238-4da6-b368-8f61fe69c81d",
+    "prId" : 30472,
+    "prUrl" : "https://github.com/apache/spark/pull/30472#pullrequestreview-560273426",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "57aaa63e-1a0e-48d6-aedf-f65ccdac6ae0",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "In `else`, we should reduce `truncatedMapSize` back because the next file can have a shorter name.\r\n\r\nIn case of `MalformedInputException`, we already has the same logic.",
+        "createdAt" : "2020-12-31T00:33:04Z",
+        "updatedAt" : "2021-01-06T05:10:00Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5acf73b2-1b41-41fa-81df-b9d630db2cd3",
+        "parentId" : "57aaa63e-1a0e-48d6-aedf-f65ccdac6ae0",
+        "authorId" : "79d368bd-8aec-43ce-bcd3-764c21bb93d5",
+        "body" : "Now, we increment the size, only when the map is updated.",
+        "createdAt" : "2020-12-31T06:32:56Z",
+        "updatedAt" : "2021-01-06T05:10:00Z",
+        "lastEditedBy" : "79d368bd-8aec-43ce-bcd3-764c21bb93d5",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a42f82d40337a3b171196e6a97b9f76c8977a08b",
+    "line" : 70,
+    "diffHunk" : "@@ -1,1 +120,124 @@            truncatedMap.put(fileName, fileContent)\n            truncatedMapSize = truncatedMapSize + (fileName.length + fileContent.length)\n          } else {\n            skippedFiles.add(fileName)\n          }"
+  },
+  {
+    "id" : "491a8bcb-5ee5-4ddc-83de-da4337009c42",
+    "prId" : 30472,
+    "prUrl" : "https://github.com/apache/spark/pull/30472#pullrequestreview-560237273",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "dabc857e-ad92-4530-8d5d-701817f0ae7e",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "`testIfTooLargeOrBinary` looks misleading because it doesn't include `f.getName.matches(\".*\\\\.template\") || f.getName.matches(\"spark.*(conf|properties)\")`.",
+        "createdAt" : "2020-12-31T00:37:26Z",
+        "updatedAt" : "2021-01-06T05:10:00Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a42f82d40337a3b171196e6a97b9f76c8977a08b",
+    "line" : 103,
+    "diffHunk" : "@@ -1,1 +150,154 @@    // and configMaps do not allow for size greater than 1.5 MiB(configurable).\n    // https://etcd.io/docs/v3.4.0/dev-guide/limit/\n    def testIfTooLargeOrBinary(f: File): Boolean = (f.length() + f.getName.length > maxSize) ||\n      f.getName.matches(\".*\\\\.(gz|zip|jar|tar)\")\n"
+  }
+]

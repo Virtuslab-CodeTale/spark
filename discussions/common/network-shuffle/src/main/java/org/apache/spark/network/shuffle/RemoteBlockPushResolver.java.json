@@ -548,5 +548,676 @@
     "commit" : "7c38487e216c044e6e6a6b24a7949d53ad90450f",
     "line" : 114,
     "diffHunk" : "@@ -1,1 +730,734 @@        }\n      }\n      isWriting = false;\n    }\n"
+  },
+  {
+    "id" : "4f036d0b-23e4-44a4-be9e-9f356d8c3179",
+    "prId" : 30433,
+    "prUrl" : "https://github.com/apache/spark/pull/30433#pullrequestreview-545283388",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "38c9a471-1885-4a8a-becd-b00e593add7d",
+        "parentId" : null,
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "Given the focus here is error handling, how are we handling a `seek` failure in `catch` block ? (Here and elsewhere in this PR)",
+        "createdAt" : "2020-11-21T09:46:57Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2cd9b318-bbca-4ad4-bca4-63e85ac74a3c",
+        "parentId" : "38c9a471-1885-4a8a-becd-b00e593add7d",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "This is a good point. I have overlooked IOExceptions from the seeks. Any IOException from the seek would not guarantee that the position is updated. So any more updates to the file may not overwrite the corrupt data which means that the files are corrupted.\r\nOne way of handling this I think is maintain the expected length of both index and meta files in AppShufflePartitionInfo instead of relying on the FilePointer. Updates to these files would be similar to writing to the merged data file as below:\r\n\r\n```\r\n     if (partitionInfo.isEncounteredFailure()) {\r\n          long updatedPos = partitionInfo.getPosition() + length;\r\n          logger.debug(\r\n            \"{} shuffleId {} reduceId {} encountered failure current pos {} updated pos {}\",\r\n            partitionInfo.appShuffleId.appId, partitionInfo.appShuffleId.shuffleId,\r\n            partitionInfo.reduceId, partitionInfo.getPosition(), updatedPos);\r\n          length += partitionInfo.dataChannel.write(buf, updatedPos);\r\n        } else {\r\n          length += partitionInfo.dataChannel.write(buf);\r\n        }\r\n```\r\nPlease let me know if there are any other suggestions?",
+        "createdAt" : "2020-11-21T18:48:04Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b74e590d-d793-43ae-9638-218199131dfe",
+        "parentId" : "38c9a471-1885-4a8a-becd-b00e593add7d",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "On a second thought, if there was an exception writing and then again an exception while seek, is there a possibility that any further updates to these files will succeed?\r\nUsually these exceptions wouldn't indicate any transient error with the FileSystem. \r\nWouldn't it be better to just stop merging any more blocks of this shuffle partition?",
+        "createdAt" : "2020-11-22T01:35:43Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a9ce0ce3-623c-4983-9b15-0795f90e2d68",
+        "parentId" : "38c9a471-1885-4a8a-becd-b00e593add7d",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "I don't think we should assume that.\r\nWe could have taken an approach where we give up on writing merged shuffle data file as well.\r\nThe issue I see here is that we are mixing block level exception with chunk level exception.\r\nRight now, both will throw exceptions triggering the `onFailure` handling.\r\nHowever, the current `onFailure` handling is meant for block level only.\r\nI think we should catch the chunk level IOExceptions inside `onComplete`, setting certain flags to make the `onFailure` handling logic know about whether we encountered a block level failure or a chunk level failure.\r\nFor a chunk level failure, we shouldn't overwrite the previous block, we should effectively only delay the closure of the chunk.",
+        "createdAt" : "2020-11-23T05:13:57Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "40dc9490-59fb-43f2-8fdc-3afa6499b940",
+        "parentId" : "38c9a471-1885-4a8a-becd-b00e593add7d",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "> I don't think we should assume that.\r\nWe could have taken an approach where we give up on writing merged shuffle data file as well.\r\n\r\nHere the shuffle service is writing to a local file. It's not a network filesystem/hdfs where because of network there could be transient exceptions. If during updating the local index/meta file the shuffle service sees an IOException and then there is an IOException again while seeking to a position, chances that the updates to the same file will fail are very high. If index/meta files are not successfully updated then those merged blocks cannot be served to the executors when they read/fetch it.\r\nIf most of the time `IOExceptions` while writing to local filesystem can only be because of issues like file permission, disk full, etc, I don't see the advantage of still trying to keep merging blocks to the shuffle partition.\r\nIt might be better for the server to reply to the executor to stop pushing in this case. Otherwise, they keep pushing more blocks and in most of the cases they will fail as well.",
+        "createdAt" : "2020-11-23T07:17:07Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c8fdbfbd-a07e-437f-acac-1a5e4bbb25b1",
+        "parentId" : "38c9a471-1885-4a8a-becd-b00e593add7d",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "Stopping merging blocks only after 2 consecutive IOExceptions seems to be giving up too early.\r\nIf there's a need to stop early due to too many disk failures, I think that logic should be on the client side inside `ErrorHandler`.\r\nFor the server side, it should just handle the received merge requests as best as it can.\r\nAlso, index/meta file writing failure should be recoverable just like how we recover data file writing failures.\r\nWe just need to handle the data file and index/meta file IOExceptions separately.",
+        "createdAt" : "2020-11-23T07:41:07Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c91f696f-9937-4c4a-ab02-da1f56a090ea",
+        "parentId" : "38c9a471-1885-4a8a-becd-b00e593add7d",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "> I think we should catch the chunk level IOExceptions inside onComplete, setting certain flags to make the onFailure handling logic know about whether we encountered a block level failure or a chunk level failure.\r\nFor a chunk level failure, we shouldn't overwrite the previous block, we should effectively only delay the closure of the chunk.\r\n\r\nThe closure of chunk write now depends on the minimum size of the chunk. If we keep growing the chunk then eventually it will be very large and the executors will get killed  fetching them because they will exceed the physical memory limit. This was the main reason to serve data in manageable-sized chunks.\r\n\r\n> Stopping merging blocks only after 2 consecutive IOExceptions seems to be giving up too early.\r\n\r\nWith local file systems the IOExceptions that I can think of would be due to disk failures, file corruption, permission and these will not go away when retrying to update these files. Are there any other scenarios that I am missing?\r\n\r\n> If there's a need to stop early due to too many disk failures, I think that logic should be on the client side inside ErrorHandler.\r\n\r\nSure, however the server here can respond with a similar runtime exception that it can't update metadata just like the `TooLate` runtime exception and the error handle for the push side can stop pushing the data.",
+        "createdAt" : "2020-11-23T07:57:42Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0a0e55d4-d7fe-474a-8696-3e4377cb53a2",
+        "parentId" : "38c9a471-1885-4a8a-becd-b00e593add7d",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "There are temporary issues as well.\r\nFor example, a user's job might be filling up the yarn local dir with its temporary data, which would then lead to IOExceptions for merge writes.\r\nWhen this issue occurs, it could trigger a clean up script which purges the temporary data from that job to recover the disk.\r\nIn this scenario, the IOException could be temporary.\r\n\r\nFor the too large chunk issue, it would only be too large if we have many consecutive IOExceptions.\r\nOnce recovered, the following chunks would go back to the normal size.\r\nOnly 2 consecutive IOExceptions within the same chunk is far from causing the potential too large chunk issue.\r\n\r\nIf we want to have a reasonable policy to stop early due to too many IOExceptions, I think that policy should require more than 2 consecutive IOExceptions during chunk metadata write to trigger.\r\nNote that, the same issue could affect writing data file as well.\r\nIf we want to address this issue holistically, it would require some state tracking.\r\nIf so, I'd rather track it on the client side instead of the server side.",
+        "createdAt" : "2020-11-23T16:50:23Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0949bf6f-64a0-4df1-82d7-cc9b9a1f4279",
+        "parentId" : "38c9a471-1885-4a8a-becd-b00e593add7d",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "@Victsm The case that you described how often does it happen? How does this cleanup script differentiates shuffle data from temporary user data and how quickly does it remove this data. This has an assumption that cluster is setup in a certain way.\r\nWould you agree that the more common cases are the non-recoverable disk failures, permission issues, file corruption etc?\r\nIf yes, then there will be continuous IOExceptions while updating these index/meta file. So if we just let the chunk grow when the index/meta file couldn't be updated, in most of the cases the executor will fail to fetch these.\r\n\r\nIn the non-push shuffle mechanism, if writing to index file fails does the executor try multiple times to write to the same file locally? I understand that in the push-mechanism, we are updating the index/meta in a continuous manner but even here it writing to an a local file.\r\n\r\n> I think that policy should require more than 2 consecutive IOExceptions during chunk metadata write to trigger.\r\nNote that, the same issue could affect writing data file as well.\r\n\r\nJust a single IOException while updating the index/meta file should be enough to indicate the client to stop pushing. Yes, it affects writing the data file as well. The reason I am not bringing that up because in this followup fix we are focusing on the exceptions while updating metadata. If others think that we should address the failures during writes to data file as well in this followup fix, we can address it. \r\n\r\n> If we want to address this issue holistically, it would require some state tracking.\r\nIf so, I'd rather track it on the client side instead of the server side.\r\n\r\nWe are already tracking the state of shuffle partition in `AppShufflePartitionInfo`. Adding few other flags to it shouldn't be an issue.\r\n\r\nWould like to know the thoughts of other folks as well.\r\n@mridulm @tgravescs @attilapiros @Ngone51 ",
+        "createdAt" : "2020-11-23T18:21:07Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1dc22936-bfa5-4515-bcdb-43d4e913f42a",
+        "parentId" : "38c9a471-1885-4a8a-becd-b00e593add7d",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "According to our operation experiences, the temporary issue I described is more common than the non-recoverable issues you described.",
+        "createdAt" : "2020-11-23T18:47:05Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2d659441-3b4e-4a55-9667-4e831fa9353e",
+        "parentId" : "38c9a471-1885-4a8a-becd-b00e593add7d",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "Also, the script I described is just one potential way to mitigate the issue faster.\r\nThat's temporary data which will be deleted by YARN at the end of the job anyway, so the cluster already has ways to self-recover from that type of issues.",
+        "createdAt" : "2020-11-23T18:49:53Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ddd9cfa0-f094-4122-b401-879da79bc28d",
+        "parentId" : "38c9a471-1885-4a8a-becd-b00e593add7d",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "Giving up on the merge write just after one IOException is too expensive.\r\nWe could have merged much more blocks if such an issue is only temporary.\r\nI think this is going against our original design to make the shuffle partition merge write tolerant of duplication, collision, and failure.",
+        "createdAt" : "2020-11-23T18:54:41Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "68519880-0438-42c7-bc26-4639fb73bf03",
+        "parentId" : "38c9a471-1885-4a8a-becd-b00e593add7d",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Tracking IO exceptions sounds a little bit complex to me...I'd prefer to stop merging in case of IO exception for the seek.\r\n\r\nBesides, I'm thinking it would be good if we could dynamically change the merger location when such IO exception happens.",
+        "createdAt" : "2020-11-24T15:01:35Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "446c84d4-3213-455a-86cc-cf149176b536",
+        "parentId" : "38c9a471-1885-4a8a-becd-b00e593add7d",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "Had a discussion with @Victsm @mridulm yesterday. This is the approach currently we are thinking of:\r\n1. Verify if `seek` is not recoverable. If it is not then let the clients know to stop pushing and stop merging this partition.\r\n2. Have a threshold on number of `IOExceptions` from writes and when this threshold is reached for a single partition, inform the client to stop pushing and stop merging this partition.\r\n3. When  the update to metadata fails, not propagate this exception back to client so that they push the block again. The size of the current chunk may grow but with (2) in place it will still be of a manageable size.\r\n\r\nThese changes will not be that complex.\r\n",
+        "createdAt" : "2020-11-24T19:23:54Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "aea1b1dd-1d7a-448d-88b9-1887317835e6",
+        "parentId" : "38c9a471-1885-4a8a-becd-b00e593add7d",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "> Besides, I'm thinking it would be good if we could dynamically change the merger location when such IO exception happens.\r\n\r\nWhich one of these do you mean?\r\n1.  The executor should start pushing to a different server for the current shuffle that is going on.\r\n2.  Do you mean that for a future shuffle, the driver should decide the merger locations considering these IOExceptions. \r\n\r\n(1) is currently difficult. The driver decides the specific merger locations before a shuffle stage and all the executors work on the assumption that these are all the shuffle servers that they push the data to. This list of shuffle servers should be consistent across the shuffle servers because if it's not then they will be push the shuffle data belonging to a reducer to different shuffle servers. This is the code I am talking about- [code](https://github.com/linkedin/spark/blob/002cb69e8ddf49bbe114744b84c46e0fd452d852/core/src/main/scala/org/apache/spark/shuffle/ShuffleBlockPusher.scala#L360).\r\n\r\n(2) This could be a future improvement where we also include the metrics for merge reported back to driver when the driver triggers the finalize. The driver could use these metrics when deciding which shuffle server to use for the next push.",
+        "createdAt" : "2020-11-24T19:49:42Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "463b6482-bee1-458a-8ea2-1479aa2c6812",
+        "parentId" : "38c9a471-1885-4a8a-becd-b00e593add7d",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "I mean (1). I know it's hard for the current framework. It requires more refactor if we want to do so. \r\n\r\n(2) sounds good to me. But to clarify, it only benefits the following push but doesn't help ease the problem(the IO exception) in the current push.",
+        "createdAt" : "2020-11-25T04:57:58Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "84255722-16ad-44d4-970e-bdb5db000409",
+        "parentId" : "38c9a471-1885-4a8a-becd-b00e593add7d",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "For dynamically changing merger locations for the current push, if the non-recoverable IOException happen after majority of the blocks have already been merged, we won't gain much by pushing the remaining blocks in this shuffle targeted to the failed shuffle service to a new location. Probably need to check the merge ratio before deciding whether to do so or not. The current framework is designed around the best-effort nature of the block push operation, which simplifies the handling of these failure scenarios.",
+        "createdAt" : "2020-11-25T18:15:24Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cc9c2f36-7f3e-4fa5-86b1-e74889c0e730",
+        "parentId" : "38c9a471-1885-4a8a-becd-b00e593add7d",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "Openjdk `seek` seems to use `lseek64`\r\n```\r\n// move file pointer to the specified offset\r\njlong os::seek_to_file_offset(int fd, jlong offset) {\r\n  return (jlong)::lseek64(fd, (off64_t)offset, SEEK_SET);\r\n}\r\n```\r\n`lseek64` is just a variation of `lseek` that uses 64 bit file offset.\r\nBelow are the errors from https://linux.die.net/man/2/lseek\r\n```\r\nEBADF\r\nfd is not an open file descriptor.\r\nEINVAL\r\nwhence is not valid. Or: the resulting file offset would be negative, or beyond the end of a seekable device.\r\nEOVERFLOW\r\nThe resulting file offset cannot be represented in an off_t.\r\nESPIPE\r\nfd is associated with a pipe, socket, or FIFO.\r\nENXIO\r\nwhence is SEEK_DATA or SEEK_HOLE, and the current file offset is beyond the end of the file.\r\n```\r\nIn our case, we always seek to a previous point in the file and none of these errors would be recoverable in that case.\r\nSo any exceptions during seek should not be recoverable.\r\n@mridulm @Victsm ",
+        "createdAt" : "2020-11-30T22:33:46Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9164a4f3-0cea-4b66-a1a6-4064dc76b97c",
+        "parentId" : "38c9a471-1885-4a8a-becd-b00e593add7d",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "Thanks for confirming @otterc, this means we should not have seek throwing exception in almost all cases for us.\r\nWe have two paths here:\r\na) Ignore seek exception as unexpected.\r\nb) Abort merge, assuming EBADF/etc - as it is unrecoverable error.\r\n\r\nI am partial towards (b) as we cannot recover with seek exception. Thoughts ?",
+        "createdAt" : "2020-12-01T04:40:44Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d55f192a-47ae-4c90-ab01-708925c813fd",
+        "parentId" : "38c9a471-1885-4a8a-becd-b00e593add7d",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "Just want to reiterate the change I am working on:\r\n- Since seek is not recoverable, we let the clients know to stop pushing for a particular shuffle partition.\r\n- Have a threshold on number of IOExceptions from writes and when this threshold is reached for a single partition, inform the client to stop pushing and stop merging this partition.\r\n- When the update to metadata fails, not propagate this exception back to client so that they push the block again. The size of the current chunk may grow but with (2) in place it will still be of a manageable size.\r\n\r\nThese changes will impact https://github.com/apache/spark/pull/30312. Right now the client stops pushing for the entire shuffle not a particular shuffle partition. The support needs to be extended to stop pushing for a particular shuffle partition.",
+        "createdAt" : "2020-12-01T20:16:59Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "af147b29-bd3a-4532-a04d-fd34418bba16",
+        "parentId" : "38c9a471-1885-4a8a-becd-b00e593add7d",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Could you file a JIRA ticket for the corresponding work for the client?",
+        "createdAt" : "2020-12-04T05:39:30Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "26c32c3d-4529-4c4a-afe9-9cef1c2e19a4",
+        "parentId" : "38c9a471-1885-4a8a-becd-b00e593add7d",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "I created this Jira:\r\nhttps://issues.apache.org/jira/browse/SPARK-33665",
+        "createdAt" : "2020-12-04T20:43:57Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f48d52f68e52b63742e7cce5dbb4fbcc89845402",
+    "line" : 352,
+    "diffHunk" : "@@ -1,1 +904,908 @@        // updated. If the update to the index file is successful but the update to meta file isn't\n        // then the index file position is not updated.\n        writeChunkTracker(mapIndex);\n        indexFile.updatePos(8);\n        this.lastChunkOffset = chunkOffset;"
+  },
+  {
+    "id" : "9ddc7fc2-3702-4e36-b760-d358ff2e2889",
+    "prId" : 30433,
+    "prUrl" : "https://github.com/apache/spark/pull/30433#pullrequestreview-535954567",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9e2c9f78-94a1-496d-b371-87791122db56",
+        "parentId" : null,
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "Move close to finally (here and below)",
+        "createdAt" : "2020-11-21T09:49:03Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f48d52f68e52b63742e7cce5dbb4fbcc89845402",
+    "line" : 433,
+    "diffHunk" : "@@ -1,1 +970,974 @@      if (metaFile != null) {\n        try {\n          metaFile.close();\n        } catch (IOException ioe) {\n          logger.warn(\"Error closing meta file for {} shuffleId {} reduceId {}\","
+  },
+  {
+    "id" : "6b79b0f6-a905-41a2-b016-4672c4d240a9",
+    "prId" : 30433,
+    "prUrl" : "https://github.com/apache/spark/pull/30433#pullrequestreview-543076379",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "015001e5-2ffd-41ea-9afd-8b703f98bc81",
+        "parentId" : null,
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "Do we want to truncate data file as well to the length recorded by the last offset in the index file?\r\nhttps://github.com/apache/spark/blob/dfa3978d9191e02eabf65d1829c970644d25d57e/common/network-shuffle/src/main/java/org/apache/spark/network/shuffle/RemoteBlockPushResolver.java#L869-L871\r\n\r\nBTW, just realized this limitation in GitHub (https://github.com/isaacs/github/issues/284).\r\nPeople know any workaround?",
+        "createdAt" : "2020-11-26T07:23:22Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7e1ced69-a539-4717-8be8-1ad27992f94a",
+        "parentId" : "015001e5-2ffd-41ea-9afd-8b703f98bc81",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "Truncating would be good, it will keep the file consistent with the index files as well.",
+        "createdAt" : "2020-11-30T23:36:29Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5e078739-cf2d-444d-84a2-21a8cc78a255",
+        "parentId" : "015001e5-2ffd-41ea-9afd-8b703f98bc81",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "What do we do when the truncate of data file here fails?",
+        "createdAt" : "2020-12-01T23:09:54Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1d1d783d-0329-410a-b76a-e4e5e9b27156",
+        "parentId" : "015001e5-2ffd-41ea-9afd-8b703f98bc81",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "Also we truncate the data file before `closeAllFiles` is invoked in `finalizeShuffleMerge`\r\n```\r\n partition.dataChannel.truncate(partition.getPosition());\r\n```",
+        "createdAt" : "2020-12-01T23:13:02Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1e722bc3-7f61-4436-8699-574f5b24939a",
+        "parentId" : "015001e5-2ffd-41ea-9afd-8b703f98bc81",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "That truncation is to truncate to the last successfully appended block.\r\nHowever, if the index/meta files are not in sync, we would have these blocks in the end of the file that won't be consumed.",
+        "createdAt" : "2020-12-02T14:07:24Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "de758f8f-d9a1-474e-836b-b12bb4cb9da7",
+        "parentId" : "015001e5-2ffd-41ea-9afd-8b703f98bc81",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "Yes, but I think truncating the data file twice while finalizing is unnecessary. Also we can't simply ignore the exceptions while truncating all these 3 files during close. I think truncation of these files should be separated from `closeAllFiles`.\r\nThis is the change I have made:\r\n```\r\n  public MergeStatuses finalizeShuffleMerge(FinalizeShuffleMerge msg) throws IOException {\r\n     ...\r\n      while (partitionsIter.hasNext()) {\r\n        AppShufflePartitionInfo partition = partitionsIter.next();\r\n        synchronized (partition) {\r\n          try {\r\n            partition.finalizePartition();\r\n            bitmaps[idx] = partition.mapTracker;\r\n            reduceIds[idx] = partition.reduceId;\r\n            sizes[idx++] = partition.getPosition();\r\n          } catch (IOException ioe) {\r\n            logger.warn(\"Exception while finalizing shuffle partition {} {} {}\", msg.appId,\r\n              msg.shuffleId, partition.reduceId, ioe);\r\n          } finally {\r\n            partition.closeAllFiles();\r\n            // The partition should be removed after the files are written so that any new stream\r\n            // for the same reduce partition will see that the data file exists.\r\n            partitionsIter.remove();\r\n          }\r\n        }\r\n      }\r\n      mergeStatuses = new MergeStatuses(msg.shuffleId, bitmaps, reduceIds, sizes);\r\n    }\r\n    partitions.remove(appShuffleId);\r\n    logger.info(\"Finalized shuffle {} from Application {}.\", msg.shuffleId, msg.appId);\r\n    return mergeStatuses;\r\n  }\r\n\r\n   private void finalizePartition() throws IOException {\r\n      if (position != lastChunkOffset) {\r\n        try {\r\n          updateChunkInfo(position, lastMergedMapIndex);\r\n        } catch (IOException ioe) {\r\n          if (seekFailed) {\r\n            // If seek has failed then fail finalize of this partition by propagating the exception.\r\n            throw ioe;\r\n          }\r\n          // If seek hasn't failed then ignore this exception.\r\n        }\r\n      }\r\n      // Get rid of any partial block data at the end of the file. This could either\r\n      // be due to failure or a request still being processed when the shuffle\r\n      // merge gets finalized.\r\n      dataChannel.truncate(lastChunkOffset);\r\n      metaFile.setLength(metaFile.getFilePointer());\r\n      indexFile.setLength(indexFile.getFilePointer());\r\n    }\r\n```\r\nAny exception while truncating data/meta/index file during finalize will propagate the exception to the caller and that partition will not be considered merged.",
+        "createdAt" : "2020-12-02T17:32:25Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f48d52f68e52b63742e7cce5dbb4fbcc89845402",
+    "line" : 429,
+    "diffHunk" : "@@ -1,1 +967,971 @@          dataChannel = null;\n        }\n      }\n      if (metaFile != null) {\n        try {"
+  },
+  {
+    "id" : "03e969fc-fd7b-4ac1-9cbe-b84ccdc5f36e",
+    "prId" : 30433,
+    "prUrl" : "https://github.com/apache/spark/pull/30433#pullrequestreview-545356938",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "aa6d68fe-4e21-4343-95d7-95f2e570330a",
+        "parentId" : null,
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "Do we want to ignore exceptions here while doing truncate (for each call) ? This is best case effort without impact on functionality in case there is unread suffix data, right ?",
+        "createdAt" : "2020-12-03T18:58:19Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fe0c32dd-4825-496f-9db9-e1673545131e",
+        "parentId" : "aa6d68fe-4e21-4343-95d7-95f2e570330a",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "We are not ignoring the exceptions for truncate. If any of these truncate fail, the finalize of this shuffle partition fails and the shuffle partition is considered not to be merged. So clients will fetch original un-merged data.\r\n\r\nIf we want, we can ignore exceptions during truncation of data file. However, I didn't do that because the existing code doesn't ignore that.",
+        "createdAt" : "2020-12-03T19:11:00Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8e5fb023-a267-4f3e-bd04-ff95682a9937",
+        "parentId" : "aa6d68fe-4e21-4343-95d7-95f2e570330a",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "I don't think we can ignore any IOExceptions during truncation of index/meta file right now. This is because how we serve the number of chunks from index file and we expect the number of chunks from index file and meta file to be consistent.",
+        "createdAt" : "2020-12-03T19:41:02Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5b158c79-ba32-4637-bfd5-90238ea5a2e6",
+        "parentId" : "aa6d68fe-4e21-4343-95d7-95f2e570330a",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "Had offline discussion with @otterc ... ignoring truncate exceptions here will require more changes to how we compute and manage chunks, keep appShufflePartitionInfo around, etc ... \r\nGiven this, I am fine with handling the exception and not ignoring it.\r\nThanks for details @otterc ",
+        "createdAt" : "2020-12-04T23:11:55Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f48d52f68e52b63742e7cce5dbb4fbcc89845402",
+    "line" : 424,
+    "diffHunk" : "@@ -1,1 +954,958 @@      dataChannel.truncate(lastChunkOffset);\n      indexFile.getChannel().truncate(indexFile.getPos());\n      metaFile.getChannel().truncate(metaFile.getPos());\n    }\n"
+  },
+  {
+    "id" : "49b127ed-e3b5-437a-8d30-31378f22d4fa",
+    "prId" : 30433,
+    "prUrl" : "https://github.com/apache/spark/pull/30433#pullrequestreview-548441083",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "cbf7ce41-7aaf-49ab-8a30-9a2fd1ac8ff2",
+        "parentId" : null,
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "We could alternatively still maintain the arrays to avoid array copying towards the end.\r\nWe can handle the null bitmaps on the driver side after it receives the MergeStatuses.",
+        "createdAt" : "2020-12-09T00:20:03Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "da6b0b9b-ade4-4b2c-82d1-6e470923ef86",
+        "parentId" : "cbf7ce41-7aaf-49ab-8a30-9a2fd1ac8ff2",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "I would prefer not sending null bitmaps. It seems awkward to do that. It is an API method so we also then have to document the API that it can send `nulls`. And what is the performance benefit? This happens once in finalize and the list will at most be few thousand elements big. Making the code optimize for this seems premature.",
+        "createdAt" : "2020-12-09T01:55:08Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "335e0d71-7972-427e-9770-27c8e32d67ba",
+        "parentId" : "cbf7ce41-7aaf-49ab-8a30-9a2fd1ac8ff2",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "I just thought that since we made this change in #30062, we might want to keep it if we can.\r\nI don't have strong opinion on this.",
+        "createdAt" : "2020-12-09T08:00:17Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f3224d22-8fc0-4efe-8896-b3a05a193648",
+        "parentId" : "cbf7ce41-7aaf-49ab-8a30-9a2fd1ac8ff2",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "I think that was my mistake. I changed it overlooking the fact that there could be fewer partitions because of the exceptions when truncating data file or updating index/meta. \r\nI don't think it is better to have `null`s in the array that is returned though.",
+        "createdAt" : "2020-12-09T17:46:06Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f48d52f68e52b63742e7cce5dbb4fbcc89845402",
+    "line" : 80,
+    "diffHunk" : "@@ -1,1 +389,393 @@      List<RoaringBitmap> bitmaps = new ArrayList<>(partitionsToFinalize.size());\n      List<Integer> reduceIds = new ArrayList<>(partitionsToFinalize.size());\n      List<Long> sizes = new ArrayList<>(partitionsToFinalize.size());\n      Iterator<AppShufflePartitionInfo> partitionsIter = partitionsToFinalize.iterator();\n      while (partitionsIter.hasNext()) {"
+  },
+  {
+    "id" : "88892544-0f1b-4f2e-9db1-aeaaba46ffdb",
+    "prId" : 30433,
+    "prUrl" : "https://github.com/apache/spark/pull/30433#pullrequestreview-548426670",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0a629cf4-be0d-41e6-bc74-fe02d97f9e96",
+        "parentId" : null,
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "Why does this need to be inside the if block, instead of keeping `writeDeferredBufs` as is and just calling `abortIfNecessary` before `writeDeferredBufs`?",
+        "createdAt" : "2020-12-09T07:54:54Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3c2511f5-4b7b-444b-97d6-4fc9377cdeb7",
+        "parentId" : "0a629cf4-be0d-41e6-bc74-fe02d97f9e96",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "I was thinking that if a stream is completing but doesn't need to write any deferred bufs then we should let it complete without failures. ",
+        "createdAt" : "2020-12-09T17:31:53Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f48d52f68e52b63742e7cce5dbb4fbcc89845402",
+    "line" : 223,
+    "diffHunk" : "@@ -1,1 +681,685 @@            try {\n              if (deferredBufs != null && !deferredBufs.isEmpty()) {\n                abortIfNecessary();\n                writeDeferredBufs();\n              }"
+  },
+  {
+    "id" : "f826f31e-6e82-49e1-a8b9-a31cd20b25f9",
+    "prId" : 30433,
+    "prUrl" : "https://github.com/apache/spark/pull/30433#pullrequestreview-551955002",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2519124d-6fa1-4e94-a4fc-d804470d75e7",
+        "parentId" : null,
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "I don't think we should invoke this here.\r\nInvoking inside `onComplete` should be sufficient.",
+        "createdAt" : "2020-12-09T07:56:56Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3f84ed1c-ce77-4b6f-bd6f-6c83f17a05f3",
+        "parentId" : "2519124d-6fa1-4e94-a4fc-d804470d75e7",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "Purpose is to only do this check once per block instead of once per buf and avoid throwing unnecessary exceptions from onData which leads to channel close.",
+        "createdAt" : "2020-12-09T08:02:11Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "800ecd00-8ae4-4285-afa8-9947ffe617db",
+        "parentId" : "2519124d-6fa1-4e94-a4fc-d804470d75e7",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "@Victsm This change is to address this comment:\r\nhttps://github.com/apache/spark/pull/30433#discussion_r538947833\r\n\r\nThe scenario is that there can be pending streams which are waiting on the lock for the `partitionInfo` and meanwhile the exception threshold has met. When the pending stream acquires the lock it will attempt to write to the data file even though the exception threshold is reached. \r\n\r\nI have added the UT `testPendingBlockIsAbortedImmediately` to verify this. \r\n\r\n> Purpose is to only do this check once per block instead of once per buf and avoid throwing unnecessary exceptions from onData which leads to channel close.\r\n\r\nWe already throw IOExceptions when write to data file fails. I don't see how throwing `IOException exceeded threshold` makes it any worse.\r\n\r\n\r\n",
+        "createdAt" : "2020-12-09T17:26:23Z",
+        "updatedAt" : "2020-12-09T18:13:54Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8c4975dd-dd83-447d-ba21-18c72724a9e7",
+        "parentId" : "2519124d-6fa1-4e94-a4fc-d804470d75e7",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "The way I see the issue mentioned in that comment is that we are not preventing new blocks to be merged when the IOException threshold is reached.\r\nTo do that, we only need to invoke `abortIfNecessary` inside `onComplete`, whether we still have any deferredBuf to write at that point.\r\nThis way, for normal case without IOException, we are only invoking `abortIfNecessary` once per block.\r\nBy invoking it here, we would invoke it once per buf for normal case.\r\n\r\nOf course, if we only check inside `onComplete`, we would delay rejection of these pending blocks until we reach their stream's end.\r\nI think this is a reasonable tradeoff to make, considering that majority of the time the code is executing for normal case instead of the exception case.",
+        "createdAt" : "2020-12-09T20:14:11Z",
+        "updatedAt" : "2020-12-09T20:14:11Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "60ef8140-acf5-4220-b80f-64a104dcd0d6",
+        "parentId" : "2519124d-6fa1-4e94-a4fc-d804470d75e7",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "hmmm. I think the intention is to not have the server attempt writing if the threshold is reached for the partition. Probably this check here makes this behavior more accurate.\r\n\r\nHowever, I don't have a strong opinion on this since the assumption is that if these number of IOExceptions have already reached the threshold, any further writes will result in an IOException as well. With that assumption, the write in `onData` after this threshold is met, will very likely throw `IOException` as well and since the  threshold is already met, the server will instead throw `IOExceptions exceeded threshold`.\r\n\r\nI can remove it from `onData`. @Ngone51 What do you think?",
+        "createdAt" : "2020-12-09T20:38:16Z",
+        "updatedAt" : "2020-12-09T21:34:56Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e46601d0-93ec-4c83-9340-d43d6c9a0cca",
+        "parentId" : "2519124d-6fa1-4e94-a4fc-d804470d75e7",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "It's OK if the further writes throw IOExceptions. I just worry, can we handle it correctly if writes succeed? Or it may lead to some undefined situation which could affect later shuffle fetch in turn.\r\n\r\nSo I'd like to avoid any writes in the first place (`onData`) so we ensure that we don't go into any undefined situation. And I think, maybe, we can update it a little, like this - we still receive data in `onData` but just not write when the partition already reach IO threshold and only call `abortIfNecessary` inside `onCompelte`.\r\n\r\nWDYT? @Victsm @otterc ",
+        "createdAt" : "2020-12-10T05:29:19Z",
+        "updatedAt" : "2020-12-10T05:29:56Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b3adcf7d-d586-4bd4-aae7-26d4af7d8567",
+        "parentId" : "2519124d-6fa1-4e94-a4fc-d804470d75e7",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "Even If the write succeeds, I don't see an issue. If there are no further failures with this block it will be merged successfully. If there are more failures later, then they will be handled in the same way as now.  I could add UTs to verify this as well.\r\n\r\n> we still receive data in onData but just not write when the partition already reach IO threshold and only call abortIfNecessary inside `onComplete`.\r\n\r\nMy thought about this is that if a block is completing and doesn't have any deferred bufs then we should let it complete without failures if possible. \r\n\r\nAgain, I don't have a strong opinion about this. IMO reaching the threshold is indicative of a persistent issue and any further writes will faill.",
+        "createdAt" : "2020-12-10T06:05:49Z",
+        "updatedAt" : "2020-12-10T06:05:49Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4ec81b06-a043-44bb-8618-f39ebdf645a1",
+        "parentId" : "2519124d-6fa1-4e94-a4fc-d804470d75e7",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "I agree with @Ngone51 - if we failed on a previous write, there should not be any subsequent writes: it will lead to inconsistent state (for example, if previous write failed due to lack of space and subsequent write can go through due to some async cleanup).\r\nIt is better to avoid these states rather than reason about them based on current code state - as things evolve, it makes it more brittle.",
+        "createdAt" : "2020-12-10T15:30:08Z",
+        "updatedAt" : "2020-12-10T15:30:09Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "40452f79-de66-4be9-8988-e0e366dbd606",
+        "parentId" : "2519124d-6fa1-4e94-a4fc-d804470d75e7",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "Ok. Then I will not remove the `abortIfNecessary()` from `onData`. \r\ncc. @mridulm @Ngone51 @Victsm \r\n",
+        "createdAt" : "2020-12-10T17:57:38Z",
+        "updatedAt" : "2020-12-10T17:57:38Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "21fc29c0-060c-4398-b83d-1b878c44737a",
+        "parentId" : "2519124d-6fa1-4e94-a4fc-d804470d75e7",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "If we want consistency, i.e., no more write after reaching IOException threshold, then we should alway invoke `abortIfNecessary` in `onComplete` to check, and if that's what we want, only invoking `abortIfNecessary` in `onComplete` should be sufficient.",
+        "createdAt" : "2020-12-10T19:51:30Z",
+        "updatedAt" : "2020-12-10T19:51:30Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ee53f5d4-7788-49d4-9326-5f8556d85ebb",
+        "parentId" : "2519124d-6fa1-4e94-a4fc-d804470d75e7",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "@Ngone51 @mridulm , by throwing exception inside `onComplete`, we are still effectively rejecting any new blocks from being successfully appended to the file.",
+        "createdAt" : "2020-12-10T19:56:46Z",
+        "updatedAt" : "2020-12-10T19:56:46Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "00358737-8532-4650-a93f-a279f8184226",
+        "parentId" : "2519124d-6fa1-4e94-a4fc-d804470d75e7",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "Had an offline discussion with @mridulm and @otterc , the concern about closing channels with throwing exception mid-stream seems negligible since it only happens after reaching the max IOException count.\r\nCalling `abortIfNecessary` inside `onData` should also have negligible performance implications.\r\nWith those, I think it should be fine to keep this part of the code as is.",
+        "createdAt" : "2020-12-10T22:11:55Z",
+        "updatedAt" : "2020-12-10T22:11:55Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a395c655-9165-4af7-acf2-31e5ef21c5f1",
+        "parentId" : "2519124d-6fa1-4e94-a4fc-d804470d75e7",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "I'm wondering does the server closes the channel or client would stop streaming the remaining data when we throw the exception in `onData`. Otherwise, we'd receive the following data from the client and throw the exception for multiple times.\r\n\r\n(I didn't find anywhere we close the channel or the client may have a chance to stop streaming. I may miss it somewhere.)",
+        "createdAt" : "2020-12-11T14:17:58Z",
+        "updatedAt" : "2020-12-11T14:17:58Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ff2dcaab-73ff-4570-a487-1d0214d9bfc1",
+        "parentId" : "2519124d-6fa1-4e94-a4fc-d804470d75e7",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "@Ngone51 I think that's an existing behavior in Spark with how it uses `StreamInterceptor` to stream data coming from a RPC message that's out of the frame.\r\nThis is also documented with SPARK-6237 in #21346:\r\nhttps://github.com/apache/spark/blob/82aca7eb8f2501dceaf610f1aaa86082153ef5ee/common/network-common/src/main/java/org/apache/spark/network/server/RpcHandler.java#L62-L66\r\n\r\nIt is the server which closes the channel if exception is thrown from `onData`.\r\nOnce an exception gets thrown from `onData` while `StreamInterceptor` hasn't finished processing all the out of frame bytes for a given RPC message, the `TransportFrameDecoder` will no longer be able to successfully decode following RPC messages from this channel.\r\nThus, the server needs to close the channel at this point.\r\nOnce the channel gets closed, the client will no longer be able to transfer any more data to the server using the same channel.\r\nThe connection needs to be reestablished at this time, resetting state on the client side.",
+        "createdAt" : "2020-12-14T19:30:07Z",
+        "updatedAt" : "2020-12-14T19:30:07Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "29baa96b-cee7-42b0-bef5-c864d49f91d6",
+        "parentId" : "2519124d-6fa1-4e94-a4fc-d804470d75e7",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "The client does receive the exception thrown from `onData`. I simulated an exception from `onData` at the server for a particular push block.\r\nBelow are the logs of the client. \r\nNote: I am running an older version of magnet which still uses `ShuffleBlockId` for shuffle push and some other classes are old.\r\n\r\n```\r\n20/12/11 19:14:48 INFO TransportClientFactory: Successfully created connection to ltx1-hcl3213.grid.linkedin.com/10.150.24.33:7337 after 12 ms (5 ms spent in bootstraps)\r\n20/12/11 19:14:56 ERROR RetryingBlockFetcher: Failed to fetch block shuffle_1_7_7, and will not retry (1 retries)\r\norg.apache.spark.network.shuffle.BlockPushException: ^H^@^@^@^_application_1602506816280_53624^@^@^@\r\nshuffle_1_7_7^@^@^@^Gjava.io.IOException: Destination failed while reading stream\r\n        at org.apache.spark.network.server.TransportRequestHandler$3.onFailure(TransportRequestHandler.java:244)\r\n        at org.apache.spark.network.client.StreamInterceptor.exceptionCaught(StreamInterceptor.java:58)\r\n        at org.apache.spark.network.util.TransportFrameDecoder.exceptionCaught(TransportFrameDecoder.java:188)\r\n        at org.spark_project.io.netty.channel.AbstractChannelHandlerContext.invokeExceptionCaught(AbstractChannelHandlerContext.java:285)\r\n        at org.spark_project.io.netty.channel.AbstractChannelHandlerContext.notifyHandlerException(AbstractChannelHandlerContext.java:850)\r\n        at org.spark_project.io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:364)\r\n        at org.spark_project.io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:348)\r\n        at org.spark_project.io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:340)\r\n        at org.spark_project.io.netty.channel.DefaultChannelPipeline$HeadContext.channelRead(DefaultChannelPipeline.java:1359)\r\n        at org.spark_project.io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:362)\r\n        at org.spark_project.io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:348)\r\n        at org.spark_project.io.netty.channel.DefaultChannelPipeline.fireChannelRead(DefaultChannelPipeline.java:935)\r\n        at org.spark_project.io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:138)\r\n        at org.spark_project.io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:645)\r\n        at org.spark_project.io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:580)\r\n        at org.spark_project.io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:497)\r\n        at org.spark_project.io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:459)\r\n        at org.spark_project.io.netty.util.concurrent.SingleThreadEventExecutor$5.run(SingleThreadEventExecutor.java:858)\r\n        at org.spark_project.io.netty.util.concurrent.DefaultThreadFactory$DefaultRunnableDecorator.run(DefaultThreadFactory.java:138)\r\n        at java.lang.Thread.run(Thread.java:748)\r\nCaused by: java.lang.RuntimeException: FAILING this stream\r\n```\r\n\r\nAfter this, the client logs show that the server has terminated the connection.\r\n```\r\n20/12/11 19:14:57 WARN TransportChannelHandler: Exception in connection from ltx1-hcl3412.grid.linkedin.com/10.150.55.78:7337\r\njava.io.IOException: Connection reset by peer\r\n        at sun.nio.ch.FileDispatcherImpl.read0(Native Method)\r\n        at sun.nio.ch.SocketDispatcher.read(SocketDispatcher.java:39)\r\n        at sun.nio.ch.IOUtil.readIntoNativeBuffer(IOUtil.java:223)\r\n        at sun.nio.ch.IOUtil.read(IOUtil.java:192)\r\n        at sun.nio.ch.SocketChannelImpl.read(SocketChannelImpl.java:380)\r\n        at io.netty.buffer.PooledUnsafeDirectByteBuf.setBytes(PooledUnsafeDirectByteBuf.java:288)\r\n        at io.netty.buffer.AbstractByteBuf.writeBytes(AbstractByteBuf.java:1106)\r\n        at io.netty.channel.socket.nio.NioSocketChannel.doReadBytes(NioSocketChannel.java:343)\r\n        at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:123)\r\n        at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:645)\r\n        at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:580)\r\n        at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:497)\r\n        at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:459)\r\n        at io.netty.util.concurrent.SingleThreadEventExecutor$5.run(SingleThreadEventExecutor.java:858)\r\n        at io.netty.util.concurrent.DefaultThreadFactory$DefaultRunnableDecorator.run(DefaultThreadFactory.java:138)\r\n        at java.lang.Thread.run(Thread.java:748)\r\n20/12/11 19:14:57 ERROR TransportResponseHandler: Still have 38 requests outstanding when connection from ltx1-hcl3412.grid.linkedin.com/10.150.55.78:7337 is closed\r\n```",
+        "createdAt" : "2020-12-14T22:41:27Z",
+        "updatedAt" : "2020-12-14T22:41:27Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f48d52f68e52b63742e7cce5dbb4fbcc89845402",
+    "line" : 183,
+    "diffHunk" : "@@ -1,1 +589,593 @@            return;\n          }\n          abortIfNecessary();\n          logger.trace(\"{} shuffleId {} reduceId {} onData writable\",\n            partitionInfo.appShuffleId.appId, partitionInfo.appShuffleId.shuffleId,"
   }
 ]

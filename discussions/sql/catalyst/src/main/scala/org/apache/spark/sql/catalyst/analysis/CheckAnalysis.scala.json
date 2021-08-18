@@ -482,5 +482,71 @@
     "commit" : "8decf274c463c3689d58feb8d2053ad888cee9f9",
     "line" : 28,
     "diffHunk" : "@@ -1,1 +111,115 @@            s\"$cmd expects a view.\")\n\n      case u: UnresolvedView =>\n        u.failAnalysis(s\"View not found for '${u.commandName}': ${u.multipartIdentifier.quoted}\")\n"
+  },
+  {
+    "id" : "5dee8eba-4649-486a-9663-b9895b8d9109",
+    "prId" : 30412,
+    "prUrl" : "https://github.com/apache/spark/pull/30412#pullrequestreview-534136103",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "504d7388-cfc0-46e5-8ad0-5f0e3b486ff0",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "> To simplify the implementation, this PR doesn't propagate char/varchar type info through functions/operators(e.g. substring).\r\n\r\nFor checking it does not propagates char/varchar types, how about checking this in all logical nodes? It seems, in the current implementation, we can pass char/varchar types into logical plans, e.g., via `functions.from_json(col, schema having char/vchar types)`?\r\n",
+        "createdAt" : "2020-11-19T05:11:26Z",
+        "updatedAt" : "2020-11-27T10:45:20Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "685909fd-6e2f-41e8-9af9-017df683789d",
+        "parentId" : "504d7388-cfc0-46e5-8ad0-5f0e3b486ff0",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "We can not, as the parser that is used to parse the schema string replaces char/varchar with string. This is the existing behavior.",
+        "createdAt" : "2020-11-19T06:56:21Z",
+        "updatedAt" : "2020-11-27T10:45:20Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ceadfaf3-3601-4b0e-b86b-7d24e60364d7",
+        "parentId" : "504d7388-cfc0-46e5-8ad0-5f0e3b486ff0",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "But it's safer to check all the nodes, I'll update it.",
+        "createdAt" : "2020-11-19T07:17:48Z",
+        "updatedAt" : "2020-11-27T10:45:20Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "73b99dc7a98f5d0673d309adba457cd19144be92",
+    "line" : 13,
+    "diffHunk" : "@@ -1,1 +95,99 @@      case p if p.analyzed => // Skip already analyzed sub-plans\n\n      case leaf: LeafNode if leaf.output.map(_.dataType).exists(CharVarcharUtils.hasCharVarchar) =>\n        throw new IllegalStateException(\n          \"[BUG] logical plan should not have output of char/varchar type: \" + leaf)"
+  },
+  {
+    "id" : "128fe9ce-127b-4ac3-b829-b889b0687da0",
+    "prId" : 30412,
+    "prUrl" : "https://github.com/apache/spark/pull/30412#pullrequestreview-537590944",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "53cddd67-eac3-4d0a-bcb2-61e5bb79415d",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "@maropu I changed it back as it's pretty risky to get output from arbitrary logical plans. An example of the error:\r\n```\r\nCaused by: sbt.ForkMain$ForkError: java.lang.AssertionError: assertion failed: Scalar subquery should have only one column\r\n\tat scala.Predef$.assert(Predef.scala:223)\r\n\tat org.apache.spark.sql.catalyst.expressions.ScalarSubquery.dataType(subquery.scala:229)\r\n\tat org.apache.spark.sql.catalyst.expressions.Alias.toAttribute(namedExpressions.scala:181)\r\n\tat org.apache.spark.sql.catalyst.plans.logical.Project.$anonfun$output$1(basicLogicalOperators.scala:61)\r\n```",
+        "createdAt" : "2020-11-24T15:09:39Z",
+        "updatedAt" : "2020-11-27T10:45:20Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "73b99dc7a98f5d0673d309adba457cd19144be92",
+    "line" : 13,
+    "diffHunk" : "@@ -1,1 +95,99 @@      case p if p.analyzed => // Skip already analyzed sub-plans\n\n      case leaf: LeafNode if leaf.output.map(_.dataType).exists(CharVarcharUtils.hasCharVarchar) =>\n        throw new IllegalStateException(\n          \"[BUG] logical plan should not have output of char/varchar type: \" + leaf)"
   }
 ]

@@ -372,5 +372,159 @@
     "commit" : "a19f5f0b965d6c9dc59f1963ce6296e1639df751",
     "line" : 30,
     "diffHunk" : "@@ -1,1 +176,180 @@      assertAnalysisError(\n        s\"DESCRIBE $t invalid_col\",\n        \"cannot resolve '`invalid_col`' given input columns: [testcat.tbl.data, testcat.tbl.id]\")\n    }\n  }"
+  },
+  {
+    "id" : "3cb53f51-5e46-4410-8713-f0a75b99b118",
+    "prId" : 30475,
+    "prUrl" : "https://github.com/apache/spark/pull/30475#pullrequestreview-537736276",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "282484b3-132e-41c6-b675-82ae6bd098c5",
+        "parentId" : null,
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "This message could be misleading since `DROP TABLE` supports table and a temporary view. To fix this, we can add `allowPermanentView` as the following and update `Analyzer` accordingly:\r\n```scala\r\ncase class UnresolvedTableOrView(\r\n    multipartIdentifier: Seq[String],\r\n    commandName: String,\r\n    allowTempView: Boolean = true,\r\n    allowPermanentView: Boolean = true) extends LeafNode {\r\n  require(allowTempView || allowPermanentView)\r\n  override lazy val resolved: Boolean = false\r\n  override def output: Seq[Attribute] = Nil\r\n}\r\n```\r\nsuch that the exception message can be updated to\r\n`Table or temporary view not found for 'DROP TABLE': t`.\r\n\r\nOne downside is that if `t` is resolved to a view, the message will become:\r\n```\r\nt is a permanent view. 'DROP TABLE' expects a table or temporary view.\r\n```\r\ninstead of (current message):\r\n```\r\nCannot drop a view with DROP TABLE. Please use DROP VIEW instead\r\n```\r\n, meaning it will lose the \"hint\" (which we can add it to `Unresolved*` if required).\r\n\r\n@cloud-fan WDYT? If you are OK with introducing `allowPermanentView`, I can do it as a separate PR.",
+        "createdAt" : "2020-11-23T21:57:51Z",
+        "updatedAt" : "2020-11-27T08:17:30Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4b0db226-7f96-44eb-95f1-f577edbff72f",
+        "parentId" : "282484b3-132e-41c6-b675-82ae6bd098c5",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Sorry I don't get it. In this case, `testcat.db.notbl` is not a permanent view, but a non-existing relation.",
+        "createdAt" : "2020-11-24T05:53:41Z",
+        "updatedAt" : "2020-11-27T08:17:30Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "451247de-35d5-47cd-8fc0-128c9bf289b6",
+        "parentId" : "282484b3-132e-41c6-b675-82ae6bd098c5",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "When I read `Table or view not found for 'DROP TABLE': t`, it sounded like `DROP TABLE` also supports permanent views.\r\n\r\nSo, I was suggesting `Table or temporary view not found for 'DROP TABLE': t` since `DROP TABLE` requires either a table or temporary view. But, I guess `Table or view not found` sounds better if we want to point out the non-existing relation.",
+        "createdAt" : "2020-11-24T07:40:24Z",
+        "updatedAt" : "2020-11-27T08:17:30Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9c8bcac5-747a-43df-af00-a17e5bdc41c6",
+        "parentId" : "282484b3-132e-41c6-b675-82ae6bd098c5",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "> since DROP TABLE requires either a table or temporary view\r\n\r\nDo we have such a test case for v2 DROP TABLE?",
+        "createdAt" : "2020-11-24T08:43:07Z",
+        "updatedAt" : "2020-11-27T08:17:30Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "06744e4d-57ff-4cd5-9b34-66097a24712a",
+        "parentId" : "282484b3-132e-41c6-b675-82ae6bd098c5",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "v2 `DROP TABLE` only handles `ResolvedTable`. If it's resolved to a view, it will be handled in `ResolveSessionCatalog` and tested here:\r\nhttps://github.com/apache/spark/blob/fdd6c73b3cfac5af30c789c7f70b92367a79f7e7/sql/hive/src/test/scala/org/apache/spark/sql/hive/execution/HiveDDLSuite.scala#L1056-L1070",
+        "createdAt" : "2020-11-24T17:15:54Z",
+        "updatedAt" : "2020-11-27T08:17:30Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "46a4c4e138c2d649889dced98caabab2db750096",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +730,734 @@      sql(\"DROP TABLE testcat.db.notbl\")\n    }\n    assert(ex.getMessage.contains(\"Table or view not found for 'DROP TABLE': testcat.db.notbl\"))\n    sql(\"DROP TABLE IF EXISTS testcat.db.notbl\")\n  }"
+  },
+  {
+    "id" : "4a3f6ac8-84d0-4653-b504-66bf6ca24d93",
+    "prId" : 30449,
+    "prUrl" : "https://github.com/apache/spark/pull/30449#pullrequestreview-535804330",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8a106e97-996b-4e16-a1d1-2d47ea6fb9e9",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Yep. Good to have. +1.",
+        "createdAt" : "2020-11-20T21:57:44Z",
+        "updatedAt" : "2020-11-20T21:57:44Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "362e8b86ae18d5833c281717924a778e1108085a",
+    "line" : 34,
+    "diffHunk" : "@@ -1,1 +2477,2481 @@      assert(partTable.partitionExists(expectedPartitionIdent))\n      // Insert into the existing partition must not fail\n      sql(s\"INSERT INTO $t PARTITION(id = 1, city = 'NY') SELECT 'def'\")\n      assert(partTable.partitionExists(expectedPartitionIdent))\n    }"
+  },
+  {
+    "id" : "3359bcf9-ec0d-4556-b265-70740a18f887",
+    "prId" : 30403,
+    "prUrl" : "https://github.com/apache/spark/pull/30403#pullrequestreview-537163823",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "75d8a43c-3847-4c63-839b-6e89100db713",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "shall we also test CACHE TABLE AS SELECT? with temp view exists and not.",
+        "createdAt" : "2020-11-24T07:23:41Z",
+        "updatedAt" : "2020-11-27T21:30:33Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9970aea4-02ea-46e3-bb62-5ce4b17801de",
+        "parentId" : "75d8a43c-3847-4c63-839b-6e89100db713",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "Added a test with an existing temp view to `CachedTableSuite`.",
+        "createdAt" : "2020-11-24T08:05:03Z",
+        "updatedAt" : "2020-11-27T21:30:33Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7e788cea5c2dd03f71ee30b0106e04d7f036f30f",
+    "line" : 13,
+    "diffHunk" : "@@ -1,1 +2020,2024 @@  }\n\n  test(\"CACHE/UNCACHE TABLE\") {\n    val t = \"testcat.ns1.ns2.tbl\"\n    withTable(t) {"
+  },
+  {
+    "id" : "4f44f8d7-5060-4257-8098-fba55e1494a3",
+    "prId" : 30403,
+    "prUrl" : "https://github.com/apache/spark/pull/30403#pullrequestreview-542418593",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "91d90341-2b2b-4782-b625-1a1548765b0f",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "unnecessary change. This is minor and let's fix it in your next PR.",
+        "createdAt" : "2020-11-30T05:36:13Z",
+        "updatedAt" : "2020-11-30T05:36:13Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0fc49a0e-1e3d-4261-93eb-ee337480a9b3",
+        "parentId" : "91d90341-2b2b-4782-b625-1a1548765b0f",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "Ok, will fix.",
+        "createdAt" : "2020-12-02T00:58:52Z",
+        "updatedAt" : "2020-12-02T00:58:52Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7e788cea5c2dd03f71ee30b0106e04d7f036f30f",
+    "line" : 58,
+    "diffHunk" : "@@ -1,1 +2558,2562 @@  }\n\n  private def testNotSupportedV2Command(\n      sqlCommand: String,\n      sqlParams: String,"
   }
 ]

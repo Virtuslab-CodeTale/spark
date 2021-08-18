@@ -1,0 +1,57 @@
+[
+  {
+    "id" : "baf67db6-7b16-40ce-9bbf-c398a18b663f",
+    "prId" : 30403,
+    "prUrl" : "https://github.com/apache/spark/pull/30403#pullrequestreview-543481983",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "26cbaa1b-6140-496c-8523-e17056edad50",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "the next thing we can do is to refactor it using the v2 framework (not adding a v2 version). The benefits are: 1. moving the logical plan to catalyst. 2. resolve the table in the analyzer. e.g.\r\n```\r\nCacheTable(UnresolvedRelation(...), ...)\r\n...\r\ncase class CacheTableExec(relation: LogicalPlan) {\r\n  def run() {\r\n     val df  = Dataset.ofRows(spark, relation)\r\n     ....\r\n  }\r\n}\r\n```",
+        "createdAt" : "2020-11-30T05:47:30Z",
+        "updatedAt" : "2020-11-30T05:47:30Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6c44d193-857d-4d4e-a312-90960b456481",
+        "parentId" : "26cbaa1b-6140-496c-8523-e17056edad50",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "OK, will do.",
+        "createdAt" : "2020-12-02T00:58:58Z",
+        "updatedAt" : "2020-12-02T00:58:59Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "19a61fea-ddce-4a33-95bd-3c2c223f5495",
+        "parentId" : "26cbaa1b-6140-496c-8523-e17056edad50",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "One issue I am encountering by moving to the v2 framework (for v2 tables) is the following.\r\n\r\nWhen `CACHE TABLE testcat.tbl` is run, `tbl` is changed from `DataSourceV2Relation` to `DataSourceV2ScanRelation` in `V2ScanRelationPushDown` rule, now that the plan goes thru analyzer, optimizer, etc. But, if I run `spark.table(\"testcat.tbl\")`, the query execution has `tbl` as `DataSourceV2Relation`, thus cache is not applied.",
+        "createdAt" : "2020-12-02T21:46:01Z",
+        "updatedAt" : "2020-12-02T21:46:01Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "eee8449a-714e-4d36-9f3e-031834406b22",
+        "parentId" : "26cbaa1b-6140-496c-8523-e17056edad50",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "ah, one solution is to follow `InsertIntoStatement` and do not make the `table` as a child. Then we resolve `UnresolvedRelation` inside `CacheTable` manually in `ResolveTempViews` and other resolution rules.",
+        "createdAt" : "2020-12-03T05:08:04Z",
+        "updatedAt" : "2020-12-03T05:08:05Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7e788cea5c2dd03f71ee30b0106e04d7f036f30f",
+    "line" : 13,
+    "diffHunk" : "@@ -1,1 +27,31 @@import org.apache.spark.storage.StorageLevel\n\ncase class CacheTableCommand(\n    multipartIdentifier: Seq[String],\n    plan: Option[LogicalPlan],"
+  }
+]

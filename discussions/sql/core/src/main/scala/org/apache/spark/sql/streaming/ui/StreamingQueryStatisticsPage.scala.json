@@ -1,0 +1,112 @@
+[
+  {
+    "id" : "4b2315ac-8203-4cc4-8e42-2e3c81bc6b5b",
+    "prId" : 30427,
+    "prUrl" : "https://github.com/apache/spark/pull/30427#pullrequestreview-536770995",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6a25be89-ad43-4422-8bed-0e3e482f8742",
+        "parentId" : null,
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "Fully agree with `knowing the gap between actual wall clock and watermark looks more useful than the absolute value.` and thanks for the super useful watermark info!\r\n\r\nI only have one concern same with @viirya https://github.com/apache/spark/pull/30427#issuecomment-730852396. Maybe we can address both scenarios(event time is/isn't close to clock time) by using the max event time received in this batch? I mean:\r\n```\r\n         if (watermarkValue > 0L) {\r\n           // seconds\r\n-          Some((batchTimestamp, ((batchTimestamp - watermarkValue) / 1000.0)))\r\n+          val maxEventTime = parseProgressTimestamp(p.eventTime.get(\"max\"))\r\n+          Some((batchTimestamp, (maxEventTime - watermarkValue) / 1000.0))\r\n         } else {\r\n           None\r\n         }\r\n```\r\n\r\nOf cause this proposal changes the meaning of this chart, it represents `The gap between the latest event \r\n and global watermark for the batch`. And we might need to add more explanation here since the number will be negative when all the data in the current batch is late than the current watermark(it can be reproduced by the complex demo provided). WDYT? @HeartSaVioR @viirya ",
+        "createdAt" : "2020-11-23T08:53:45Z",
+        "updatedAt" : "2020-11-24T22:46:17Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1a7cfabf-3de1-4087-a5a2-031982efcc9d",
+        "parentId" : "6a25be89-ad43-4422-8bed-0e3e482f8742",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "I'm sorry, but when you pick the max event time, you're discarding the gap between wall clock and event time. The intention of showing watermark gap is showing the \"gap\" between \"the event time\" of events (which finally produces watermark) and \"wall clock\".\r\n\r\nWould this answer your comment?",
+        "createdAt" : "2020-11-23T09:06:08Z",
+        "updatedAt" : "2020-11-24T22:46:17Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "30c982ee-ce87-4a3f-ad34-1e7d18323c77",
+        "parentId" : "6a25be89-ad43-4422-8bed-0e3e482f8742",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Probably we can represent various aspect of views if we plot all points (wall clock, max event time, global watermark, etc. like min event time). As I'm not a FE and don't like to jump in and hack the code around graph, I just stick with one line and decide to plot the line for the gap between wall clock and global watermark.\r\n\r\nIf someone is interested to do some experiment with the graph, plotting all lines and finding relations and deciding lines to keep would be valuable.",
+        "createdAt" : "2020-11-23T09:32:08Z",
+        "updatedAt" : "2020-11-24T22:46:17Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "37a1d031-9b03-4be3-87e5-e98a77829bfa",
+        "parentId" : "6a25be89-ad43-4422-8bed-0e3e482f8742",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "Yeah, that depends on how we define `watermark gap` here.\r\nThese 2 definitions will not show a difference in result in the ideal case. My point is as the watermark is decided by event time, seems it should make more sense to use both event time to get the `gap`.",
+        "createdAt" : "2020-11-23T09:32:24Z",
+        "updatedAt" : "2020-11-24T22:46:17Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6a98dda7-4cfc-47f6-a1d7-b56fa28d700f",
+        "parentId" : "6a25be89-ad43-4422-8bed-0e3e482f8742",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "`we can represent various aspect of views if we plot all points`\r\nYeah agree, if a multi-line chart is available here might be helpful here! :)\r\n\r\nActually, this idea came when I was thinking about the `ideal line` for the historical streaming data that should be using event time to represent processing time, not current clock time.\r\n\r\nAnyway, just want to post a different explanation of the `watermark gap` here, the current changes LGTM. If others think it's worth having another event-based gap maybe we can do it at another timeline.",
+        "createdAt" : "2020-11-23T09:50:30Z",
+        "updatedAt" : "2020-11-24T22:46:17Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d928a833-ddcf-4947-829f-642cdee357cb",
+        "parentId" : "6a25be89-ad43-4422-8bed-0e3e482f8742",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "More correctly, how we define the \"processing time\" in the graph in https://github.com/apache/spark/pull/30427#issuecomment-730844687. (y axis) \r\n\r\nThe query which pulls recent events are expected to have processing time as wall clock. That is only broken when we deal with historical data - that's not having the \"ideal\" processing time. One of approaches which can rough guess would be tracking event time, but given Spark takes max event time to calculate watermark (while other engines take min event time) the gap is more likely pretty much similar across batches.\r\n\r\nIn historical case, as well as real time case (as Spark picks max event time), tracking the gap between global watermark and min event time would be more helpful, as we can at least see whether the watermark delay is enough to cover the min event time of the next batch. This is pretty specific to Spark's case, though.\r\n\r\n(So likewise I said, there're several useful lines to plot which can be compared between and produce the meaning. I just don't take the step to go my life for frontend engineer.)",
+        "createdAt" : "2020-11-23T10:02:03Z",
+        "updatedAt" : "2020-11-24T22:46:17Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f672242b-9f63-44a1-99d3-200265c6fa7e",
+        "parentId" : "6a25be89-ad43-4422-8bed-0e3e482f8742",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "OK I took too many efforts to write the comment and wrote too late. In short, if we can pick the second metric to compare with global watermark, it should be min instead of max. If Spark also picks min event time to construct watermark, we should pick max to see how much the output is lagging due to slow watermark advance.",
+        "createdAt" : "2020-11-23T10:04:52Z",
+        "updatedAt" : "2020-11-24T22:46:17Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cbdc1f11-75b4-496c-989e-5dcec9332425",
+        "parentId" : "6a25be89-ad43-4422-8bed-0e3e482f8742",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Thanks @xuanyuanking for raising this discussion.\r\n\r\n> OK I took too many efforts to write the comment and wrote too late. In short, if we can pick the second metric to compare with global watermark, it should be min instead of max. If Spark also picks min event time to construct watermark, we should pick max to see how much the output is lagging due to slow watermark advance.\r\n\r\nI agree. Actually my first thought is to use min event time instead of batch time in this graph.\r\n\r\nI think a ideal approach should be able to select different base time for constructing this graph, e.g. min event time or batch time. I am not sure if current UI component supports this kind of feature. But for current change, I think it should be good enough for use cases except for event time is far from clock time. That is why I gave +1 for this PR.\r\n",
+        "createdAt" : "2020-11-23T18:00:42Z",
+        "updatedAt" : "2020-11-24T22:46:17Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d04da101-82db-40f6-ad6e-f18edc7e5b11",
+        "parentId" : "6a25be89-ad43-4422-8bed-0e3e482f8742",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Yeah it should be great if someone who is familiar with the FE volunteers to revise the graphs. I actually think other existing graphs are also not that ideal. (in point of auto-scale, multiple lines plotting, better unit & value & tooltip)",
+        "createdAt" : "2020-11-23T19:13:27Z",
+        "updatedAt" : "2020-11-24T22:46:17Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a6db726c10ba999077a03d90231c8224d2a4a621",
+    "line" : 17,
+    "diffHunk" : "@@ -1,1 +154,158 @@        if (watermarkValue > 0L) {\n          // seconds\n          Some((batchTimestamp, ((batchTimestamp - watermarkValue) / 1000.0)))\n        } else {\n          None"
+  }
+]

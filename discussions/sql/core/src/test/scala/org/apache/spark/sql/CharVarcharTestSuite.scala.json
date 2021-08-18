@@ -174,5 +174,104 @@
     "commit" : "8773e669ddaf08f918ebf9dc36226495366a71c5",
     "line" : 29,
     "diffHunk" : "@@ -1,1 +685,689 @@\n  test(\"SPARK-34114: should not trim right for read-side length check and char padding\") {\n    Seq(\"char\", \"varchar\").foreach { typ =>\n      withTempPath { dir =>\n        withTable(\"t\") {"
+  },
+  {
+    "id" : "30cb35eb-df77-46ed-8c9a-a988cecb0733",
+    "prId" : 30412,
+    "prUrl" : "https://github.com/apache/spark/pull/30412#pullrequestreview-537138548",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8b4b0a35-691a-455a-b877-442889820757",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Could you add char comparison tests for a map case, too?",
+        "createdAt" : "2020-11-20T04:59:46Z",
+        "updatedAt" : "2020-11-27T10:45:20Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f8beb891-e103-43dc-93ee-3ba9b6785eae",
+        "parentId" : "8b4b0a35-691a-455a-b877-442889820757",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "map type is not comparable.",
+        "createdAt" : "2020-11-23T17:36:29Z",
+        "updatedAt" : "2020-11-27T10:45:20Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5ba35656-b2e9-44bb-ad09-b246618582fe",
+        "parentId" : "8b4b0a35-691a-455a-b877-442889820757",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Ah, I see. If so, why the function `typeWithWiderCharLength` has an entry for `Map`? https://github.com/apache/spark/pull/30412/files#diff-16753285e80505e04c445ea8ccee1dde7ae601ed7bae224e212d90d395f57928R225-R226\r\nIt seems the function is only used for `addPaddingInStringComparison`. ",
+        "createdAt" : "2020-11-24T00:04:29Z",
+        "updatedAt" : "2020-11-27T10:45:20Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dba6b8e7-9dd3-4925-be7d-9af104bda14f",
+        "parentId" : "8b4b0a35-691a-455a-b877-442889820757",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "You are right, I should remove it.",
+        "createdAt" : "2020-11-24T07:25:59Z",
+        "updatedAt" : "2020-11-27T10:45:20Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "73b99dc7a98f5d0673d309adba457cd19144be92",
+    "line" : 415,
+    "diffHunk" : "@@ -1,1 +413,417 @@  }\n\n  test(\"char type comparison: nested in array of array\") {\n    withTable(\"t\") {\n      sql(\"CREATE TABLE t(c1 ARRAY<ARRAY<CHAR(2)>>, c2 ARRAY<ARRAY<CHAR(5)>>) \" +"
+  },
+  {
+    "id" : "b388fd61-f6c0-44bd-a61b-9553b2cec4fa",
+    "prId" : 30412,
+    "prUrl" : "https://github.com/apache/spark/pull/30412#pullrequestreview-536935484",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "33ad60b0-53d1-4f72-80d1-8e2cda438884",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "How about checking an output schema, too, in these tests?\r\n```\r\nscala> sql(\"CREATE TABLE t(i STRING, c CHAR(5)) USING parquet PARTITIONED BY (c)\")\r\nscala> spark.table(\"t\").printSchema\r\nroot\r\n |-- i: string (nullable = true)\r\n |-- c: string (nullable = true) <---- this check\r\n```\r\nbtw, how do users check a char length after defining a table? In pg, users can check a char length via some commands, e.g., `\\d`;\r\n```\r\npostgres=# create table t (c char(5));\r\nCREATE TABLE\r\npostgres=# \\d t\r\n                    Table \"public.t\"\r\n Column |     Type     | Collation | Nullable | Default \r\n--------+--------------+-----------+----------+---------\r\n c      | character(5) |           |          | \r\n```",
+        "createdAt" : "2020-11-20T05:19:59Z",
+        "updatedAt" : "2020-11-27T10:45:20Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9412ec0f-80af-406a-98c4-a64f7d4f7d26",
+        "parentId" : "33ad60b0-53d1-4f72-80d1-8e2cda438884",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "We ensure that `LocalPlan.output` won't have char/varchar type and we have UT to verify it. It seems not necessary to check it again here.\r\n\r\nFor DDL command support, can we leave it to followup? This PR is already very big. I can create a ticket for it.",
+        "createdAt" : "2020-11-23T17:42:30Z",
+        "updatedAt" : "2020-11-27T10:45:20Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bcd69417-047c-4d4f-ad74-f3990788ead6",
+        "parentId" : "33ad60b0-53d1-4f72-80d1-8e2cda438884",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "The followup looks fine.",
+        "createdAt" : "2020-11-23T23:53:28Z",
+        "updatedAt" : "2020-11-27T10:45:20Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "73b99dc7a98f5d0673d309adba457cd19144be92",
+    "line" : 44,
+    "diffHunk" : "@@ -1,1 +42,46 @@      sql(s\"CREATE TABLE t(i STRING, c CHAR(5)) USING $format\")\n      sql(\"INSERT INTO t VALUES ('1', 'a')\")\n      checkAnswer(spark.table(\"t\"), Row(\"1\", \"a\" + \" \" * 4))\n      checkColType(spark.table(\"t\").schema(1), CharType(5))\n"
   }
 ]
