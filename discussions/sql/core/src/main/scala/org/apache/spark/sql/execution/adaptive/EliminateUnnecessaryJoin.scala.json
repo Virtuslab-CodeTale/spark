@@ -1,0 +1,101 @@
+[
+  {
+    "id" : "2e0ee360-4c3b-4dd5-b3cf-2c4a7a9a891c",
+    "prId" : 31873,
+    "prUrl" : "https://github.com/apache/spark/pull/31873#pullrequestreview-615979359",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "dd973992-5cdd-4540-99a9-90fe116e2356",
+        "parentId" : null,
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "This is added compared to previous `EliminateJoinToEmptyRelation.scala`.",
+        "createdAt" : "2021-03-17T21:58:49Z",
+        "updatedAt" : "2021-03-18T00:31:00Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8b319e4e-a391-4cda-bddf-9ed77704cb22",
+        "parentId" : "dd973992-5cdd-4540-99a9-90fe116e2356",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "nit comment: we need the `hasRow` param? How about simply checking `count == 0` like this?\r\n```\r\nprivate def hasNoRow(plan: LogicalPlan): Boolean = plan match {\r\n    case LogicalQueryStage(_, stage: QueryStageExec) if stage.resultOption.get().isDefined =>\r\n      stage.getRuntimeStatistics.rowCount match {\r\n        case Some(count) => count == 0\r\n        case _ => false\r\n      }\r\n    case _ => false\r\n  }\r\n```\r\nThen,\r\n```\r\n    case j @ Join(_, _, Inner, _, _) if hasNoRow(j.left) ||\r\n    ...\r\n    case j @ Join(_, _, LeftSemi, condition, _) =>\r\n      if (checkRowCount(j.right, hasRow = false)) {\r\n        LocalRelation(j.output, data = Seq.empty, isStreaming = j.isStreaming)\r\n      } else if (condition.isEmpty && !hasNoRow(j.right)) {\r\n```",
+        "createdAt" : "2021-03-19T00:18:29Z",
+        "updatedAt" : "2021-03-19T00:18:29Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cfbef451-6f5d-46ab-9712-212d5eacbf57",
+        "parentId" : "dd973992-5cdd-4540-99a9-90fe116e2356",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@maropu - sorry I don't quite get here, `checkRowCount(j.right, hasRow = false` still exists in your example. Am I missing anything? Thanks.",
+        "createdAt" : "2021-03-19T00:22:33Z",
+        "updatedAt" : "2021-03-19T00:22:33Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "177b7dd9-fe9a-4d87-9d2c-e21192a553e2",
+        "parentId" : "dd973992-5cdd-4540-99a9-90fe116e2356",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "ah, my bad. I meant `checkRowCount` -> `hasNoRow `:\r\n```\r\n    case j @ Join(_, _, Inner, _, _) if hasNoRow(j.left) ||\r\n    ...\r\n    case j @ Join(_, _, LeftSemi, condition, _) =>\r\n      if (hasNoRow(j.right)) {\r\n        LocalRelation(j.output, data = Seq.empty, isStreaming = j.isStreaming)\r\n      } else if (condition.isEmpty && !hasNoRow(j.right)) {\r\n```",
+        "createdAt" : "2021-03-19T00:27:05Z",
+        "updatedAt" : "2021-03-19T00:27:05Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "338ae482-9c34-4819-bd6b-eeb5dcd15ae9",
+        "parentId" : "dd973992-5cdd-4540-99a9-90fe116e2356",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@maropu - I thought about this too, but I think this is dangerous as we want to make sure the child output is known, and row count is larger than zero.\r\n\r\nThere can be the case where `hasNoRow()` returns false but the plan is not executed in AQE at all (not `LogicalQueryStage`) or result is not known yet.",
+        "createdAt" : "2021-03-19T00:30:01Z",
+        "updatedAt" : "2021-03-19T00:30:01Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "47315918-ed8c-46d8-9e77-97b37a671dba",
+        "parentId" : "dd973992-5cdd-4540-99a9-90fe116e2356",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Ah, okay. I got your point. sgtm",
+        "createdAt" : "2021-03-19T00:40:26Z",
+        "updatedAt" : "2021-03-19T00:40:27Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7f7f3347efe267e9f75c166c8fe98ef09a204db7",
+    "line" : 56,
+    "diffHunk" : "@@ -1,1 +54,58 @@  }\n\n  private def checkRowCount(plan: LogicalPlan, hasRow: Boolean): Boolean = plan match {\n    case LogicalQueryStage(_, stage: QueryStageExec) if stage.resultOption.get().isDefined =>\n      stage.getRuntimeStatistics.rowCount match {"
+  },
+  {
+    "id" : "a68d7acd-3792-4c43-b145-d18d9bde4597",
+    "prId" : 31873,
+    "prUrl" : "https://github.com/apache/spark/pull/31873#pullrequestreview-614820595",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "866f4831-57e7-432e-a9d9-d7479fbddfc9",
+        "parentId" : null,
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "This is slightly changed compared to previous `EliminateJoinToEmptyRelation.scala`.",
+        "createdAt" : "2021-03-17T21:59:00Z",
+        "updatedAt" : "2021-03-18T00:31:00Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7f7f3347efe267e9f75c166c8fe98ef09a204db7",
+    "line" : 49,
+    "diffHunk" : "@@ -1,1 +47,51 @@object EliminateUnnecessaryJoin extends Rule[LogicalPlan] {\n\n  private def isRelationWithAllNullKeys(plan: LogicalPlan) = plan match {\n    case LogicalQueryStage(_, stage: BroadcastQueryStageExec)\n      if stage.resultOption.get().isDefined =>"
+  }
+]

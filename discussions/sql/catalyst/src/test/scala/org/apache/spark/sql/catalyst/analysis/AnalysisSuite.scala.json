@@ -1,0 +1,112 @@
+[
+  {
+    "id" : "f8d7d257-4f8e-4e96-84df-def2ec629742",
+    "prId" : 31835,
+    "prUrl" : "https://github.com/apache/spark/pull/31835#pullrequestreview-614586949",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2215113a-a205-4eca-8bd6-cd8dcf95fe74",
+        "parentId" : null,
+        "authorId" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "body" : "I am not sure I got it. Spark resolves keys in UPDATE assignments using only the target table and the values using both the target and the source table. If we encounter `UPDATE SET a = a`, it seems reasonable to get an exception as the value is indeed ambiguous.\r\n\r\nBut how does the dedup step helps us here? The test below in `ReplaceNullWithFalseInPredicateSuite` covers a case like `UPDATE SET a = source.a` which is not ambiguous. Will that test succeed even without the dedup logic added in this PR?",
+        "createdAt" : "2021-03-15T23:25:33Z",
+        "updatedAt" : "2021-03-17T07:33:37Z",
+        "lastEditedBy" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7d820514-eb02-48ce-8bb2-3c7bb0912392",
+        "parentId" : "2215113a-a205-4eca-8bd6-cd8dcf95fe74",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Think about `UPDATE SET a = source.a * 2 + target.a`, without this fix, both `source.a` and `target.a` refer to the column `a` from the source table, which is wrong. With this fix to dedup the self-merge, the column `a` can be correctly resolved, because the column `a` from source and target table have different expr IDs.\r\n\r\nFor `UPDATE SET a = source.a`, I think it works before and after this fix. @Ngone51 can you confirm?",
+        "createdAt" : "2021-03-16T06:16:56Z",
+        "updatedAt" : "2021-03-17T07:33:37Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "36b3dd64-b0c2-4b03-851d-5f2911860896",
+        "parentId" : "2215113a-a205-4eca-8bd6-cd8dcf95fe74",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "> For UPDATE SET a = source.a, I think it works before and after this fix. @Ngone51 can you confirm?\r\n\r\nYes, it works before and after this fix.\r\n\r\nThe reason why we need `source.a` is `ReplaceNullWithFalseInPredicateSuite` can fail with the ambiguous reference error after we added the dedup step.",
+        "createdAt" : "2021-03-16T06:36:56Z",
+        "updatedAt" : "2021-03-17T07:33:37Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6f84c97c-861d-4ffc-a73f-449a6860fa59",
+        "parentId" : "2215113a-a205-4eca-8bd6-cd8dcf95fe74",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "@Ngone51 , can we have @cloud-fan 's example in this test case?",
+        "createdAt" : "2021-03-16T18:26:28Z",
+        "updatedAt" : "2021-03-17T07:33:38Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a13c69ac-5235-413d-ba7f-cd195e8b30cc",
+        "parentId" : "2215113a-a205-4eca-8bd6-cd8dcf95fe74",
+        "authorId" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "body" : "The use case @cloud-fan mentions makes sense to me. It'd be great to have a dedicated test for this, if possible.",
+        "createdAt" : "2021-03-16T19:14:00Z",
+        "updatedAt" : "2021-03-17T07:33:38Z",
+        "lastEditedBy" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2ef6f927-05c0-47ff-8c9b-493f7d02b7ec",
+        "parentId" : "2215113a-a205-4eca-8bd6-cd8dcf95fe74",
+        "authorId" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "body" : "One more quick question, @cloud-fan. I thought the current construction logic for `DataSourceV2Relation` would always produce different expr IDs for output attributes:\r\n\r\n```\r\nDataSourceV2Relation(table, schema.toAttributes, catalog, identifier, options)\r\n```\r\n\r\nI did not look closely. Is my assumption wrong?",
+        "createdAt" : "2021-03-16T21:06:36Z",
+        "updatedAt" : "2021-03-17T07:33:38Z",
+        "lastEditedBy" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0ec69678-a357-4c2b-b4e6-d263a027535e",
+        "parentId" : "2215113a-a205-4eca-8bd6-cd8dcf95fe74",
+        "authorId" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "body" : "Or is it because of table relation cache?",
+        "createdAt" : "2021-03-16T21:07:49Z",
+        "updatedAt" : "2021-03-17T07:33:38Z",
+        "lastEditedBy" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "96b9c0d1-5d8d-4849-a483-5daad6b33c8b",
+        "parentId" : "2215113a-a205-4eca-8bd6-cd8dcf95fe74",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "yea Spark has a table relation cache per query (see `AnalysisContext.relationCache`), for self-merge the `DataSourceV2Relation` is the same instance.",
+        "createdAt" : "2021-03-17T03:40:00Z",
+        "updatedAt" : "2021-03-17T07:33:38Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "51ef8f89-11b0-4d81-9bef-66f175932837",
+        "parentId" : "2215113a-a205-4eca-8bd6-cd8dcf95fe74",
+        "authorId" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "body" : "Got it. Thanks for confirming, @cloud-fan!",
+        "createdAt" : "2021-03-17T17:15:49Z",
+        "updatedAt" : "2021-03-17T17:15:49Z",
+        "lastEditedBy" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c2f257c3b780e4e4dd90300c1c3055758ab4d9b8",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +674,678 @@  test(\"SPARK-34741: Avoid ambiguous reference in MergeIntoTable\") {\n    val cond = 'a > 1\n    assertAnalysisError(\n      MergeIntoTable(\n        testRelation,"
+  }
+]

@@ -20,5 +20,38 @@
     "commit" : "624e45e27513933e9fe5615601d0dddac341a258",
     "line" : 120,
     "diffHunk" : "@@ -1,1 +138,142 @@ * and it may introduce extra exchanges.\n */\nobject PropagateEmptyRelation extends PropagateEmptyRelationBase {\n  private def applyFunc: PartialFunction[LogicalPlan, LogicalPlan] = {\n    case p: Union if p.children.exists(isEmpty) =>"
+  },
+  {
+    "id" : "a0d42f87-e0b7-465e-9cc2-71ccabfed3c0",
+    "prId" : 31857,
+    "prUrl" : "https://github.com/apache/spark/pull/31857#pullrequestreview-615652865",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c3751ae5-09e1-4db5-8b85-35198d6a2f5a",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "With this change, do we still need to update `PushPredicateThroughJoin`?",
+        "createdAt" : "2021-03-18T16:35:18Z",
+        "updatedAt" : "2021-03-19T16:15:44Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e4b270f3-1657-44c3-ae7b-52d584e2dd10",
+        "parentId" : "c3751ae5-09e1-4db5-8b85-35198d6a2f5a",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "Mainly used to avoid unnecessary pushdown:\r\n```sql\r\nSELECT * FROM t1 LEFT JOIN t2 ON true\r\n```\r\nPlan:\r\n```\r\n=== Applying Rule org.apache.spark.sql.catalyst.optimizer.PushDownPredicates ===\r\n Join LeftOuter, true                        Join LeftOuter, true\r\n :- Relation default.t1[a#6L,b#7L] parquet   :- Relation default.t1[a#6L,b#7L] parquet\r\n!+- Relation default.t2[x#8L,y#9L] parquet   +- Filter true\r\n!                                               +- Relation default.t2[x#8L,y#9L] parquet\r\n\r\n=== Applying Rule org.apache.spark.sql.catalyst.optimizer.PruneFilters ===\r\n Join LeftOuter, true                           Join LeftOuter, true\r\n :- Relation default.t1[a#6L,b#7L] parquet      :- Relation default.t1[a#6L,b#7L] parquet\r\n!+- Filter true                                 +- Relation default.t2[x#8L,y#9L] parquet\r\n!   +- Relation default.t2[x#8L,y#9L] parquet   \r\n           \r\n00:57:41.206 ERROR org.apache.spark.sql.catalyst.rules.PlanChangeLogger: \r\n=== Result of Batch Cleanup filters that cannot be pushed down ===\r\n Join LeftOuter, true                           Join LeftOuter, true\r\n :- Relation default.t1[a#6L,b#7L] parquet      :- Relation default.t1[a#6L,b#7L] parquet\r\n!+- Filter true                                 +- Relation default.t2[x#8L,y#9L] parquet\r\n!   +- Relation default.t2[x#8L,y#9L] parquet \r\n```",
+        "createdAt" : "2021-03-18T17:01:13Z",
+        "updatedAt" : "2021-03-19T16:15:44Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "320259052a6e6fc67965875b6a356f6c2664155a",
+    "line" : 12,
+    "diffHunk" : "@@ -1,1 +32,36 @@ * 2. Unary-node Logical Plans\n *    - Project/Filter/Sample/Join/Limit/Repartition with all empty children.\n *    - Join with false condition.\n *    - Aggregate with all empty children and at least one grouping expression.\n *    - Generate(Explode) with all empty children. Others like Hive UDTF may return results."
   }
 ]

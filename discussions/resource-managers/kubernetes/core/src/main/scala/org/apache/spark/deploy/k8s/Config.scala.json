@@ -97,5 +97,115 @@
     "commit" : "b87803e241d6ea380884db477be6b35fdc86f137",
     "line" : 6,
     "diffHunk" : "@@ -1,1 +73,77 @@  val KUBERNETES_DRIVER_REUSE_PVC =\n    ConfigBuilder(\"spark.kubernetes.driver.reusePersistentVolumeClaim\")\n      .doc(\"If true, driver pod tries to reuse driver-owned on-demand persistent volume claims \" +\n        \"of the deleted executor pods if exists. This can be useful to reduce executor pod \" +\n        \"creation delay by skipping persistent volume creations. Note that a pod in \" +"
+  },
+  {
+    "id" : "4fff38fa-bb05-42a8-b93d-68393712edb4",
+    "prId" : 31790,
+    "prUrl" : "https://github.com/apache/spark/pull/31790#pullrequestreview-702381604",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c3b1be3f-89ac-42f7-95fb-c7d68e31c8e5",
+        "parentId" : null,
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "This default seems high, can you explain why 150?",
+        "createdAt" : "2021-06-25T17:59:21Z",
+        "updatedAt" : "2021-06-25T18:00:10Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "59b30c08-f2db-4390-994b-06e9c47f9b95",
+        "parentId" : "c3b1be3f-89ac-42f7-95fb-c7d68e31c8e5",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "Thanks for the review!\r\n\r\nMy main intention was to come up with a limit which protect us from overloading the k8s scheduler but still allows progressive upscaling. I think when a PODs spends long time in pending state we should make the allocation as early as possible but being careful to avoid the overloading of the k8s scheduler as that would be counterproductive for the allocations. And as we still use the batch size during upscaling there is a limited number of active new POD requests from a single Spark application (this also helps to avoid the overloading).\r\n\r\nAnd the second reason was I hoped this a good default for those envs where the batchsize is already increased (I have seen examples where the batch size was set to 50). \r\n\r\nBut I just run a few tests and although I have seen 150 pending PODs was not causing any problem during resource allocation my test was running in a EKS cluster where only one Spark app was submitted (my test app) and even the cluster size was small. \r\n\r\nSo nevertheless we can go for a different solution:\r\n**Another strategy to choose this limit would be to use a default which is conformed to the default batch size (which is really small = 5). So what about setting the default to 15 here?** In this case we can mention this new config in the migration guide. \r\n\r\n@holdenk WDYT?\r\n",
+        "createdAt" : "2021-06-26T18:13:15Z",
+        "updatedAt" : "2021-06-26T18:13:15Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1d844967-1153-4406-91e3-dd6569362a7e",
+        "parentId" : "c3b1be3f-89ac-42f7-95fb-c7d68e31c8e5",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "I'd like to propose to disable this feature at Apache Spark 3.2.0 to remove the side-effect completely. For example, we can use `Int.MaxValue` as default to disable this feature.\r\nWDYT, @attilapiros and @holdenk ?",
+        "createdAt" : "2021-06-27T05:07:39Z",
+        "updatedAt" : "2021-06-27T05:14:13Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "48334daf-1925-4712-a4c6-91c0462d2dba",
+        "parentId" : "c3b1be3f-89ac-42f7-95fb-c7d68e31c8e5",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "@dongjoon-hyun \r\n> And, it would be great if we keep the existing test cases with the default configuration (disabled), and add new test coverage for this new conf.\r\n\r\nSo this PR has 3 small features which relates to each others:\r\n- modify how the batch size limit is taken into account: earlier the next batch is not started when even one POD was stuck as newly created POD: **these causes some of the test changes**\r\n- change what is outstanding PODs are: earlier Pending PODs and newly created PODs was counted as outstanding PODs which [was stopping the allocation if it was coming from the scheduler](https://github.com/apache/spark/blob/master/resource-managers/kubernetes/core/src/main/scala/org/apache/spark/scheduler/cluster/k8s/ExecutorPodsAllocator.scala#L125). \r\n**This causes the rest of the unit test difference.**\r\n- introduce limit for pending pods\r\n\r\nLet me separate them into different PRs (at least for two) this will make the review easier.  \r\n\r\n",
+        "createdAt" : "2021-06-27T08:24:43Z",
+        "updatedAt" : "2021-06-27T08:24:44Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1f9e758f-c03f-4c75-8f80-9379ceb86dbb",
+        "parentId" : "c3b1be3f-89ac-42f7-95fb-c7d68e31c8e5",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Sounds good, ping me on your split PRs and I'll be happy to take a look.",
+        "createdAt" : "2021-07-08T18:31:18Z",
+        "updatedAt" : "2021-07-08T18:31:23Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "61cdaab5057da929d0eea59caa87cd272c235c17",
+    "line" : 10,
+    "diffHunk" : "@@ -1,1 +299,303 @@      .intConf\n      .checkValue(value => value > 0, \"Maximum number of pending pods should be a positive integer\")\n      .createWithDefault(150)\n\n  val KUBERNETES_ALLOCATION_BATCH_DELAY ="
+  },
+  {
+    "id" : "0ef9656a-bdb0-463e-85b8-9eb16bab8681",
+    "prId" : 31790,
+    "prUrl" : "https://github.com/apache/spark/pull/31790#pullrequestreview-693377779",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7ace2543-c858-4c4a-98a4-b7fa04828dc5",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "`alloction` -> `allocation`?",
+        "createdAt" : "2021-06-27T05:04:14Z",
+        "updatedAt" : "2021-06-27T05:04:15Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "61cdaab5057da929d0eea59caa87cd272c235c17",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +295,299 @@  val KUBERNETES_MAX_PENDING_PODS =\n    ConfigBuilder(\"spark.kubernetes.allocation.max.pendingPods\")\n      .doc(\"Maximum number of pending pods allowed during executor alloction for this application.\")\n      .version(\"3.2.0\")\n      .intConf"
+  },
+  {
+    "id" : "e30ca67e-0ff6-48cd-9932-150e02d836c9",
+    "prId" : 31790,
+    "prUrl" : "https://github.com/apache/spark/pull/31790#pullrequestreview-693377845",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "291baecf-2efb-4e31-988f-65e805f7aa0f",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "This introduces a new namespace, `max`, with only one child, `pendingPods`. Do you have a plan to add more? Otherwise, we need to reduce the depth like `maxPendingPods`.",
+        "createdAt" : "2021-06-27T05:05:45Z",
+        "updatedAt" : "2021-06-27T05:05:45Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "61cdaab5057da929d0eea59caa87cd272c235c17",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +294,298 @@\n  val KUBERNETES_MAX_PENDING_PODS =\n    ConfigBuilder(\"spark.kubernetes.allocation.max.pendingPods\")\n      .doc(\"Maximum number of pending pods allowed during executor alloction for this application.\")\n      .version(\"3.2.0\")"
   }
 ]

@@ -75,5 +75,104 @@
     "commit" : "c206f2a9d05a3413494e6634c48d84cfc396225c",
     "line" : 3,
     "diffHunk" : "@@ -1,1 +189,193 @@        }\n\n      case (DateType, TimestampType) => Some(TimestampType)\n      case (DateType, AnyTimestampType) => Some(AnyTimestampType.defaultConcreteType)\n"
+  },
+  {
+    "id" : "fcb0e47f-78ce-4386-88be-ddb404d75450",
+    "prId" : 31859,
+    "prUrl" : "https://github.com/apache/spark/pull/31859#pullrequestreview-619273757",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3cf5a619-85c1-4b68-93c9-483c58b57003",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "How about doing it like this so that we could quickly notice potential bugs?\r\n```\r\n          val foundTypes = convertibleTypes.filter { dt =>\r\n            convertibleTypes.forall { target =>\r\n              implicitCast(dt, target, isInputFoldable = false).isDefined\r\n            }\r\n          }\r\n\r\n          assert(foundTypes.length <= 1)\r\n\r\n          val closestConvertibleType = foundTypes.headOption\r\n```",
+        "createdAt" : "2021-03-17T23:02:49Z",
+        "updatedAt" : "2021-03-24T08:41:05Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "49acc806-af22-4489-bd78-4611dff79a8f",
+        "parentId" : "3cf5a619-85c1-4b68-93c9-483c58b57003",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Actually, this logic always selects the convertible leftmost data type from the type precedence list ?",
+        "createdAt" : "2021-03-17T23:17:58Z",
+        "updatedAt" : "2021-03-24T08:41:05Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6c6d21e6-9ab7-40c7-bdb9-b052ec303ef6",
+        "parentId" : "3cf5a619-85c1-4b68-93c9-483c58b57003",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "> Actually, this logic always selects the convertible leftmost data type from the type precedence list ?\r\n\r\nYes. The pain point is NullType and String Literal has multiple type precedence lists.\r\n\r\n\r\n![image](https://user-images.githubusercontent.com/1097932/111567348-0aa10d80-875c-11eb-9655-b4545dffc400.png)\r\n\r\n",
+        "createdAt" : "2021-03-18T03:05:01Z",
+        "updatedAt" : "2021-03-24T08:41:05Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a4467a6f-a695-44c4-9d3b-528ea563164d",
+        "parentId" : "3cf5a619-85c1-4b68-93c9-483c58b57003",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "> How about doing it like this so that we could quickly notice potential bugs?\r\n\r\nHere is my concern: if there are duplicated types(E.g. UDT) in `TypeCollection`, then the assert will fail. ",
+        "createdAt" : "2021-03-18T03:07:16Z",
+        "updatedAt" : "2021-03-24T08:41:05Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "33f6b98e-63d0-4472-b1e6-69324e6920a1",
+        "parentId" : "3cf5a619-85c1-4b68-93c9-483c58b57003",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "> Yes. The pain point is NullType and String Literal has multiple type precedence lists.\r\n\r\nAh, I see. For example, what if we have `from=NullType, to=TypeCollection[StringType, BinaryType]`? It seems `convertibleTypes ` is not empty, but `closestConvertibleType` is `None`?",
+        "createdAt" : "2021-03-19T07:50:43Z",
+        "updatedAt" : "2021-03-24T08:41:05Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b9311e40-9667-420f-a30e-3a8d57481ec6",
+        "parentId" : "3cf5a619-85c1-4b68-93c9-483c58b57003",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "Yes, the `convertibleTypes` is [StringType, BinaryType]. Since there is no such a type in [StringType, BinaryType] that can be converted to all the other types, the `closestConvertibleType` is None.",
+        "createdAt" : "2021-03-23T14:01:28Z",
+        "updatedAt" : "2021-03-24T08:41:05Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f45f6e4d-5e9d-4c6a-aed9-c88a758a4399",
+        "parentId" : "3cf5a619-85c1-4b68-93c9-483c58b57003",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Ah, okay. I got it. Thanks for the explanation. If so, could you add more test for these negative cases (the cases where the logic returns `None`), too?",
+        "createdAt" : "2021-03-23T23:40:14Z",
+        "updatedAt" : "2021-03-24T08:41:05Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1a7c7040-f1e5-4f63-a477-58e21cd8e938",
+        "parentId" : "3cf5a619-85c1-4b68-93c9-483c58b57003",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "Sure :)",
+        "createdAt" : "2021-03-24T03:11:39Z",
+        "updatedAt" : "2021-03-24T08:41:05Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a72dcfbf4919f8ff6c3070240cb390aeedbb8fb0",
+    "line" : 33,
+    "diffHunk" : "@@ -1,1 +210,214 @@          // find the closet convertible data type, which can be implicit cast to all other\n          // convertible types.\n          val closestConvertibleType = convertibleTypes.find { dt =>\n            convertibleTypes.forall { target =>\n              implicitCast(dt, target, isInputFoldable = false).isDefined"
   }
 ]
