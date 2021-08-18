@@ -1,0 +1,123 @@
+[
+  {
+    "id" : "94e9c708-ba99-4b31-8db0-78a858e38af5",
+    "prId" : 33617,
+    "prUrl" : "https://github.com/apache/spark/pull/33617#pullrequestreview-728145560",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2b205842-8379-4914-a460-e552b860d093",
+        "parentId" : null,
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "If the exception is a `BlockPushNonFatalFailure`, should we still close the channel?\r\nIdeally, we shouldn't since it's a \"non fatal failure\", however by throwing the exception inside `RemoteBlockPushResolver#receiveBlockDataAsStream` it indeed requires closing channel.\r\nShould we handle the too old attempt case in a similar way as \"TOO_LATE_BLOCK\" and \"BLOCK_APPEND_COLLISION\", i.e. delay throwing the exception until the stream is fully consumed?",
+        "createdAt" : "2021-08-11T17:17:44Z",
+        "updatedAt" : "2021-08-11T17:17:44Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7125d479-1e0e-4eb6-8491-83b12fed4ec7",
+        "parentId" : "2b205842-8379-4914-a460-e552b860d093",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "I agree about not closing for the other return codes.\r\n`TOO_OLD_ATTEMPT_SUFFIX` on the other hand is an error situation to begin with - the executor should have shutdown already, or will soon enough.\r\nClosing channel for this case sounds fine to me.",
+        "createdAt" : "2021-08-11T18:05:56Z",
+        "updatedAt" : "2021-08-11T18:10:24Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "184bb998-b6bb-4ac3-bca5-b78169332aa6",
+        "parentId" : "2b205842-8379-4914-a460-e552b860d093",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "You are right. Too old attempt would only be seen in corner cases by a failed app attempt. It indeed feels like an overkill to do graceful handling in this case, given the executors could be shutdown anytime.",
+        "createdAt" : "2021-08-11T21:08:36Z",
+        "updatedAt" : "2021-08-11T21:08:37Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bd267545-ef2a-42d4-b84f-4e097bff47a1",
+        "parentId" : "2b205842-8379-4914-a460-e552b860d093",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "However, given this, should this too old attempt still be made a BlockPushNonFatalFailure? @mridulm ",
+        "createdAt" : "2021-08-11T21:15:35Z",
+        "updatedAt" : "2021-08-11T21:15:35Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8348c413-1c77-494b-a6dd-3cbc6ba659a3",
+        "parentId" : "2b205842-8379-4914-a460-e552b860d093",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "I am fine with with `BlockPushNonFatalFailure` and a `ReturnCode` for the case. I am sure we will have more cases in future as we extend this.",
+        "createdAt" : "2021-08-12T03:17:15Z",
+        "updatedAt" : "2021-08-12T03:17:15Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "96c04d21be8fde57328a44a03f8887602ee4f330",
+    "line" : 11,
+    "diffHunk" : "@@ -1,1 +255,259 @@        // using exceptions encoded in the RPCFailure. Using a proper RPCResponse is more\n        // efficient, and now only include the too old attempt case here.\n        respond(new RpcResponse(req.requestId,\n          new NioManagedBuffer(((BlockPushNonFatalFailure) e).getResponse())));\n      } else {"
+  },
+  {
+    "id" : "10f799d8-2ffb-44d6-b2a2-f495f8bbd2e1",
+    "prId" : 33613,
+    "prUrl" : "https://github.com/apache/spark/pull/33613#pullrequestreview-723937158",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b514741e-a3d1-4afb-8052-865b5d6e8534",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Shall we catch `BlockPushNonFatalFailure` inside the `onComplete`? We can have a response filed inside `streamHandler` to store the response value. In this way,  `getCompletionResponse` can handle the success and error cases consistently.",
+        "createdAt" : "2021-08-05T08:48:52Z",
+        "updatedAt" : "2021-08-05T08:48:52Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "213ea693-0fc5-4c93-88f5-5f6a54b901c6",
+        "parentId" : "b514741e-a3d1-4afb-8052-865b5d6e8534",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "We still need to invoke `streamHandler#onFailure` in case we get a non-success return code, which handles logging and other things.\r\nCatching the `BlockPushNonFatalFailure` inside `onComplete` makes it hard to tell apart a success and an error case.\r\n\r\nWe could potentially return a `BlockPushNonFatalFailure` in `StreamCallback#getCompletionResponse`.\r\nHowever, I feel that returning a `ByteBuffer` in `StreamCallback#getCompletionResponse` is generic enough since `StreamCallback` is used for multiple purposes.\r\nReturning a `BlockPushNonFatalFailure` in `StreamCallback` feels too specific for only 1 use case of this interface.",
+        "createdAt" : "2021-08-05T17:26:41Z",
+        "updatedAt" : "2021-08-05T17:35:28Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5f77ca64-c624-4fad-9400-2cb5a561190d",
+        "parentId" : "b514741e-a3d1-4afb-8052-865b5d6e8534",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "The current `getCompletionResponse` only returns the `SUCCESS` byte buffer, right?\r\n\r\nI didn't mean to return `BlockPushNonFatalFailure` in the `StreamCallback. getCompletionResponse`. What I expect is to allow return `SUCCESS`, `TOO_LATE_BLOCK_PUSH`, etc, byte buffers in `getCompletionResponse`.",
+        "createdAt" : "2021-08-06T02:36:27Z",
+        "updatedAt" : "2021-08-06T02:36:27Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "51c92b8f-fcc7-4e71-a84b-554d59aeab25",
+        "parentId" : "b514741e-a3d1-4afb-8052-865b5d6e8534",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "What I meant is that by throwing the exception, it's much easier to tell apart the success case from the failure case.\r\nIt's not straightforward to tell the content of the returned ByteBuffer without decoding it.\r\nEven for decoding, it's not convenient to decode an rpc message inside network-common module.",
+        "createdAt" : "2021-08-06T02:43:06Z",
+        "updatedAt" : "2021-08-06T02:43:07Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "52b709356b367a8616acffec9f7f3a0eec834fce",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +215,219 @@             streamHandler.onComplete(streamId);\n             callback.onSuccess(streamHandler.getCompletionResponse());\n           } catch (BlockPushNonFatalFailure ex) {\n             // Respond an RPC message with the error code to client instead of using exceptions\n             // encoded in the RPCFailure. This type of exceptions gets thrown more frequently"
+  }
+]

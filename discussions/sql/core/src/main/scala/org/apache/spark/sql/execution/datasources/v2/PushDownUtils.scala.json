@@ -1,0 +1,90 @@
+[
+  {
+    "id" : "13a8ff61-1539-445f-9d77-3c68f67ec099",
+    "prId" : 33584,
+    "prUrl" : "https://github.com/apache/spark/pull/33584#pullrequestreview-719328967",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ba3f03e1-44d9-4c77-8be9-57947d190600",
+        "parentId" : null,
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "can we move this into a separate util method? so that we can share it between here and `PruneFileSourcePartitions`?",
+        "createdAt" : "2021-07-30T17:40:30Z",
+        "updatedAt" : "2021-07-30T18:21:30Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "bbc85db716de1db24bdb67f2ca9075dcaa648ded",
+    "line" : 24,
+    "diffHunk" : "@@ -1,1 +86,90 @@    scanBuilder match {\n      case fileBuilder: FileScanBuilder =>\n        val partitionColumns = relation.resolve(\n          fileBuilder.readPartitionSchema(),\n          fileBuilder.getSparkSession.sessionState.analyzer.resolver)"
+  },
+  {
+    "id" : "d09d6c1c-1451-4cbb-ac36-6c61341fa844",
+    "prId" : 33584,
+    "prUrl" : "https://github.com/apache/spark/pull/33584#pullrequestreview-719634360",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "cc00cb0e-20ed-4673-b585-90d7bacdc1d2",
+        "parentId" : null,
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "I think this name is a bit confusing: it doesn't **push** the partition filters but rather just set the filters in the scan builder?",
+        "createdAt" : "2021-07-30T18:03:46Z",
+        "updatedAt" : "2021-07-30T18:21:30Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3385bd2e-49c8-4031-900d-4ac0c14405b9",
+        "parentId" : "cc00cb0e-20ed-4673-b585-90d7bacdc1d2",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "So you want to move partition pruning for `DataSourceV2ScanRelation` from `PruneFileSourcePartitions` to `pushPartitionFilters`?",
+        "createdAt" : "2021-08-01T07:59:09Z",
+        "updatedAt" : "2021-08-01T08:07:03Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "bbc85db716de1db24bdb67f2ca9075dcaa648ded",
+    "line" : 18,
+    "diffHunk" : "@@ -1,1 +80,84 @@   * @return pushed partition filters.\n   */\n  def pushPartitionFilters(\n      scanBuilder: ScanBuilder,\n      relation: DataSourceV2Relation,"
+  },
+  {
+    "id" : "2df95682-19cb-46ce-b982-204c1e718688",
+    "prId" : 33584,
+    "prUrl" : "https://github.com/apache/spark/pull/33584#pullrequestreview-723076829",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6a945675-4f46-45ce-b6c9-e2f3be681ac7",
+        "parentId" : null,
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "```\r\nIf we don't want to touch PruneFileSourcePartitions, I guess instead of checking if the postScanFilter is empty using if filters.isEmpty, we do something like this:\r\n\r\nif (JDBC)\r\n  if filters.isEmpty\r\n     push down aggregate\r\nelse // file based\r\n  if filters are only partition filters\r\n    push down aggregate\r\nThis looks hacky though. Please let me know if anybody has a better idea.\r\n```\r\n@huaxingao I don't have a better idea either. \r\nBut you have to match special case `FileScanBuilder` here anyway. I would prefer resolving the partition filters in `pushAggregates`, which is more straightforward. ",
+        "createdAt" : "2021-08-05T05:18:34Z",
+        "updatedAt" : "2021-08-05T05:18:34Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "015cce76-ef3e-4531-8225-34cd4418be75",
+        "parentId" : "6a945675-4f46-45ce-b6c9-e2f3be681ac7",
+        "authorId" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "body" : "@gengliangwang OK. I will not change `PruneFileSourcePartitions`. I will close this PR and find other way to do this. Thank you very much for your help!",
+        "createdAt" : "2021-08-05T08:28:19Z",
+        "updatedAt" : "2021-08-05T08:28:19Z",
+        "lastEditedBy" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "bbc85db716de1db24bdb67f2ca9075dcaa648ded",
+    "line" : 50,
+    "diffHunk" : "@@ -1,1 +147,151 @@      filters: Seq[Expression]): (Scan, Seq[AttributeReference]) = {\n    val filePartitionFilter = scanBuilder match {\n      case fileScanBuilder: FileScanBuilder => fileScanBuilder.getPartitionFilters\n      case _ => Seq.empty[Expression]\n    }"
+  }
+]

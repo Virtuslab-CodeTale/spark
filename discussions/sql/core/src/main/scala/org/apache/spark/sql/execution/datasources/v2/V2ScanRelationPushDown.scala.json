@@ -1,0 +1,68 @@
+[
+  {
+    "id" : "7905affb-0ee8-4bbe-80f1-04bf9a453421",
+    "prId" : 33584,
+    "prUrl" : "https://github.com/apache/spark/pull/33584#pullrequestreview-719523582",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "cdc9ddba-109b-4f7a-8763-56945a3fe8b0",
+        "parentId" : null,
+        "authorId" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "body" : "Here we have subtracted the `partitionFilters` from the `postScanFilters`. If the file based data source only has partition filters, then the `postScanFilters` should be empty here, and we can push down aggregate for  file based data source.\r\n",
+        "createdAt" : "2021-07-30T20:21:20Z",
+        "updatedAt" : "2021-07-30T20:21:20Z",
+        "lastEditedBy" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "06e07b57-d5b6-4419-87e7-39faec9fe580",
+        "parentId" : "cdc9ddba-109b-4f7a-8763-56945a3fe8b0",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "I'm not sure why we can't do this in the old code, where `filters` contain both partition filters and data filters. Suppose we have a method `DataSourceUtils.getPartitionKeyFiltersAndDataFilters`, then we can basically do:\r\n\r\n```scala\r\nval (partitionFilters, dataFilters) = DataSourceUtils.getPartitionKeyFiltersAndDataFilters(...)\r\nif (dataFilters.isEmpty) {\r\n  // pushdown aggregates\r\n}\r\n```\r\n?",
+        "createdAt" : "2021-07-30T23:19:18Z",
+        "updatedAt" : "2021-07-30T23:19:19Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "34ea0bac-8ee2-4831-909e-d64f5a1d5b56",
+        "parentId" : "cdc9ddba-109b-4f7a-8763-56945a3fe8b0",
+        "authorId" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "body" : "Yes, we can do it that way, but since we have already called `DataSourceUtils.getPartitionKeyFiltersAndDataFilters` to separate the partition filters and data filters, we can just push these two filters to the scan builder, so we can completely remove the v2 partition pruning code from `PruneFileSourcePartitions`.",
+        "createdAt" : "2021-07-31T00:08:45Z",
+        "updatedAt" : "2021-07-31T00:08:45Z",
+        "lastEditedBy" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "bbc85db716de1db24bdb67f2ca9075dcaa648ded",
+    "line" : 18,
+    "diffHunk" : "@@ -1,1 +62,66 @@        .pushPartitionFilters(sHolder.builder, sHolder.relation, normalizedFiltersWithoutSubquery)\n      postScanFilters =\n        (ExpressionSet(postScanFilters) -- partitionFilters.filter(_.references.nonEmpty)).toSeq\n\n      logInfo("
+  },
+  {
+    "id" : "fc8faa02-e040-4c42-a0d9-b2e8d221fddb",
+    "prId" : 33584,
+    "prUrl" : "https://github.com/apache/spark/pull/33584#pullrequestreview-719634360",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "dfc91cf5-5180-4eba-b91a-9f1114b2b468",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Honestly I feel that it is somehow not good to move partial partition pruning from `PruneFileSourcePartitions` to this place mixed with `V2ScanRelationPushDown`.\r\n\r\n",
+        "createdAt" : "2021-08-01T08:06:40Z",
+        "updatedAt" : "2021-08-01T08:07:03Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "bbc85db716de1db24bdb67f2ca9075dcaa648ded",
+    "line" : 16,
+    "diffHunk" : "@@ -1,1 +60,64 @@      var postScanFilters = postScanFiltersWithoutSubquery ++ normalizedFiltersWithSubquery\n      val partitionFilters = PushDownUtils\n        .pushPartitionFilters(sHolder.builder, sHolder.relation, normalizedFiltersWithoutSubquery)\n      postScanFilters =\n        (ExpressionSet(postScanFilters) -- partitionFilters.filter(_.references.nonEmpty)).toSeq"
+  }
+]
