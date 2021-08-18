@@ -1,0 +1,68 @@
+[
+  {
+    "id" : "95a1389e-8dc4-4b6e-b526-9ed7107bbf00",
+    "prId" : 33284,
+    "prUrl" : "https://github.com/apache/spark/pull/33284#pullrequestreview-706807360",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a811a713-757c-4a87-a7cb-fed2bf1ec998",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "do we need to handle nested subqueries here? I think the rule `OptimizeSubqueries` will run this rule again to optimize nested subqueries.",
+        "createdAt" : "2021-07-14T13:20:08Z",
+        "updatedAt" : "2021-07-14T13:20:08Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "011407d7-d97f-46cb-b465-58c3b3b3c301",
+        "parentId" : "a811a713-757c-4a87-a7cb-fed2bf1ec998",
+        "authorId" : "b3ba992a-312c-46eb-b3c3-8d861d15ac40",
+        "body" : "The reason why we need to check subqueries is to deal with nested subqueries:\r\n```\r\nProject [scalar-subquery [a]]\r\n:  +- Project [scalar-subquery [b]] <-- collapsible if transform with nested subqueries first\r\n:     :  +- Project [outer(b) + 1]\r\n:     :     +- OneRowRelation\r\n:     +- Project [outer(a) as b]\r\n:         +- OneRowRelation\r\n+- Relation [a]\r\n```\r\nA subquery's plan should only be rewritten if it doesn't contain another correlated subquery. If we do not transform the nested subqueries first, we will miss out cases like the one above.",
+        "createdAt" : "2021-07-14T23:48:22Z",
+        "updatedAt" : "2021-07-14T23:48:22Z",
+        "lastEditedBy" : "b3ba992a-312c-46eb-b3c3-8d861d15ac40",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7ba19740668cc8d0f28a83482344b7828ccaafff",
+    "line" : 35,
+    "diffHunk" : "@@ -1,1 +736,740 @@   * if there is no nested subqueries in the subquery plan.\n   */\n  private def rewrite(plan: LogicalPlan): LogicalPlan = plan.transformUpWithSubqueries {\n    case LateralJoin(left, right @ LateralSubquery(OneRowSubquery(projectList), _, _, _), _, None)\n        if !hasCorrelatedSubquery(right.plan) && right.joinCond.isEmpty =>"
+  },
+  {
+    "id" : "70d45a8c-5824-44f0-a90a-969c1119632d",
+    "prId" : 33284,
+    "prUrl" : "https://github.com/apache/spark/pull/33284#pullrequestreview-706833354",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a662cc10-df70-4ac5-9a50-cd21277c343d",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "if the lateral join has a condition, can we just add a filter above project?",
+        "createdAt" : "2021-07-14T13:21:58Z",
+        "updatedAt" : "2021-07-14T13:21:59Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3932ac71-ef19-4b77-87c7-a94b57e93c8b",
+        "parentId" : "a662cc10-df70-4ac5-9a50-cd21277c343d",
+        "authorId" : "b3ba992a-312c-46eb-b3c3-8d861d15ac40",
+        "body" : "It should be fine for inner join but for left outer join, it's trickier. This also applies to subqueries after pulling out correlated filters as join conditions. Maybe this can be a separate optimization before RewriteCorrelatedScalarSubqueries / RewriteLateralSubqueries.",
+        "createdAt" : "2021-07-15T01:02:13Z",
+        "updatedAt" : "2021-07-15T01:02:13Z",
+        "lastEditedBy" : "b3ba992a-312c-46eb-b3c3-8d861d15ac40",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7ba19740668cc8d0f28a83482344b7828ccaafff",
+    "line" : 38,
+    "diffHunk" : "@@ -1,1 +739,743 @@    case LateralJoin(left, right @ LateralSubquery(OneRowSubquery(projectList), _, _, _), _, None)\n        if !hasCorrelatedSubquery(right.plan) && right.joinCond.isEmpty =>\n      Project(left.output ++ projectList, left)\n    case p: LogicalPlan => p.transformExpressionsUpWithPruning(\n      _.containsPattern(SCALAR_SUBQUERY)) {"
+  }
+]

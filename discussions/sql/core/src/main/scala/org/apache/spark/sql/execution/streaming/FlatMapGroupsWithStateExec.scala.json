@@ -1,0 +1,90 @@
+[
+  {
+    "id" : "d576a097-12f5-43e2-aa67-741a798180e4",
+    "prId" : 33336,
+    "prUrl" : "https://github.com/apache/spark/pull/33336#pullrequestreview-707723565",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a9152bf5-05b4-4690-921b-c812e3ecd5d7",
+        "parentId" : null,
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "why do we call `createForStreaming` rather than `createForBatch`?",
+        "createdAt" : "2021-07-15T19:02:15Z",
+        "updatedAt" : "2021-07-15T19:02:45Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "457280910896a17e5740bfe9f93f9210c175c908",
+    "line" : 60,
+    "diffHunk" : "@@ -1,1 +448,452 @@\n        // Create group state object\n        val groupState = GroupStateImpl.createForStreaming(\n          optionalStates.headOption,\n          System.currentTimeMillis,"
+  },
+  {
+    "id" : "4d042076-f457-4192-b437-225920d444e0",
+    "prId" : 33336,
+    "prUrl" : "https://github.com/apache/spark/pull/33336#pullrequestreview-711121543",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f75d0903-5e42-4add-bc41-410458f9569b",
+        "parentId" : null,
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "This won't catch duplicate keys because `states` is an Iterator. E.g.,\r\n```\r\nval states = Iterator(1, 1)\r\nvar foundInitialStateForKey = false\r\nval optionalState = states.map { stateValue =>\r\n  if (foundInitialStateForKey) {\r\n    throw new RuntimeException(\"foo\")\r\n  }\r\n  foundInitialStateForKey = true\r\n  stateValue\r\n}.toSeq\r\noptionalState.headOption\r\n```\r\nthe above case won't fail.\r\n\r\nYou can change `toSeq` to `toArray` to fix this issue. Can we add a unit test for this?",
+        "createdAt" : "2021-07-20T22:05:10Z",
+        "updatedAt" : "2021-07-20T22:13:57Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ed25392f-f09c-4d8f-86ca-317149c9d88c",
+        "parentId" : "f75d0903-5e42-4add-bc41-410458f9569b",
+        "authorId" : "0e7383af-ae8f-4891-9ab6-e80efa3990c0",
+        "body" : "oh great catch",
+        "createdAt" : "2021-07-20T22:18:56Z",
+        "updatedAt" : "2021-07-20T22:18:56Z",
+        "lastEditedBy" : "0e7383af-ae8f-4891-9ab6-e80efa3990c0",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1a5c96bb-c0e0-4571-8e63-0e2d00f21989",
+        "parentId" : "f75d0903-5e42-4add-bc41-410458f9569b",
+        "authorId" : "9cd657f0-37cd-41bd-908a-f2c996b95a7a",
+        "body" : "does this bug exist for streaming as well?",
+        "createdAt" : "2021-07-20T22:27:38Z",
+        "updatedAt" : "2021-07-20T22:27:38Z",
+        "lastEditedBy" : "9cd657f0-37cd-41bd-908a-f2c996b95a7a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e6ccbd21-53d7-4bdf-9cb2-f723fb37f6ca",
+        "parentId" : "f75d0903-5e42-4add-bc41-410458f9569b",
+        "authorId" : "0e7383af-ae8f-4891-9ab6-e80efa3990c0",
+        "body" : "no we have a test for that `flatMapGroupsWithState - initial state - duplicate keys` ",
+        "createdAt" : "2021-07-20T22:28:53Z",
+        "updatedAt" : "2021-07-20T22:28:53Z",
+        "lastEditedBy" : "0e7383af-ae8f-4891-9ab6-e80efa3990c0",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dee7a8ba-74cb-4c78-9a17-14a65d2d1b11",
+        "parentId" : "f75d0903-5e42-4add-bc41-410458f9569b",
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "streaming is using `Iterator.foreach`.",
+        "createdAt" : "2021-07-20T22:40:18Z",
+        "updatedAt" : "2021-07-20T22:42:47Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "457280910896a17e5740bfe9f93f9210c175c908",
+    "line" : 53,
+    "diffHunk" : "@@ -1,1 +441,445 @@        val optionalStates = states.map { stateValue =>\n          if (foundInitialStateForKey) {\n            foundDuplicateInitialKeyException()\n          }\n          foundInitialStateForKey = true"
+  }
+]

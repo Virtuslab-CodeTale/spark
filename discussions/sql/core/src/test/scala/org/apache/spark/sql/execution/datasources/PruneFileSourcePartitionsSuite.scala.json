@@ -42,5 +42,159 @@
     "commit" : "4663ab4098f4e439f35c804d88a36ff5d4f14ea9",
     "line" : 94,
     "diffHunk" : "@@ -1,1 +108,112 @@    withSQLConf((SQLConf.USE_V1_SOURCE_LIST.key, \"\")) {\n      withTempPath { dir =>\n        spark.range(10).coalesce(1).selectExpr(\"id\", \"id % 3 as p\")\n            .write.partitionBy(\"p\").parquet(dir.getCanonicalPath)\n        withTempView(\"tmp\") {"
+  },
+  {
+    "id" : "6300ea36-f10d-493b-a95c-eb341dfb0adf",
+    "prId" : 33350,
+    "prUrl" : "https://github.com/apache/spark/pull/33350#pullrequestreview-707916591",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8c872d3c-431d-4825-9272-4aa2c1a0be14",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Since this claims a simple moving classes, shall we preserve `i` instead of introducing new column name, `id`?",
+        "createdAt" : "2021-07-15T07:04:36Z",
+        "updatedAt" : "2021-07-15T07:04:36Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "65639edf-bb56-4dbe-875c-44a903e8021b",
+        "parentId" : "8c872d3c-431d-4825-9272-4aa2c1a0be14",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Thanks. I'm not sure whether it's worth doing so because we changed how the test table is created by using the DataFrame API `spark.range(10).selectExpr(\"id\", \"id % 3 as p\").write.partitionBy(\"p\").saveAsTable(\"test\")`, which creates `id` column by default. The `id` here is also consistent with the rest of the tests in this file as well as other tests which use the same API to create tables.",
+        "createdAt" : "2021-07-15T17:35:47Z",
+        "updatedAt" : "2021-07-15T17:35:47Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b5611628-263f-48fb-90b6-8029c29a46ff",
+        "parentId" : "8c872d3c-431d-4825-9272-4aa2c1a0be14",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "I meant we should recover it from `id` to `i` together~",
+        "createdAt" : "2021-07-15T20:55:22Z",
+        "updatedAt" : "2021-07-15T20:55:22Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2922b1c5-9aa7-41bd-adf1-2c0cbe12385a",
+        "parentId" : "8c872d3c-431d-4825-9272-4aa2c1a0be14",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Anyway, if the title and scope becomes broaden, I'm okay for `id`, too.",
+        "createdAt" : "2021-07-15T20:56:42Z",
+        "updatedAt" : "2021-07-15T20:56:42Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dc468c03-086b-4714-a579-16402f6b26e7",
+        "parentId" : "8c872d3c-431d-4825-9272-4aa2c1a0be14",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Thanks! I'll keep as it is then :-)",
+        "createdAt" : "2021-07-16T00:30:40Z",
+        "updatedAt" : "2021-07-16T00:30:40Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d6fa7a504944212337150147be86540730ff4346",
+    "line" : 80,
+    "diffHunk" : "@@ -1,1 +63,67 @@\n      val logicalRelation = LogicalRelation(relation, tableMeta)\n      val query = Project(Seq(Symbol(\"id\"), Symbol(\"p\")),\n        Filter(Symbol(\"p\") === 1, logicalRelation)).analyze\n"
+  },
+  {
+    "id" : "028465b9-c3c8-46b5-8139-ef92e38a2b04",
+    "prId" : 33350,
+    "prUrl" : "https://github.com/apache/spark/pull/33350#pullrequestreview-708667920",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e09f21ef-ae99-44db-9cde-2c05166db856",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "As you know, `saveAsTable` is different from `STORED AS` parquet. The original test coverage seems to be coupled with `convertMetastoreParquet`, but this one looks different. Are we losing the existing test coverage?\r\n\r\n```scala\r\nscala> spark.range(10).selectExpr(\"id\", \"id % 3 as p\").write.partitionBy(\"p\").saveAsTable(\"t1\")\r\n\r\nscala> sql(\"DESCRIBE TABLE EXTENDED t1\").show()\r\n...\r\n|            Provider|             parquet|       |\r\n...\r\nscala> sql(\"CREATE TABLE t2(a int) STORED AS parquet\").show()\r\nscala> sql(\"DESCRIBE TABLE EXTENDED t2\").show()\r\n...\r\n|            Provider|                hive|       |\r\n...\r\n```",
+        "createdAt" : "2021-07-16T03:08:13Z",
+        "updatedAt" : "2021-07-16T03:12:56Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "79930938-18ab-4dec-812c-cf07ca282e15",
+        "parentId" : "e09f21ef-ae99-44db-9cde-2c05166db856",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "This specific test coverage should remain at `hive` module.",
+        "createdAt" : "2021-07-16T03:14:02Z",
+        "updatedAt" : "2021-07-16T03:14:02Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1b7e884e-a3bb-436e-a3b3-412481330147",
+        "parentId" : "e09f21ef-ae99-44db-9cde-2c05166db856",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Hmm what is `convertMetastoreParquet`? I couldn't find it anywhere.\r\n\r\nRegarding the test, I think it is still covered (I've debugged the test and made sure it is still going through the related code paths in `PruneFileSourcePartitions`). Much has changed since 2016 though: the test (added in #15569) was originally designed to make sure that `LogicalRelation.expectedOutputAttributes` was correctly populated in the class. The `expectedOutputAttributes`, however, was later replaced by directly passing `output` in `LogicalRelation` (in #17552), which I think further prevented the issue from happening. ",
+        "createdAt" : "2021-07-16T07:10:09Z",
+        "updatedAt" : "2021-07-16T07:10:09Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a69a788c-791c-42cf-8021-2f203e9fd830",
+        "parentId" : "e09f21ef-ae99-44db-9cde-2c05166db856",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "I mean `spark.sql.hive.convertMetastoreParquet`. Here is the document.\r\n- https://spark.apache.org/docs/latest/sql-data-sources-parquet.html#hive-metastore-parquet-table-conversion",
+        "createdAt" : "2021-07-16T07:19:45Z",
+        "updatedAt" : "2021-07-16T07:19:45Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1adfeed3-b0db-4e2c-933d-a6c2a1b25665",
+        "parentId" : "e09f21ef-ae99-44db-9cde-2c05166db856",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "FYI, `CREATE TABLE ... USING PARQUET` (spark syntax) and `CREATE TABLE ... STORED AS PARQUET` (hive syntax) generates different tables in Apache Spark.",
+        "createdAt" : "2021-07-16T07:20:58Z",
+        "updatedAt" : "2021-07-16T07:20:58Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b3084af8-da1f-45af-bdfd-d9fec7a96220",
+        "parentId" : "e09f21ef-ae99-44db-9cde-2c05166db856",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "For Hive tables generated by `STORED AS` syntax, Spark converts them to data source tables on the fly because `spark.sql.hive.convertMetastoreParquet` is `true` by default. It's the same for ORC. For ORC, we have `spark.sql.hive.convertMetastoreOrc`.",
+        "createdAt" : "2021-07-16T07:22:16Z",
+        "updatedAt" : "2021-07-16T07:23:46Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4d41c548-6fad-4cd6-9fc9-4c927d2cd0a4",
+        "parentId" : "e09f21ef-ae99-44db-9cde-2c05166db856",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Thanks @dongjoon-hyun . I found it now. However I'm not sure whether this matters for the test though: what it does is just 1) register table metadata in the catalog, 2) create a `LogicalRelation` wrapping a `HadoopFsRelation` which has the data and partition schema from the step 1), and 3) feed it into the rule `PruneFileSourcePartitions` and see if the `LogicalRelation`'s `expectedOutputAttributes` is properly set. Seems this is irrelevant to what SerDe it is using?",
+        "createdAt" : "2021-07-16T18:53:04Z",
+        "updatedAt" : "2021-07-16T18:53:05Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d6fa7a504944212337150147be86540730ff4346",
+    "line" : 64,
+    "diffHunk" : "@@ -1,1 +47,51 @@  test(\"PruneFileSourcePartitions should not change the output of LogicalRelation\") {\n    withTable(\"test\") {\n      spark.range(10).selectExpr(\"id\", \"id % 3 as p\").write.partitionBy(\"p\").saveAsTable(\"test\")\n      val tableMeta = spark.sharedState.externalCatalog.getTable(\"default\", \"test\")\n      val catalogFileIndex = new CatalogFileIndex(spark, tableMeta, 0)"
   }
 ]
