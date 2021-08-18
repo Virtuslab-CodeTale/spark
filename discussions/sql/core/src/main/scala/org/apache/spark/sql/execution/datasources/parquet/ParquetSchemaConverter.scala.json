@@ -1,0 +1,101 @@
+[
+  {
+    "id" : "e0333961-4e4b-45e1-ae43-bc45eef303f7",
+    "prId" : 31960,
+    "prUrl" : "https://github.com/apache/spark/pull/31960#pullrequestreview-647777894",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "12a51c1b-031b-4169-ad11-c706d63f88b4",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I don't think it's related to `DecimalType.LongDecimal`. We want it to store uint64, so the precision we need is `java.lang.Long.toUnsignedString(-1).length`, which is 20.\r\n\r\nLet's make it more explicit\r\n```\r\n// The precision to hold the largest unsigned long is: `java.lang.Long.toUnsignedString(-1).length` = 20\r\ncase UINT_64 => DecimalType(20, 0)\r\n```",
+        "createdAt" : "2021-04-29T02:24:41Z",
+        "updatedAt" : "2021-04-29T02:24:41Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "24cf6059-5140-4912-a74f-7953e43a3eab",
+        "parentId" : "12a51c1b-031b-4169-ad11-c706d63f88b4",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "OK, I will send a followup",
+        "createdAt" : "2021-04-29T02:35:56Z",
+        "updatedAt" : "2021-04-29T02:35:56Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5e9a423f4ccd420389f618cb8e322f6415e3ded6",
+    "line" : 15,
+    "diffHunk" : "@@ -1,1 +142,146 @@          case INT_64 | null => LongType\n          case DECIMAL => makeDecimalType(Decimal.MAX_LONG_DIGITS)\n          case UINT_64 => DecimalType.LongDecimal\n          case TIMESTAMP_MICROS => TimestampType\n          case TIMESTAMP_MILLIS => TimestampType"
+  },
+  {
+    "id" : "e917e155-7834-4dcd-8b5d-f47c4bc90636",
+    "prId" : 31921,
+    "prUrl" : "https://github.com/apache/spark/pull/31921#pullrequestreview-617205540",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "eb96e0a6-fc93-4305-834d-39af16a85d1b",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "These were explicitly unsupported at https://github.com/apache/spark/pull/9646 .. per @liancheng's advice (who's also Parquet committer). So I'm less sure if this is something we should support.",
+        "createdAt" : "2021-03-22T06:37:25Z",
+        "updatedAt" : "2021-03-25T04:16:05Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1c2debcd-47ce-4be3-aa00-4900b74cef15",
+        "parentId" : "eb96e0a6-fc93-4305-834d-39af16a85d1b",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "But it's very old. Almost 6 years ago lol. @liancheng do you have a different thought now?",
+        "createdAt" : "2021-03-22T06:38:07Z",
+        "updatedAt" : "2021-03-25T04:16:05Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "92e80e42-575a-4f63-80cf-c12100c513f9",
+        "parentId" : "eb96e0a6-fc93-4305-834d-39af16a85d1b",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "Thanks, @HyukjinKwon,\r\nYea, I have checked that PR too. There's also a suggestion that we support them.\r\nLately, Wenchen created https://issues.apache.org/jira/browse/SPARK-34786 for reading uint64. As other unsigned types are not supported too and they are a bit more clear than uint64 which needs a decimal, I raised this PR to collect more opinions.\r\n\r\nIMO, for Spark, it is worthwhile to be able to support more storage layer features without breaking our own rules. ",
+        "createdAt" : "2021-03-22T06:58:41Z",
+        "updatedAt" : "2021-03-25T04:16:05Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "00530e4a-09cc-4793-bd22-ea3eabced7ca",
+        "parentId" : "eb96e0a6-fc93-4305-834d-39af16a85d1b",
+        "authorId" : "eec69026-4066-480b-afca-bd70f71d6813",
+        "body" : "My hunch is that Spark SQL didn't support unsigned integral types at all back then. As long as we support that now, it's OK to have.",
+        "createdAt" : "2021-03-22T07:00:22Z",
+        "updatedAt" : "2021-03-25T04:16:05Z",
+        "lastEditedBy" : "eec69026-4066-480b-afca-bd70f71d6813",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "32d16218-23ec-419e-b73e-ae7d6290a8df",
+        "parentId" : "eb96e0a6-fc93-4305-834d-39af16a85d1b",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "It's mostly about compatibility. Spark won't have unsigned types, but spark should be able to read existing parquet files written by other systems that support unsigned types.",
+        "createdAt" : "2021-03-22T07:19:26Z",
+        "updatedAt" : "2021-03-25T04:16:05Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "71496bdc4d5c8081139e5a26fa9bddfa1ddc38ed",
+    "line" : 13,
+    "diffHunk" : "@@ -1,1 +136,140 @@          case DATE => DateType\n          case DECIMAL => makeDecimalType(Decimal.MAX_INT_DIGITS)\n          case UINT_32 => LongType\n          case TIME_MILLIS => typeNotImplemented()\n          case _ => illegalType()"
+  }
+]

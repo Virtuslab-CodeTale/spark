@@ -53,5 +53,82 @@
     "commit" : "046d751c005376aad290d96d80478c64da8c4c29",
     "line" : 105,
     "diffHunk" : "@@ -1,1 +157,161 @@      currentOffsets: Map[TopicPartition, Long],\n      maxTriggerDelayMs: Long): Boolean = {\n    // Checking first if the maxbatchDelay time has passed\n    if ((System.currentTimeMillis() - lastTriggerMillis) >= maxTriggerDelayMs) {\n      logDebug(\"Maximum wait time is passed, triggering batch\")"
+  },
+  {
+    "id" : "21ca2711-dc3a-4d3e-a584-2481cb8d45ae",
+    "prId" : 31944,
+    "prUrl" : "https://github.com/apache/spark/pull/31944#pullrequestreview-636585747",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "21b92e20-33cf-4209-bd27-224e5fd6916d",
+        "parentId" : null,
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "`latestConsumedOffset` techically can be none, right? Wondering what will happen such case (`KafkaSourceOffset(null)`)?",
+        "createdAt" : "2021-04-12T11:36:18Z",
+        "updatedAt" : "2021-05-04T23:33:00Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dd2cd4b0-eee3-4d31-ae77-c1b58e9d808a",
+        "parentId" : "21b92e20-33cf-4209-bd27-224e5fd6916d",
+        "authorId" : "135e1e15-9613-4c1f-bf11-b9ec5cf2a369",
+        "body" : "Yes. LatestConsumedOffset can be None, and it will skip the case. This is checked by offset.nonEmpty.\r\n\r\nAlso this is the test for checking latestConsumedOffset to be none case: https://github.com/apache/spark/pull/31944/files#diff-4ddf27dccbb57c9b29179090d9430bbbd3d1bc8d57ab8100901fb45971d23810R1395",
+        "createdAt" : "2021-04-14T04:23:29Z",
+        "updatedAt" : "2021-05-04T23:33:00Z",
+        "lastEditedBy" : "135e1e15-9613-4c1f-bf11-b9ec5cf2a369",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2f0390a2-a8cf-416f-a529-770b537e9408",
+        "parentId" : "21b92e20-33cf-4209-bd27-224e5fd6916d",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "Had a deeper look and this maps to `None` and not `Some(null)` so this is fine.",
+        "createdAt" : "2021-04-15T13:15:38Z",
+        "updatedAt" : "2021-05-04T23:33:00Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2f13f28d7bee15bed657858c53dd8495ba8f1cbc",
+    "line" : 63,
+    "diffHunk" : "@@ -1,1 +247,251 @@\n    if (offset.nonEmpty && latestAvailablePartitionOffsets != null) {\n      val consumedPartitionOffsets = offset.map(KafkaSourceOffset(_)).get.partitionToOffsets\n      val offsetsBehindLatest = latestAvailablePartitionOffsets\n        .map(partitionOffset => partitionOffset._2 - consumedPartitionOffsets(partitionOffset._1))"
+  },
+  {
+    "id" : "2529a41d-eb8d-4299-8e30-62396ec21178",
+    "prId" : 31944,
+    "prUrl" : "https://github.com/apache/spark/pull/31944#pullrequestreview-647712481",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3e338b44-1642-45fc-9e5c-b594f428bc68",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "It returns min/max/avg offset behind latest offset, may you describe the actual returned metric map in the doc?",
+        "createdAt" : "2021-04-28T17:12:20Z",
+        "updatedAt" : "2021-05-04T23:33:00Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3787da8d-35bb-4d88-99dd-449ce1e19a1a",
+        "parentId" : "3e338b44-1642-45fc-9e5c-b594f428bc68",
+        "authorId" : "135e1e15-9613-4c1f-bf11-b9ec5cf2a369",
+        "body" : "Added.",
+        "createdAt" : "2021-04-28T23:15:35Z",
+        "updatedAt" : "2021-05-04T23:33:00Z",
+        "lastEditedBy" : "135e1e15-9613-4c1f-bf11-b9ec5cf2a369",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2f13f28d7bee15bed657858c53dd8495ba8f1cbc",
+    "line" : 47,
+    "diffHunk" : "@@ -1,1 +231,235 @@\n  /**\n   * Compute the difference of offset per partition between latestAvailablePartitionOffsets\n   * and partition offsets in the latestConsumedOffset.\n   * Report min/max/avg offsets behind the latest for all the partitions in the Kafka stream."
   }
 ]

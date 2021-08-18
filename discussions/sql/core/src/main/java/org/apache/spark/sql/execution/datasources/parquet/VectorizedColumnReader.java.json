@@ -75,5 +75,104 @@
     "commit" : "6541d99bd6788ae7ee3da1ccc76d30e9b39b9cb5",
     "line" : 64,
     "diffHunk" : "@@ -1,1 +180,184 @@        // TIMESTAMP_MILLIS encoded as INT64 can't be lazily decoded as we need to post process\n        // the values to add microseconds precision.\n        if (column.hasDictionary() || (startRowId == pageFirstRowIndex &&\n            isLazyDecodingSupported(typeName))) {\n          // Column vector supports lazy decoding of dictionary values so just set the dictionary."
+  },
+  {
+    "id" : "0369eccb-8766-4eb1-b191-1df5453546b2",
+    "prId" : 31921,
+    "prUrl" : "https://github.com/apache/spark/pull/31921#pullrequestreview-617212893",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8a782ff8-78df-4e8b-83d3-a57f0463d148",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "where do we handle uint8 and unit16?",
+        "createdAt" : "2021-03-22T07:27:02Z",
+        "updatedAt" : "2021-03-25T04:16:05Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6c468fbd-97d5-44b5-90f8-536b5bccd417",
+        "parentId" : "8a782ff8-78df-4e8b-83d3-a57f0463d148",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "These values fix signed int32 well. Parquet will not convert them forth and back, so it's fine for us to read the raw data",
+        "createdAt" : "2021-03-22T07:32:38Z",
+        "updatedAt" : "2021-03-25T04:16:05Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "71496bdc4d5c8081139e5a26fa9bddfa1ddc38ed",
+    "line" : 62,
+    "diffHunk" : "@@ -1,1 +581,585 @@      defColumn.readIntegers(\n          num, column, rowId, maxDefLevel, (VectorizedValuesReader) dataColumn);\n    } else if (column.dataType() == DataTypes.LongType) {\n      // In `ParquetToSparkSchemaConverter`, we map parquet UINT32 to our LongType.\n      // For unsigned int32, it stores as plain signed int32 in Parquet when dictionary fall backs."
+  },
+  {
+    "id" : "e919ce19-e5d7-48e9-9239-15a59c610584",
+    "prId" : 31921,
+    "prUrl" : "https://github.com/apache/spark/pull/31921#pullrequestreview-619900494",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9443e884-5833-4331-8c13-20938ddcb7ba",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "when will we hit this branch? it's `case INT32` not unsigned.",
+        "createdAt" : "2021-03-24T15:23:43Z",
+        "updatedAt" : "2021-03-25T04:16:05Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "63feebba-609f-4a2c-80de-6bf2041a0c58",
+        "parentId" : "9443e884-5833-4331-8c13-20938ddcb7ba",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "On Parquet side, for signed and unsigned int (<=32)  types they share the same `PrimitiveType` - `INT32`. The Unsigned ones are just logical types.",
+        "createdAt" : "2021-03-24T15:49:25Z",
+        "updatedAt" : "2021-03-25T04:16:05Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "71496bdc4d5c8081139e5a26fa9bddfa1ddc38ed",
+    "line" : 43,
+    "diffHunk" : "@@ -1,1 +374,378 @@            }\n          }\n        } else if (column.dataType() == DataTypes.LongType) {\n          // In `ParquetToSparkSchemaConverter`, we map parquet UINT32 to our LongType.\n          // For unsigned int32, it stores as dictionary encoded signed int32 in Parquet"
+  },
+  {
+    "id" : "8d3edb8b-dd04-491d-b159-b82da8aa5eb9",
+    "prId" : 31921,
+    "prUrl" : "https://github.com/apache/spark/pull/31921#pullrequestreview-619903305",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "81e042a2-3e81-4898-a158-626cca89dd0f",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "shall we add an extra check to make sure we are reading unsigned values?",
+        "createdAt" : "2021-03-24T15:24:35Z",
+        "updatedAt" : "2021-03-25T04:16:05Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "75cb83f0-5996-4f8b-b49e-58c37ee5e0d9",
+        "parentId" : "81e042a2-3e81-4898-a158-626cca89dd0f",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "This is deterministic and controlled by our own, which seems not necessary. see https://github.com/apache/spark/pull/31921/files#diff-3730a913c4b95edf09fb78f8739c538bae53f7269555b6226efe7ccee1901b39R137",
+        "createdAt" : "2021-03-24T15:51:39Z",
+        "updatedAt" : "2021-03-25T04:16:05Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "71496bdc4d5c8081139e5a26fa9bddfa1ddc38ed",
+    "line" : 62,
+    "diffHunk" : "@@ -1,1 +581,585 @@      defColumn.readIntegers(\n          num, column, rowId, maxDefLevel, (VectorizedValuesReader) dataColumn);\n    } else if (column.dataType() == DataTypes.LongType) {\n      // In `ParquetToSparkSchemaConverter`, we map parquet UINT32 to our LongType.\n      // For unsigned int32, it stores as plain signed int32 in Parquet when dictionary fall backs."
   }
 ]

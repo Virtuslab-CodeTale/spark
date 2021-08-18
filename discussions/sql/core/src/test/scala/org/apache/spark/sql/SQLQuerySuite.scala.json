@@ -174,5 +174,82 @@
     "commit" : "b6d26b7d87917e7e230ca38f2817c6110b461370",
     "line" : 13,
     "diffHunk" : "@@ -1,1 +1079,1083 @@    // these keys does not exist as default yet\n    checkAnswer(sql(s\"SET ${key}no\"), Row(key + \"no\", \"<undefined>\"))\n    checkAnswer(sql(\"SET dfs.replication\"), Row(\"dfs.replication\", \"<undefined>\"))\n\n    // io.file.buffer.size has a default value from `SparkHadoopUtil.newConfiguration`"
+  },
+  {
+    "id" : "c08c1888-e2c2-4b98-a11b-f0eec7493e64",
+    "prId" : 31892,
+    "prUrl" : "https://github.com/apache/spark/pull/31892#pullrequestreview-616084768",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1129f893-0510-4967-827e-faf0f56c53a6",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "is INSERT necessary to reproduce the bug?",
+        "createdAt" : "2021-03-19T05:50:43Z",
+        "updatedAt" : "2021-03-19T05:50:43Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f24e4de7-44bc-4476-b0c3-7d59872f1483",
+        "parentId" : "1129f893-0510-4967-827e-faf0f56c53a6",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@cloud-fan - yes I think so.\r\n\r\nFor query:\r\n\r\n```\r\nSELECT t1.k FROM left_table t1\r\nJOIN empty_right_table t2\r\nON t1.k = t2.k\r\nLIMIT 3\r\n```\r\n\r\nThe physical plan:\r\n\r\n\r\n```\r\nCollectLimit 3\r\n+- *(2) Project [k#228L]\r\n   +- *(2) BroadcastHashJoin [k#228L], [k#229L], Inner, BuildRight, false\r\n      :- *(2) Filter isnotnull(k#228L)\r\n      :  +- *(2) ColumnarToRow\r\n      :     +- FileScan parquet default.left_table[k#228L] Batched: true, DataFilters: [isnotnull(k#228L)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/Users/chengsu/spark/sql/core/spark-warehouse/org.apache.spark.sq..., PartitionFilters: [], PushedFilters: [IsNotNull(k)], ReadSchema: struct<k:bigint>\r\n      +- BroadcastExchange HashedRelationBroadcastMode(List(input[0, bigint, false]),false), [id=#148]\r\n         +- *(1) Filter isnotnull(k#229L)\r\n            +- *(1) ColumnarToRow\r\n               +- FileScan parquet default.empty_right_table[k#229L] Batched: true, DataFilters: [isnotnull(k#229L)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/Users/chengsu/spark/sql/core/spark-warehouse/org.apache.spark.sq..., PartitionFilters: [], PushedFilters: [IsNotNull(k)], ReadSchema: struct<k:bigint>\r\n```\r\n\r\nThis is not reproduced any more as there's no code-gen `BaseLimitExec` after `BroadcastHashJoin`.",
+        "createdAt" : "2021-03-19T06:06:10Z",
+        "updatedAt" : "2021-03-19T06:06:10Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d57f914b79f8c6372f1ecf3116a5956f0bbce54b",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +4108,4112 @@        spark.sql(\n          \"\"\"\n            |INSERT INTO TABLE output_table\n            |SELECT t1.k FROM left_table t1\n            |JOIN empty_right_table t2"
+  },
+  {
+    "id" : "eb053ef6-7298-4719-a5d3-59939db11bcb",
+    "prId" : 31892,
+    "prUrl" : "https://github.com/apache/spark/pull/31892#pullrequestreview-616121777",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b72b2661-4a97-4a8b-bfcc-fa4c3cf40c79",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "nit: how about checking `checkAnswer(spark.table(\"output_table\"), Row(...) ...)` just in case?",
+        "createdAt" : "2021-03-19T05:54:50Z",
+        "updatedAt" : "2021-03-19T05:54:51Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2992e0fe-ef99-45c5-9194-7d3841fdf13f",
+        "parentId" : "b72b2661-4a97-4a8b-bfcc-fa4c3cf40c79",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@maropu - here we are inner-joining an empty table `empty_right_table`, so the output table still has nothing after query. Shall we check answer as well? I am fine either way.",
+        "createdAt" : "2021-03-19T06:26:51Z",
+        "updatedAt" : "2021-03-19T06:26:51Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "33d3fa86-96ac-486e-9644-717fad16f368",
+        "parentId" : "b72b2661-4a97-4a8b-bfcc-fa4c3cf40c79",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "okay, looks fine as it is.",
+        "createdAt" : "2021-03-19T07:29:29Z",
+        "updatedAt" : "2021-03-19T07:29:30Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d57f914b79f8c6372f1ecf3116a5956f0bbce54b",
+    "line" : 19,
+    "diffHunk" : "@@ -1,1 +4113,4117 @@            |ON t1.k = t2.k\n            |LIMIT 3\n          \"\"\".stripMargin)\n      }\n    }"
   }
 ]

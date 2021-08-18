@@ -1,0 +1,123 @@
+[
+  {
+    "id" : "880a33d8-12b9-4e35-b63f-f8f94124b554",
+    "prId" : 31898,
+    "prUrl" : "https://github.com/apache/spark/pull/31898#pullrequestreview-617184332",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ca6094fe-f0ae-4ea4-8daa-d00cd98b5c15",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "I think we still have enough time to take a look and make AQE supported with IO encryption. Does it require a lot of change to make it supported?",
+        "createdAt" : "2021-03-21T00:40:16Z",
+        "updatedAt" : "2021-03-22T14:31:44Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ef133b70-ceb9-487e-92f7-321088b6ea99",
+        "parentId" : "ca6094fe-f0ae-4ea4-8daa-d00cd98b5c15",
+        "authorId" : "b0e245a1-4f84-42f1-9f20-4c5f111c43a7",
+        "body" : "Yes, you are right. This PR makes a simple read control, which may sacrifice shuffle read performance in AQE. It would be better to allow batch fetching for contiguous shuffle blocks while IO encryption enabled.\r\n",
+        "createdAt" : "2021-03-21T15:38:25Z",
+        "updatedAt" : "2021-03-22T14:31:44Z",
+        "lastEditedBy" : "b0e245a1-4f84-42f1-9f20-4c5f111c43a7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a84883ac-66cc-41a1-a369-53b0ca852ab2",
+        "parentId" : "ca6094fe-f0ae-4ea4-8daa-d00cd98b5c15",
+        "authorId" : "b0e245a1-4f84-42f1-9f20-4c5f111c43a7",
+        "body" : "BTW, it seems to me that when io encryption enabled, the demarcation point (end of blocks) between consecutive blocks cannot be resolved correctly during deserialization (shuffle read).\r\n",
+        "createdAt" : "2021-03-21T15:39:17Z",
+        "updatedAt" : "2021-03-22T14:31:44Z",
+        "lastEditedBy" : "b0e245a1-4f84-42f1-9f20-4c5f111c43a7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e1a68ccc-6183-4936-ae5c-de67f6d4e1de",
+        "parentId" : "ca6094fe-f0ae-4ea4-8daa-d00cd98b5c15",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "We could store the size info of each consecutive block in `ShuffleBlockBatchId` to resolve it?",
+        "createdAt" : "2021-03-22T03:43:55Z",
+        "updatedAt" : "2021-03-22T14:31:44Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7aae271e-ef66-4a14-980b-46e67f375e6b",
+        "parentId" : "ca6094fe-f0ae-4ea4-8daa-d00cd98b5c15",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "That sounds like a good idea but we need to think about how to support it in the current shuffle protocol.",
+        "createdAt" : "2021-03-22T05:59:16Z",
+        "updatedAt" : "2021-03-22T14:31:44Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c47b4fad-8a7d-42e1-a4f2-70b7038a35d2",
+        "parentId" : "ca6094fe-f0ae-4ea4-8daa-d00cd98b5c15",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "Maybe we can have this bandage fix first. The encryption shuffle mode breaks the assumption of batch serialized and deserialize, similar to the issue with codec concatenation.",
+        "createdAt" : "2021-03-22T06:33:41Z",
+        "updatedAt" : "2021-03-22T14:31:44Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d824a9b36d41154d15c54925be440ba92759f599",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +53,57 @@    val useOldFetchProtocol = conf.get(config.SHUFFLE_USE_OLD_FETCH_PROTOCOL)\n    // SPARK-34790: Fetching continuous blocks in batch is incompatible with io encryption.\n    val ioEncryption = conf.get(config.IO_ENCRYPTION_ENABLED)\n\n    val doBatchFetch = shouldBatchFetch && serializerRelocatable &&"
+  },
+  {
+    "id" : "33328c24-c9e3-4b4b-9b77-b8c821ea5b8c",
+    "prId" : 31898,
+    "prUrl" : "https://github.com/apache/spark/pull/31898#pullrequestreview-617034876",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "90d5a99f-b35c-4451-9e1d-e0428340f7f7",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "@hezuojiao . Do you want to ban IO encryption when we don't use adaptive SQL query execution,  `spark.sql.adaptive.enabled=false`?",
+        "createdAt" : "2021-03-21T00:57:29Z",
+        "updatedAt" : "2021-03-22T14:31:44Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "01f2f641-3c08-41b0-9549-8646fd4dfc28",
+        "parentId" : "90d5a99f-b35c-4451-9e1d-e0428340f7f7",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "IIUC, the test coverage of this code path works correctly when `spark.sql.adaptive.enabled=false`. If not, please file another JIRA. It's independent from AQE.",
+        "createdAt" : "2021-03-21T00:58:36Z",
+        "updatedAt" : "2021-03-22T14:31:44Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bc90fce5-5b4b-4c5b-864a-6ab538825ae8",
+        "parentId" : "90d5a99f-b35c-4451-9e1d-e0428340f7f7",
+        "authorId" : "b0e245a1-4f84-42f1-9f20-4c5f111c43a7",
+        "body" : "No. In my understanding, continuous reading in batch only occurs when adaptive query execution is turned on. Furthermore, it is actually only related to partition coalescing of AQE. So it will not affect the case when the adaptive query execution is closed.",
+        "createdAt" : "2021-03-21T15:56:11Z",
+        "updatedAt" : "2021-03-22T14:31:44Z",
+        "lastEditedBy" : "b0e245a1-4f84-42f1-9f20-4c5f111c43a7",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d824a9b36d41154d15c54925be440ba92759f599",
+    "line" : 9,
+    "diffHunk" : "@@ -1,1 +56,60 @@\n    val doBatchFetch = shouldBatchFetch && serializerRelocatable &&\n      (!compressed || codecConcatenation) && !useOldFetchProtocol && !ioEncryption\n    if (shouldBatchFetch && !doBatchFetch) {\n      logDebug(\"The feature tag of continuous shuffle block fetching is set to true, but \" +"
+  }
+]

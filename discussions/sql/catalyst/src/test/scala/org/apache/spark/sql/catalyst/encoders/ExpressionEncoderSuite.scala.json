@@ -1,0 +1,57 @@
+[
+  {
+    "id" : "6d0728ce-0bb6-4ec9-989a-923b8d0ef59e",
+    "prId" : 31888,
+    "prUrl" : "https://github.com/apache/spark/pull/31888#pullrequestreview-619431543",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "39dad986-c186-4ada-b198-a67913b55064",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Is this the compilation error?\r\n\r\n```\r\n[info]   Cause: org.codehaus.commons.compiler.CompileException: File 'generated.java', Line 32, Column 124: failed to compile: org.codehaus.commons.compiler.CompileException: File 'generated.java', Line 32, Column 124: \"org.apache.\r\nspark.sql.catalyst.encoders.ExpressionEncoderSuite$MalformedClassObject$\" has no member type \"ExpressionEncoderSuite$MalformedClassObject$MalformedNameExample\"\r\n```",
+        "createdAt" : "2021-03-22T18:28:22Z",
+        "updatedAt" : "2021-03-22T18:28:22Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3cb6796a-b375-4b23-ab48-33fdc7a5fe11",
+        "parentId" : "39dad986-c186-4ada-b198-a67913b55064",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "But by moving `MalformedClassObject` out of `ExpressionEncoderSuite`, the generated code can be compiled.\r\n\r\nI'm not sure what this test wants to test actually. Am I confused or do I misunderstand it?",
+        "createdAt" : "2021-03-22T18:34:56Z",
+        "updatedAt" : "2021-03-22T18:34:57Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7e12890f-dd6c-431a-99f0-0907c894cf84",
+        "parentId" : "39dad986-c186-4ada-b198-a67913b55064",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "> Is this the compilation error?\r\n\r\nYea, that's the expected error. Actually, the master has same error when `useFallback = false`:\r\nhttps://github.com/apache/spark/blob/d32bb4e5ee4718741252c46c50a40810b722f12d/sql/catalyst/src/test/scala/org/apache/spark/sql/catalyst/encoders/ExpressionEncoderSuite.scala#L219\r\n\r\n```\r\n// master\r\n[info]   Cause: org.codehaus.commons.compiler.CompileException: File 'generated.java', Line 32, Column 124: failed to compile: org.codehaus.commons.compiler.CompileException: File 'generated.java', Line 32, Column 124: \"org.apache.spark.sql.catalyst.encoders.ExpressionEncoderSuite$MalformedClassObject$\" has no member type \"ExpressionEncoderSuite$MalformedClassObject$MalformedNameExample\"\r\n[info]   at org.apache.spark.sql.errors.QueryExecutionErrors$.compilerError(QueryExecutionErrors.scala:328)\r\n```\r\n\r\n> But by moving MalformedClassObject out of ExpressionEncoderSuite, the generated code can be compiled.\r\n\r\nIIUC the condition where the error happens is that `MalformedClassObject` is placed in `ExpressionEncoderSuite` as Kris said in the previous PR: https://github.com/apache/spark/pull/31709#issuecomment-791275810\r\n```\r\nActually, what's more interesting is the different rules of Java's nested classes and Scala's. Since there is no such\r\n notion of a \"companion object\" or built-in \"singleton object\" notion on the Java language level, at least not in \r\nJava 8, the Java language syntax for creating a new instance of a inner class object doesn't work well for Scala's\r\n class Foo { object Bar { class Baz {...} } } kind of nesting, i.e. even when we do use the correct \"simple name\" \r\n(e.g. MalformedNameExample), there would still be no valid Java syntax to create it (i.e. outerObj.new \r\nInnerClass(...) doesn't work when outerObj is a Scala object)\r\n```\r\ncc: @rednaxelafx ",
+        "createdAt" : "2021-03-23T07:26:12Z",
+        "updatedAt" : "2021-03-23T07:26:13Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5ad9315f-2602-44b0-83be-a31173f1488d",
+        "parentId" : "39dad986-c186-4ada-b198-a67913b55064",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Got it. Thanks for the reference.",
+        "createdAt" : "2021-03-24T08:20:13Z",
+        "updatedAt" : "2021-03-24T08:20:14Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5152fffc7344f98d1c9c83d35f219e2855bc4cff",
+    "line" : 18,
+    "diffHunk" : "@@ -1,1 +218,222 @@        boundEncoder.fromRow(row)\n      }.getCause.getMessage\n      assert(errMsg.contains(\"failed to compile: \"))\n    }\n  }"
+  }
+]

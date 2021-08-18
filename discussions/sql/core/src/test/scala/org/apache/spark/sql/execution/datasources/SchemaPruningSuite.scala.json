@@ -1,0 +1,57 @@
+[
+  {
+    "id" : "d8ccd4db-be03-4660-a55d-8287ea47b8fc",
+    "prId" : 31966,
+    "prUrl" : "https://github.com/apache/spark/pull/31966#pullrequestreview-636369873",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a7692ce4-395b-4820-9a97-dc624a98801d",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Can this work correctly if `explode` has another func in its child, e.g., `explode(filter(friends, x -> x is not null))`?",
+        "createdAt" : "2021-04-13T02:31:32Z",
+        "updatedAt" : "2021-04-25T00:49:15Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3dda7e8c-c30b-4f80-92d9-558c220ff0af",
+        "parentId" : "a7692ce4-395b-4820-9a97-dc624a98801d",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Let me add a test to verify it.",
+        "createdAt" : "2021-04-15T06:28:18Z",
+        "updatedAt" : "2021-04-25T00:49:15Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "753ee96c-9b1b-47ac-bcc5-09b0ec883919",
+        "parentId" : "a7692ce4-395b-4820-9a97-dc624a98801d",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Oh, because in the lambda function you access `friends`, Spark cannot prune it.",
+        "createdAt" : "2021-04-15T07:31:41Z",
+        "updatedAt" : "2021-04-25T00:49:15Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f8bf046e-bada-4965-b212-0d4117e751a2",
+        "parentId" : "a7692ce4-395b-4820-9a97-dc624a98801d",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "The higher order function expression is a special case. I just looked at it with more details. For example, `ArrayFilter` holds the complex expression `friends`, so from the point of view of Spark, `friends` is thought to be used by `ArrayFilter`.\r\n\r\nI think it has some space to optimize it more, targeting higher order function expression. It is out of the scope of this PR, however. I will take some time to look at this after.\r\n\r\n",
+        "createdAt" : "2021-04-15T07:47:44Z",
+        "updatedAt" : "2021-04-25T00:49:15Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a7194092ebc3a9ca97daba29fda0fcc0ec099cf4",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +354,358 @@  testSchemaPruning(\"SPARK-34638: nested column prune on generator output\") {\n    val query1 = spark.table(\"contacts\")\n      .select(explode(col(\"friends\")).as(\"friend\"))\n      .select(\"friend.first\")\n    checkScan(query1, \"struct<friends:array<struct<first:string>>>\")"
+  }
+]

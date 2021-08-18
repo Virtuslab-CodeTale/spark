@@ -42,5 +42,60 @@
     "commit" : "957215452e9df57f5e0424f63556897ea928744f",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +254,258 @@      hintToShuffleHashJoinLeft(hint)\n    } else {\n      if (hintToPreferShuffleHashJoinLeft(hint)) {\n        true\n      } else {"
+  },
+  {
+    "id" : "eb3d62d6-aa55-4b88-adfb-f2915faabd4f",
+    "prId" : 31908,
+    "prUrl" : "https://github.com/apache/spark/pull/31908#pullrequestreview-673956668",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b0e9c98b-6384-421e-bcf1-0d54bf672f64",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Sorry I missed this. It's outer join and it will never reduce data volume of the left side. So we can always remove the join, no matter it's broadcast or not.",
+        "createdAt" : "2021-06-02T03:16:45Z",
+        "updatedAt" : "2021-06-02T03:16:45Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4c7a0ba4-a65c-4d4e-b8e0-e7f05302f590",
+        "parentId" : "b0e9c98b-6384-421e-bcf1-0d54bf672f64",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "The result may be incorrect if always remove the join. For example:\r\n```\r\n0: jdbc:hive2://hdc49-mcc10-01-0510-2005-006-> create table test11.t1 using parquet as select id % 3 as a, id as b from range(10);\r\n+---------+--+\r\n| Result  |\r\n+---------+--+\r\n+---------+--+\r\nNo rows selected (1.611 seconds)\r\n0: jdbc:hive2://hdc49-mcc10-01-0510-2005-006-> create table test11.t2 using parquet as select id % 3 as x, id as y from range(5);\r\n+---------+--+\r\n| Result  |\r\n+---------+--+\r\n+---------+--+\r\nNo rows selected (1.043 seconds)\r\n0: jdbc:hive2://hdc49-mcc10-01-0510-2005-006-> select t1.a from t1 left join t2 on a = x;\r\n+----+--+\r\n| a  |\r\n+----+--+\r\n| 0  |\r\n| 0  |\r\n| 1  |\r\n| 1  |\r\n| 0  |\r\n| 0  |\r\n| 1  |\r\n| 1  |\r\n| 2  |\r\n| 0  |\r\n| 0  |\r\n| 1  |\r\n| 1  |\r\n| 2  |\r\n| 0  |\r\n| 0  |\r\n| 2  |\r\n+----+--+\r\n17 rows selected (1.409 seconds)\r\n```",
+        "createdAt" : "2021-06-02T03:37:07Z",
+        "updatedAt" : "2021-06-02T03:37:07Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0ed9ac77-32a2-4ddb-844b-4de58e55fc3d",
+        "parentId" : "b0e9c98b-6384-421e-bcf1-0d54bf672f64",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "The aggregate should still be there. I mean we can remove this `canPlanAsBroadcastHashJoin` check",
+        "createdAt" : "2021-06-02T03:39:24Z",
+        "updatedAt" : "2021-06-02T03:39:24Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "60a20ac1-4a3d-48ec-bdd7-a2b9aab362de",
+        "parentId" : "b0e9c98b-6384-421e-bcf1-0d54bf672f64",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "https://github.com/apache/spark/pull/32744",
+        "createdAt" : "2021-06-02T09:24:58Z",
+        "updatedAt" : "2021-06-02T09:24:58Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "aae4efea461af0da9f6ddfec4fb7a073ce191a67",
+    "line" : 32,
+    "diffHunk" : "@@ -1,1 +174,178 @@    case a @ Aggregate(_, _, join @ Join(left, _, LeftOuter, _, _))\n        if a.isDistinct && a.references.subsetOf(AttributeSet(left.output)) &&\n          !canPlanAsBroadcastHashJoin(join, conf) =>\n      a.copy(child = left)\n    case a @ Aggregate(_, _, join @ Join(_, right, RightOuter, _, _))"
   }
 ]

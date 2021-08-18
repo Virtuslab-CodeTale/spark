@@ -1,0 +1,79 @@
+[
+  {
+    "id" : "c777f371-03b1-4e37-b573-12ff9753e793",
+    "prId" : 31942,
+    "prUrl" : "https://github.com/apache/spark/pull/31942#pullrequestreview-620461511",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "61739b5d-8b51-4a79-86f1-2f8f60a0e2f7",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "While we're here, I wonder if it's better to extend the whole try-finally block around this else-if branch? what if outstandingRpcs.get/remove fails? highly unlikely I guess so any 'leak' is trivial.\r\n\r\nBut what about the same problem around line 168 and 172? there's no try-finally around onSuccess, which could fail?\r\n\r\nDo all of these messages really need to be release()-ed? meaning, should .release() happen in all branches?",
+        "createdAt" : "2021-03-24T22:25:28Z",
+        "updatedAt" : "2021-03-24T22:25:49Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "42091be4-985a-46ff-b8b9-b309c82c680a",
+        "parentId" : "61739b5d-8b51-4a79-86f1-2f8f60a0e2f7",
+        "authorId" : "31afe32d-3af0-4fcf-93e2-115f5d7bab18",
+        "body" : "`I wonder if it's better to extend the whole try-finally block around this else-if branch? what if outstandingRpcs.get/remove fails? highly unlikely I guess so any 'leak' is trivial.` ,  Yes , the outstandingRpcs.get/remove can not fail, so we should not try-finally block around this else-if branch here, which may Improve performance.\r\n\r\n`But what about the same problem around line 168 and 172? there's no try-finally around onSuccess, which could fail?`, i think we should  also try-finally around onSuccess around line 168 and 172, do you think so ?\r\n\r\n`Do all of these messages really need to be release()-ed? meaning, should .release() happen in all branches?`,It should be released, although this scenario is not easy to happen.\r\n\r\n\r\n",
+        "createdAt" : "2021-03-25T02:04:52Z",
+        "updatedAt" : "2021-03-25T02:04:53Z",
+        "lastEditedBy" : "31afe32d-3af0-4fcf-93e2-115f5d7bab18",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d14dc1a4-2407-45f1-8fdd-e16e0e7b6272",
+        "parentId" : "61739b5d-8b51-4a79-86f1-2f8f60a0e2f7",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "I just wonder if it would be simpler to wrap a lot more in one big try-finally and release the thing in all cases?",
+        "createdAt" : "2021-03-25T02:36:50Z",
+        "updatedAt" : "2021-03-25T02:36:50Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8bdf28e04b6e2d5a9771afde40edbd3d98dde5a4",
+    "line" : 1,
+    "diffHunk" : "@@ -1,1 +186,190 @@      RpcResponse resp = (RpcResponse) message;\n      RpcResponseCallback listener = outstandingRpcs.get(resp.requestId);\n      if (listener == null) {\n        logger.warn(\"Ignoring response for RPC {} from {} ({} bytes) since it is not outstanding\",\n          resp.requestId, getRemoteAddress(channel), resp.body().size());"
+  },
+  {
+    "id" : "ea19d593-3a77-45c2-957b-68278c817b04",
+    "prId" : 31942,
+    "prUrl" : "https://github.com/apache/spark/pull/31942#pullrequestreview-621779030",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "80a26f40-9f1d-45f7-b762-d9652ec349d4",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "From the commit history, is this missed since Apache Spark 1.2.0 at SPARK-3453?",
+        "createdAt" : "2021-03-26T04:34:59Z",
+        "updatedAt" : "2021-03-26T04:35:00Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1989df2a-19fd-406f-b00a-a044b542b4d4",
+        "parentId" : "80a26f40-9f1d-45f7-b762-d9652ec349d4",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Evidently, yeah. It may just not cause much of an issue. Are there any reasons to release() it, anyone know?",
+        "createdAt" : "2021-03-26T04:38:34Z",
+        "updatedAt" : "2021-03-26T04:38:35Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8bdf28e04b6e2d5a9771afde40edbd3d98dde5a4",
+    "line" : 4,
+    "diffHunk" : "@@ -1,1 +189,193 @@        logger.warn(\"Ignoring response for RPC {} from {} ({} bytes) since it is not outstanding\",\n          resp.requestId, getRemoteAddress(channel), resp.body().size());\n        resp.body().release();\n      } else {\n        outstandingRpcs.remove(resp.requestId);"
+  }
+]

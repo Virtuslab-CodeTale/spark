@@ -1,0 +1,101 @@
+[
+  {
+    "id" : "763879d2-6087-4e1d-9741-d831ca4b99f0",
+    "prId" : 31880,
+    "prUrl" : "https://github.com/apache/spark/pull/31880#pullrequestreview-616889295",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2ef5b1a1-8386-4d72-b7e2-64912ba9e01c",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "I think this is fine now(?) we're avoiding maven help that caused side effect. It makes the script more robust anyway ...",
+        "createdAt" : "2021-03-19T01:01:48Z",
+        "updatedAt" : "2021-03-19T01:01:48Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cbdc407d-2eea-4c1b-9528-645e1d464dac",
+        "parentId" : "2ef5b1a1-8386-4d72-b7e2-64912ba9e01c",
+        "authorId" : "3a227965-84e0-47cf-9974-11293764f028",
+        "body" : "You mean we can go with this change?",
+        "createdAt" : "2021-03-19T02:40:58Z",
+        "updatedAt" : "2021-03-19T02:40:58Z",
+        "lastEditedBy" : "3a227965-84e0-47cf-9974-11293764f028",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c42a9ac4-c09a-4d56-9d4d-69b59fe96943",
+        "parentId" : "2ef5b1a1-8386-4d72-b7e2-64912ba9e01c",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "I still don't see why this part is necessary. Can we fix this without breaking other parts of the build script that depend on scala.version?",
+        "createdAt" : "2021-03-19T02:49:49Z",
+        "updatedAt" : "2021-03-19T02:49:49Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bc69dcda-45a1-450e-8c60-adadd5e5cadd",
+        "parentId" : "2ef5b1a1-8386-4d72-b7e2-64912ba9e01c",
+        "authorId" : "3a227965-84e0-47cf-9974-11293764f028",
+        "body" : "sbt (or courier?) seems to fail to resolve dependency if the pom file for a dependency is in `~/.m2` but jar file is not. I don't know the reason.\r\n\r\nFor `master` branch, before #31862, `change-scala-version.sh` run `mvn help:evaluate` and it downloads `commons-cli-1.2.pom` but doesn't `commons-cli-1.2.jar`.\r\n```\r\n$ ls -R ~/.m2/repository/commons-cli/commons-cli/\r\n/home/kou/.m2/repository/commons-cli/commons-cli/:\r\n1.2\r\n\r\n/home/kou/.m2/repository/commons-cli/commons-cli/1.2:\r\n_remote.repositories  commons-cli-1.2.pom  commons-cli-1.2.pom.sha1\r\n```\r\nYou can also confirm with `mvn -X help:evaluate`.\r\n\r\nSo, I resolved by getting `commons-cli-1.2.jar`using `mvn dependency:get` in #31862.\r\n\r\nFor `branch-3.1`, `mvn help:evaluate` also downloads `commons-cli-1.2.jar` but it's resolved this part by #31862.\r\nBut `mvn dependency:get` downloads `commons-io-2.6.pom` though it doesn't download `commons-io-2.6.jar`.\r\n```\r\nls -R ~/.m2/repository/commons-io/commons-io/\r\n/home/kou/.m2/repository/commons-io/commons-io/:\r\n2.4  2.5  2.6\r\n\r\n/home/kou/.m2/repository/commons-io/commons-io/2.4:\r\n_remote.repositories  commons-io-2.4.pom  commons-io-2.4.pom.sha1\r\n\r\n/home/kou/.m2/repository/commons-io/commons-io/2.5:\r\n_remote.repositories  commons-io-2.5.jar  commons-io-2.5.jar.sha1  commons-io-2.5.pom  commons-io-2.5.pom.sha1\r\n\r\n/home/kou/.m2/repository/commons-io/commons-io/2.6:\r\n_remote.repositories  commons-io-2.6.pom  commons-io-2.6.pom.sha1\r\n```\r\nI understand `branch-3.1` depends on `commons-io-2.5` but, in fact, if we manually delete `commons-io/comons-io-2.6` before `sbt`, build successfully finishes.\r\n\r\nIt's also true for `master` that `commons-io-2.6.pom` is present but `commons-io-2.6.jar` is absent.\r\nBut there is one difference between `master` and `branch-3.1`.\r\n`master` depends on `commons-io-2.8` which is newer version than `commons-io-2.6` while `branch-3.1` depends on `commons-io-2.5` which is older than `commons-io-2.6`.\r\nSo I guess this affects build failure for `branch-3.1` while it succeeds for `master`.\r\n\r\nAnyway, if we don't use maven plugins in `change-scala-version.sh`, this problem can be resolved easily.\r\nOr, do you have a better solution?",
+        "createdAt" : "2021-03-19T08:33:28Z",
+        "updatedAt" : "2021-03-19T08:33:28Z",
+        "lastEditedBy" : "3a227965-84e0-47cf-9974-11293764f028",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "528351b5-546b-4ce9-9e6c-9976cfe38b7a",
+        "parentId" : "2ef5b1a1-8386-4d72-b7e2-64912ba9e01c",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Can we solve this by updating commons-io in older branches? that would be fine too IMHO.",
+        "createdAt" : "2021-03-19T17:58:33Z",
+        "updatedAt" : "2021-03-19T17:58:33Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0238d7f8-f503-4810-8eca-5b7bc010b55e",
+        "parentId" : "2ef5b1a1-8386-4d72-b7e2-64912ba9e01c",
+        "authorId" : "3a227965-84e0-47cf-9974-11293764f028",
+        "body" : "I thought what you think too and it can resolve this issue for the time being.\r\nBut I'm afraid that this build failure happens again in the future.\r\n\r\nIn this case, only `commons-cli` and `comons-io` matters but, actually, `help` and `dependency` downloads not only them.\r\nI confirmed that `help` downloads pom files but not jar files for 300+ dependencies.\r\n\r\nIf we use newer maven or upgraded plugins and Spark and those plugins have a comondependency but plugins use newer version, this problem can happen again.\r\n\r\nMy worry might be unnecessary or you think we just just fix this problem when it happens again, I'll close this PR.",
+        "createdAt" : "2021-03-20T06:10:27Z",
+        "updatedAt" : "2021-03-20T06:10:27Z",
+        "lastEditedBy" : "3a227965-84e0-47cf-9974-11293764f028",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "00437508-13ac-438d-a30a-318896aea8fa",
+        "parentId" : "2ef5b1a1-8386-4d72-b7e2-64912ba9e01c",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "To be clear can we fix this by using newer Maven versions or newer plugins, or newer versions of the dependencies? I think that's fine, even if it means it pulls in a lot of stuff.",
+        "createdAt" : "2021-03-20T06:16:04Z",
+        "updatedAt" : "2021-03-20T06:16:05Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e0f62248-3515-493d-857c-10d6fd6c1442",
+        "parentId" : "2ef5b1a1-8386-4d72-b7e2-64912ba9e01c",
+        "authorId" : "3a227965-84e0-47cf-9974-11293764f028",
+        "body" : "I don't think we can fix this by using newer Maven or newer plugins.\r\nSpark needs to use newer version of dependencies than what plugins use.\r\n\r\nThis problem can happen if all the following condition is true.\r\n\r\n* Spark and a plugin have a common direct/indirect dependcy.\r\n* A plugin uses newer or the same version of the dependency.\r\n* The plugin downloads `pom` but not `jar` for the dependency.\r\n* Build with `sbt` (or may be the case `courier` is used) under the condition that the pom is present but the jar is absent.. \r\n\r\nOne example is `dependency-plugin` and `commons-io`. Both Spark and `dependency-plugin` depends on `commons-io` (`dependency-plugin` seems to depend on it indirectly). \r\nAnd `branch-3.1` depends on `commons-io:2.4`, while `dependency-plugin` depends on  newer `commons-io:2.6`.\r\nWhen `mvn dependency:get` runs, pom is downloaded but doesn't jar for `commons-io:2.6`.\r\nUnder this condition, if we build with `sbt`, `sbt` or `courier` doesn't download the dependent jar, leading this issue.\r\n\r\nNewer Maven and newer plugins can depends on newer version of the common dependency than what Spark depends on. So I don't think we can't fix this issue using newer Maven or newer plugins.",
+        "createdAt" : "2021-03-20T06:45:36Z",
+        "updatedAt" : "2021-03-20T07:05:02Z",
+        "lastEditedBy" : "3a227965-84e0-47cf-9974-11293764f028",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9660460c4e788283cdf78a39ce0131c8d9fdd1d0",
+    "line" : 16,
+    "diffHunk" : "@@ -1,1 +67,71 @@ESCAPED_TO_VERSION=$(echo $TO_VERSION | sed -n \"s/\\./\\\\\\\\./gp\")\nSCALA_VERSION=$(sed -n \"/<id>scala-$ESCAPED_TO_VERSION<\\/id>/,/<\\/profile>/ \\\n  s;^.*<scala\\.version>\\(.*\\)</scala\\.version>.*$;\\1;p\" pom.xml)\nsed_i '1,/<scala\\.version>[0-9]*\\.[0-9]*\\.[0-9]*</s/<scala\\.version>[0-9]*\\.[0-9]*\\.[0-9]*</<scala.version>'$SCALA_VERSION'</' \\\n  \"$BASEDIR/pom.xml\""
+  }
+]

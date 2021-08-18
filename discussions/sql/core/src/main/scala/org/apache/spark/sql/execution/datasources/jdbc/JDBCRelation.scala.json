@@ -1,0 +1,90 @@
+[
+  {
+    "id" : "cbec0aca-18b7-4295-aef0-5ef77b73a660",
+    "prId" : 31965,
+    "prUrl" : "https://github.com/apache/spark/pull/31965#pullrequestreview-621982216",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e4f18ca1-36fa-4b33-8622-93cad65979e0",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "> This can lead to a big difference between the provided upper bound and the actual start of the last partition.\r\n\r\nCould you add a simple calculation example in the PR description for showing the difference between the current one and the proposed one ?",
+        "createdAt" : "2021-03-26T01:09:33Z",
+        "updatedAt" : "2021-03-26T10:38:10Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1c4c0077-1e28-42d6-9552-bd5dc1ba7f67",
+        "parentId" : "e4f18ca1-36fa-4b33-8622-93cad65979e0",
+        "authorId" : "3a20ea59-17d4-4666-81a2-665b330cca1f",
+        "body" : "Definitely! I'll add a couple examples.",
+        "createdAt" : "2021-03-26T09:30:58Z",
+        "updatedAt" : "2021-03-26T10:38:10Z",
+        "lastEditedBy" : "3a20ea59-17d4-4666-81a2-665b330cca1f",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9c0f7a5d-0ea0-48cd-ba0a-8aa5d1b2dace",
+        "parentId" : "e4f18ca1-36fa-4b33-8622-93cad65979e0",
+        "authorId" : "3a20ea59-17d4-4666-81a2-665b330cca1f",
+        "body" : "Examples added.",
+        "createdAt" : "2021-03-26T10:28:56Z",
+        "updatedAt" : "2021-03-26T10:38:10Z",
+        "lastEditedBy" : "3a20ea59-17d4-4666-81a2-665b330cca1f",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c157bfb926ca66a01176f13cb95238acf2f0d49a",
+    "line" : 32,
+    "diffHunk" : "@@ -1,1 +137,141 @@    val lostNumOfStrides = (preciseStride - stride) * numPartitions / stride\n    val lowerBoundWithStrideAlignment = lowerBound +\n      ((lostNumOfStrides / 2) * stride).setScale(0, RoundingMode.HALF_UP).toLong\n\n    var i: Int = 0"
+  },
+  {
+    "id" : "3702ae5b-88da-4ae5-ab0f-3fa5ec395b1d",
+    "prId" : 31965,
+    "prUrl" : "https://github.com/apache/spark/pull/31965#pullrequestreview-622698438",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9f3a7b80-f14e-4db1-9bc1-9bdabd447764",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Why do we use `scale=18` and `RoundingMode.HALF_EVEN` here?",
+        "createdAt" : "2021-03-26T01:10:11Z",
+        "updatedAt" : "2021-03-26T10:38:10Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "532aad5c-67d9-4a97-b1b1-0e8b3ef7bbf9",
+        "parentId" : "9f3a7b80-f14e-4db1-9bc1-9bdabd447764",
+        "authorId" : "3a20ea59-17d4-4666-81a2-665b330cca1f",
+        "body" : "I'm using setScale here to handle an issue that can arise with repeating decimals. For instance, if you end up with upperStride = 1.333... and lowerStride of  0.333..., when doing upperStride - lowerStride, you'd get 0.999.... This would then be truncated to 0 when converted to a long for stride, which is an issue. Using setScale, the repeating decimals are rounded and after the subtraction you end up with 1.0. \r\n\r\nThe reason I'm using `RoundingMode.HALF_EVEN` is because that's the default for BigDecimal. As for a scale of 18, this was a number I picked from prior defaults I've encountered (e.g. when a DecimalType is deserialized into BigDecimal, the BigDecimal is instantiated as 38,18). However, I could lower the scale if you think it is worthwhile. Since these calculations are at such a small scale, I wasn't concerned about BigDecimal performance, but instead accuracy. ",
+        "createdAt" : "2021-03-26T09:24:19Z",
+        "updatedAt" : "2021-03-26T10:38:10Z",
+        "lastEditedBy" : "3a20ea59-17d4-4666-81a2-665b330cca1f",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0a1bf432-4c9b-4e92-82f0-8a39d0cbcc1d",
+        "parentId" : "9f3a7b80-f14e-4db1-9bc1-9bdabd447764",
+        "authorId" : "3a20ea59-17d4-4666-81a2-665b330cca1f",
+        "body" : "I'll go ahead and mark this as resolved for now. We can unresolve it if you, or someone else, have a different suggestion.",
+        "createdAt" : "2021-03-27T20:06:46Z",
+        "updatedAt" : "2021-03-27T20:06:46Z",
+        "lastEditedBy" : "3a20ea59-17d4-4666-81a2-665b330cca1f",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c157bfb926ca66a01176f13cb95238acf2f0d49a",
+    "line" : 22,
+    "diffHunk" : "@@ -1,1 +127,131 @@      .setScale(18, RoundingMode.HALF_EVEN)\n    val lowerStride = (lowerBound / BigDecimal(numPartitions))\n      .setScale(18, RoundingMode.HALF_EVEN)\n\n    val preciseStride = upperStride - lowerStride"
+  }
+]

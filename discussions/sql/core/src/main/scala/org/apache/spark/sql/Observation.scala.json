@@ -1,0 +1,299 @@
+[
+  {
+    "id" : "1d47f221-25db-4778-96ae-2ae0727ad5b9",
+    "prId" : 31905,
+    "prUrl" : "https://github.com/apache/spark/pull/31905#pullrequestreview-685629340",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "79beaa34-6861-4b29-9e48-d58d5d91e0e4",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I'm thinking about what APIs we should provide here. We should at least have the `get` API to get the result and wait until it's available. We should also provide APIs with a timeout. Some ideas:\r\n1. `def get(time: Long, unit: TimeUnit)`, which is similar to [LinkedBlockingQueue.poll](https://docs.oracle.com/javase/7/docs/api/java/util/concurrent/LinkedBlockingQueue.html#poll(long,%20java.util.concurrent.TimeUnit))\r\n2. `waitCompleted` and users can call `get` later if it returns true.\r\n\r\nIt looks to me that `def get(time: Long, unit: TimeUnit)` should be good enough and people can do try-catch if they want to handle timeout differently. It's better to start with less public APIs as we can always add later.",
+        "createdAt" : "2021-06-15T13:31:34Z",
+        "updatedAt" : "2021-06-15T13:31:34Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ddcc0e00-41f3-4f6c-a81b-52417c90cfdd",
+        "parentId" : "79beaa34-6861-4b29-9e48-d58d5d91e0e4",
+        "authorId" : "c4ecf4e4-1fda-4fed-9980-aed6c3b3e8e4",
+        "body" : "I find the `time` parameters more suitable with `waitCompleted`, and `get` should be the argument-less method.\r\n\r\nCalling `get` without a successful `waitCompleted` should throw an `NoSuchElementException` or `IllegalStateException`.\r\n\r\nWhat do you think about returning false on timeout and true on success? A timeout is not really an exceptional situation as it is something you can expect when you wait for something give a timeout.",
+        "createdAt" : "2021-06-15T18:43:53Z",
+        "updatedAt" : "2021-06-15T18:43:53Z",
+        "lastEditedBy" : "c4ecf4e4-1fda-4fed-9980-aed6c3b3e8e4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "124e3cb1-2681-4bb7-8b23-ab5ea35bf5cb",
+        "parentId" : "79beaa34-6861-4b29-9e48-d58d5d91e0e4",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "then shall we have a variant of `waitCompleted` that w/o a timeout?",
+        "createdAt" : "2021-06-16T04:29:26Z",
+        "updatedAt" : "2021-06-16T04:29:26Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5da17bea-ed6b-4e8c-a272-eaa35c8d606a",
+        "parentId" : "79beaa34-6861-4b29-9e48-d58d5d91e0e4",
+        "authorId" : "c4ecf4e4-1fda-4fed-9980-aed6c3b3e8e4",
+        "body" : "Well, a `waitCompleted` w/o a timeout is not really needed when we have `get` w/o a timeout. I have removed `reset` and even `close` as we use it only once.",
+        "createdAt" : "2021-06-16T20:26:50Z",
+        "updatedAt" : "2021-06-16T20:26:51Z",
+        "lastEditedBy" : "c4ecf4e4-1fda-4fed-9980-aed6c3b3e8e4",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ec7f7275ca7902db83aef86d174890bd1e240fe7",
+    "line" : 46,
+    "diffHunk" : "@@ -1,1 +44,48 @@ * @since 3.3.0\n */\nclass Observation(name: String) {\n\n  private val listener: ObservationListener = ObservationListener(this)"
+  },
+  {
+    "id" : "16d47b77-ee6e-490c-af79-587c8376d31f",
+    "prId" : 31905,
+    "prUrl" : "https://github.com/apache/spark/pull/31905#pullrequestreview-686472620",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "916681b4-53c5-4030-b788-1ad9dc7fe5be",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "looks like this class is thread safe?",
+        "createdAt" : "2021-06-17T06:08:27Z",
+        "updatedAt" : "2021-06-17T06:08:27Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d5c89e01-8226-4571-9df7-c65b6836b8c4",
+        "parentId" : "916681b4-53c5-4030-b788-1ad9dc7fe5be",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "The only thing we need to protect is the `register` method, and we can simply add `synchronized`.",
+        "createdAt" : "2021-06-17T06:09:25Z",
+        "updatedAt" : "2021-06-17T06:09:25Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "be40b296-c285-4748-8a6c-beb34643565c",
+        "parentId" : "916681b4-53c5-4030-b788-1ad9dc7fe5be",
+        "authorId" : "c4ecf4e4-1fda-4fed-9980-aed6c3b3e8e4",
+        "body" : "Now that we do not have the `reset` method any more, it looks like the only race-condition that can occur is inside `register`, so yes, Observation can made thread-safe then.",
+        "createdAt" : "2021-06-17T15:35:20Z",
+        "updatedAt" : "2021-06-17T15:35:21Z",
+        "lastEditedBy" : "c4ecf4e4-1fda-4fed-9980-aed6c3b3e8e4",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ec7f7275ca7902db83aef86d174890bd1e240fe7",
+    "line" : 46,
+    "diffHunk" : "@@ -1,1 +44,48 @@ * @since 3.3.0\n */\nclass Observation(name: String) {\n\n  private val listener: ObservationListener = ObservationListener(this)"
+  },
+  {
+    "id" : "9d11bbfc-d86b-40a5-8d76-aa5bcf192985",
+    "prId" : 31905,
+    "prUrl" : "https://github.com/apache/spark/pull/31905#pullrequestreview-692548532",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5d367b68-48d4-4f04-9989-f2f9e6cfe68c",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "shall we also mention the `on` API here?",
+        "createdAt" : "2021-06-21T13:57:25Z",
+        "updatedAt" : "2021-06-21T13:57:25Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b1ff3d9b-936d-44ce-8c99-10ca596b197f",
+        "parentId" : "5d367b68-48d4-4f04-9989-f2f9e6cfe68c",
+        "authorId" : "c4ecf4e4-1fda-4fed-9980-aed6c3b3e8e4",
+        "body" : "It does not really add something substantial to the API. I can make it `private[spark]`. It is more a convenient hook for `Dataset.observe`.",
+        "createdAt" : "2021-06-22T06:33:10Z",
+        "updatedAt" : "2021-06-22T06:33:10Z",
+        "lastEditedBy" : "c4ecf4e4-1fda-4fed-9980-aed6c3b3e8e4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "63227e3a-b30f-4e2a-b0a9-cc7e1e419606",
+        "parentId" : "5d367b68-48d4-4f04-9989-f2f9e6cfe68c",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "private[spark] SGTM",
+        "createdAt" : "2021-06-22T09:16:05Z",
+        "updatedAt" : "2021-06-22T09:16:05Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f79b3454-adb1-4c39-b5ad-ac85587b91ec",
+        "parentId" : "5d367b68-48d4-4f04-9989-f2f9e6cfe68c",
+        "authorId" : "c4ecf4e4-1fda-4fed-9980-aed6c3b3e8e4",
+        "body" : "done",
+        "createdAt" : "2021-06-25T07:58:48Z",
+        "updatedAt" : "2021-06-25T07:58:48Z",
+        "lastEditedBy" : "c4ecf4e4-1fda-4fed-9980-aed6c3b3e8e4",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ec7f7275ca7902db83aef86d174890bd1e240fe7",
+    "line" : 34,
+    "diffHunk" : "@@ -1,1 +32,36 @@ *   val observed_ds = ds.observe(observation, count(lit(1)).as(\"rows\"), max($\"id\").as(\"maxid\"))\n *   observed_ds.write.parquet(\"ds.parquet\")\n *   val metrics = observation.get\n * }}}\n *"
+  },
+  {
+    "id" : "5cecf484-5318-40f9-85ac-c7fbc5d39382",
+    "prId" : 31905,
+    "prUrl" : "https://github.com/apache/spark/pull/31905#pullrequestreview-692548791",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ac39e0f9-acae-4f8e-a2f3-212218f3b577",
+        "parentId" : null,
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "This is in essence an asynchronous API. You never know when the computation actually finishes, and in most cases you are only interested in it when it produces a result. So why are we introducing concepts like wait & get? To me it would be more logical to make this return a Future. In that case the user can compose a further computation using that & if they need the blocking API they can just use Future.get/await.\r\n",
+        "createdAt" : "2021-06-21T14:18:47Z",
+        "updatedAt" : "2021-06-21T14:18:47Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "99072b7b-22de-405b-88d4-32142d218ca4",
+        "parentId" : "ac39e0f9-acae-4f8e-a2f3-212218f3b577",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "That's a good point! We can simply leverage the standard `Future` API to represent this async result.",
+        "createdAt" : "2021-06-21T14:24:55Z",
+        "updatedAt" : "2021-06-21T14:24:55Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5e207e15-fb0c-42ee-86d5-032115b718df",
+        "parentId" : "ac39e0f9-acae-4f8e-a2f3-212218f3b577",
+        "authorId" : "c4ecf4e4-1fda-4fed-9980-aed6c3b3e8e4",
+        "body" : "This `Observation` is trying hiding multi-threading from the user for use cases where they simply want a metric after they have called an action on a Dataset. Adding async notion to the API does not contribute to that goal.\r\n\r\nThe `waitCompleted` is an edge case, usually you simply call `Observation.get`. If the user wanted a Future, they could wrap the `Observation.get` with one. What you are proposing would mean that everyone else who does not want a `Future` would get a `Future` and has to call `.value` to get an `Option[Try[Row]]` and deal with this result where `Observation.get` now returns the `Row`. I do not see where the Future simplifies the API.\r\n\r\nMaybe you can sketch this out a bit more on how it would look like for the user of `Observation` so the benefits become clearer.",
+        "createdAt" : "2021-06-22T07:18:29Z",
+        "updatedAt" : "2021-06-22T07:18:30Z",
+        "lastEditedBy" : "c4ecf4e4-1fda-4fed-9980-aed6c3b3e8e4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ae989f60-7844-47ca-8c8c-5a8742b26529",
+        "parentId" : "ac39e0f9-acae-4f8e-a2f3-212218f3b577",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "We can still keep the `get` API, but returning `Future` should be a more standard way for users to do async than `waitCompleted`.",
+        "createdAt" : "2021-06-22T07:48:56Z",
+        "updatedAt" : "2021-06-22T07:48:56Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a5e09e52-dfd6-4ed4-872c-8c13a50f3b91",
+        "parentId" : "ac39e0f9-acae-4f8e-a2f3-212218f3b577",
+        "authorId" : "c4ecf4e4-1fda-4fed-9980-aed6c3b3e8e4",
+        "body" : "We can remove the public `waitCompleted` and only provide `get`. If they want a `Future`, they can\r\n\r\n    val f = Future { observation.get }\r\n\r\nand they want a timeout, they can do:\r\n\r\n    Await.result(f, 2 seconds)\r\n",
+        "createdAt" : "2021-06-22T08:50:14Z",
+        "updatedAt" : "2021-06-22T08:50:14Z",
+        "lastEditedBy" : "c4ecf4e4-1fda-4fed-9980-aed6c3b3e8e4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "128eea33-bfca-4261-9977-6bc2fbe4f2bb",
+        "parentId" : "ac39e0f9-acae-4f8e-a2f3-212218f3b577",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "SGTM",
+        "createdAt" : "2021-06-22T09:12:28Z",
+        "updatedAt" : "2021-06-22T09:12:28Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "30b69273-8662-4558-9da8-c82abe27b3d5",
+        "parentId" : "ac39e0f9-acae-4f8e-a2f3-212218f3b577",
+        "authorId" : "c4ecf4e4-1fda-4fed-9980-aed6c3b3e8e4",
+        "body" : "done",
+        "createdAt" : "2021-06-25T07:59:08Z",
+        "updatedAt" : "2021-06-25T07:59:08Z",
+        "lastEditedBy" : "c4ecf4e4-1fda-4fed-9980-aed6c3b3e8e4",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ec7f7275ca7902db83aef86d174890bd1e240fe7",
+    "line" : 46,
+    "diffHunk" : "@@ -1,1 +44,48 @@ * @since 3.3.0\n */\nclass Observation(name: String) {\n\n  private val listener: ObservationListener = ObservationListener(this)"
+  },
+  {
+    "id" : "a8d9833d-2560-4126-b496-d6383b8689c7",
+    "prId" : 31905,
+    "prUrl" : "https://github.com/apache/spark/pull/31905#pullrequestreview-709461960",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "46e73706-a642-4f98-88f6-2edba43ff45c",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Is this an API too? It would be great if we explicitly document it starting with `(Scala-specific) ... ` ",
+        "createdAt" : "2021-07-19T10:35:06Z",
+        "updatedAt" : "2021-07-19T10:35:06Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5c03b179-b9c1-4dea-b476-e27d7108adb0",
+        "parentId" : "46e73706-a642-4f98-88f6-2edba43ff45c",
+        "authorId" : "c4ecf4e4-1fda-4fed-9980-aed6c3b3e8e4",
+        "body" : "You mean add the \"Scala-specific\" note to the companion object?",
+        "createdAt" : "2021-07-19T10:45:38Z",
+        "updatedAt" : "2021-07-19T10:46:27Z",
+        "lastEditedBy" : "c4ecf4e4-1fda-4fed-9980-aed6c3b3e8e4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9d3e2f01-ddc7-4eb8-8446-3aa53bca74d3",
+        "parentId" : "46e73706-a642-4f98-88f6-2edba43ff45c",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Yeah, the docs like:\r\n\r\n```scala\r\n/**\r\n * (Scala-specific) Create an instance of Observation blah blah\r\n */\r\n```",
+        "createdAt" : "2021-07-19T10:47:34Z",
+        "updatedAt" : "2021-07-19T10:47:43Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "456be230-7ad0-4bf5-8039-593c7b47e7ed",
+        "parentId" : "46e73706-a642-4f98-88f6-2edba43ff45c",
+        "authorId" : "c4ecf4e4-1fda-4fed-9980-aed6c3b3e8e4",
+        "body" : "Thank, done.",
+        "createdAt" : "2021-07-19T11:57:21Z",
+        "updatedAt" : "2021-07-19T11:57:22Z",
+        "lastEditedBy" : "c4ecf4e4-1fda-4fed-9980-aed6c3b3e8e4",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ec7f7275ca7902db83aef86d174890bd1e240fe7",
+    "line" : 134,
+    "diffHunk" : "@@ -1,1 +132,136 @@}\n\nobject Observation {\n\n  /**"
+  }
+]

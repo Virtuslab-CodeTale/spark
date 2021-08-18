@@ -1,0 +1,112 @@
+[
+  {
+    "id" : "6e35e257-98c7-4520-9901-a6618b35559f",
+    "prId" : 31936,
+    "prUrl" : "https://github.com/apache/spark/pull/31936#pullrequestreview-621133390",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c62d88e2-9202-4f19-bd42-bf4332f9ee1b",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Could you add some description about the limitation with old Hadoop versions (like 2.7.x)? Here or at Section `Running multiple versions of the Spark Shuffle Service`?",
+        "createdAt" : "2021-03-23T05:08:08Z",
+        "updatedAt" : "2021-03-29T17:15:56Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6874701c-39ac-4fea-8b26-dee7e7df5cf3",
+        "parentId" : "c62d88e2-9202-4f19-bd42-bf4332f9ee1b",
+        "authorId" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "body" : "For this section, everything will work as expected on Hadoop 2.7.x. The \"Running multiple versions\" section won't work on 2.7, but I already called out the supported YARN versions there. Can you let me know if there's anything else you think I should call out?",
+        "createdAt" : "2021-03-23T15:46:51Z",
+        "updatedAt" : "2021-03-29T17:15:56Z",
+        "lastEditedBy" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ddabb930-61dc-4044-9706-9665e33ef3e1",
+        "parentId" : "c62d88e2-9202-4f19-bd42-bf4332f9ee1b",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "I'm worrying about the situation some users try to use `Apache Spark distribution (with Hadoop 2.7)` at YARN 2.9+ cluster. Does it work?",
+        "createdAt" : "2021-03-24T05:26:38Z",
+        "updatedAt" : "2021-03-29T17:15:56Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ec16436e-6bca-483f-bfb7-543715ecb1c1",
+        "parentId" : "c62d88e2-9202-4f19-bd42-bf4332f9ee1b",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "it looks like the name referenced by the node manager works with the Hadoop 2.9+ custom class loader, but I assume with Hadoop 2.7 it requires the spark_shuffle name ?  hence the spark.shuffle.service.name won't work unless you have recompiled the code and manually changed it.\r\nPerhaps we just need to be more explicit in the config spark.shuffle.service.name that either references  the section running multiple versions of the Spark Shuffle Service or explicitly states supported in YARN 2.9+.     I assume this config with metrics doesn't matter as far as Hadoop version.\r\nAlso did we explicitly test with Hadoop 2.7 and the case @dongjoon-hyun brings up?",
+        "createdAt" : "2021-03-24T13:29:09Z",
+        "updatedAt" : "2021-03-29T17:15:56Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0eb834b8-ed85-4e7d-b4dc-bac9987f850e",
+        "parentId" : "c62d88e2-9202-4f19-bd42-bf4332f9ee1b",
+        "authorId" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "body" : "> it looks like the name referenced by the node manager works with the Hadoop 2.9+ custom class loader, but I assume with Hadoop 2.7 it requires the spark_shuffle name ? hence the spark.shuffle.service.name won't work unless you have recompiled the code and manually changed it.\r\n\r\nNo, this is not correct. YARN ignores the hard-coded name on _all_ versions of YARN. Take a look at `AuxServices` on the 2.7.0 branch: \r\nhttps://github.com/apache/hadoop/blob/f95b390df2ca7d599f0ad82cf6e8d980469e7abb/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/main/java/org/apache/hadoop/yarn/server/nodemanager/containermanager/AuxServices.java#L129-L136\r\n\r\n`spark.shuffle.service.name` works fine on Hadoop 2.7, it is only the isolated classloader that won't work on older versions.\r\n\r\n> I'm worrying about the situation some users try to use `Apache Spark distribution (with Hadoop 2.7)` at YARN 2.9+ cluster. Does it work?\r\n\r\nI don't quite understand the concern here. Does my explanation above address your question? We haven't changed any of the interfaces used to interact with YARN, there should be no binary compatibility issues or anything of that sort. I can test whichever combination of `Spark Version + Hadoop Version Distribution` running on top of `Hadoop Version YARN` you like, but I am failing to see where the concern is / what you'd like me to look for.",
+        "createdAt" : "2021-03-24T17:05:03Z",
+        "updatedAt" : "2021-03-29T17:15:56Z",
+        "lastEditedBy" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "361500bf-40d5-4798-b763-d079e6a0fd1b",
+        "parentId" : "c62d88e2-9202-4f19-bd42-bf4332f9ee1b",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "great, I'm glad it works with 2.7 as well, thanks for clarifying.  Yeah the concern was if it didn't work in 2.7 so I think you answered that.",
+        "createdAt" : "2021-03-25T13:48:54Z",
+        "updatedAt" : "2021-03-29T17:15:56Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ef880526e05b6143c31d98829d22d25cea659401",
+    "line" : 9,
+    "diffHunk" : "@@ -1,1 +779,783 @@  <td>\n    The namespace to use when emitting shuffle service metrics into Hadoop metrics2 system of the\n    NodeManager.\n  </td>\n</tr>"
+  },
+  {
+    "id" : "c8be3966-4181-4aec-9744-195e052c8ed6",
+    "prId" : 31936,
+    "prUrl" : "https://github.com/apache/spark/pull/31936#pullrequestreview-620002732",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "78922857-358c-4498-9104-e693afd6f953",
+        "parentId" : null,
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "I think we should be more explicit here and say requires Yarn 2.9+",
+        "createdAt" : "2021-03-24T13:29:06Z",
+        "updatedAt" : "2021-03-29T17:15:56Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1a2deaac-ca00-4b95-9c77-c7bff2249d8f",
+        "parentId" : "78922857-358c-4498-9104-e693afd6f953",
+        "authorId" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "body" : "Makes sense, called this out as the first line of the section.",
+        "createdAt" : "2021-03-24T17:13:04Z",
+        "updatedAt" : "2021-03-29T17:15:56Z",
+        "lastEditedBy" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ef880526e05b6143c31d98829d22d25cea659401",
+    "line" : 42,
+    "diffHunk" : "@@ -1,1 +853,857 @@with a mixed workload of applications running multiple Spark versions, since a given version of\nthe shuffle service is not always compatible with other versions of Spark. YARN versions since 2.9.0\nsupport the ability to run shuffle services within an isolated classloader\n(see [YARN-4577](https://issues.apache.org/jira/browse/YARN-4577)), meaning multiple Spark versions\ncan coexist within a single NodeManager. The"
+  }
+]
