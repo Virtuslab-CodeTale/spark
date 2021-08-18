@@ -31,5 +31,82 @@
     "commit" : "2d6e87b1892683b6035bfdf6ed8c475bada5bbc8",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +100,104 @@class _GaussianMixtureParams(HasMaxIter, HasFeaturesCol, HasSeed, HasPredictionCol,\n                             HasProbabilityCol, HasTol, HasAggregationDepth, HasWeightCol,\n                             HasBlockSize, HasK):\n    \"\"\"\n    Params for :py:class:`GaussianMixture` and :py:class:`GaussianMixtureModel`."
+  },
+  {
+    "id" : "2109acc1-03bd-41fa-9e18-7b102504e875",
+    "prId" : 27519,
+    "prUrl" : "https://github.com/apache/spark/pull/27519#pullrequestreview-367001416",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e8cb3bf7-b28a-4309-a836-6a702303d558",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "This seems kind of unlikely, as probabilities? is this valid?",
+        "createdAt" : "2020-02-28T20:11:48Z",
+        "updatedAt" : "2020-03-03T08:08:02Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0531afc7-f6b1-4e17-9a4e-b8626e954ce3",
+        "parentId" : "e8cb3bf7-b28a-4309-a836-6a702303d558",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "I had checked it in master, and when maxIter is set to 30, then the model also output `DenseVector([0.0, 0.0, 1.0])`",
+        "createdAt" : "2020-03-02T07:49:52Z",
+        "updatedAt" : "2020-03-03T08:08:02Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "eeb567b1-c349-4740-bce2-8396e441fc5e",
+        "parentId" : "e8cb3bf7-b28a-4309-a836-6a702303d558",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "![image](https://user-images.githubusercontent.com/7322292/75656008-01064e00-5c9e-11ea-945c-2c95daf1de2c.png)\r\n\r\nThe result in `model.transform(df).show()` are not `DenseVector([0.0, 0.0, 1.0])`, it is about `[6.74824658670777...`;\r\n\r\nbut the `model.transform(df).head()` shows `DenseVector([0.0, 0.0, 1.0])`.\r\n\r\nIs this a kind of rounding in `Vector.toString`?\r\n\r\n![image](https://user-images.githubusercontent.com/7322292/75656394-cc46c680-5c9e-11ea-8b0a-a83b4527bf0e.png)\r\n",
+        "createdAt" : "2020-03-02T07:55:38Z",
+        "updatedAt" : "2020-03-03T08:08:02Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "936e8bfe02ee5119471c47194a5a3597f271fb06",
+    "line" : 18,
+    "diffHunk" : "@@ -1,1 +253,257 @@    2\n    >>> model.predictProbability(df.head().features)\n    DenseVector([0.0, 0.0, 1.0])\n    >>> model.hasSummary\n    True"
+  },
+  {
+    "id" : "4c6278e8-a465-4e10-bb05-634bbfdc2ed4",
+    "prId" : 27519,
+    "prUrl" : "https://github.com/apache/spark/pull/27519#pullrequestreview-366998756",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "330ca62f-60ba-43eb-bf3b-84bc2fed06ed",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Same question, I just wonder why the answer changes so significantly?",
+        "createdAt" : "2020-02-28T20:12:35Z",
+        "updatedAt" : "2020-03-03T08:08:02Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d3c2f140-38a0-457e-923d-9c4379b7d09d",
+        "parentId" : "330ca62f-60ba-43eb-bf3b-84bc2fed06ed",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "Since the maxIter was changed from 10 to 30, the model coefficients are different.\r\nI had checked the model coefficients of both master and this PR with maxIter=30, they are the same. But they are different from coefficients at iteration=10;",
+        "createdAt" : "2020-03-02T07:49:04Z",
+        "updatedAt" : "2020-03-03T08:08:02Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "936e8bfe02ee5119471c47194a5a3597f271fb06",
+    "line" : 55,
+    "diffHunk" : "@@ -1,1 +280,284 @@    DenseVector([-0.055, -0.075])\n    >>> gaussians[2].cov\n    DenseMatrix(2, 2, [0.002, -0.0011, -0.0011, 0.0006], 0)\n    >>> model.gaussiansDF.select(\"mean\").head()\n    Row(mean=DenseVector([0.825, 0.8675]))"
   }
 ]

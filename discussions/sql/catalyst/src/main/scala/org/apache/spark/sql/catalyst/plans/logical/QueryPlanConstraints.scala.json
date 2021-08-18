@@ -20,5 +20,181 @@
     "commit" : "bf7b8e561029791daa17ffb90aac9e970f002cf9",
     "line" : 22,
     "diffHunk" : "@@ -1,1 +86,90 @@      case _ => // No inference\n    }\n    (inferredConstraints -- constraints).filterNot(i => constraints.exists(_.semanticEquals(i)))\n  }\n"
+  },
+  {
+    "id" : "8de58f82-b888-4634-849c-ebd621184ffc",
+    "prId" : 27518,
+    "prUrl" : "https://github.com/apache/spark/pull/27518#pullrequestreview-483242896",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a7903b41-9bba-45fb-8258-24729533811c",
+        "parentId" : null,
+        "authorId" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "body" : "`EqualTo` should not be needed here, as the `inferEqualityConstraints` should cover all cases including it.",
+        "createdAt" : "2020-09-06T14:29:57Z",
+        "updatedAt" : "2020-09-06T14:44:42Z",
+        "lastEditedBy" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0be05165-2b2d-4ea1-ac44-268da2d452ab",
+        "parentId" : "a7903b41-9bba-45fb-8258-24729533811c",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "`inferEqualityConstraints` can not handle all cases, such as constraint with cast.",
+        "createdAt" : "2020-09-07T03:34:12Z",
+        "updatedAt" : "2020-09-07T03:34:12Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c9a08b6a-af8d-45f1-98db-c121e10ec04b",
+        "parentId" : "a7903b41-9bba-45fb-8258-24729533811c",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "For example: `cast(a as double) > cast(b as double) and cast(b as double) = 1`",
+        "createdAt" : "2020-09-07T05:03:09Z",
+        "updatedAt" : "2020-09-07T05:03:09Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5c76b9d700d834182760906577951bcaed49d147",
+    "line" : 42,
+    "diffHunk" : "@@ -1,1 +103,107 @@      case _: LessThan => true\n      case _: LessThanOrEqual => true\n      case _: EqualTo => true\n      case _ => false\n    }"
+  },
+  {
+    "id" : "a602977d-88bb-46a0-8324-fc3bc5aab8f7",
+    "prId" : 27518,
+    "prUrl" : "https://github.com/apache/spark/pull/27518#pullrequestreview-483638882",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "42fd2c40-8f75-4b7b-8af2-f52acee90533",
+        "parentId" : null,
+        "authorId" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "body" : "Doesn't this duplicate the `greaterThans` block? \r\nHere you have `a < b < c` and in the other block you have `c > b > a` ",
+        "createdAt" : "2020-09-06T14:31:57Z",
+        "updatedAt" : "2020-09-06T14:44:42Z",
+        "lastEditedBy" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b371e90d-cae4-4b68-82dc-cc6237b55388",
+        "parentId" : "42fd2c40-8f75-4b7b-8af2-f52acee90533",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "No. for example:\r\n`a > b and 5 > a`. we can not infer anything. but we can infer that `b < 5` after rewriting `a > b and 5 > a` as `b < a and a < 5`.\r\n",
+        "createdAt" : "2020-09-07T03:44:24Z",
+        "updatedAt" : "2020-09-07T03:44:24Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f80d1d01-7cd6-401f-9905-b13dd942e58d",
+        "parentId" : "42fd2c40-8f75-4b7b-8af2-f52acee90533",
+        "authorId" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "body" : "Is it because of the foldable check? Without it, it should be inferable.",
+        "createdAt" : "2020-09-07T15:41:40Z",
+        "updatedAt" : "2020-09-07T15:41:57Z",
+        "lastEditedBy" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5c76b9d700d834182760906577951bcaed49d147",
+    "line" : 58,
+    "diffHunk" : "@@ -1,1 +119,123 @@      case GreaterThanOrEqual(l, r) => LessThanOrEqual(r, l)\n      case other => other\n    }\n\n    var inferredConstraints = Set.empty[Expression]"
+  },
+  {
+    "id" : "e049ed99-3ce5-4220-be31-8387c74b71cc",
+    "prId" : 27518,
+    "prUrl" : "https://github.com/apache/spark/pull/27518#pullrequestreview-483643424",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3efd8efc-63d0-4ec9-9282-6b78cd379aa6",
+        "parentId" : null,
+        "authorId" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "body" : "I think that the foldability is not needed here. The new constraints do not have to only involve constants, but also any attribute. ",
+        "createdAt" : "2020-09-06T14:33:43Z",
+        "updatedAt" : "2020-09-06T14:44:42Z",
+        "lastEditedBy" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "89479b19-30ee-4f5a-8490-e0f9c81b468c",
+        "parentId" : "3efd8efc-63d0-4ec9-9282-6b78cd379aa6",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "To avoid generating too many constraints. For example: `a > b > c > 1`. The expected inferred constraints are: `a > 1 and b > 1`. ` a > c` is useless.\r\n\r\n",
+        "createdAt" : "2020-09-07T03:38:33Z",
+        "updatedAt" : "2020-09-07T03:38:34Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f8c4218a-881e-4cc1-a330-bd86ba36d004",
+        "parentId" : "3efd8efc-63d0-4ec9-9282-6b78cd379aa6",
+        "authorId" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "body" : "If a and c are in tihe same side of a join, then it can be pushed down.",
+        "createdAt" : "2020-09-07T14:36:49Z",
+        "updatedAt" : "2020-09-07T14:36:50Z",
+        "lastEditedBy" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3ddb88da-1c0a-4a22-b965-307dad0c0a9d",
+        "parentId" : "3efd8efc-63d0-4ec9-9282-6b78cd379aa6",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "How to push down `a > c` if  both `a` and `c` are not foldable?",
+        "createdAt" : "2020-09-07T14:41:58Z",
+        "updatedAt" : "2020-09-07T14:41:58Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b7caf707-b162-413b-9bb8-94da68a9a3fa",
+        "parentId" : "3efd8efc-63d0-4ec9-9282-6b78cd379aa6",
+        "authorId" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "body" : "I'm sorry, I used a wrong word. I meant pushed through the join into one of the sides.",
+        "createdAt" : "2020-09-07T15:50:55Z",
+        "updatedAt" : "2020-09-07T15:50:55Z",
+        "lastEditedBy" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5c76b9d700d834182760906577951bcaed49d147",
+    "line" : 63,
+    "diffHunk" : "@@ -1,1 +124,128 @@    greaterThans.foreach {\n      case op @ BinaryComparison(source: Attribute, destination: Expression)\n        if destination.foldable =>\n        inferredConstraints ++= (greaterThans - op).map {\n          case GreaterThan(l, r) if r.semanticEquals(source) =>"
+  },
+  {
+    "id" : "388522de-2dec-4e09-8e6f-4ea5f10b51e2",
+    "prId" : 27518,
+    "prUrl" : "https://github.com/apache/spark/pull/27518#pullrequestreview-483148131",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "39aada6d-e5dc-4cc2-a4b6-3baf081cb415",
+        "parentId" : null,
+        "authorId" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "body" : "Could you hit a infinite loop with non deterministic filters? As they are never semantically equal to any other expression (including themselves). I hit that problem in #29650, where I was also working on constraint inference , but from `EqualNullSafe`.",
+        "createdAt" : "2020-09-06T14:41:39Z",
+        "updatedAt" : "2020-09-06T14:44:42Z",
+        "lastEditedBy" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5c76b9d700d834182760906577951bcaed49d147",
+    "line" : 13,
+    "diffHunk" : "@@ -1,1 +65,69 @@      lastInequalityInferred = inferInequalityConstraints(constraints ++ inferred)\n      inferred ++= lastInequalityInferred\n    } while (lastInequalityInferred.nonEmpty)\n    inferred\n  }"
   }
 ]

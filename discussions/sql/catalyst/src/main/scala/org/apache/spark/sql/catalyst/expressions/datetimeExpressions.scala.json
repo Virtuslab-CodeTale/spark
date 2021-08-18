@@ -1087,5 +1087,49 @@
     "commit" : "10b733cf32d5875d266460659eece2435051cb17",
     "line" : 18,
     "diffHunk" : "@@ -1,1 +2120,2124 @@    case \"WEEK\" | \"W\" | \"WEEKS\" => WeekOfYear(source)\n    case \"DAY\" | \"D\" | \"DAYS\" => DayOfMonth(source)\n    case \"DAYOFWEEK\" | \"DOW\" => DayOfWeek(source)\n    case \"ISODOW\" => Add(WeekDay(source), Literal(1))\n    case \"DOY\" => DayOfYear(source)"
+  },
+  {
+    "id" : "f932c868-6345-488e-8237-dfffb83975bd",
+    "prId" : 27537,
+    "prUrl" : "https://github.com/apache/spark/pull/27537#pullrequestreview-363169775",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a41dd535-48bb-4329-9f34-16bc9d57b180",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "can we create a util function to do it? e.g.\r\n```\r\ndef parseTimestamp(formatter: TimestampFormatter,  str: String, result: LongWrapper): Boolean = {\r\n  try {\r\n    ...\r\n    result.set(...)\r\n    true\r\n  } catch {\r\n    case e: DateTimeParseException =>\r\n      if (FAIL) throw ...\r\n      else false\r\n    case NonFatal(_) => false\r\n  }\r\n}\r\n```\r\n\r\nand the caller side\r\n```\r\nval result = new LongWrapper\r\nif (parseTimestamp(formatter, str, result)) {\r\n  result.get ... // whatever operations\r\n} else {\r\n  null\r\n}\r\n```",
+        "createdAt" : "2020-02-21T08:12:31Z",
+        "updatedAt" : "2020-03-05T02:00:49Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7ebcaf82-47ea-43c9-9db5-41a382ccf4b6",
+        "parentId" : "a41dd535-48bb-4329-9f34-16bc9d57b180",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "and do we need to fix more places? Can we check all the places that access LEGACY_TIME_PARSER_ENABLED?",
+        "createdAt" : "2020-02-21T08:15:06Z",
+        "updatedAt" : "2020-03-05T02:00:49Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "61d88681-62e5-4e29-8994-9938bd308ea4",
+        "parentId" : "a41dd535-48bb-4329-9f34-16bc9d57b180",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "> can we create a util function to do it?\r\n\r\nThe function demo you provided is clearer, but since we need to change both sides of code generation and normal mode, the current abstract might be better?\r\n\r\n> and do we need to fix more places?\r\n\r\nActually, in this PR, we tracked all the place which used the original config `LEGACY_TIME_PARSER_ENABLED ` and do the fix in UT. For every case that `legacy` mode have a different result with `corrected` mode, I added an explicit check in the UT. (The only exception is https://github.com/apache/spark/pull/27537/files#diff-ab881d9b6bceac0a14656dee940917f4R720, which use different format pattern in legacy and corrected mode, so I think this shouldn't be the cases we want to fix here.)\r\ncc @MaxGekk for double-checking.\r\n\r\n",
+        "createdAt" : "2020-02-24T04:56:14Z",
+        "updatedAt" : "2020-03-05T02:00:49Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d01c7502ea7b4126bc6be362f1c2c20cebc5f288",
+    "line" : 9,
+    "diffHunk" : "@@ -1,1 +788,792 @@          } else {\n            try {\n              formatter.parse(\n                t.asInstanceOf[UTF8String].toString) / downScaleFactor\n            } catch {"
   }
 ]

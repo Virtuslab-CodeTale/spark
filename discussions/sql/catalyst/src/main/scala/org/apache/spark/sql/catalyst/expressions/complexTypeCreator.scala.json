@@ -460,5 +460,71 @@
     "commit" : "e2559060d8fd99078d9b25472c45072867531fe8",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +38,42 @@       [1,2,3]\n  \"\"\")\ncase class CreateArray(children: Seq[Expression], useStringTypeWhenEmpty: Boolean)\n  extends Expression {\n"
+  },
+  {
+    "id" : "12c2ac71-fdb7-4a3f-b0c4-d956b0799bfb",
+    "prId" : 27542,
+    "prUrl" : "https://github.com/apache/spark/pull/27542#pullrequestreview-357353446",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a02a960f-1eff-43fb-a441-d49d95600667",
+        "parentId" : null,
+        "authorId" : "832e1988-205f-40f9-89d5-c37ea16224c9",
+        "body" : "In `ArrayBasedMapBuilder`, we are explicitly asserting that `keyType` can't be `NullType`.  So assigning `NullType` here is causing test failures. \r\n@cloud-fan  ",
+        "createdAt" : "2020-02-12T05:50:39Z",
+        "updatedAt" : "2020-02-12T18:03:04Z",
+        "lastEditedBy" : "832e1988-205f-40f9-89d5-c37ea16224c9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e64796e8-65ae-4ee1-9e03-709827ad505c",
+        "parentId" : "a02a960f-1eff-43fb-a441-d49d95600667",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Can we remove that asserting?",
+        "createdAt" : "2020-02-12T06:09:00Z",
+        "updatedAt" : "2020-02-12T18:03:04Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "02ab72d7-d161-4083-a4fb-2d54a1eb629c",
+        "parentId" : "a02a960f-1eff-43fb-a441-d49d95600667",
+        "authorId" : "832e1988-205f-40f9-89d5-c37ea16224c9",
+        "body" : "In `ArrayBaseMapBuilder`, `Nulltype` is not handled for key. This causes following problem:\r\n```\r\nscala> sql(\"select map(null,2)\")\r\nres1: org.apache.spark.sql.DataFrame = [map(NULL, 2): map<null,int>]\r\n\r\nscala> sql(\"select map(null,2)\").collect\r\nscala.MatchError: NullType (of class org.apache.spark.sql.types.NullType$)\r\n  at org.apache.spark.sql.catalyst.util.TypeUtils$.getInterpretedOrdering(TypeUtils.scala:67)\r\n  at org.apache.spark.sql.catalyst.util.ArrayBasedMapBuilder.keyToIndex$lzycompute(ArrayBasedMapBuilder.scala:37)\r\n```  \r\n\r\n\r\nAfter removing the assertion we need to handle this.\r\n @cloud-fan  [#23124(comment)](https://github.com/apache/spark/pull/23124/commits/9df627465d9f9bcdde129baf1304035f082e5ab6?file-filters%5B%5D=.scala#r235929748)",
+        "createdAt" : "2020-02-12T08:28:10Z",
+        "updatedAt" : "2020-02-12T18:03:04Z",
+        "lastEditedBy" : "832e1988-205f-40f9-89d5-c37ea16224c9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "99c6aefe-07f2-4b70-a076-eea76870a181",
+        "parentId" : "a02a960f-1eff-43fb-a441-d49d95600667",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "yea we need to handle it. Let's add `NullType` to `case _: AtomicType | _: CalendarIntervalType if !keyType.isInstanceOf[BinaryType]`",
+        "createdAt" : "2020-02-12T10:32:50Z",
+        "updatedAt" : "2020-02-12T18:03:04Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ae1b3681-909b-4001-b25d-549abc60378a",
+        "parentId" : "a02a960f-1eff-43fb-a441-d49d95600667",
+        "authorId" : "832e1988-205f-40f9-89d5-c37ea16224c9",
+        "body" : "Yeah. I updated the PR using that approach only. All the Other review comments are handled as well.",
+        "createdAt" : "2020-02-12T10:46:56Z",
+        "updatedAt" : "2020-02-12T18:03:04Z",
+        "lastEditedBy" : "832e1988-205f-40f9-89d5-c37ea16224c9",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e873527032ffaed583b211d81f2c9aafebe9fe07",
+    "line" : 29,
+    "diffHunk" : "@@ -1,1 +176,180 @@    MapType(\n      keyType = TypeCoercion.findCommonTypeDifferentOnlyInNullFlags(keys.map(_.dataType))\n        .getOrElse(defaultElementType),\n      valueType = TypeCoercion.findCommonTypeDifferentOnlyInNullFlags(values.map(_.dataType))\n        .getOrElse(defaultElementType),"
   }
 ]

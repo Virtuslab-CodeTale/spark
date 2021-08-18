@@ -812,5 +812,115 @@
     "commit" : "4755526bd20f44aa24f91a120c98518330081398",
     "line" : 18,
     "diffHunk" : "@@ -1,1 +49,53 @@ *\n * Let's say L2, L4 and R3, R4 are skewed, and each of them get split into 2 sub-partitions. This\n * is scheduled to run 4 tasks at the beginning: (L1, R1), (L2, R2), (L2, R2), (L2, R2).\n * This rule expands it to 9 tasks to increase parallelism:\n * (L1, R1),"
+  },
+  {
+    "id" : "bce16ed6-6dbf-4507-8053-7d9ef6f77897",
+    "prId" : 27493,
+    "prUrl" : "https://github.com/apache/spark/pull/27493#pullrequestreview-356013785",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8679ba87-874d-49f3-afa2-93fddc8f7a90",
+        "parentId" : null,
+        "authorId" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "body" : "Can we add a comment here about `nonSkewPartitionIndices` used to delay creation of non-skew partitions and for potential coalescing?",
+        "createdAt" : "2020-02-10T15:33:36Z",
+        "updatedAt" : "2020-02-13T12:28:23Z",
+        "lastEditedBy" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b4a0606c240476d037a912e238b4a25e33b4e6da",
+    "line" : 73,
+    "diffHunk" : "@@ -1,1 +162,166 @@      // This is used to delay the creation of non-skew partitions so that we can potentially\n      // coalesce them like `ReduceNumShufflePartitions` does.\n      val nonSkewPartitionIndices = mutable.ArrayBuffer.empty[Int]\n      val leftSkewDesc = new SkewDesc\n      val rightSkewDesc = new SkewDesc"
+  },
+  {
+    "id" : "882738fc-ab96-4585-a0dc-3d260c3d9ac1",
+    "prId" : 27493,
+    "prUrl" : "https://github.com/apache/spark/pull/27493#pullrequestreview-356013785",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d694e94e-f905-4341-a2e1-56aab650591c",
+        "parentId" : null,
+        "authorId" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "body" : "code comment: as soon as we see a skew, we'll \"flush\" out unhandled non-skew partitions.",
+        "createdAt" : "2020-02-10T15:35:47Z",
+        "updatedAt" : "2020-02-13T12:28:23Z",
+        "lastEditedBy" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b4a0606c240476d037a912e238b4a25e33b4e6da",
+    "line" : 82,
+    "diffHunk" : "@@ -1,1 +171,175 @@        val isRightSkew = isSkewed(rightSize, rightMedSize) && canSplitRight\n        if (isLeftSkew || isRightSkew) {\n          if (nonSkewPartitionIndices.nonEmpty) {\n            // As soon as we see a skew, we'll \"flush\" out unhandled non-skew partitions.\n            createNonSkewPartitions(leftStats, rightStats, nonSkewPartitionIndices).foreach { p =>"
+  },
+  {
+    "id" : "bd8d9764-ca35-4afa-92b3-582659eb7e36",
+    "prId" : 27493,
+    "prUrl" : "https://github.com/apache/spark/pull/27493#pullrequestreview-357284988",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "092f5d75-fe52-4a8c-be2c-6f6df40b890b",
+        "parentId" : null,
+        "authorId" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "body" : "Eventually we should be able to just have one reader, right?",
+        "createdAt" : "2020-02-10T15:43:31Z",
+        "updatedAt" : "2020-02-13T12:28:23Z",
+        "lastEditedBy" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e0fa8ded-c26b-4918-9f15-05dc0d2cb7bb",
+        "parentId" : "092f5d75-fe52-4a8c-be2c-6f6df40b890b",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I think we still need multiple shuffle readers, but use the same RDD.\r\n\r\nFor example, `LocalShuffleReaderExec` override `outputPartitioning`",
+        "createdAt" : "2020-02-10T15:56:35Z",
+        "updatedAt" : "2020-02-13T12:28:23Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bc18d44e-8c6c-4674-a9b8-09f5219668ab",
+        "parentId" : "092f5d75-fe52-4a8c-be2c-6f6df40b890b",
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "You could just have one reader, that just takes the output partitioning as a parameter. I am kind of in favor of this since it eliminates 3 nearly identical nodes.",
+        "createdAt" : "2020-02-12T09:07:03Z",
+        "updatedAt" : "2020-02-13T12:28:23Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b4a0606c240476d037a912e238b4a25e33b4e6da",
+    "line" : 319,
+    "diffHunk" : "@@ -1,1 +361,365 @@ * @param skewDesc The description of the skewed partitions.\n */\ncase class SkewJoinShuffleReaderExec(\n    child: SparkPlan,\n    partitionSpecs: Array[ShufflePartitionSpec],"
+  },
+  {
+    "id" : "e5fee1b7-9332-4fe2-97eb-aead64e4ad7f",
+    "prId" : 27493,
+    "prUrl" : "https://github.com/apache/spark/pull/27493#pullrequestreview-357841031",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "85c93f22-538c-4ce8-b9e2-711bf735a5a4",
+        "parentId" : null,
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "This is pretty neat.",
+        "createdAt" : "2020-02-12T22:39:01Z",
+        "updatedAt" : "2020-02-13T12:28:23Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b4a0606c240476d037a912e238b4a25e33b4e6da",
+    "line" : 199,
+    "diffHunk" : "@@ -1,1 +244,248 @@      Seq(SinglePartitionSpec(nonSkewPartitionIndices.head))\n    } else {\n      val startIndices = ShufflePartitionsCoalescer.coalescePartitions(\n        Array(leftStats, rightStats),\n        firstPartitionIndex = nonSkewPartitionIndices.head,"
   }
 ]

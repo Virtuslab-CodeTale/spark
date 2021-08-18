@@ -1,0 +1,68 @@
+[
+  {
+    "id" : "f2f79d57-a418-4e5c-81d3-8d04a4e0c2d3",
+    "prId" : 27519,
+    "prUrl" : "https://github.com/apache/spark/pull/27519#pullrequestreview-359792872",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9a7b86c0-2846-4a07-82f3-fd6b7954709b",
+        "parentId" : null,
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "`rootSigmaInv * delta = rootSigmaInv * (x - breezeMu) = - (rootSigmaInv * breezeMu - rootSigmaInv * x)`",
+        "createdAt" : "2020-02-17T08:06:17Z",
+        "updatedAt" : "2020-03-03T08:08:02Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "31e50f77-07a5-4378-a0df-4a985a28ca00",
+        "parentId" : "9a7b86c0-2846-4a07-82f3-fd6b7954709b",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Is logpdf covered in MultivariateGaussianSuite? I didn't see it. Might be good to make some assertions about it and make sure it doesn't change much at all after this. I don't know enough to evaluate whether this loses any numeric precision (or is it from Breeze?)",
+        "createdAt" : "2020-02-17T14:57:35Z",
+        "updatedAt" : "2020-03-03T08:08:02Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "936e8bfe02ee5119471c47194a5a3597f271fb06",
+    "line" : 66,
+    "diffHunk" : "@@ -1,1 +79,83 @@    val v = rootSigmaInvMulMu.copy\n    BLAS.gemv(-1.0, rootSigmaInvMat, x, 1.0, v)\n    u - 0.5 * BLAS.dot(v, v)\n  }\n"
+  },
+  {
+    "id" : "11d475af-7ef1-4774-a3db-f62cd826b677",
+    "prId" : 27519,
+    "prUrl" : "https://github.com/apache/spark/pull/27519#pullrequestreview-364596777",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6393e718-8f39-4581-8c3f-b10457e4a485",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "This is how breeze does it? there's no way to compute this except in log space? just wondering if we lose any accuracy this way otherwise.",
+        "createdAt" : "2020-02-25T15:00:04Z",
+        "updatedAt" : "2020-03-03T08:08:02Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f49b9d21-b44e-4c40-be38-616a11310408",
+        "parentId" : "6393e718-8f39-4581-8c3f-b10457e4a485",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "Yes, that is what existing impl does:\r\n```scala\r\n  /**\r\n   * Returns density of this multivariate Gaussian at given point, x\r\n   */\r\n  @Since(\"2.0.0\")\r\n  def pdf(x: Vector): Double = {\r\n    pdf(x.asBreeze)\r\n  }\r\n\r\n  /**\r\n   * Returns the log-density of this multivariate Gaussian at given point, x\r\n   */\r\n  @Since(\"2.0.0\")\r\n  def logpdf(x: Vector): Double = {\r\n    logpdf(x.asBreeze)\r\n  }\r\n\r\n  /** Returns density of this multivariate Gaussian at given point, x */\r\n  private[ml] def pdf(x: BV[Double]): Double = {\r\n    math.exp(logpdf(x))\r\n  }\r\n\r\n  /** Returns the log-density of this multivariate Gaussian at given point, x */\r\n  private[ml] def logpdf(x: BV[Double]): Double = {\r\n    val delta = x - breezeMu\r\n    val v = rootSigmaInv * delta\r\n    u + v.t * v * -0.5\r\n  }\r\n\r\n```\r\n\r\nAfter this change, we do not need private methods based on BreezeVector.",
+        "createdAt" : "2020-02-26T03:05:41Z",
+        "updatedAt" : "2020-03-03T08:08:02Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "936e8bfe02ee5119471c47194a5a3597f271fb06",
+    "line" : 43,
+    "diffHunk" : "@@ -1,1 +69,73 @@  @Since(\"2.0.0\")\n  def pdf(x: Vector): Double = {\n    math.exp(logpdf(x))\n  }\n"
+  }
+]

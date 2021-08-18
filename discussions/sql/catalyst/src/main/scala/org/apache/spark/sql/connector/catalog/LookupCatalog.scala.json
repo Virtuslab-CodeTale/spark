@@ -163,5 +163,104 @@
     "commit" : "b18437c5998f5df50172732015f66b33c3908d2a",
     "line" : 14,
     "diffHunk" : "@@ -1,1 +157,161 @@  }\n\n  // TODO: move function related v2 statements to the new framework.\n  def parseSessionCatalogFunctionIdentifier(\n      nameParts: Seq[String],"
+  },
+  {
+    "id" : "0db676e4-bd8c-4920-9ee2-16216a6af987",
+    "prId" : 27550,
+    "prUrl" : "https://github.com/apache/spark/pull/27550#pullrequestreview-358045393",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7c371046-06c7-46c3-84fd-9e51023c9b50",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Hmm, this adds current namespace to the returned identifier? So we cannot tell if a returned identifier is for a temp view?",
+        "createdAt" : "2020-02-12T20:07:38Z",
+        "updatedAt" : "2020-02-14T10:56:14Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a77a76f5-5161-459b-b4a9-1a147824b112",
+        "parentId" : "7c371046-06c7-46c3-84fd-9e51023c9b50",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "I think `ResolveTempViews` needs to be updated to look up twice (one with namespace and one without).",
+        "createdAt" : "2020-02-13T00:44:10Z",
+        "updatedAt" : "2020-02-14T10:56:14Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4438debc-68ef-42df-8c07-553ae9a5f242",
+        "parentId" : "7c371046-06c7-46c3-84fd-9e51023c9b50",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "if you look at `SessionCatalog.setCurrentDatabase`, we forbid to set `global_temp` as the current database.\r\n\r\nThis is to make the resolution of temp view simple: we look up temp view via the name parts given by users literally. No name extension is allowed.\r\n\r\nThe general rule of relation resolution is: we try to look up temp view first, then tables/permanent views. When we call `CatalogAndIdentifier`, the temp view lookup should already be tried, or the caller side don't want to resolve temp views.\r\n",
+        "createdAt" : "2020-02-13T04:33:27Z",
+        "updatedAt" : "2020-02-14T10:56:14Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4ab488f7-fe8e-4b49-b23b-f43bff45d516",
+        "parentId" : "7c371046-06c7-46c3-84fd-9e51023c9b50",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "> When we call `CatalogAndIdentifier`, the temp view lookup should already be tried, or the caller side don't want to resolve temp views.\r\n\r\nSo, `ResolveCatalogs` should be applied after `ResolveTables` and `ResolveRelations`?",
+        "createdAt" : "2020-02-13T05:15:34Z",
+        "updatedAt" : "2020-02-14T10:56:14Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c97f264f-4490-4098-9a80-d9709dce8fab",
+        "parentId" : "7c371046-06c7-46c3-84fd-9e51023c9b50",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "these 2 are different frameworks so I don't see a way to guarantee the order. I think what we should do is to migrate to the new framework.",
+        "createdAt" : "2020-02-13T08:57:42Z",
+        "updatedAt" : "2020-02-14T10:56:14Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f4a3d08d096ee44d2fc7bf5d23f6223f9700865a",
+    "line" : 25,
+    "diffHunk" : "@@ -1,1 +108,112 @@      assert(nameParts.nonEmpty)\n      if (nameParts.length == 1) {\n        Some((currentCatalog, Identifier.of(catalogManager.currentNamespace, nameParts.head)))\n      } else if (nameParts.head.equalsIgnoreCase(globalTempDB)) {\n        // Conceptually global temp views are in a special reserved catalog. However, the v2 catalog"
+  },
+  {
+    "id" : "464ab000-9673-4c9b-8a71-f92fbc715350",
+    "prId" : 27550,
+    "prUrl" : "https://github.com/apache/spark/pull/27550#pullrequestreview-360848364",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a96f02d6-342d-4981-82a2-678390c971a1",
+        "parentId" : null,
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "The term `Catalog` is being used in many places. For example, our internal SessionCatalog also manages temp objects. ",
+        "createdAt" : "2020-02-18T18:54:46Z",
+        "updatedAt" : "2020-02-18T18:54:46Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e442b6a4-ecf0-4ae7-9786-57c303673432",
+        "parentId" : "a96f02d6-342d-4981-82a2-678390c971a1",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "> our internal SessionCatalog also manages temp objects\r\n\r\nWe can move them out and put it in a temp view manager like the `GlobalTempViewManager`. I'm talking more about the theory.",
+        "createdAt" : "2020-02-19T05:20:30Z",
+        "updatedAt" : "2020-02-19T05:20:31Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f4a3d08d096ee44d2fc7bf5d23f6223f9700865a",
+    "line" : 7,
+    "diffHunk" : "@@ -1,1 +98,102 @@   * Note that, this pattern is used to look up permanent catalog objects like table, view,\n   * function, etc. If you need to look up temp objects like temp view, please do it separately\n   * before calling this pattern, as temp objects don't belong to any catalog.\n   */\n  object CatalogAndIdentifier {"
   }
 ]

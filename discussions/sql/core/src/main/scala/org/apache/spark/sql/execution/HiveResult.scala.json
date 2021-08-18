@@ -86,5 +86,137 @@
     "commit" : "74b98f52b9e40d0ce63b48381e883ab6e3aed133",
     "line" : 9,
     "diffHunk" : "@@ -1,1 +62,66 @@  private def zoneId = DateTimeUtils.getZoneId(SQLConf.get.sessionLocalTimeZone)\n  private def dateFormatter = DateFormatter(zoneId)\n  private def timestampFormatter = TimestampFormatter.getFractionFormatter(zoneId)\n\n  /** Formats a datum (based on the given data type) and returns the string representation. */"
+  },
+  {
+    "id" : "78305484-4d75-4f8d-a338-f2e2b29db2a8",
+    "prId" : 27552,
+    "prUrl" : "https://github.com/apache/spark/pull/27552#pullrequestreview-365662665",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "697c7c43-dbc8-4cee-9521-1ed029b6755c",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "found a problem. `Dataset.ofRows` will set the input session as active, so we should write `Dataset.ofRows(sessionWithJava8DatetimeEnabled, ...` and remove the outer `sessionWithJava8DatetimeEnabled.withActive`.",
+        "createdAt" : "2020-02-27T13:05:08Z",
+        "updatedAt" : "2020-02-27T13:05:08Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "880b1dec95595b58688a3d5f7a2e0637a090cb47",
+    "line" : 63,
+    "diffHunk" : "@@ -1,1 +64,68 @@          // We cannot collect the original dataset because its encoders could be created\n          // with disabled Java 8 date-time API.\n          val result: Seq[Seq[Any]] = Dataset.ofRows(ds.sparkSession, ds.logicalPlan)\n            .queryExecution\n            .executedPlan"
+  },
+  {
+    "id" : "a3a46628-8a68-46dc-9c38-771ce5e44ee9",
+    "prId" : 27552,
+    "prUrl" : "https://github.com/apache/spark/pull/27552#pullrequestreview-366189946",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "cb52af2f-d848-4899-a895-481ed66ffb8d",
+        "parentId" : null,
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "why is this always `true`?",
+        "createdAt" : "2020-02-28T04:50:18Z",
+        "updatedAt" : "2020-02-28T04:50:18Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e3aa3a99-b58c-4d89-98e4-c1fb3d5d43aa",
+        "parentId" : "cb52af2f-d848-4899-a895-481ed66ffb8d",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "the old `Date`/`Timestamp` doesn't follow the new calendar and may produce wrong string for some date/timestamp values.",
+        "createdAt" : "2020-02-28T04:52:15Z",
+        "updatedAt" : "2020-02-28T04:52:15Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dc58b01a-414f-4f0a-88d6-3a7fd6aea88a",
+        "parentId" : "cb52af2f-d848-4899-a895-481ed66ffb8d",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "oh wait, we format `Date/Timestamp` by our own formatter, so this should be no problem.",
+        "createdAt" : "2020-02-28T04:58:09Z",
+        "updatedAt" : "2020-02-28T04:58:09Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2a4bc95d-acc0-44aa-a7eb-0d80de2d96e0",
+        "parentId" : "cb52af2f-d848-4899-a895-481ed66ffb8d",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "```\r\n-- !query\r\nset spark.sql.datetime.java8API.enabled\r\n-- !query schema\r\nstruct<key:string,value:string>\r\n-- !query output\r\nspark.sql.datetime.java8API.enabled\tfalse\r\n\r\n\r\n-- !query\r\nset set spark.sql.session.timeZone=America/Los_Angeles\r\n-- !query schema\r\nstruct<key:string,value:string>\r\n-- !query output\r\nset spark.sql.session.timeZone\tAmerica/Los_Angeles\r\n\r\n\r\n-- !query\r\nSELECT DATE_TRUNC('MILLENNIUM', DATE '1970-03-20')\r\n-- !query schema\r\nstruct<date_trunc(MILLENNIUM, CAST(DATE '1970-03-20' AS TIMESTAMP)):timestamp>\r\n-- !query output\r\n1001-01-01 00:00:00\r\n```\r\n\r\nI rm this line and run `SQLQueryTestSuite` with cases above,  the results are the same. Or does this problem only exists for  `spark-sql` script?",
+        "createdAt" : "2020-02-28T05:23:00Z",
+        "updatedAt" : "2020-02-28T05:23:00Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5c8ddc6c-13ca-4395-bc6f-19972fe5392f",
+        "parentId" : "cb52af2f-d848-4899-a895-481ed66ffb8d",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "> Or does this problem only exists for spark-sql script?\r\n\r\nOnly when thrift-server is involved in the loop.",
+        "createdAt" : "2020-02-28T05:49:12Z",
+        "updatedAt" : "2020-02-28T05:49:12Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "adf36cb4-fab8-4d93-b56f-e5b5713aabf5",
+        "parentId" : "cb52af2f-d848-4899-a895-481ed66ffb8d",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "I also pass these tests through `ThriftServerQueryTestSuite`",
+        "createdAt" : "2020-02-28T06:26:48Z",
+        "updatedAt" : "2020-02-28T06:26:55Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9f684bce-4b75-4335-be1f-9170d203fd1b",
+        "parentId" : "cb52af2f-d848-4899-a895-481ed66ffb8d",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "```\r\nspark-sql> set spark.sql.session.timeZone=America/Los_Angeles;\r\nspark.sql.session.timeZone\tAmerica/Los_Angeles\r\nspark-sql> SELECT DATE_TRUNC('MILLENNIUM', DATE '1970-03-20');\r\n1001-01-01 00:00:00\r\nspark-sql> select version();\r\n3.1.0 b3dcb63a682bc31827a86cf381f157a81e9e07ac\r\n```\r\nAlso correct with `bin/spark-sql`",
+        "createdAt" : "2020-02-28T06:31:33Z",
+        "updatedAt" : "2020-02-28T06:31:33Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "754c497e-448c-471a-a1e7-7c0d63f41c60",
+        "parentId" : "cb52af2f-d848-4899-a895-481ed66ffb8d",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Yea I tested it too and looks fine. Maybe some refactor of how to format old `Date/Timestamp` fixes it already.\r\n\r\n@yaooqinn can you send a PR to revert it? Let's see if all tests pass.",
+        "createdAt" : "2020-02-28T06:46:46Z",
+        "updatedAt" : "2020-02-28T06:46:46Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6e9ed243-4dc5-46c8-a5b2-670ffd08815d",
+        "parentId" : "cb52af2f-d848-4899-a895-481ed66ffb8d",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "OK",
+        "createdAt" : "2020-02-28T06:53:33Z",
+        "updatedAt" : "2020-02-28T06:53:34Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "880b1dec95595b58688a3d5f7a2e0637a090cb47",
+    "line" : 57,
+    "diffHunk" : "@@ -1,1 +58,62 @@        val sessionWithJava8DatetimeEnabled = {\n          val cloned = ds.sparkSession.cloneSession()\n          cloned.conf.set(SQLConf.DATETIME_JAVA8API_ENABLED.key, true)\n          cloned\n        }"
   }
 ]

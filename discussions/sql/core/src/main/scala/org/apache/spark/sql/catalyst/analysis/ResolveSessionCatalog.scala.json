@@ -889,5 +889,137 @@
     "commit" : "eb0ebf1990c126d352c61f757d68686faf9c7f4b",
     "line" : 54,
     "diffHunk" : "@@ -1,1 +445,449 @@      // Use namespace only if table name doesn't specify it. If namespace is already specified\n      // in the table name, it's checked against the given namespace below.\n      val nameParts = if (ns.isDefined && tbl.length == 1) {\n        ns.get ++ tbl\n      } else {"
+  },
+  {
+    "id" : "6d78827e-8231-492f-abe0-a00e1a382fbd",
+    "prId" : 27550,
+    "prUrl" : "https://github.com/apache/spark/pull/27550#pullrequestreview-358691035",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "69933673-2251-4745-a49d-2d63f5d3be55",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I can remove this, but then I need to update many tests slightly to update the error message. We can leave it to 3.1.",
+        "createdAt" : "2020-02-14T03:16:34Z",
+        "updatedAt" : "2020-02-14T10:56:14Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f4a3d08d096ee44d2fc7bf5d23f6223f9700865a",
+    "line" : 269,
+    "diffHunk" : "@@ -1,1 +640,644 @@          // If there is only one name part, it means the current catalog is the session catalog.\n          // Here we return the original name part, to keep the error message unchanged for\n          // v1 commands.\n          Some(catalog -> nameParts)\n        } else {"
+  },
+  {
+    "id" : "c4de6012-c947-488e-8990-c94e418d23e4",
+    "prId" : 27550,
+    "prUrl" : "https://github.com/apache/spark/pull/27550#pullrequestreview-358708629",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "bf512aba-8a15-4418-a649-b41f6a97fe63",
+        "parentId" : null,
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "Since `tbl` is from `SessionCatalogAndTable`, `tbl` may have the current namespace? And if the current namespace is not empty, this will always return false?",
+        "createdAt" : "2020-02-14T03:41:04Z",
+        "updatedAt" : "2020-02-14T10:56:14Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cfe85287-ad38-432b-aaaa-095922a1348f",
+        "parentId" : "bf512aba-8a15-4418-a649-b41f6a97fe63",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "You have a good point here. I think this is an existing bug. Here we look up table first (call `loadTable`) then look up temp view. We should look up temp view first to retain the behavior of Spark 2.4. @imback82 can you help fix it later?",
+        "createdAt" : "2020-02-14T04:24:22Z",
+        "updatedAt" : "2020-02-14T10:56:14Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9bb46160-2779-430c-8a69-afb4c0da095a",
+        "parentId" : "bf512aba-8a15-4418-a649-b41f6a97fe63",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "Yes, will do after this PR.",
+        "createdAt" : "2020-02-14T04:38:10Z",
+        "updatedAt" : "2020-02-14T10:56:14Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f4a3d08d096ee44d2fc7bf5d23f6223f9700865a",
+    "line" : 40,
+    "diffHunk" : "@@ -1,1 +235,239 @@          DescribeColumnCommand(tbl.asTableIdentifier, colNameParts, isExtended)\n      }.getOrElse {\n        if (isTempView(tbl)) {\n          // v1 DESCRIBE COLUMN supports temp view.\n          DescribeColumnCommand(tbl.asTableIdentifier, colNameParts, isExtended)"
+  },
+  {
+    "id" : "51c21454-078b-4103-9b07-2c1b1d6e8ad1",
+    "prId" : 27550,
+    "prUrl" : "https://github.com/apache/spark/pull/27550#pullrequestreview-358709143",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "648c3084-8861-4d0e-b50b-9a3bd20089be",
+        "parentId" : null,
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "Unrelated question, what was the reason to allow `spark_catalog.t` to be `spark_catalog.<cur_db>.t`? (different behavior from v2 catalogs)",
+        "createdAt" : "2020-02-14T03:49:55Z",
+        "updatedAt" : "2020-02-14T10:56:14Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fd144914-4168-4ded-8ab7-4b138ff3f924",
+        "parentId" : "648c3084-8861-4d0e-b50b-9a3bd20089be",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I noticed this well and think this is not intentional. But this is a different topic and we have many tests using `spark_catalog.t`.\r\n\r\nWe can open another PR to forbid it if we think we shouldn't support this feature.",
+        "createdAt" : "2020-02-14T04:26:38Z",
+        "updatedAt" : "2020-02-14T10:56:14Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b7a49eca-26d2-4396-8553-0a5e508881b2",
+        "parentId" : "648c3084-8861-4d0e-b50b-9a3bd20089be",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "Got it, thanks for the explanation. It makes more sense to forbid it to keep the behavior consistent.",
+        "createdAt" : "2020-02-14T04:40:36Z",
+        "updatedAt" : "2020-02-14T10:56:14Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f4a3d08d096ee44d2fc7bf5d23f6223f9700865a",
+    "line" : 283,
+    "diffHunk" : "@@ -1,1 +654,658 @@      case SessionCatalogAndTable(_, tbl) =>\n        if (nameParts.head == CatalogManager.SESSION_CATALOG_NAME && tbl.length == 1) {\n          // For name parts like `spark_catalog.t`, we need to fill in the default database so\n          // that the caller side won't treat it as a temp view.\n          Some(Seq(catalogManager.v1SessionCatalog.getCurrentDatabase, tbl.head))"
+  },
+  {
+    "id" : "bc54c0d1-1473-4618-bb3f-604ca62bfbd0",
+    "prId" : 27550,
+    "prUrl" : "https://github.com/apache/spark/pull/27550#pullrequestreview-358865132",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3b05aed7-afd8-4323-b246-b9a4c2050ad3",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "This is consistent with https://github.com/apache/spark/pull/27550/files#diff-2e07be4d73605cb1941153441a0c0c14L536",
+        "createdAt" : "2020-02-14T11:01:36Z",
+        "updatedAt" : "2020-02-14T11:01:37Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f4a3d08d096ee44d2fc7bf5d23f6223f9700865a",
+    "line" : 177,
+    "diffHunk" : "@@ -1,1 +536,540 @@        // temp func doesn't belong to any catalog and we shouldn't resolve catalog in the name.\n        val database = if (nameParts.length > 2) {\n          throw new AnalysisException(s\"Unsupported function name '${nameParts.quoted}'\")\n        } else if (nameParts.length == 2) {\n          Some(nameParts.head)"
   }
 ]

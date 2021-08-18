@@ -1,0 +1,134 @@
+[
+  {
+    "id" : "3a0489cc-faa5-4386-95f3-d8c88fe2dcb6",
+    "prId" : 27527,
+    "prUrl" : "https://github.com/apache/spark/pull/27527#pullrequestreview-360067322",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2a2daa9d-e49f-4b4d-8303-5c3c114ee4e7",
+        "parentId" : null,
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "I suggest to use `E(XY)-E(X)E(Y)` instead, then only one pass is needed.",
+        "createdAt" : "2020-02-14T07:44:43Z",
+        "updatedAt" : "2020-02-14T07:45:23Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d896a205-eb3b-4ec3-9f50-f6fb4e192220",
+        "parentId" : "2a2daa9d-e49f-4b4d-8303-5c3c114ee4e7",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Does this lead to numerical instability? i don't know either way, just know this has been an issue at times. Maybe it's 'worth it' here.",
+        "createdAt" : "2020-02-14T19:05:38Z",
+        "updatedAt" : "2020-02-14T19:05:39Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "148a7001-2764-451b-9eb8-00fdae943b25",
+        "parentId" : "2a2daa9d-e49f-4b4d-8303-5c3c114ee4e7",
+        "authorId" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "body" : "I saw this on wikipedia (https://en.wikipedia.org/wiki/Covariance): \r\n\r\n![image](https://user-images.githubusercontent.com/13592258/74616568-6b838f80-50dd-11ea-9d5f-85c2416d244c.png)\r\n\r\nMaybe we should use two pass algorithm instead of one pass? \r\n",
+        "createdAt" : "2020-02-17T01:06:48Z",
+        "updatedAt" : "2020-02-17T01:06:49Z",
+        "lastEditedBy" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c524a175-2d6d-40c8-af43-fa9376fdffd0",
+        "parentId" : "2a2daa9d-e49f-4b4d-8303-5c3c114ee4e7",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "Yes, for numerical stablity",
+        "createdAt" : "2020-02-18T04:39:39Z",
+        "updatedAt" : "2020-02-18T04:39:39Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2b519b5f1b5ffb02a285c80271892d3d0d826e76",
+    "line" : 107,
+    "diffHunk" : "@@ -1,1 +105,109 @@      }\n    }.aggregateByKey[(Double, Double)]((0.0, 0.0))(\n      seqOp = {\n        // sumForCov: sum((Xi - avg(X)) * ((Yi - avg (Y)))   X: feature, Y: Label\n        //            It is used for calculating covariance"
+  },
+  {
+    "id" : "834cb723-fccc-449f-bcc7-4b903aebde82",
+    "prId" : 27527,
+    "prUrl" : "https://github.com/apache/spark/pull/27527#pullrequestreview-358772955",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "881367f8-8ce6-4f4d-bad0-1512407ca1e8",
+        "parentId" : null,
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "~~I guess we only need to deal with non-zero values, so maybe use `foreachNonZero` instead.\r\nThen I now think following the logic in `Summizer` maybe more efficient: maintain arrays of sum of `(value - xMeans(col.toInt)` and `(label - yMean)` on each partition, then `treeReduce` to obtain the global sum/mean.~~\r\nI just notice that the FValueRegression's logic is different from ChiSqTest, since `ChiSqTest` need to maintain a relative large matrix for each col, so need to flatMap and aggByKey for each col. While in FValueRegression, we only need two arrays (or three arrays if using E(XY)-E(X)E(Y))",
+        "createdAt" : "2020-02-14T08:20:30Z",
+        "updatedAt" : "2020-02-18T05:12:52Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2b519b5f1b5ffb02a285c80271892d3d0d826e76",
+    "line" : 104,
+    "diffHunk" : "@@ -1,1 +102,106 @@    labeledPointRdd.flatMap { case LabeledPoint(label, features) =>\n      features.iterator.map { case (col, value) =>\n        (col, (value - xMeans(col.toInt), (label - yMean)))\n      }\n    }.aggregateByKey[(Double, Double)]((0.0, 0.0))("
+  },
+  {
+    "id" : "46c7bf12-bef9-4767-abfd-5e5d64a6d192",
+    "prId" : 27527,
+    "prUrl" : "https://github.com/apache/spark/pull/27527#pullrequestreview-360070565",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "621c83f4-e445-4b99-8993-9b2637bbedd3",
+        "parentId" : null,
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "Compute these variables on a pass\r\n```\r\nval Row(xMean: Vector, xStd: Vector, yMean: Double, yStd: Double, count: Long) = dataset\r\n    .select(Summarizer.metrics(\"mean\", \"std\", \"count\").summary(col($(featuresCol))).as(\"summary\"),\r\n            avg(col($(labelCol))).as(\"yMean\"),\r\n            stddev(col($(labelCol))).as(\"yStd\"))\r\n    .select(\"summary.mean\", \"summary.std\", \"yMean\", \"yStd\", \"summary.count\")\r\n    .first()\r\n```",
+        "createdAt" : "2020-02-18T05:07:42Z",
+        "updatedAt" : "2020-02-18T05:40:03Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8eeb605f-df70-4f0c-9ecd-bd10d1fee1cb",
+        "parentId" : "621c83f4-e445-4b99-8993-9b2637bbedd3",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "Make sure the denominator is the same as `computeCovariance`,\r\nif different, adjust it by multiplying `n/(n-1)` or `(n-1)/n` after converting back to variance.",
+        "createdAt" : "2020-02-18T05:36:37Z",
+        "updatedAt" : "2020-02-18T05:40:03Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2b519b5f1b5ffb02a285c80271892d3d0d826e76",
+    "line" : 84,
+    "diffHunk" : "@@ -1,1 +82,86 @@    SchemaUtils.checkNumericType(dataset.schema, labelCol)\n\n    val yMean = dataset.select(col(labelCol)).as[Double].rdd.stats().mean\n\n    val stats = dataset"
+  },
+  {
+    "id" : "999e7645-6789-4021-b99c-7194877a82c5",
+    "prId" : 27527,
+    "prUrl" : "https://github.com/apache/spark/pull/27527#pullrequestreview-360070565",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "449a4f7a-23a7-4601-a484-375037c1add2",
+        "parentId" : null,
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "Use array instead:\r\n```scala\r\nlabeledPointRdd.mapPartition { iter =>\r\n    if (iter.hasNext) {\r\n        val array = Array.ofDim[Double](numFeatures)\r\n        while(iter.hasNext) {\r\n            val LabeledPoint(label, features) = iter.next\r\n            val yDiff = label - yMean\r\n            if (yDiff != 0) {\r\n                features.iterator.zip(xMeans.iterator)\r\n                    .foreach { case ((col, x), (_, xMean)) => array(col) += yDiff * (x - xMean) }\r\n            }\r\n        }\r\n        Iterator.single(array)\r\n    } else Iterator.empty\r\n}.treeReduce { case (array1, array2) =>\r\n    var i = 0\r\n    while (i < numFeatures) {\r\n        array1(i) += array2(i)\r\n        i += 1\r\n    }\r\n    array1\r\n}\r\n```\r\n\r\nOr use `treeAggregate` instead.",
+        "createdAt" : "2020-02-18T05:11:16Z",
+        "updatedAt" : "2020-02-18T05:49:50Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2b519b5f1b5ffb02a285c80271892d3d0d826e76",
+    "line" : 103,
+    "diffHunk" : "@@ -1,1 +101,105 @@\n    labeledPointRdd.flatMap { case LabeledPoint(label, features) =>\n      features.iterator.map { case (col, value) =>\n        (col, (value - xMeans(col.toInt), (label - yMean)))\n      }"
+  }
+]
