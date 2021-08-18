@@ -350,5 +350,71 @@
     "commit" : "319d9257b200bb087afe15aace8b66d96925ce93",
     "line" : 53,
     "diffHunk" : "@@ -1,1 +191,195 @@      blockId: String,\n      bmId: BlockManagerId,\n      defaultValue: T): PartialFunction[Throwable, T] = {\n    case e: IOException =>\n      logWarning(s\"Error trying to remove $blockType $blockId\" +"
+  },
+  {
+    "id" : "3a3e75f3-8445-4e63-95a4-452789234db0",
+    "prId" : 28708,
+    "prUrl" : "https://github.com/apache/spark/pull/28708#pullrequestreview-433770929",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d952a200-d55f-4ea9-9342-d13add0cec71",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "I see that `getMigrationBlocks` returns the sub blocks in the order of `[index, data]`, but I wonder if the sub blocks are indeed migrated strictly in order ? Is it ever possible to have a data block updated before an index block ? It seems that we would want both, before we update the mapOutputTracker -- but I am not 100% clear on how that is ensured.",
+        "createdAt" : "2020-06-19T02:43:08Z",
+        "updatedAt" : "2020-07-17T23:45:20Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b67fd747-d5a8-463f-b0e2-fb6efdfe29ce",
+        "parentId" : "d952a200-d55f-4ea9-9342-d13add0cec71",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Yeah sub blocks are migrated in order (we don't parallel map them).",
+        "createdAt" : "2020-06-19T03:18:52Z",
+        "updatedAt" : "2020-07-17T23:45:20Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8494bdd94285c7cc5a41e151da920710be7f4671",
+    "line" : 38,
+    "diffHunk" : "@@ -1,1 +547,551 @@      blockId match {\n        case ShuffleIndexBlockId(shuffleId, mapId, _) =>\n          // Don't update the map output on just the index block\n          logDebug(s\"Received shuffle index block update for ${shuffleId} ${mapId}, ignoring.\")\n          return true"
+  },
+  {
+    "id" : "70080bbe-e5bf-4256-85e3-e61dc5edbfad",
+    "prId" : 28708,
+    "prUrl" : "https://github.com/apache/spark/pull/28708#pullrequestreview-436926949",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d18f82f0-33b2-4b7a-b42c-51f46e5dea85",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "I wanted to confirm my understanding that this PR does not do anything about shuffle files written by executors that have since finished ? That would be the External Shuffle Service's responsibility (if enabled), Right ? And that piece of the puzzle isn't implemented yet ?\r\n\r\nMy question stems from how we handle this scenario: (Consider the standalone scheduler mode here)\r\n- Executor wrote some shuffle data and is enabled with external shuffle service \r\n- Executor finished normally and nothing is running on the worker. \r\n- DecommissionExecutor is not even called because the executor does not exist\r\n- Thus the DecommissionBlockManager isn't called and thus no migrations take place.\r\n\r\nTherefore fetch failures would happen for other tasks that try to read this executor's shuffle data (via the External Shuffle Service). I believe fixing this is not in the scope of this PR.\r\n\r\nCan you please check this understanding. Thanks.\r\n",
+        "createdAt" : "2020-06-22T05:04:45Z",
+        "updatedAt" : "2020-07-17T23:45:20Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5fa2abf6-ac42-4f76-84c8-a90fd4e7850b",
+        "parentId" : "d18f82f0-33b2-4b7a-b42c-51f46e5dea85",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Right we don't do anything in that situation.",
+        "createdAt" : "2020-06-24T19:04:26Z",
+        "updatedAt" : "2020-07-17T23:45:20Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8494bdd94285c7cc5a41e151da920710be7f4671",
+    "line" : 22,
+    "diffHunk" : "@@ -1,1 +163,167 @@      context.reply(true)\n\n    case DecommissionBlockManagers(executorIds) =>\n      val bmIds = executorIds.flatMap(blockManagerIdByExecutor.get)\n      decommissionBlockManagers(bmIds)"
   }
 ]

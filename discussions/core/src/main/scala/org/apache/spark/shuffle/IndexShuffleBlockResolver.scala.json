@@ -185,5 +185,82 @@
     "commit" : "69b25406b9d5ee1f0862f06614f579a4ed9a1e03",
     "line" : 42,
     "diffHunk" : "@@ -1,1 +187,191 @@      val bytesUsed = getShuffleBytesStored()\n      if (maxBytes < bytesUsed) {\n        throw new SparkException(s\"Not storing remote shuffles $bytesUsed exceeds $maxBytes\")\n      }\n    }"
+  },
+  {
+    "id" : "f2093b8c-d940-43bc-a8cc-c470112af90b",
+    "prId" : 28708,
+    "prUrl" : "https://github.com/apache/spark/pull/28708#pullrequestreview-423519621",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "bdf76928-4586-41d7-9aab-9adb9aa5decb",
+        "parentId" : null,
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "The reason of the failure might be interesting here:\r\n \r\n```suggestion\r\n        // the framework handles the connection itself, we just need to do local cleanup\r\n        logWarning(s\"Error while uploading $blockId\", cause)\r\n```",
+        "createdAt" : "2020-06-03T12:52:05Z",
+        "updatedAt" : "2020-07-17T23:45:20Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8494bdd94285c7cc5a41e151da920710be7f4671",
+    "line" : 104,
+    "diffHunk" : "@@ -1,1 +214,218 @@\n      override def onFailure(streamId: String, cause: Throwable): Unit = {\n        // the framework handles the connection itself, we just need to do local cleanup\n        logWarning(s\"Error while uploading $blockId\", cause)\n        channel.close()"
+  },
+  {
+    "id" : "1fe5cb85-d933-4191-9a8c-ac8707a99def",
+    "prId" : 28708,
+    "prUrl" : "https://github.com/apache/spark/pull/28708#pullrequestreview-464464617",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "54915d84-86ce-40bb-b8bd-6c50f99a5559",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "I didn't follow why this is locked ?",
+        "createdAt" : "2020-06-19T01:39:50Z",
+        "updatedAt" : "2020-07-17T23:45:20Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f08f9f1b-7c22-4ee7-90ff-21f597478f6e",
+        "parentId" : "54915d84-86ce-40bb-b8bd-6c50f99a5559",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "The corresponding logic of finalizing is also synchronized. I think it's fairly remote but if (somehow) we've got some other process renaming the same file (say a speculative task), we could end up with junk data if we don't synchronize here.",
+        "createdAt" : "2020-06-19T03:03:48Z",
+        "updatedAt" : "2020-07-17T23:45:20Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "46a48ef8-3fe3-41ca-b822-8c606e47235a",
+        "parentId" : "54915d84-86ce-40bb-b8bd-6c50f99a5559",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "I think this lock might not be needed as in `writeIndexFileAndCommit` the lock is used to have the `checkIndexAndDataFile` and the file rename in one atomic operation. \r\n\r\nBut in a follow-up PR we can investigate this more.",
+        "createdAt" : "2020-07-19T10:59:22Z",
+        "updatedAt" : "2020-07-19T11:05:14Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c6018bd7-1005-46a7-9b7c-4d7b65bd9a61",
+        "parentId" : "54915d84-86ce-40bb-b8bd-6c50f99a5559",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "The lock used for synchronizing looks incorrect here - should be `IndexShuffleBlockResolver.this` ?\r\n(I missed reviewing this earlier, apologies)",
+        "createdAt" : "2020-08-10T18:16:04Z",
+        "updatedAt" : "2020-08-10T18:16:04Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8494bdd94285c7cc5a41e151da920710be7f4671",
+    "line" : 92,
+    "diffHunk" : "@@ -1,1 +202,206 @@        channel.close()\n        val diskSize = fileTmp.length()\n        this.synchronized {\n          if (file.exists()) {\n            file.delete()"
   }
 ]

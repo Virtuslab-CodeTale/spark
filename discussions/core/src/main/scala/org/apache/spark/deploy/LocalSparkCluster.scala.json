@@ -1,0 +1,57 @@
+[
+  {
+    "id" : "9426965c-dc0f-4453-8695-ddd1ef63dc41",
+    "prId" : 28746,
+    "prUrl" : "https://github.com/apache/spark/pull/28746#pullrequestreview-425946615",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f1fc95c6-8aaa-4b8e-9566-a483dd73a12e",
+        "parentId" : null,
+        "authorId" : "e7dcdd7d-a86f-415f-875c-a80eec9bc0f6",
+        "body" : "additionally, there might be a problem with the comment \r\n>  // Stop the workers before the master so they don't get upset that it disconnected\r\n\r\nand the implementation. the code does not really wait for workers to stop before the master. we could rewrite it like:\r\n```\r\n    Seq(workerRpcEnvs, masterRpcEnvs).foreach { rpcEnvArr =>\r\n      rpcEnvArr.foreach(rpcEnv => Utils.tryLog {\r\n        rpcEnv.shutdown()\r\n        rpcEnv.awaitTermination()\r\n      })\r\n      rpcEnvArr.clear()\r\n    }\r\n```",
+        "createdAt" : "2020-06-08T01:33:51Z",
+        "updatedAt" : "2020-07-13T02:06:02Z",
+        "lastEditedBy" : "e7dcdd7d-a86f-415f-875c-a80eec9bc0f6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f562e79f-204a-43f6-b14f-896283879920",
+        "parentId" : "f1fc95c6-8aaa-4b8e-9566-a483dd73a12e",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "It's not really necessary since shutdown is performed in a synchronization way. Therefore, the worker will close the connection to the master firstly. And `awaitTermination()` doesn't make sure everything stops but only the `Dispather`.",
+        "createdAt" : "2020-06-08T03:51:28Z",
+        "updatedAt" : "2020-07-13T02:06:02Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9baaef7c-7871-4005-8f7a-a210e57a2651",
+        "parentId" : "f1fc95c6-8aaa-4b8e-9566-a483dd73a12e",
+        "authorId" : "e7dcdd7d-a86f-415f-875c-a80eec9bc0f6",
+        "body" : "you may be right about this but this contradicts to the [scaladoc](https://github.com/apache/spark/blob/264b0f36cedacd9a22b45a3e14b2186230432be6/core/src/main/scala/org/apache/spark/rpc/RpcEnv.scala#L119) ",
+        "createdAt" : "2020-06-08T04:34:38Z",
+        "updatedAt" : "2020-07-13T02:06:02Z",
+        "lastEditedBy" : "e7dcdd7d-a86f-415f-875c-a80eec9bc0f6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8caec0b7-4c6d-41e1-8ce1-5d157b5482d9",
+        "parentId" : "f1fc95c6-8aaa-4b8e-9566-a483dd73a12e",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "ok. let's follow the doc.",
+        "createdAt" : "2020-06-08T06:36:01Z",
+        "updatedAt" : "2020-07-13T02:06:02Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "59a0595c8177ff801d0f7cbcc1fe6c458bcb844c",
+    "line" : 3,
+    "diffHunk" : "@@ -1,1 +76,80 @@    logInfo(\"Shutting down local Spark cluster.\")\n    // Stop the workers before the master so they don't get upset that it disconnected\n    workerRpcEnvs.foreach(_.shutdown())\n    workerRpcEnvs.foreach(_.awaitTermination())\n    masterRpcEnvs.foreach(_.shutdown())"
+  }
+]

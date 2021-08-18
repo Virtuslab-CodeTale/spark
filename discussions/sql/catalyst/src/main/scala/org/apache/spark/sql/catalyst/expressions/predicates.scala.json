@@ -185,5 +185,170 @@
     "commit" : "e2777c99144f91b463924530a0a89e6f1a39ab66",
     "line" : 39,
     "diffHunk" : "@@ -1,1 +263,267 @@  def CNFWithGroupExpressionsByQualifier(condition: Expression): Seq[Expression] = {\n    conjunctiveNormalForm(condition, (expressions: Seq[Expression]) =>\n        expressions.groupBy(_.references.map(_.qualifier)).map(_._2.reduceLeft(And)).toSeq)\n  }\n"
+  },
+  {
+    "id" : "9fd76599-49aa-446b-a11b-ff7b879b852f",
+    "prId" : 28733,
+    "prUrl" : "https://github.com/apache/spark/pull/28733#pullrequestreview-426965671",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "63c1d45e-b51c-45a5-b2ee-fc36754a7978",
+        "parentId" : null,
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "For  a test case  `dt = '1' OR (dt = '2' AND id = 1)` passed to   conjunctiveNormalForm, still return   `dt = '1' OR (dt = '2' AND id = 1)`. \r\n\r\nSee qualifier when groupby ,   they are\r\n```\r\nList(List(spark_catalog, default, t))\r\nList(List(spark_catalog, default, t))\r\n```\r\n",
+        "createdAt" : "2020-06-08T07:18:27Z",
+        "updatedAt" : "2020-06-11T00:53:20Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "507c04c0-86d3-426a-97ae-8916c4b65a62",
+        "parentId" : "63c1d45e-b51c-45a5-b2ee-fc36754a7978",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "I think we can try \r\n```\r\nexpressions.groupBy(_.references.flatMap(_.qualifier).toSet).map(_._2.reduceLeft(And)).toSeq\r\n```\r\nI will update this PR later",
+        "createdAt" : "2020-06-08T07:38:26Z",
+        "updatedAt" : "2020-06-11T00:53:20Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d1e2e0e6-f49f-4b59-9e25-6af925994f98",
+        "parentId" : "63c1d45e-b51c-45a5-b2ee-fc36754a7978",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> ```\r\n> expressions.groupBy(_.references.flatMap(_.qualifier).toSet).map(_._2.reduceLeft(And)).toSeq\r\n> ```\r\n\r\nNot work,  just\r\n```\r\nexpressions.groupBy(_.references).map(_._2.reduceLeft(And)).toSeq\r\n```",
+        "createdAt" : "2020-06-08T07:54:53Z",
+        "updatedAt" : "2020-06-11T00:53:20Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b13ec6c6-95ee-4025-b20a-73d0372ea6d9",
+        "parentId" : "63c1d45e-b51c-45a5-b2ee-fc36754a7978",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "The qualifier is the table name which is able to be used for aggregating more expressions",
+        "createdAt" : "2020-06-08T08:15:55Z",
+        "updatedAt" : "2020-06-11T00:53:20Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f3f66274-46c8-4a84-9f90-194ef96142d2",
+        "parentId" : "63c1d45e-b51c-45a5-b2ee-fc36754a7978",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> The qualifier is the table name which is able to be used for aggregating more expressions\r\n\r\nGot the point, you did this for split condition to join children, I want convert scan predicate condition to optimize scan predicate. ",
+        "createdAt" : "2020-06-08T08:35:14Z",
+        "updatedAt" : "2020-06-11T00:53:20Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "92664ada-7f80-4ebf-beed-56b481840a31",
+        "parentId" : "63c1d45e-b51c-45a5-b2ee-fc36754a7978",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "I think this PR is complex enough. Let's keep this part in this way for now.",
+        "createdAt" : "2020-06-09T09:33:45Z",
+        "updatedAt" : "2020-06-11T00:53:20Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dd684098-04af-425f-8550-3a25b4f407b8",
+        "parentId" : "63c1d45e-b51c-45a5-b2ee-fc36754a7978",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "Yea, I  will raise pr for other problem base on your code and change a little  after your pr merged.",
+        "createdAt" : "2020-06-09T09:36:43Z",
+        "updatedAt" : "2020-06-11T00:53:20Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b42ce1dde86069a74ebbda44a1729cde39c2672d",
+    "line" : 74,
+    "diffHunk" : "@@ -1,1 +252,256 @@  private def groupExpressionsByQualifier(expressions: Seq[Expression]): Seq[Expression] = {\n    expressions.groupBy(_.references.map(_.qualifier)).map(_._2.reduceLeft(And)).toSeq\n  }\n\n  /**"
+  },
+  {
+    "id" : "1829456b-eb60-4f65-9e6d-2361ce0e6bd5",
+    "prId" : 28733,
+    "prUrl" : "https://github.com/apache/spark/pull/28733#pullrequestreview-428392589",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f5b10638-48f7-446f-899e-9f38d9115d59",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Based on  the the `@return` statement above, how about `conjunctiveNormalForm ` -> `convertToDisjunctiveExpressions`?",
+        "createdAt" : "2020-06-10T14:16:10Z",
+        "updatedAt" : "2020-06-11T00:53:20Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e031e8fa-1f8b-494c-aa4a-15e33e81f966",
+        "parentId" : "f5b10638-48f7-446f-899e-9f38d9115d59",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "well, let me remove the word `Disjunctive` to avoid misunderstanding.",
+        "createdAt" : "2020-06-10T20:12:17Z",
+        "updatedAt" : "2020-06-11T00:53:20Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b42ce1dde86069a74ebbda44a1729cde39c2672d",
+    "line" : 34,
+    "diffHunk" : "@@ -1,1 +212,216 @@   *         exceeds threshold on converting `Or`, `Seq.empty` is returned.\n   */\n  def conjunctiveNormalForm(condition: Expression): Seq[Expression] = {\n    val postOrderNodes = postOrderTraversal(condition)\n    val resultStack = new mutable.Stack[Seq[Expression]]"
+  },
+  {
+    "id" : "d9356c50-7866-4c57-8157-d53a9212258f",
+    "prId" : 28733,
+    "prUrl" : "https://github.com/apache/spark/pull/28733#pullrequestreview-428089943",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2f9cbf87-b7fe-4e73-b5ca-2671e111d090",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "`the same references.` -> `the same table references.`?",
+        "createdAt" : "2020-06-10T14:26:23Z",
+        "updatedAt" : "2020-06-11T00:53:20Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b42ce1dde86069a74ebbda44a1729cde39c2672d",
+    "line" : 46,
+    "diffHunk" : "@@ -1,1 +224,228 @@          left ++ right\n        case _: Or =>\n          // For each side, there is no need to expand predicates of the same references.\n          // So here we can aggregate predicates of the same qualifier as one single predicate,\n          // for reducing the size of pushed down predicates and corresponding codegen."
+  },
+  {
+    "id" : "3eeb098a-6ae7-40c8-8517-cc96216f3b6b",
+    "prId" : 28733,
+    "prUrl" : "https://github.com/apache/spark/pull/28733#pullrequestreview-428089943",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "17b15245-bc35-4816-aa2d-6450ceea1fde",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Could we print some messages here by `logInfo` just like `WholeStageCodegenExec `? https://github.com/apache/spark/blob/master/sql/core/src/main/scala/org/apache/spark/sql/execution/WholeStageCodegenExec.scala#L729-L733",
+        "createdAt" : "2020-06-10T14:28:33Z",
+        "updatedAt" : "2020-06-11T00:53:20Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b42ce1dde86069a74ebbda44a1729cde39c2672d",
+    "line" : 52,
+    "diffHunk" : "@@ -1,1 +230,234 @@          val left = groupExpressionsByQualifier(resultStack.pop())\n          // Stop the loop whenever the result exceeds the `maxCnfNodeCount`\n          if (left.size * right.size > maxCnfNodeCount) {\n            logInfo(s\"As the result size exceeds the threshold $maxCnfNodeCount. \" +\n              \"The CNF conversion is skipped and returning Seq.empty now. To avoid this, you can \" +"
   }
 ]

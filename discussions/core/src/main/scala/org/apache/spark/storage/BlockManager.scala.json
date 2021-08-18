@@ -482,5 +482,104 @@
     "commit" : "a2c055715ccf2992e399cef3768b1299c24d9a82",
     "line" : 252,
     "diffHunk" : "@@ -1,1 +2052,2056 @@  private[spark] class BlockManagerDecommissionManager(conf: SparkConf) {\n    @volatile private var stopped = false\n    // Since running tasks can add more blocks this can change.\n    @volatile var allBlocksMigrated = false\n    var previousBlocksLeft = true"
+  },
+  {
+    "id" : "69521326-9285-4a97-a641-27fcfd936fe8",
+    "prId" : 28708,
+    "prUrl" : "https://github.com/apache/spark/pull/28708#pullrequestreview-447738372",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "100e536c-f7ff-4c77-b75a-c5b88df8f517",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Just for my understanding: why is decommissioner volatile now ? Would a comment help ?",
+        "createdAt" : "2020-06-19T01:48:31Z",
+        "updatedAt" : "2020-07-17T23:45:20Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4dfed59e-4b07-4647-bff0-652f14d6c2f2",
+        "parentId" : "100e536c-f7ff-4c77-b75a-c5b88df8f517",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "If we receive two decommissioning messages at the same time. we don't want to launch two of them.",
+        "createdAt" : "2020-06-19T03:05:52Z",
+        "updatedAt" : "2020-07-17T23:45:20Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6495f264-30fc-4e28-8ddf-c264ae1b4de8",
+        "parentId" : "100e536c-f7ff-4c77-b75a-c5b88df8f517",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Hmm, the creation to `decommissioner` is guarded by a lock. ",
+        "createdAt" : "2020-06-19T03:50:44Z",
+        "updatedAt" : "2020-07-17T23:45:20Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "45d246f8-a5d6-4e49-88bc-d69554c5218a",
+        "parentId" : "100e536c-f7ff-4c77-b75a-c5b88df8f517",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "That's true. If we drop it we might also accept remove block puts after we've started decommissioning though. Depends on how much we want to avoid that.",
+        "createdAt" : "2020-06-29T20:58:04Z",
+        "updatedAt" : "2020-07-17T23:45:20Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5b0bac83-6465-4406-b72c-481a6c0f01aa",
+        "parentId" : "100e536c-f7ff-4c77-b75a-c5b88df8f517",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "I think I'm going to leave it volatile for now, I'd like to avoid remote block puts once we're in decommissioning because we depend on not getting new blocks except from tasks to figure out when it is safe to exit.",
+        "createdAt" : "2020-07-14T02:20:31Z",
+        "updatedAt" : "2020-07-17T23:45:20Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8494bdd94285c7cc5a41e151da920710be7f4671",
+    "line" : 23,
+    "diffHunk" : "@@ -1,1 +246,250 @@\n  // This is volatile since if it's defined we should not accept remote blocks.\n  @volatile private var decommissioner: Option[BlockManagerDecommissioner] = None\n\n  // A DownloadFileManager used to track all the files of remote blocks which are above the"
+  },
+  {
+    "id" : "2a901300-cbf3-457a-a55b-eaeb872db352",
+    "prId" : 28708,
+    "prUrl" : "https://github.com/apache/spark/pull/28708#pullrequestreview-433770929",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3dfe86a2-a3aa-4156-b97c-86f56247b88d",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Ah I see: That's why the migratableResolver is a lazy val. \r\n\r\nIs the blockId pertinent to log here ? I believe that the class cast exception would be thrown when the resolver is not of the correct type on the first access. Would a regular function help here, or perhaps the class cast exception check can be moved inside of the migratableResolver assignment ?",
+        "createdAt" : "2020-06-19T01:56:37Z",
+        "updatedAt" : "2020-07-17T23:45:20Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6d25d548-5bc7-404a-8c00-1bcc67cf465e",
+        "parentId" : "3dfe86a2-a3aa-4156-b97c-86f56247b88d",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Yeah were logging which kind of block we received. We only really care about the type but it's easier to just print the blockId its self.",
+        "createdAt" : "2020-06-19T03:07:52Z",
+        "updatedAt" : "2020-07-17T23:45:20Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8494bdd94285c7cc5a41e151da920710be7f4671",
+    "line" : 74,
+    "diffHunk" : "@@ -1,1 +673,677 @@        return migratableResolver.putShuffleBlockAsStream(blockId, serializerManager)\n      } catch {\n        case e: ClassCastException => throw new SparkException(\n          s\"Unexpected shuffle block ${blockId} with unsupported shuffle \" +\n          s\"resolver ${shuffleManager.shuffleBlockResolver}\")"
   }
 ]

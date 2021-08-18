@@ -163,5 +163,82 @@
     "commit" : "d2468407f3d02e5a191ad373b5f2201a930cbb09",
     "line" : 16,
     "diffHunk" : "@@ -1,1 +910,914 @@          exec.id, ExecutorState.DECOMMISSIONED,\n          Some(\"worker decommissioned\"), None,\n          // worker host is being set here to let the driver know that the host (aka. worker)\n          // is also being decommissioned. So the driver can unregister all the shuffle map\n          // statues located at this host when it receives the executor lost event."
+  },
+  {
+    "id" : "4a5c43ed-f8dd-4b44-8f3e-a120472ade30",
+    "prId" : 28742,
+    "prUrl" : "https://github.com/apache/spark/pull/28742#pullrequestreview-426291962",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "363e9910-e770-4192-b0e8-4fb5c6215f61",
+        "parentId" : null,
+        "authorId" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "body" : "Why do you need to verify `waitingApps.length == 1` ?",
+        "createdAt" : "2020-06-08T06:41:47Z",
+        "updatedAt" : "2020-06-08T06:41:47Z",
+        "lastEditedBy" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0bbb8914-9020-4aad-8608-b0fb70e62aec",
+        "parentId" : "363e9910-e770-4192-b0e8-4fb5c6215f61",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "hmm..I was also thinking about this question when I was fixing. I think we can extend it to multiple apps. Let me try it.",
+        "createdAt" : "2020-06-08T07:06:06Z",
+        "updatedAt" : "2020-06-08T07:06:07Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "940bee1e-0bc4-45eb-aa45-1a50154d6cbd",
+        "parentId" : "363e9910-e770-4192-b0e8-4fb5c6215f61",
+        "authorId" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "body" : "I'm not sure how useful is this warning message, this just reflects the current status within one round of scheduling, we can tolerant the behavior to not launch a new executor on currently available workers.",
+        "createdAt" : "2020-06-08T07:11:10Z",
+        "updatedAt" : "2020-06-08T07:11:10Z",
+        "lastEditedBy" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1de0a809-2bcd-4ed7-9def-72e798db6634",
+        "parentId" : "363e9910-e770-4192-b0e8-4fb5c6215f61",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "It's from https://github.com/apache/spark/pull/25047#discussion_r311779752 originally. The warning is mainly used to detect the possible hang of an application.",
+        "createdAt" : "2020-06-08T07:15:09Z",
+        "updatedAt" : "2020-06-08T07:15:09Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3b2e3a5a-84ee-41ab-b668-b8d2e22df1c6",
+        "parentId" : "363e9910-e770-4192-b0e8-4fb5c6215f61",
+        "authorId" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "body" : "I don't like this check, but that seems to be the most simple solution for now. Let's keep it then.",
+        "createdAt" : "2020-06-08T07:21:27Z",
+        "updatedAt" : "2020-06-08T07:21:27Z",
+        "lastEditedBy" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "245bd195-7a74-464f-b918-120bc43e2b6d",
+        "parentId" : "363e9910-e770-4192-b0e8-4fb5c6215f61",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "I think the idea of ==1 is that there is only 1 active application, if more then 1, other applications could be using resources so unless you did a lot more checking. We could definitely make it a more comprehensive check in the future.  I believe this was supposed to be a simple sanity check for people playing around that may have started the cluster with not enough resources.  The standalone mode does not tell you there aren't enough and will just hang forever.",
+        "createdAt" : "2020-06-08T14:21:12Z",
+        "updatedAt" : "2020-06-08T14:21:12Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "55d47307df8f5eb7f303dd3ce4b09fbe45cf6e84",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +716,720 @@          .filter(canLaunchExecutor(_, app.desc))\n          .sortBy(_.coresFree).reverse\n        val appMayHang = waitingApps.length == 1 &&\n          waitingApps.head.executors.isEmpty && usableWorkers.isEmpty\n        if (appMayHang) {"
   }
 ]

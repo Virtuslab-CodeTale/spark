@@ -1,0 +1,57 @@
+[
+  {
+    "id" : "4d5a54a6-bb5e-446d-801e-7c5da18b0d35",
+    "prId" : 28745,
+    "prUrl" : "https://github.com/apache/spark/pull/28745#pullrequestreview-425887836",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4d2c9b15-b57f-4d6b-a9ff-21a993d3741a",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "I feel this looks not precisely correct at all cases. Seems `dataExprs` are inputs to Python UDFs. Is it possible that `groupingExprs` are not just child's outputs but expressions like `column + 1`? \r\n\r\nIn `RelationalGroupedDataset`, we added one projection previously to put these grouping expressions with original child's outputs. Now we don't have it. So can we always find semantically equal expr in `dataExprs` for a grouping expression? `dataExprs` are input expressions in left/right plan for `FlatMapCoGroupsInPandasExec`, so I guess we cannot find `column + 1` in it.\r\n\r\n",
+        "createdAt" : "2020-06-07T16:37:18Z",
+        "updatedAt" : "2020-06-09T13:14:46Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9fa07ff4-b467-4d39-a06f-19e180e3e62b",
+        "parentId" : "4d2c9b15-b57f-4d6b-a9ff-21a993d3741a",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Actually the `groupingExprs` will be projected at https://github.com/apache/spark/pull/28745/files/2800eb238465547074498eae762199a53efc4277#diff-e7c34a6080e15837af82863db34fb1c4R66 for the input iterator before the actual execution.\r\n\r\nThe `groupingExprs` were already dropped in this code without this fix https://github.com/apache/spark/pull/28745/files/2800eb238465547074498eae762199a53efc4277#diff-e7c34a6080e15837af82863db34fb1c4L93\r\n\r\nI believe there's no difference virtually in the execution path here.\r\n\r\nFor analysis,\r\n\r\nWith this change: `groupingExprs` at `FlatMapGroupsInPandasExec`, for example, `column + 1`.  The attributes `column` inside `column + 1` will be properly resolved, and then it becomes an alias to project later during execution.\r\n\r\nWithout this change: `Project`'s output contains the grouping expression as a separate attribute reference, `column + 1` (whereas the current fix keeps it as an expression). `FlatMapGroupsInPandasExec` contains the attribute reference as a grouping expression , and this grouping attribute will be used to project later.",
+        "createdAt" : "2020-06-08T01:40:14Z",
+        "updatedAt" : "2020-06-09T13:14:46Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2f33dc9f-ccd3-4495-86f9-57a26c25c1ec",
+        "parentId" : "4d2c9b15-b57f-4d6b-a9ff-21a993d3741a",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Just for doubly sure, `column + 1` case is being tested at https://github.com/apache/spark/blob/ab0890bdb18dcd0441f6082afbe4c84219611e87/python/pyspark/sql/tests/test_pandas_cogrouped_map.py#L161-L174",
+        "createdAt" : "2020-06-08T01:46:47Z",
+        "updatedAt" : "2020-06-09T13:14:46Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "36ba2b8b-b89c-45b8-833a-17b50261e36e",
+        "parentId" : "4d2c9b15-b57f-4d6b-a9ff-21a993d3741a",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "ok, looks good after re-checking. ",
+        "createdAt" : "2020-06-08T02:55:48Z",
+        "updatedAt" : "2020-06-09T13:14:46Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2bf09c0b2b009ddea5d9fe1b08c52bcee705e2f7",
+    "line" : 63,
+    "diffHunk" : "@@ -1,1 +94,98 @@    val groupingIndicesInData = groupingExprs.map { expression =>\n      dataExprs.indexWhere(expression.semanticEquals)\n    }\n\n    val groupingArgOffsets = new ArrayBuffer[Int]"
+  }
+]

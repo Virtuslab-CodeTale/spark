@@ -75,5 +75,60 @@
     "commit" : "3c0e5077722d39b25680870ba9d435aafc62466c",
     "line" : 14,
     "diffHunk" : "@@ -1,1 +37,41 @@  since = \"1.0.0\")\ncase class Average(child: Expression) extends DeclarativeAggregate with ImplicitCastInputTypes\n    with UnaryLike[Expression] {\n\n  override def prettyName: String = getTagValue(FunctionRegistry.FUNC_ALIAS).getOrElse(\"avg\")"
+  },
+  {
+    "id" : "1cb75287-88c0-43da-83e3-e446d5e2e6f7",
+    "prId" : 28754,
+    "prUrl" : "https://github.com/apache/spark/pull/28754#pullrequestreview-439951316",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8d2f90f6-6aee-45e0-8154-432d773cc04d",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "@Fokko, before you go further, can we check other DBMSes as references? I would like to avoid having a variant behaviour in Spark alone compared to other DBMSes ...",
+        "createdAt" : "2020-06-09T04:19:15Z",
+        "updatedAt" : "2020-08-19T18:10:05Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "70cd9ae0-f363-40d6-baf3-333feddd4028",
+        "parentId" : "8d2f90f6-6aee-45e0-8154-432d773cc04d",
+        "authorId" : "e29a7794-ac2e-4e6f-a690-737e83e1bace",
+        "body" : "Sure, that makes sense. See the details below, let me know if I'm missing something, but I don't think there is a real consensus on the subject.\r\n\r\n# Postgres\r\n\r\nFor postgres, it is just unsupported\r\n\r\n```\r\npostgres@366ecc8a0fb9:/$ psql\r\npsql (12.3 (Debian 12.3-1.pgdg100+1))\r\nType \"help\" for help.\r\n\r\npostgres=# SELECT CAST(CAST('2020-01-01' AS DATE) AS decimal);\r\nERROR:  cannot cast type date to numeric\r\nLINE 1: SELECT CAST(CAST('2020-01-01' AS DATE) AS decimal);\r\n               ^\r\n\r\npostgres=# SELECT CAST(CAST('2020-01-01' AS DATE) AS integer);\r\nERROR:  cannot cast type date to integer\r\nLINE 1: SELECT CAST(CAST('2020-01-01' AS DATE) AS integer);\r\n               ^\r\n\r\nThe way to get the epoch in days is:\r\n\r\npostgres=# SELECT EXTRACT(DAYS FROM (now() - '1970-01-01'));\r\ndate_part \r\n-----------\r\n    18422\r\n(1 row)\r\n```\r\n\r\n# MySQL\r\n\r\nFor MySQL it will convert it automatically to a YYYYMMDD format:\r\n\r\n```\r\nmysql> SELECT CAST(CAST('2020-01-01' AS DATE) AS decimal);\r\n+---------------------------------------------+\r\n| CAST(CAST('2020-01-01' AS DATE) AS decimal) |\r\n+---------------------------------------------+\r\n|                                    20200101 |\r\n+---------------------------------------------+\r\n1 row in set (0.00 sec)\r\n```\r\n\r\nConverting to an int is not allowed:\r\n\r\n```\r\nmysql> SELECT CAST(CAST('2020-01-01' AS DATE) AS int);\r\nERROR 1064 (42000): You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'int)' at line 1\r\n\r\nmysql> SELECT CAST(CAST('2020-01-01' AS DATE) AS bigint);\r\nERROR 1064 (42000): You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'bigint)' at line 1\r\n```\r\n\r\n# BigQuery\r\n\r\nUnsupported\r\n\r\n![image](https://user-images.githubusercontent.com/1134248/84114035-ede8e400-aa2b-11ea-9c0c-d0764164d549.png)\r\n\r\nhttps://cloud.google.com/bigquery/docs/reference/standard-sql/conversion_rules\r\n\r\n# Excel\r\n\r\nThe greatest DBMS of them all:\r\n\r\n![image](https://user-images.githubusercontent.com/1134248/84115283-18d43780-aa2e-11ea-859e-f13c6a2cc467.png)\r\n\r\nWhich is the epoch since 01-01-1900 :)\r\n",
+        "createdAt" : "2020-06-09T06:48:39Z",
+        "updatedAt" : "2020-08-19T18:10:05Z",
+        "lastEditedBy" : "e29a7794-ac2e-4e6f-a690-737e83e1bace",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "437649b7-e860-469e-b297-7f32fc8dfcca",
+        "parentId" : "8d2f90f6-6aee-45e0-8154-432d773cc04d",
+        "authorId" : "e29a7794-ac2e-4e6f-a690-737e83e1bace",
+        "body" : "For Avro it is milliseconds since epoch:\r\nhttps://github.com/apache/avro/blob/master/lang/java/avro/src/main/java/org/apache/avro/reflect/DateAsLongEncoding.java\r\n\r\nFor Parquet it is days since epoch:\r\nhttps://github.com/apache/parquet-format/blob/master/LogicalTypes.md#date\r\n\r\nAlso ORC is based around days since Epoch:\r\nhttps://github.com/apache/orc/blob/master/java/core/src/java/org/threeten/extra/chrono/HybridDate.java\r\n\r\nAlso with this, we keep parity with the Catalyst type :)",
+        "createdAt" : "2020-06-11T21:39:43Z",
+        "updatedAt" : "2020-08-19T18:10:05Z",
+        "lastEditedBy" : "e29a7794-ac2e-4e6f-a690-737e83e1bace",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8f18d349-6f98-4e5f-97c4-9eddd48febdc",
+        "parentId" : "8d2f90f6-6aee-45e0-8154-432d773cc04d",
+        "authorId" : "e29a7794-ac2e-4e6f-a690-737e83e1bace",
+        "body" : "@HyukjinKwon what are your thoughts on this? Can we move this forward?",
+        "createdAt" : "2020-06-30T12:12:19Z",
+        "updatedAt" : "2020-08-19T18:10:05Z",
+        "lastEditedBy" : "e29a7794-ac2e-4e6f-a690-737e83e1bace",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f4992025c07b0aa7a7261a26f4f073add286be70",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +41,45 @@  override def children: Seq[Expression] = child :: Nil\n\n  override def inputTypes: Seq[AbstractDataType] = Seq(NumericType, DateType)\n\n  override def checkInputDataTypes(): TypeCheckResult = {"
   }
 ]

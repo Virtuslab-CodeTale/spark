@@ -1,0 +1,90 @@
+[
+  {
+    "id" : "f161190b-fe74-4399-8365-7bf55bbd7eda",
+    "prId" : 28733,
+    "prUrl" : "https://github.com/apache/spark/pull/28733#pullrequestreview-428462519",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b592e57f-c09f-4655-a762-dd64f2636a87",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "```\r\n          case NaturalJoin(_) => sys.error(\"Untransformed NaturalJoin node\")\r\n          case UsingJoin(_, _) => sys.error(\"Untransformed Using join node\")\r\n```\r\nWe need this error checks inside this rule?",
+        "createdAt" : "2020-06-10T14:33:05Z",
+        "updatedAt" : "2020-06-11T00:53:20Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d4686b55-b78c-4204-9ae7-fbbbb96ab425",
+        "parentId" : "b592e57f-c09f-4655-a762-dd64f2636a87",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "This is actually the same as the rule PushPredicateThroughJoin.\r\nLet's keep the current way.",
+        "createdAt" : "2020-06-10T22:09:02Z",
+        "updatedAt" : "2020-06-11T00:53:20Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b42ce1dde86069a74ebbda44a1729cde39c2672d",
+    "line" : 58,
+    "diffHunk" : "@@ -1,1 +56,60 @@          case FullOuter => j\n          case NaturalJoin(_) => sys.error(\"Untransformed NaturalJoin node\")\n          case UsingJoin(_, _) => sys.error(\"Untransformed Using join node\")\n        }\n      }"
+  },
+  {
+    "id" : "5ef49a5c-d187-4733-be9e-c36c97462be8",
+    "prId" : 28733,
+    "prUrl" : "https://github.com/apache/spark/pull/28733#pullrequestreview-428784206",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5d4d9e16-7d19-4726-89ef-6683a1a1038f",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "To avoid unnecessary computation, could we filter out this case in line 33? https://github.com/apache/spark/pull/28733/files#diff-a1c24ad0e0caa15f53ff24287aeb09feR33",
+        "createdAt" : "2020-06-10T14:34:17Z",
+        "updatedAt" : "2020-06-11T00:53:20Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c322ee67-15e1-4f16-9312-1ee6e7bb7779",
+        "parentId" : "5d4d9e16-7d19-4726-89ef-6683a1a1038f",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "ok",
+        "createdAt" : "2020-06-10T22:10:39Z",
+        "updatedAt" : "2020-06-11T00:53:20Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fab498ec-2064-402d-878a-b29e85d2dad0",
+        "parentId" : "5d4d9e16-7d19-4726-89ef-6683a1a1038f",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "I got such error in build\r\n```\r\n[error] [warn] /Users/gengliang.wang/projects/spark/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/optimizer/PushCNFPredicateThroughJoin.scala:50: match may not be exhaustive.\r\n[error] It would fail on the following input: FullOuter\r\n[error] [warn]         joinType match {\r\n[error] [warn] \r\n```",
+        "createdAt" : "2020-06-11T00:50:58Z",
+        "updatedAt" : "2020-06-11T00:53:20Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1a72abf3-feb3-4777-abf0-5bd0fa4f60df",
+        "parentId" : "5d4d9e16-7d19-4726-89ef-6683a1a1038f",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Ur, one more nit comment; probably, to avoid the unecessary CNF computation for a full-outer join case, we can write it like this;\r\n```\r\n  private def canPushPredicateThroughJoin(joinType: JoinType): Boolean = joinType match {\r\n    case _: InnerLike | LeftSemi | RightOuter | LeftOuter | LeftAnti | ExistenceJoin(_) => true\r\n    case _ => false\r\n  }\r\n\r\n  def apply(plan: LogicalPlan): LogicalPlan = plan transform {\r\n    case j @ Join(left, right, joinType, Some(joinCondition), hint)\r\n        if canPushPredicateThroughJoin(joinType) =>\r\n      val predicates = conjunctiveNormalForm(joinCondition)\r\n      if (predicates.isEmpty) {\r\n        j\r\n      } else {\r\n        ...\r\n        joinType match {\r\n          case _: InnerLike | LeftSemi =>\r\n            Join(newLeft, newRight, joinType, Some(joinCondition), hint)\r\n          case RightOuter =>\r\n            Join(newLeft, right, RightOuter, Some(joinCondition), hint)\r\n          case LeftOuter | LeftAnti | ExistenceJoin(_) =>\r\n            Join(left, newRight, joinType, Some(joinCondition), hint)\r\n          case jt =>\r\n            sys.error(s\"Unexpected join type: $jt\")\r\n        }\r\n      }\r\n```",
+        "createdAt" : "2020-06-11T10:26:44Z",
+        "updatedAt" : "2020-06-11T10:26:45Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b42ce1dde86069a74ebbda44a1729cde39c2672d",
+    "line" : 56,
+    "diffHunk" : "@@ -1,1 +54,58 @@          case LeftOuter | LeftAnti | ExistenceJoin(_) =>\n            Join(left, newRight, joinType, Some(joinCondition), hint)\n          case FullOuter => j\n          case NaturalJoin(_) => sys.error(\"Untransformed NaturalJoin node\")\n          case UsingJoin(_, _) => sys.error(\"Untransformed Using join node\")"
+  }
+]

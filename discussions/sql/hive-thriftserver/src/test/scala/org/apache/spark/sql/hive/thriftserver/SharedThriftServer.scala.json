@@ -64,5 +64,137 @@
     "commit" : "c00ac4eefeee7262f252e4cdb811502523c9b0e2",
     "line" : 63,
     "diffHunk" : "@@ -1,1 +90,94 @@\n    try {\n      hiveServer2 = HiveThriftServer2.startWithContext(sqlContext)\n      hiveServer2.getServices.asScala.foreach {\n        case t: ThriftCLIService =>"
+  },
+  {
+    "id" : "8f9a4146-1770-4e56-9d93-388e7d921bff",
+    "prId" : 28751,
+    "prUrl" : "https://github.com/apache/spark/pull/28751#pullrequestreview-427077485",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e104ea02-49a0-4276-93c2-b7b1bd44dfd8",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "so we may not output this log?",
+        "createdAt" : "2020-06-08T12:10:59Z",
+        "updatedAt" : "2020-06-09T12:42:50Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4b46bd26-f848-486b-9f4e-28436a6e88c1",
+        "parentId" : "e104ea02-49a0-4276-93c2-b7b1bd44dfd8",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "Before this fix, yes. The port binding is in another background thread.",
+        "createdAt" : "2020-06-08T12:16:42Z",
+        "updatedAt" : "2020-06-09T12:42:50Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5ff31d3c-e556-4c57-8f07-edf061c3ed64",
+        "parentId" : "e104ea02-49a0-4276-93c2-b7b1bd44dfd8",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "how does this patch fix it? It seems you just added a try-catch?",
+        "createdAt" : "2020-06-08T12:22:31Z",
+        "updatedAt" : "2020-06-09T12:42:50Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c7d25b26-49e0-43a8-8895-eb74caecc49f",
+        "parentId" : "e104ea02-49a0-4276-93c2-b7b1bd44dfd8",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "With https://github.com/apache/spark/pull/28751/files#diff-7610697b4f8f1bc4842c77e50807914cR178 and its implementations, the port binding is done in the same thread where we call `getPortNumber` later.",
+        "createdAt" : "2020-06-08T12:25:26Z",
+        "updatedAt" : "2020-06-09T12:42:50Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d643e2a5-44d6-4664-8e92-6e4540d13ccb",
+        "parentId" : "e104ea02-49a0-4276-93c2-b7b1bd44dfd8",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "https://github.com/apache/spark/pull/28651#discussion_r435932239 . there was a discussion with @juliuszsompolski before ",
+        "createdAt" : "2020-06-08T12:27:27Z",
+        "updatedAt" : "2020-06-09T12:42:50Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3b716b7c-7491-45c3-a2db-2fea1dbcd241",
+        "parentId" : "e104ea02-49a0-4276-93c2-b7b1bd44dfd8",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "ah I see!",
+        "createdAt" : "2020-06-08T12:36:26Z",
+        "updatedAt" : "2020-06-09T12:42:50Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a75a3d50-7780-47b5-91bb-c64c824ef932",
+        "parentId" : "e104ea02-49a0-4276-93c2-b7b1bd44dfd8",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "Take `ThriftBinaryCLIService` for an example\r\nBefore:\r\n  we do `TThreadPoolServer` initialization and `serve` in the same `run` function of the background thread.  Then if we call getPortNumber right after `startWithContext`, concurrency issue will occur. The `portNum` may not reset yet when we call.\r\n\r\nAfter:\r\n we do `TThreadPoolServer` initialization in the current thread and do `serve` in the `run` function of the background thread.\r\n",
+        "createdAt" : "2020-06-08T12:37:39Z",
+        "updatedAt" : "2020-06-09T12:42:50Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "405b8b30-7086-4860-9dde-8c672888c848",
+        "parentId" : "e104ea02-49a0-4276-93c2-b7b1bd44dfd8",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Ah, I see. Nice catch.",
+        "createdAt" : "2020-06-09T12:26:16Z",
+        "updatedAt" : "2020-06-09T12:42:50Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "04f0a1cb58897fc272a3021e68a19cfd2ecf26b9",
+    "line" : 52,
+    "diffHunk" : "@@ -1,1 +92,96 @@        case t: ThriftCLIService =>\n          serverPort = t.getPortNumber\n          logInfo(s\"Started HiveThriftServer2: port=$serverPort, attempt=$attempt\")\n        case _ =>\n      }"
+  },
+  {
+    "id" : "869a6ab1-e8dd-4141-86de-6b1fd51ad106",
+    "prId" : 28751,
+    "prUrl" : "https://github.com/apache/spark/pull/28751#pullrequestreview-427105350",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "53a130ef-292c-48c8-bdf2-f14c2889c865",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "nit format:\r\n```\r\nprivate lazy val jdbcUri = if (mode == ServerMode.http) {\r\n    s\"jdbc:hive2://localhost:$serverPort/default;transportMode=http;httpPath=cliservice\"\r\n  } else {\r\n    s\"jdbc:hive2://localhost:$serverPort\"\r\n  }\r\n```\r\n?",
+        "createdAt" : "2020-06-09T12:16:05Z",
+        "updatedAt" : "2020-06-09T12:42:50Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "740d76e0-26ca-4676-a6b2-4c84beb3ddb5",
+        "parentId" : "53a130ef-292c-48c8-bdf2-f14c2889c865",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I think the existing format is correct.",
+        "createdAt" : "2020-06-09T12:48:48Z",
+        "updatedAt" : "2020-06-09T12:48:48Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "04f0a1cb58897fc272a3021e68a19cfd2ecf26b9",
+    "line" : 17,
+    "diffHunk" : "@@ -1,1 +60,64 @@  } else {\n    s\"jdbc:hive2://localhost:$serverPort\"\n  }\n\n  protected def withJdbcStatement(fs: (Statement => Unit)*): Unit = {"
   }
 ]

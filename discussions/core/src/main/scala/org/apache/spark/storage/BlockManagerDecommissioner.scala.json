@@ -669,5 +669,236 @@
     "commit" : "e81c3fc2d0b8c28cd0aedf08a7ea1e86a153ae49",
     "line" : 181,
     "diffHunk" : "@@ -1,1 +368,372 @@  }\n\n  /*\n   *  Returns the last migration time and a boolean for if all blocks have been migrated.\n   *  The last migration time is calculated to be the minimum of the last migration of any"
+  },
+  {
+    "id" : "773ca4a7-47ff-4c6e-a387-3b81cf21655e",
+    "prId" : 28708,
+    "prUrl" : "https://github.com/apache/spark/pull/28708#pullrequestreview-430105527",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "874776b2-f413-4199-8fdb-032966f2701b",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "This code tries to copy the shuffled blocks to exactly one other live peer (ie offloads to another live peer), by virtue of the fact that `shufflesToMigrate` is polled. This should be documented :-) Its quite subtle as it currently reads.\r\n\r\nSecond, can we dedup this logic with the `replicate` codepath used for replicating `cached` blocks. The only semantic difference is wrt to you want to copy the block to one peer vs N peers (for replicate). The rest of the machinery should be shareable. ",
+        "createdAt" : "2020-06-12T04:12:52Z",
+        "updatedAt" : "2020-07-17T23:45:20Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dc549117-956d-434e-b7af-fc0eddfec966",
+        "parentId" : "874776b2-f413-4199-8fdb-032966f2701b",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "So it tries to migrate to whichever live peer is available first, and if that fails re-inserts the shuffle file into the queue.\r\n\r\nThe cache block one is different in a few ways: 1) we have a policy for determining what the replication target host is based on the current replication info in the block, 2) we only have to migrate one block at a time (here we have two separate blocks that need to migrate).\r\n\r\nI think the producer/consumer model is optimal for the shuffle blocks where we just want to migrate them quickly, but not a good fit for the cache blocks where we have a policy to choose a target block manager for a given block.",
+        "createdAt" : "2020-06-12T12:24:54Z",
+        "updatedAt" : "2020-07-17T23:45:20Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c6165d43-5b4b-4a17-961e-a509110fe178",
+        "parentId" : "874776b2-f413-4199-8fdb-032966f2701b",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Thank you !. This is a great explanation and perhaps should go into the code as code comments as well :-). ",
+        "createdAt" : "2020-06-12T16:04:53Z",
+        "updatedAt" : "2020-07-17T23:45:20Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ccc85ce5-aced-4d72-81a0-3d4a77b6384b",
+        "parentId" : "874776b2-f413-4199-8fdb-032966f2701b",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Cool, I'll add this in the code up above the loop where we launch the two different migrations :)",
+        "createdAt" : "2020-06-13T02:12:58Z",
+        "updatedAt" : "2020-07-17T23:45:20Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8494bdd94285c7cc5a41e151da920710be7f4671",
+    "line" : 210,
+    "diffHunk" : "@@ -1,1 +208,212 @@    migrationPeers ++= newPeers.map { peer =>\n      logDebug(s\"Starting thread to migrate shuffle blocks to ${peer}\")\n      val runnable = new ShuffleMigrationRunnable(peer)\n      shuffleMigrationPool.submit(runnable)\n      (peer, runnable)"
+  },
+  {
+    "id" : "bede07b1-86e8-49cd-b17b-9483d04f8ce3",
+    "prId" : 28708,
+    "prUrl" : "https://github.com/apache/spark/pull/28708#pullrequestreview-430905401",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "71c68323-4a8f-455f-b22d-9778a8f3c4e4",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Could you use more specific `Exception` type?",
+        "createdAt" : "2020-06-14T17:53:55Z",
+        "updatedAt" : "2020-07-17T23:45:20Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "264a1c4a-0f1a-4448-aa91-273ac2330439",
+        "parentId" : "71c68323-4a8f-455f-b22d-9778a8f3c4e4",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "I kind of want to catch everything here though and just log it while re-inserting the shuffle into the queue if applicable, so I thin narrowing the scope here isn't the right thing to do.",
+        "createdAt" : "2020-06-15T18:49:25Z",
+        "updatedAt" : "2020-07-17T23:45:20Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8494bdd94285c7cc5a41e151da920710be7f4671",
+    "line" : 103,
+    "diffHunk" : "@@ -1,1 +101,105 @@        // if we encounter errors migrating to an executor we want to stop.\n      } catch {\n        case e: Exception =>\n          migrating match {\n            case Some((shuffleMap, retryCount)) =>"
+  },
+  {
+    "id" : "61d51511-2d99-4668-a161-76798f502574",
+    "prId" : 28708,
+    "prUrl" : "https://github.com/apache/spark/pull/28708#pullrequestreview-451119629",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5dcd0e5f-0acb-4363-b7c6-6644b998be28",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Should we inline SLEEP_TIME_SECS ? \r\n\r\nAnd why sleep 1 second ? Why not like 100ms ? \r\n\r\nI also wonder if it would complicate the code a lot to switch this to a blocked poll, and use a poison pill when running is made false ? We wouldn't need the \"polling\" then.\r\n",
+        "createdAt" : "2020-06-19T02:00:58Z",
+        "updatedAt" : "2020-07-17T23:45:20Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "65216606-e8d0-4ae5-b16d-7481cf1232b8",
+        "parentId" : "5dcd0e5f-0acb-4363-b7c6-6644b998be28",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Let me think about that, I'm not sure it's worth the complexity increase.",
+        "createdAt" : "2020-06-19T03:12:07Z",
+        "updatedAt" : "2020-07-17T23:45:20Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "46496c32-e73e-4c7b-b913-28c1bc6a279e",
+        "parentId" : "5dcd0e5f-0acb-4363-b7c6-6644b998be28",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "I agree. I think one second polling is fine but its a magic number that raises questions nevertheless ;-) ",
+        "createdAt" : "2020-06-19T03:51:50Z",
+        "updatedAt" : "2020-07-17T23:45:20Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6df8629d-9bbc-490e-8f23-782b704ef001",
+        "parentId" : "5dcd0e5f-0acb-4363-b7c6-6644b998be28",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "I think this is fine as I have seen this pattern used in the code somewhere else too, ie.:\r\nhttps://github.com/apache/spark/blob/026b0b926dfd40038f2cee932f38b917eb25b77e/core/src/main/scala/org/apache/spark/storage/BlockManager.scala#L520\r\n\r\nI believe this is for emphasizing here is something to be set only once with a correct default (by code as opposed to a config param). So reading the code it raises attention that here an important choice was made. ",
+        "createdAt" : "2020-07-19T10:41:50Z",
+        "updatedAt" : "2020-07-19T11:05:14Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8494bdd94285c7cc5a41e151da920710be7f4671",
+    "line" : 74,
+    "diffHunk" : "@@ -1,1 +72,76 @@              // Nothing to do right now, but maybe a transfer will fail or a new block\n              // will finish being committed.\n              val SLEEP_TIME_SECS = 1\n              Thread.sleep(SLEEP_TIME_SECS * 1000L)\n            case Some((shuffleBlockInfo, retryCount)) =>"
+  },
+  {
+    "id" : "0feee04d-22cc-4891-b8e4-7cbe008c57df",
+    "prId" : 28708,
+    "prUrl" : "https://github.com/apache/spark/pull/28708#pullrequestreview-433770929",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "31f4e930-ed9f-4fb6-aa2c-5ccd3fa9ae9a",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "The default setting of STORAGE_DECOMMISSION_REPLICATION_REATTEMPT_INTERVAL is 30 seconds. I think that is too high considering that ideally should work on the migration asap as the new blocks are written ? \r\n\r\nShould we reduce that ? In addition, `decommissionRddCacheBlocks` method will synchronously block until all RDD blocks have been migrated (I believe). That will further lead to more time loss.\r\n\r\nWhen a node is being decom'd, it does not have a lot of time. For example spot kills are like given 2 minutes to clean up. So I think we should make sure that the decommissioner is going as fast as needed. I am wondering if there should be two runnables here: one for shuffle blocks and one for persisted blocks ? ",
+        "createdAt" : "2020-06-19T02:35:03Z",
+        "updatedAt" : "2020-07-17T23:45:20Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cb9c6445-93c6-44d2-80d9-44099f00c1ae",
+        "parentId" : "31f4e930-ed9f-4fb6-aa2c-5ccd3fa9ae9a",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Yeah we can split this into two threads to simplify matters.",
+        "createdAt" : "2020-06-19T03:14:54Z",
+        "updatedAt" : "2020-07-17T23:45:20Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8494bdd94285c7cc5a41e151da920710be7f4671",
+    "line" : 143,
+    "diffHunk" : "@@ -1,1 +141,145 @@          logInfo(\"Attempt to replicate all cached blocks done\")\n          logInfo(s\"Waiting for ${sleepInterval} before refreshing migrations.\")\n          Thread.sleep(sleepInterval)\n        } catch {\n          case e: InterruptedException =>"
+  },
+  {
+    "id" : "7a54e8b4-1c91-436b-baad-75b7b3252e5f",
+    "prId" : 28708,
+    "prUrl" : "https://github.com/apache/spark/pull/28708#pullrequestreview-433770929",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "31e46e99-626d-4f3a-a5ea-1b8cdd6b20c3",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "new line before this comment block ?",
+        "createdAt" : "2020-06-19T02:35:30Z",
+        "updatedAt" : "2020-07-17T23:45:20Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8b5d706d-5451-40a0-a336-287d7c57a253",
+        "parentId" : "31e46e99-626d-4f3a-a5ea-1b8cdd6b20c3",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "sure",
+        "createdAt" : "2020-06-19T03:15:09Z",
+        "updatedAt" : "2020-07-17T23:45:20Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8494bdd94285c7cc5a41e151da920710be7f4671",
+    "line" : 188,
+    "diffHunk" : "@@ -1,1 +186,190 @@    conf.get(config.STORAGE_DECOMMISSION_SHUFFLE_MAX_THREADS))\n\n  /**\n   * Tries to offload all shuffle blocks that are registered with the shuffle service locally.\n   * Note: this does not delete the shuffle files in-case there is an in-progress fetch"
+  },
+  {
+    "id" : "57076613-1e19-4294-a259-f05f34980cd0",
+    "prId" : 28708,
+    "prUrl" : "https://github.com/apache/spark/pull/28708#pullrequestreview-448737816",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "02db571c-4433-42c2-81c9-ea6d06b6c3f6",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Could you add an explanation for the entry type, especially for the `Int`?",
+        "createdAt" : "2020-07-15T08:28:11Z",
+        "updatedAt" : "2020-07-17T23:45:20Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8494bdd94285c7cc5a41e151da920710be7f4671",
+    "line" : 120,
+    "diffHunk" : "@@ -1,1 +118,122 @@  // Shuffles which are queued for migration & number of retries so far.\n  private[storage] val shufflesToMigrate =\n    new java.util.concurrent.ConcurrentLinkedQueue[(ShuffleBlockInfo, Int)]()\n\n  // Set if we encounter an error attempting to migrate and stop."
   }
 ]

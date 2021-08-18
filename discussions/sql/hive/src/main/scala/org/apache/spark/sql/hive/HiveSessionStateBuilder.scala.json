@@ -1,0 +1,68 @@
+[
+  {
+    "id" : "294dbef2-f12e-477a-88d6-00e168dd6669",
+    "prId" : 28686,
+    "prUrl" : "https://github.com/apache/spark/pull/28686#pullrequestreview-424165215",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b3f06dbc-6541-4a3d-9968-e0bd029e0362",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "`DetermineTableStats` updates statistics in `HiveTableRelation` for some cases. Updated statistics will be propagated into `HadoopFsRelation` and so the `sizeInBytes` depends on it.\r\n\r\nAs you change the order of `DetermineTableStats` to after `RelationConversions`, it could change the  `sizeInBytes` of converted `HadoopFsRelation`.\r\n\r\nThat said, if the user is willing to use `fallBackToHdfsForStatsEnabled` to calculate table size, this change will make it not work as before.",
+        "createdAt" : "2020-06-03T19:38:39Z",
+        "updatedAt" : "2020-07-01T21:31:44Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4a2cd7ed-814d-4eb9-b9f5-dc544f0c6974",
+        "parentId" : "b3f06dbc-6541-4a3d-9968-e0bd029e0362",
+        "authorId" : "f3166ab8-4dba-4d22-b10b-31a984dfa2ad",
+        "body" : "@viirya Hive tables are converted To `HiveTableScanExec` instead of `Logical Relation`(which inturn uses HadoopFSRelation) . This happens in `org.apache.spark.sql.hive.HiveStrategies.HiveTableScans` . It will not affect HadoopFSRelation I think. Let me know if I am missing some thing\r\nNote: conversion to HiveTableScanExec happen for Hive table with any formats other than Parquet and Orc.\r\nIn case or Orc and Parquet, it happens when the flag to convert to datasource table is disabled.\r\n",
+        "createdAt" : "2020-06-03T19:59:10Z",
+        "updatedAt" : "2020-07-01T21:31:44Z",
+        "lastEditedBy" : "f3166ab8-4dba-4d22-b10b-31a984dfa2ad",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5e58edf2-40c4-4ad0-a25e-4a30ce5f273e",
+        "parentId" : "b3f06dbc-6541-4a3d-9968-e0bd029e0362",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "I mean previously `DetermineTableStats` will calculate table size and update in `HiveTableRelation` before `RelationConversions`.  Then in `RelationConversions`, this calculated table size will be propagated into `HadoopFsRelation` and used by `sizeInBytes`.\r\n\r\nNow as you change the rule order, when running `RelationConversions`, even users enable `fallBackToHdfsForStatsEnabled`, the `HadoopFsRelation` won't get the table size calculated in `DetermineTableStats` (because this rule is run after `RelationConversions` now).",
+        "createdAt" : "2020-06-03T20:17:21Z",
+        "updatedAt" : "2020-07-01T21:31:44Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5ed3ad23-bbec-4651-8f6d-fb9833ff3335",
+        "parentId" : "b3f06dbc-6541-4a3d-9968-e0bd029e0362",
+        "authorId" : "f3166ab8-4dba-4d22-b10b-31a984dfa2ad",
+        "body" : "@viirya Thanks for catching this, I think this re-order will not be useful. I will decline this pull request.",
+        "createdAt" : "2020-06-04T06:02:10Z",
+        "updatedAt" : "2020-07-01T21:31:44Z",
+        "lastEditedBy" : "f3166ab8-4dba-4d22-b10b-31a984dfa2ad",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fc4d1425-ef9b-4226-8ebe-def2b26c7c98",
+        "parentId" : "b3f06dbc-6541-4a3d-9968-e0bd029e0362",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "> Updated statistics will be propagated into HadoopFsRelation and so the sizeInBytes depends on it.\r\n\r\nAh, I see. I missed that code flow.",
+        "createdAt" : "2020-06-04T07:19:43Z",
+        "updatedAt" : "2020-07-01T21:31:44Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3ce6fbb20204b77d20043709a7fd05c72a8b98bd",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +84,88 @@      new DetectAmbiguousSelfJoin(conf) +:\n        RelationConversions(conf, catalog) +:\n        new DetermineTableStats(session) +:\n        PreprocessTableCreation(session) +:\n        PreprocessTableInsertion(conf) +:"
+  }
+]

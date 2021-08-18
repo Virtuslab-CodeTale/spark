@@ -581,5 +581,27 @@
     "commit" : "e81c3fc2d0b8c28cd0aedf08a7ea1e86a153ae49",
     "line" : 4,
     "diffHunk" : "@@ -1,1 +443,447 @@            logError(s\"Unexpected error during decommissioning ${e.toString}\", e)\n        }\n        // Send decommission message to the executor, this may be a duplicate since the executor\n        // could have been the one to notify us. But it's also possible the notification came from\n        // elsewhere and the executor does not yet know."
+  },
+  {
+    "id" : "d6e321d2-2d21-43d4-8c4f-5cc3ad4a898d",
+    "prId" : 28746,
+    "prUrl" : "https://github.com/apache/spark/pull/28746#pullrequestreview-425902897",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "059a392e-0afb-486c-af39-9f9d27591bcd",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "This change fixes the failure of test `org.apache.spark.launcher.LauncherBackendSuite.standalone/client: launcher handle`. After sleeping one more second, the application launched by the `SparkLauncher` now has a chance to submit tasks to TaskScheduler and call `reviveOffers` on the SchedulerBackend. At the same time, the `SparkLauncher` will ask the application to stop. Therefore, the SchedulerBackend could have been already stopped when it receives `ReviveOffers` messages, which would fail the entire application at the end.\r\n\r\nSo, I use ` Utils.tryLogNonFatalError` to fix it and I think this should be fine since we've already use it at:\r\n\r\nhttps://github.com/apache/spark/blob/c560428fe0113f17362bae2b369910049914696f/core/src/main/scala/org/apache/spark/scheduler/cluster/CoarseGrainedSchedulerBackend.scala#L137-L139\r\n\r\n ",
+        "createdAt" : "2020-06-08T04:00:45Z",
+        "updatedAt" : "2020-07-13T02:06:02Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "59a0595c8177ff801d0f7cbcc1fe6c458bcb844c",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +561,565 @@  }\n\n  override def reviveOffers(): Unit = Utils.tryLogNonFatalError {\n    driverEndpoint.send(ReviveOffers)\n  }"
   }
 ]

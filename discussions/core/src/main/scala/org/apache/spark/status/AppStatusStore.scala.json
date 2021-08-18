@@ -185,5 +185,38 @@
     "commit" : "769ce48b4f1500e65c9548e2bdc93d5c8e01079f",
     "line" : 36,
     "diffHunk" : "@@ -1,1 +455,459 @@    tasks.filter(t => t.status.equalsIgnoreCase(\"failed\"))\n      .flatMap(t => t.failureReason)\n      .groupBy(e => (e.failureType, e.message))\n      .values\n      .map(t => new v1.FailureSummary(t.head, t.length))"
+  },
+  {
+    "id" : "a9006a47-a5c0-4f20-bf13-174b2cdaaa37",
+    "prId" : 28769,
+    "prUrl" : "https://github.com/apache/spark/pull/28769#pullrequestreview-428373840",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "47daa0a7-2f74-4b25-9eb5-85b8fa263d8c",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "(OFF-TOPIC, as my comment is for further PR, the change itself looks OK.)\r\n\r\n@srowen \r\nThis change shows the drawback if we fix the leak properly. I'm trying to implement at least `Iterable` to the `KVStoreIterator` so that `iterator().asScala` would work, but still require much more lines than before.\r\n\r\nI also see what you meant by toSeq - some callers don't materialize full list and still want to have stream, but then we can't apply the resource cleanup there. I'd say we cannot give up resource cleanup even for that case - looks like there's no choice but just materialize if it is not known to be a huge stream, otherwise just pass KVStoreIterator as a return and let caller deal with cleanup.\r\n\r\nDoes it make sense?",
+        "createdAt" : "2020-06-10T19:31:26Z",
+        "updatedAt" : "2020-06-14T03:10:06Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8af3e637-10d4-455a-8744-b24e214635fd",
+        "parentId" : "47daa0a7-2f74-4b25-9eb5-85b8fa263d8c",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "An Iterator shouldn't be Iterable, really... hm, what about explicitly draining the iterator to a Seq in the methods that call asScala, so we can manage the iterator lifecycle? \r\n\r\nAssuming there isn't much data there, materializing it could be fine. Or expose some other explicit method that returns the results from KVStore as a Seq, rather than just an iterator, if necessary.\r\n\r\nI still don't quite see how the iterator doesn't get closed; surely the .asScala wrapper has to evaluate all elements in the underlying iterator to produce the final filtered/mapped Seq. Hm. Maybe just being more explicit is better",
+        "createdAt" : "2020-06-10T19:43:57Z",
+        "updatedAt" : "2020-06-14T03:10:06Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9bcc084160021dd9a7dc1d573b787075016e9f01",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +40,44 @@    try {\n      // The ApplicationInfo may not be available when Spark is starting up.\n      Utils.tryWithResource(\n        store.view(classOf[ApplicationInfoWrapper])\n          .max(1)"
   }
 ]

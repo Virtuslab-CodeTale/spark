@@ -295,5 +295,60 @@
     "commit" : "612426e34e29229aa2187e8775ee0e453288c75d",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +414,418 @@        # Slice the DataFrame to be batched\n        step = -(-len(pdf) // self.sparkContext.defaultParallelism)  # round int up\n        pdf_slices = (pdf.iloc[start:start + step] for start in xrange(0, len(pdf), step))\n\n        # Create list of Arrow (columns, type) for serializer dump_stream"
+  },
+  {
+    "id" : "fd061c76-66e8-4467-9386-3fdad2bf1430",
+    "prId" : 28743,
+    "prUrl" : "https://github.com/apache/spark/pull/28743#pullrequestreview-427959183",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "061f2d0c-cdf3-41bd-a912-2453e118c09a",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Why don't we follow nullability anymore?",
+        "createdAt" : "2020-06-10T03:46:05Z",
+        "updatedAt" : "2020-06-11T14:37:02Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6d1210ff-8570-4936-8662-faea72ae52a2",
+        "parentId" : "061f2d0c-cdf3-41bd-a912-2453e118c09a",
+        "authorId" : "19b2f27e-11d4-4e35-89e0-140cc4b3f40b",
+        "body" : "`infer_type` only returns a type, not a `field`, which would supposedly have nullability information. But it appears that in the implementation of `Schema.from_pandas` ([link](https://github.com/apache/arrow/blob/b058cf0d1c26ad7984c104bb84322cc7dcc66f00/python/pyarrow/types.pxi#L1328)), inferring nullability was not actually done and the default `nullable=True` would always be returned. So this change is just following the existing behaviour of `Schema.from_pandas`.",
+        "createdAt" : "2020-06-10T04:50:08Z",
+        "updatedAt" : "2020-06-11T14:37:02Z",
+        "lastEditedBy" : "19b2f27e-11d4-4e35-89e0-140cc4b3f40b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6ea059db-6554-4c44-9532-fa039f5dcaed",
+        "parentId" : "061f2d0c-cdf3-41bd-a912-2453e118c09a",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Let's add a comment here to explain it?",
+        "createdAt" : "2020-06-10T06:28:58Z",
+        "updatedAt" : "2020-06-11T14:37:02Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "47fcdcf8-d28d-47df-9d98-e6b791e00efe",
+        "parentId" : "061f2d0c-cdf3-41bd-a912-2453e118c09a",
+        "authorId" : "19b2f27e-11d4-4e35-89e0-140cc4b3f40b",
+        "body" : "Sounds good, will update with a comment.\r\n\r\nAlternatively, `any(s.isna())` could be checked if we wanted to actively infer nullability here. This would change existing behavior as well as being inconsistent with the non-Arrow path, though, which similarly defaults to inferred types being nullable: https://github.com/apache/spark/blob/43063e2db2bf7469f985f1954d8615b95cf5c578/python/pyspark/sql/types.py#L1069",
+        "createdAt" : "2020-06-10T11:26:30Z",
+        "updatedAt" : "2020-06-11T14:37:02Z",
+        "lastEditedBy" : "19b2f27e-11d4-4e35-89e0-140cc4b3f40b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "01fb6a4c25f830ec6a52d1030b2a6790a3dbae4f",
+    "line" : 31,
+    "diffHunk" : "@@ -1,1 +410,414 @@                # nullability is not determined on types inferred by Arrow or\n                # by the non-Arrow conversion path, so default to nullable\n                struct.add(name, from_arrow_type(t), nullable=True)\n            schema = struct\n"
   }
 ]
