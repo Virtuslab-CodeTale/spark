@@ -1,0 +1,112 @@
+[
+  {
+    "id" : "6fb869ec-40b5-41dd-89f4-3d7e8097c0f4",
+    "prId" : 30650,
+    "prUrl" : "https://github.com/apache/spark/pull/30650#pullrequestreview-563196665",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "dd8836da-638c-4b80-a459-fa72485c4cfa",
+        "parentId" : null,
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "Do this for barrier tasks only if schedule goes through ?",
+        "createdAt" : "2020-12-23T19:03:03Z",
+        "updatedAt" : "2021-02-18T15:35:53Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0e6103b4-737c-4dc9-819a-ecbd58070faf",
+        "parentId" : "dd8836da-638c-4b80-a459-fa72485c4cfa",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "This's the legacy delay scheduling behavior(disabled by default). In the new delay scheduling, we do reset only if all barrier tasks get scheduled:\r\nhttps://github.com/apache/spark/blob/e3058ba17cb4512537953eb4ded884e24ee93ba2/core/src/main/scala/org/apache/spark/scheduler/TaskSchedulerImpl.scala#L589-L593\r\n\r\n(For the barrier taskset, `noDelaySchedulingRejects` means all tasks get scheduled in a single resourceOffers round.)\r\n\r\n\r\nFor the legacy delay scheduling, I'd prefer to keep the same behavior as it is.\r\n",
+        "createdAt" : "2020-12-28T12:06:49Z",
+        "updatedAt" : "2021-02-18T15:35:53Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a404e56c-327a-483e-b761-fca699cdd7e8",
+        "parentId" : "dd8836da-638c-4b80-a459-fa72485c4cfa",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "When `legacyLocalityWaitReset` = `true` and barrier task cant be scheduled, there is a behavior change here. Right ? The reset goes through even though nothing was scheduled ?",
+        "createdAt" : "2020-12-29T02:19:31Z",
+        "updatedAt" : "2021-02-18T15:35:53Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a9238ffe-b5dd-4a6f-818e-c712d200dc34",
+        "parentId" : "dd8836da-638c-4b80-a459-fa72485c4cfa",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "We do reset because we assume the task would get launched like the normal task and let the legacy delay scheduling take effect. The legacy delay scheduling actually doesn't take effect if we don't reset for the barrier task here. Right? Although it actually improves the possibility for the barrier taskset to get launched.\r\n\r\nTo prevent the behavior change, I think we might need to correct the locality level(like reverting the `reset` we did before) if the barrier taskset failed to get launched at the end of a single resourceOffer round. WDYT?\r\n\r\n\r\n(BTW, it's meaningless to reset the timer after all barrier tasks that are already scheduled/launched.)\r\n",
+        "createdAt" : "2020-12-30T04:03:47Z",
+        "updatedAt" : "2021-02-18T15:35:53Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "54f3fe8e-3d25-4920-83ad-6bf313d0ab55",
+        "parentId" : "dd8836da-638c-4b80-a459-fa72485c4cfa",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "If there are multiple tsm's (stages), the reset will adversely affect the scheduling for the barrier stage, no ?\r\nI agree, once barrier stage is scheduled, it does not matter (but then this wont get triggered anyway in that case if I am not wrong).\r\n\r\n> To prevent the behavior change, I think we might need to correct the locality level(like reverting the reset we did before) if the barrier taskset failed to get launched at the end of a single resourceOffer round. WDYT?\r\n\r\nI agree, this should be sufficient.",
+        "createdAt" : "2020-12-30T20:48:45Z",
+        "updatedAt" : "2021-02-18T15:35:53Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "78637016-266f-4c48-a317-f44cacd129df",
+        "parentId" : "dd8836da-638c-4b80-a459-fa72485c4cfa",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "> If there are multiple tsm's (stages), the reset will adversely affect the scheduling for the barrier stage, no ?\r\n\r\nNo. The reset should only affect the tsm itself.",
+        "createdAt" : "2021-01-04T05:24:14Z",
+        "updatedAt" : "2021-02-18T15:35:53Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "78226c76-994a-4d0d-808f-2aacd30f9bb2",
+        "parentId" : "dd8836da-638c-4b80-a459-fa72485c4cfa",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "So as @mridulm pointed out, since the legacy locality wait is reset  every time we could schedule something I think that means you will never look at other levels, correct?  I think this was behavior before but that doesn't seem right. I think that means you could have enough slots available and some are node local but you won't ever be able to use the ones that aren't.  Please correct me if I'm wrong.  I guess that could be separate issue since same behavior as before.\r\n",
+        "createdAt" : "2021-01-05T15:17:11Z",
+        "updatedAt" : "2021-02-18T15:35:53Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9c2ec416-b21c-48f0-9b15-fc9e2e74b8d5",
+        "parentId" : "dd8836da-638c-4b80-a459-fa72485c4cfa",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "> So as @mridulm pointed out, since the legacy locality wait is reset every time we could schedule something I think that means you will never look at other levels, correct?\r\n\r\nRight (although there's a corner case that we could look at other levels when the current level doesn't have any pending tasks). So in legacy mode, it's very strict for the barrier tsm to get launched.\r\n\r\n> I think this was behavior before but that doesn't seem right.\r\n\r\nI think that's why we have the new version of delay scheduling.",
+        "createdAt" : "2021-01-07T03:42:55Z",
+        "updatedAt" : "2021-02-18T15:35:53Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ca14a419-7f11-42ca-95bf-2ae5025e1b39",
+        "parentId" : "dd8836da-638c-4b80-a459-fa72485c4cfa",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "> I think that means you could have enough slots available and some are node local but you won't ever be able to use the ones that aren't.\r\n\r\nThis may lead to the barrier tsm gets hang? (But if we don't revert the locality level at the time we reverting resources, it would not hang since the level will go up as time goes by.)",
+        "createdAt" : "2021-01-07T04:02:35Z",
+        "updatedAt" : "2021-02-18T15:35:53Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "fead0790b2ed5bc27abf6f46de3ae8e84f3ac640",
+    "line" : 133,
+    "diffHunk" : "@@ -1,1 +456,460 @@            dequeuedTaskIndex = Some(index)\n            if (legacyLocalityWaitReset && maxLocality != TaskLocality.NO_PREF) {\n              resetDelayScheduleTimer(Some(taskLocality))\n            }\n            if (isBarrier) {"
+  }
+]

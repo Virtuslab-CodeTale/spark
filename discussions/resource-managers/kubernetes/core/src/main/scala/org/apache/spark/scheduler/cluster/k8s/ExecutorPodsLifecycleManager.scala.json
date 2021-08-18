@@ -20,5 +20,82 @@
     "commit" : "438decec2b67f54a4997d9e3c8f301af76f54672",
     "line" : 35,
     "diffHunk" : "@@ -1,1 +50,54 @@    CacheBuilder.newBuilder()\n      .expireAfterWrite(3, TimeUnit.MINUTES)\n      .build[java.lang.Long, java.lang.Long]()\n\n  private var lastFullSnapshotTs: Long = 0"
+  },
+  {
+    "id" : "dfb6338c-ecbb-44d2-b2d8-18368e04fa7f",
+    "prId" : 30675,
+    "prUrl" : "https://github.com/apache/spark/pull/30675#pullrequestreview-555731185",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "460c2a9c-b684-4375-ac2f-42654bcdfc98",
+        "parentId" : null,
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "For \"we just removed in this round\" it seems like we do? Provided that the executor was registered a long time ago. Unless I'm misunderstanding  `registrationTs`. Is `registrationTs` the time when the executor was initial registered or is it updated? (I'm assuming initial since it's a val but maybe we make a new object each snapshot)?",
+        "createdAt" : "2020-12-11T18:40:55Z",
+        "updatedAt" : "2021-01-09T19:40:55Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d0cda893-6e01-4382-8445-82b6c31fcd63",
+        "parentId" : "460c2a9c-b684-4375-ac2f-42654bcdfc98",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "The \"we just removed in this round\" means those executors we have just received the `PodDeleted` for, see this line: https://github.com/apache/spark/blob/add1c6441981e412c13c539665baa1568f7f23bb/resource-managers/kubernetes/core/src/main/scala/org/apache/spark/scheduler/cluster/k8s/ExecutorPodsLifecycleManager.scala#L71.\r\n\r\nOf course this goes to the deleted executors cache too. \r\nSo the old comment just ensures us the current round deleted executors is handled here as well (by skipping them; they are not forgotten from the logic). \r\n\r\nThe `registrationTs` is the timestamp when the executor is registered to the **scheduler backend**.\r\nThere is no updates. See this place and class containing it (also this is only place where executor data is added to this collection):\r\nhttps://github.com/apache/spark/blob/add1c6441981e412c13c539665baa1568f7f23bb/core/src/main/scala/org/apache/spark/scheduler/cluster/CoarseGrainedSchedulerBackend.scala#L246\r\n",
+        "createdAt" : "2020-12-11T19:30:05Z",
+        "updatedAt" : "2021-01-09T19:40:55Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b13e44a1-4c20-4817-851e-4a75eb518c2a",
+        "parentId" : "460c2a9c-b684-4375-ac2f-42654bcdfc98",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Gotcha that makes more sense. I thought the comment was about the logic new logic rather than the existing logic so it was a little confusing.",
+        "createdAt" : "2020-12-18T18:50:22Z",
+        "updatedAt" : "2021-01-09T19:40:55Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a98bf364b8ccdfdc5abef4b4355e61c74c9f3802",
+    "line" : 19,
+    "diffHunk" : "@@ -1,1 +114,118 @@    // transitions immediately from running to absent. We only need to check against the latest\n    // fresh full snapshot (coming from ExecutorPodsPollingSnapshotSource) for this, and we don't\n    // do this for executors in the deleted executors cache or that we just removed in this round.\n    if (snapshots.nonEmpty && lastFullSnapshotTs != snapshots.last.fullSnapshotTs) {\n      lastFullSnapshotTs = snapshots.last.fullSnapshotTs"
+  },
+  {
+    "id" : "f37752ec-0180-47cc-bf3b-4b440fec73f6",
+    "prId" : 30675,
+    "prUrl" : "https://github.com/apache/spark/pull/30675#pullrequestreview-564780627",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c30def0b-bc2b-493a-a5e7-5ca9fcd6f76a",
+        "parentId" : null,
+        "authorId" : "8c82da5a-f351-4a37-a8a9-13809311b07b",
+        "body" : "Why don't we convert executor IDs to longs in `getExecutorsWithRegistrationTs` then?",
+        "createdAt" : "2021-01-08T15:24:32Z",
+        "updatedAt" : "2021-01-09T19:40:55Z",
+        "lastEditedBy" : "8c82da5a-f351-4a37-a8a9-13809311b07b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7bcfd51f-e79f-4db8-a886-76fff0191535",
+        "parentId" : "c30def0b-bc2b-493a-a5e7-5ca9fcd6f76a",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "In the `CoarseGrainedSchedulerBackend` the executor ID is a string. See the other methods, like:\r\nhttps://github.com/apache/spark/blob/4a4853ae369859bec6fef395c0ee7d405b8ed36b/core/src/main/scala/org/apache/spark/scheduler/cluster/CoarseGrainedSchedulerBackend.scala#L628-L630\r\n\r\nhttps://github.com/apache/spark/blob/4a4853ae369859bec6fef395c0ee7d405b8ed36b/core/src/main/scala/org/apache/spark/scheduler/cluster/CoarseGrainedSchedulerBackend.scala#L636\r\n\r\nSo to keep the consistency I would leave `getExecutorsWithRegistrationTs` as it is.\r\n\r\n",
+        "createdAt" : "2021-01-09T12:24:21Z",
+        "updatedAt" : "2021-01-09T19:40:55Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a98bf364b8ccdfdc5abef4b4355e61c74c9f3802",
+    "line" : 23,
+    "diffHunk" : "@@ -1,1 +118,122 @@      lastFullSnapshotTs = snapshots.last.fullSnapshotTs\n      val lostExecutorsWithRegistrationTs =\n        schedulerBackend.getExecutorsWithRegistrationTs().map(t => (t._1.toLong, t._2)) --\n        snapshots.last.executorPods.keySet -- execIdsRemovedInThisRound\n"
   }
 ]
