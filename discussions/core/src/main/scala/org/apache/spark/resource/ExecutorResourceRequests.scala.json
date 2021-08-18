@@ -64,5 +64,104 @@
     "commit" : "e25dafbac32534eaa998b00da98d4e90114a2c64",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +56,60 @@\n  /**\n   * Specify off heap memory. The value specified will be converted to MiB.\n   * This value only take effect when MEMORY_OFFHEAP_ENABLED is true.\n   *"
+  },
+  {
+    "id" : "b4a3dba2-b809-411d-93b9-111e86aa9a49",
+    "prId" : 28085,
+    "prUrl" : "https://github.com/apache/spark/pull/28085#pullrequestreview-393021182",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "574aaea6-f93a-49f7-9afa-e903b12325df",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "If you target to support Java API from this class, it might be just best to let `requests` return a Java map directly. In Scala side, it's pretty easily able to use via using `asScala`. I think this is the usual approach in the case base if I am not mistaken.",
+        "createdAt" : "2020-04-13T06:11:47Z",
+        "updatedAt" : "2020-04-22T14:03:45Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "422ec083-c4a7-4d0b-b826-d5471162c24d",
+        "parentId" : "574aaea6-f93a-49f7-9afa-e903b12325df",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "that is less convenient api for scala, which I think it used more. We talked about this when we added resources into TaskContextImpl class for the original resource scheduling and went with this approach so am keeping it common with that.  I would prefer to keep consistent. ",
+        "createdAt" : "2020-04-13T16:37:00Z",
+        "updatedAt" : "2020-04-22T14:03:45Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d4f729de-b18f-417c-b792-c10e67f6c8d7",
+        "parentId" : "574aaea6-f93a-49f7-9afa-e903b12325df",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Hm .. I am still hesitant about having different methods for Java and Scala in particular given that It is legitimate for Scala side to use Java side (the opposite is not).\r\n\r\nMy impression of Spark APIs are in general same or similar API usage across languages. There are many examples that uses Java classes, for example, in Structured Streaming as an example. e.g) `StateOperatorProgress`, `StreamingQueryProgress`, etc.\r\n\r\nSo, we should probably keep it consistent with other instances, instead of `TaskContextImpl`. Seems we marked `resourceJMap` as `Evolving` so looks not too late to change .. though ..",
+        "createdAt" : "2020-04-14T01:06:05Z",
+        "updatedAt" : "2020-04-22T14:03:45Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "88677b46-4888-487f-a117-fab0fbe7c470",
+        "parentId" : "574aaea6-f93a-49f7-9afa-e903b12325df",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "But .. should be okay to keep it as is for now .. we can discuss and do this in a separate JIRA too.",
+        "createdAt" : "2020-04-14T01:07:19Z",
+        "updatedAt" : "2020-04-22T14:03:45Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "99502f60-5696-4b21-8f63-9f80e8b88323",
+        "parentId" : "574aaea6-f93a-49f7-9afa-e903b12325df",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "I guess I disagree with you and others already agreed on the previous PR for TaskContextImpl.  why not just have the function and its friendly to both java and scala api's. We have lots of java specific versions of apis. Go look at the DataSet api docs and look for \"Java-specific\". I agree that there is no set rule for this though, but I would also rather make it more friendly for the common case which I think is the scala api.  One point here is that I don't think Spark has many api that return things, instead its the input parameters.  there is collect() and collectAsList() but I think when I was looking for TaskContextImpl I didn't find any other usages\r\n\r\n @mengxr  @jiangxb1987  as they were in on original api.",
+        "createdAt" : "2020-04-14T13:57:41Z",
+        "updatedAt" : "2020-04-22T14:03:45Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9da2f257-436c-43fc-acde-204b69fd5ddf",
+        "parentId" : "574aaea6-f93a-49f7-9afa-e903b12325df",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "I was not so against it because I took it as just one or several exceptions. If this is going to be a pattern, I think it is a problem. Why not have one function legitimate for both Scala and Java that gives you a consistent API usage. Other \"java specific\" have the same names and most of then are just overloading. See `functions.scala` as an example.\r\n\r\nI would like to run this separately though rather then setting up the policy here which might be slightly off topic.",
+        "createdAt" : "2020-04-14T14:49:22Z",
+        "updatedAt" : "2020-04-22T14:03:45Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "491daf1b-c5d4-4035-9d8a-c6b489460c9e",
+        "parentId" : "574aaea6-f93a-49f7-9afa-e903b12325df",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "None of the java specific functions in functions.scala return a different type, they take different types. That is the difference. You can't overload a function based on return type in scala.",
+        "createdAt" : "2020-04-14T15:00:04Z",
+        "updatedAt" : "2020-04-22T14:03:45Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c38a1f26-171b-445b-97b5-d93bbdc8105b",
+        "parentId" : "574aaea6-f93a-49f7-9afa-e903b12325df",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "My point is the most of java specifics are like that. I think I pointed out some examples that return Java instances in structured streaming. I have an idea to kind of compromising. I will send an email to the dev list tomorrow. We could discuss further there. For now, I am okay with keeping this line in this PR.",
+        "createdAt" : "2020-04-14T15:05:54Z",
+        "updatedAt" : "2020-04-22T14:03:45Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "354fb0c09ff9ed6be985f0ca7a8b6fae835303a2",
+    "line" : 12,
+    "diffHunk" : "@@ -1,1 +40,44 @@  def requests: Map[String, ExecutorResourceRequest] = _executorResources.asScala.toMap\n\n  def requestsJMap: JMap[String, ExecutorResourceRequest] = requests.asJava\n\n  /**"
   }
 ]

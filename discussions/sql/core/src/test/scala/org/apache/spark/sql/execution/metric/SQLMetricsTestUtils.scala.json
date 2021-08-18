@@ -31,5 +31,71 @@
     "commit" : "b932caad400db1c5ace2cbba9318e8f97bbdd24e",
     "line" : 20,
     "diffHunk" : "@@ -1,1 +262,266 @@   * @param expectedMetrics the expected metrics. The format is `metric name -> metric value`.\n   */\n  protected def testMetricsInSparkPlanOperator(\n      plan: SparkPlan,\n      expectedMetrics: Map[String, Long]): Unit = {"
+  },
+  {
+    "id" : "b0fe6206-8a96-42e0-afb1-e29f4c573410",
+    "prId" : 28173,
+    "prUrl" : "https://github.com/apache/spark/pull/28173#pullrequestreview-394702058",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8672f6c7-6b5c-4504-a791-887b23a1e79e",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Is it not enough just to run tests here with both modes: codegen and non-codegen?\r\n```\r\nSeq(true, false).foreach { codegenEnabled =>\r\n  testSparkPlanMetricsWithPredicates(df, expectedNumOfJobs, expectedMetricsPredicates, codegenEnabled)\r\n}\r\n```",
+        "createdAt" : "2020-04-14T04:52:56Z",
+        "updatedAt" : "2020-04-17T17:53:52Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4ca1c683-7076-4684-bf7d-40766fe35118",
+        "parentId" : "8672f6c7-6b5c-4504-a791-887b23a1e79e",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Ah, the same comment there.... https://github.com/apache/spark/pull/28173#discussion_r406877479\r\nCould you check this, @sririshindra ",
+        "createdAt" : "2020-04-14T05:07:46Z",
+        "updatedAt" : "2020-04-17T17:53:52Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "57313fe9-c731-44d5-9d7e-1d3c5264044b",
+        "parentId" : "8672f6c7-6b5c-4504-a791-887b23a1e79e",
+        "authorId" : "cdcefa9a-1880-4b7a-ae6a-ece33e944188",
+        "body" : "@maropu \r\nThe expectedMetricsPredicates can vary with codegenEnabled=true and codegenEnabled=false. \r\n\r\nAlso the test \"WholeStageCodegen metrics\"  needs to run testSparkPlanMetricsWithPredicates method with only codegenEnabled=true. So if we change the method to run with both configurations then the test \"WholeStageCodegen metrics\"  will fail. \r\n\r\nThe dataframe (variable df) needs to be fresh for every time a call to testSparkPlanMetricsWithPredicates is made. The dataframe should not be reused or else the metrics might change which causes the tests to fail.",
+        "createdAt" : "2020-04-14T17:23:37Z",
+        "updatedAt" : "2020-04-17T17:53:52Z",
+        "lastEditedBy" : "cdcefa9a-1880-4b7a-ae6a-ece33e944188",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "758fdc27-5441-4f22-abd8-902bdeffab17",
+        "parentId" : "8672f6c7-6b5c-4504-a791-887b23a1e79e",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "But, we should avoid duplicate code where possible.\r\nHow about this?\r\n```\r\n  protected def testSparkPlanMetrics(\r\n      df: _ => DataFrame,  // To make `df` fresh as you said.\r\n      expectedNumOfJobs: Int,\r\n      expectedMetrics: Map[Long, (String, Map[String, Any])],\r\n      testWithWholeStage: Boolean = false): Unit = {\r\n    val expectedMetricsPredicates = expectedMetrics.mapValues { case (nodeName, nodeMetrics) =>\r\n      (nodeName, nodeMetrics.mapValues(expectedMetricValue =>\r\n        (actualMetricValue: Any) => {\r\n          actualMetricValue.toString.matches(expectedMetricValue.toString)\r\n        }))\r\n    }\r\n    testSparkPlanMetricsWithPredicates(\r\n      df(), expectedNumOfJobs, expectedMetricsPredicates, false)\r\n\r\n    // If testWithWholeStage=true, run the second test with codegen enabled\r\n    if (testWithWholeStage) {\r\n      testSparkPlanMetricsWithPredicates(\r\n        df(), expectedNumOfJobs, expectedMetricsPredicates, true)\r\n    }\r\n  }\r\n```",
+        "createdAt" : "2020-04-15T12:24:03Z",
+        "updatedAt" : "2020-04-17T17:53:52Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2a7ea455-187f-49bf-8844-9b30747d82db",
+        "parentId" : "8672f6c7-6b5c-4504-a791-887b23a1e79e",
+        "authorId" : "cdcefa9a-1880-4b7a-ae6a-ece33e944188",
+        "body" : "Interesting idea to make the 'df' fresh.\r\nHowever we still have the problem of expectedMetricsPredicates argument being different for most of the tests when codegen=true and codegen=false. Since the arguments to the testSparkPlanMetricsWithPredicates method could be different when codegen=true and codegen=false, we probably couldn’t avoid calling the testSparkPlanMetrics method twice with the corresponding arguments.\r\n\r\nI agree with you that we should minimize the code duplication. I just pushed another commit to further refactor the code to minimize code duplication. Could you please take a look and let me know what do you think.",
+        "createdAt" : "2020-04-16T14:40:08Z",
+        "updatedAt" : "2020-04-17T17:53:52Z",
+        "lastEditedBy" : "cdcefa9a-1880-4b7a-ae6a-ece33e944188",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "933a78134e5f2f152ca2e82f913ebfa5871aee9d",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +223,227 @@        }))\n    }\n    testSparkPlanMetricsWithPredicates(df, expectedNumOfJobs, expectedMetricsPredicates,\n      enableWholeStage)\n  }"
   }
 ]

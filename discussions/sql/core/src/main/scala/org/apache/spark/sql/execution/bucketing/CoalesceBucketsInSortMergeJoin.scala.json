@@ -1,0 +1,222 @@
+[
+  {
+    "id" : "4176dd44-5b80-4e56-9565-d0b695d48f0f",
+    "prId" : 28123,
+    "prUrl" : "https://github.com/apache/spark/pull/28123#pullrequestreview-431100630",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d30567dc-b8b7-4f9e-99b3-0c3eeda54cde",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "One condition listed in the PR description `Join is the sort merge one with equality conditions.`, seems missing here? I also don't see this condition in the `CoalesceBucketsInSortMergeJoin` rule. Do I miss it?",
+        "createdAt" : "2020-06-12T03:59:26Z",
+        "updatedAt" : "2020-06-19T04:52:18Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e71f2b72-12d3-4189-8e02-6a59ea1e566f",
+        "parentId" : "d30567dc-b8b7-4f9e-99b3-0c3eeda54cde",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "Since `SortMergeJoinExec` is created only for the equi-join case, I don't think we don't need to check it in this rule. I can update the PR description to remove `equality conditions` if it causes a confusion.",
+        "createdAt" : "2020-06-13T03:57:24Z",
+        "updatedAt" : "2020-06-19T04:52:18Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d1179fc2-aa0f-45a5-bd7e-50d78ea40d26",
+        "parentId" : "d30567dc-b8b7-4f9e-99b3-0c3eeda54cde",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Yeah, please update the description. Thanks.",
+        "createdAt" : "2020-06-13T06:36:56Z",
+        "updatedAt" : "2020-06-19T04:52:18Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c0f4a929-f967-4074-9002-032445f072b1",
+        "parentId" : "d30567dc-b8b7-4f9e-99b3-0c3eeda54cde",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "Updated. Thanks.",
+        "createdAt" : "2020-06-16T01:37:01Z",
+        "updatedAt" : "2020-06-19T04:52:18Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "62a04a3e4d94e63b3787533f619e368a7e8d59f6",
+    "line" : 30,
+    "diffHunk" : "@@ -1,1 +28,32 @@/**\n * This rule coalesces one side of the `SortMergeJoin` if the following conditions are met:\n *   - Two bucketed tables are joined.\n *   - Join keys match with output partition expressions on their respective sides.\n *   - The larger bucket number is divisible by the smaller bucket number."
+  },
+  {
+    "id" : "c069a4ca-8fd7-4bb1-b73d-6ef8b6e39c0a",
+    "prId" : 28123,
+    "prUrl" : "https://github.com/apache/spark/pull/28123#pullrequestreview-431737362",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2b59878b-662b-428a-8115-d6aa4d98b829",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "So looks like the rule allows projection on top of `FileSourceScanExec` when coalescing buckets. If we change output partition in projection, we actually don't need to to coalescing.",
+        "createdAt" : "2020-06-12T04:06:26Z",
+        "updatedAt" : "2020-06-19T04:52:18Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9be61cbb-5782-4ce2-90e1-7b32825769b2",
+        "parentId" : "2b59878b-662b-428a-8115-d6aa4d98b829",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "Would this be a cleaner approach? Or handling buckets in one place (`FileSourceScanExec`) would be cleaner? What do you think @cloud-fan / @maropu?",
+        "createdAt" : "2020-06-13T04:02:14Z",
+        "updatedAt" : "2020-06-19T04:52:18Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4d49392e-3daa-4b7b-843a-dba377e7e264",
+        "parentId" : "2b59878b-662b-428a-8115-d6aa4d98b829",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "@viirya this is a good point! We should apply this optimizer rule more conservatively.\r\n\r\nFor a sort-merge join with join keys `[k1, k2, ...]`, we should coalesce the buckets if the bucket keys are also `[k1, k2, ...]`. The keys can be renamed by Project and we should take care of it.\r\n\r\nExamples:\r\n`t1(bucket by a, b) JOIN t2(bucket by c, d) ON a = c AND b = d` should apply\r\n`t1(bucket by a, b) JOIN (SELECT c AS x, d AS y FROM t2(bucket by c, d)) ON a = x AND b = y` should apply\r\n`t1(bucket by a) JOIN t2(bucket by c) ON b = d` should not apply",
+        "createdAt" : "2020-06-16T11:37:35Z",
+        "updatedAt" : "2020-06-19T04:52:18Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ac86c5b0-3989-4e75-97a9-6ef571e9f470",
+        "parentId" : "2b59878b-662b-428a-8115-d6aa4d98b829",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "Ah ok, I misunderstood @viirya's question (I thought I had to move the logic to output \"partitioning\" in projection). I will make these changes. Thanks!",
+        "createdAt" : "2020-06-16T17:32:25Z",
+        "updatedAt" : "2020-06-19T04:52:18Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "62a04a3e4d94e63b3787533f619e368a7e8d59f6",
+    "line" : 85,
+    "diffHunk" : "@@ -1,1 +83,87 @@  private def isScanOperation(plan: SparkPlan): Boolean = plan match {\n    case f: FilterExec => isScanOperation(f.child)\n    case p: ProjectExec => isScanOperation(p.child)\n    case _: FileSourceScanExec => true\n    case _ => false"
+  },
+  {
+    "id" : "08d4e0c6-868f-40d9-81a2-59f04ea3b79a",
+    "prId" : 28123,
+    "prUrl" : "https://github.com/apache/spark/pull/28123#pullrequestreview-433468860",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f307b08f-b376-4bee-b330-baddd8f592a7",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "what can go wrong if we check the order here as well?",
+        "createdAt" : "2020-06-18T11:13:46Z",
+        "updatedAt" : "2020-06-19T04:52:18Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "40758b6a-0c4d-48cd-bb91-d3a084f5cd59",
+        "parentId" : "f307b08f-b376-4bee-b330-baddd8f592a7",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "If we enforce ordering here, we will miss valid cases. For example, if we have tables `t1` and `t2` bucketed by columns `i` and `j`, `t1 JOIN t2 on t1.j = t2.j AND t1.i = t2i` will not be satisfied if the ordering is enforced here. However, `EnsureRequirement` reorders the join condition to match the output partitioning expressions to eliminate shuffles.",
+        "createdAt" : "2020-06-18T16:48:42Z",
+        "updatedAt" : "2020-06-19T04:52:18Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "62a04a3e4d94e63b3787533f619e368a7e8d59f6",
+    "line" : 100,
+    "diffHunk" : "@@ -1,1 +98,102 @@  /**\n   * The join keys should match with expressions for output partitioning. Note that\n   * the ordering does not matter because it will be handled in `EnsureRequirements`.\n   */\n  private def satisfiesOutputPartitioning("
+  },
+  {
+    "id" : "d9e8c075-6d77-45da-94f5-7521d0855a87",
+    "prId" : 28123,
+    "prUrl" : "https://github.com/apache/spark/pull/28123#pullrequestreview-447409512",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2a9a8266-478f-4616-9a92-11f8564cc9fb",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "not related to this PR but just an idea: we don't need to do bucket scan at all if it can't save shuffles. This can increase parallelism.",
+        "createdAt" : "2020-06-18T11:15:10Z",
+        "updatedAt" : "2020-06-19T04:52:18Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6d9e21fa-cf5a-46f2-9723-41303da71f10",
+        "parentId" : "2a9a8266-478f-4616-9a92-11f8564cc9fb",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "yea good idea.",
+        "createdAt" : "2020-06-18T16:40:22Z",
+        "updatedAt" : "2020-06-19T04:52:18Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a1334864-333e-410f-b91b-9d2a5a48cc43",
+        "parentId" : "2a9a8266-478f-4616-9a92-11f8564cc9fb",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Is this a follow-up issue?",
+        "createdAt" : "2020-06-19T02:22:07Z",
+        "updatedAt" : "2020-06-19T04:52:18Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "87c9ff8f-6b57-466c-bb39-22a6650c2f0d",
+        "parentId" : "2a9a8266-478f-4616-9a92-11f8564cc9fb",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "I can give it a shot after this PR.",
+        "createdAt" : "2020-06-19T04:53:22Z",
+        "updatedAt" : "2020-06-19T04:53:22Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8b4b9b04-c238-4dce-94a6-2e54ef0aad4e",
+        "parentId" : "2a9a8266-478f-4616-9a92-11f8564cc9fb",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "yea, thanks!",
+        "createdAt" : "2020-06-19T05:26:18Z",
+        "updatedAt" : "2020-06-19T05:26:18Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "53c68898-c620-4973-b48c-f90198ab886d",
+        "parentId" : "2a9a8266-478f-4616-9a92-11f8564cc9fb",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "> we don't need to do bucket scan at all if it can't save shuffles. This can increase parallelism.\r\n\r\n@cloud-fan IMO there's other benefit to do bucket scan even though it can't save shuffle, e.g. bucket filter push down. So we probably need to take that into consideration before disabling bucketing. ",
+        "createdAt" : "2020-07-13T16:27:36Z",
+        "updatedAt" : "2020-07-13T16:27:37Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "62a04a3e4d94e63b3787533f619e368a7e8d59f6",
+    "line" : 116,
+    "diffHunk" : "@@ -1,1 +114,118 @@      isScanOperation(s.right) &&\n      satisfiesOutputPartitioning(s.leftKeys, s.left.outputPartitioning) &&\n      satisfiesOutputPartitioning(s.rightKeys, s.right.outputPartitioning)\n  }\n"
+  }
+]

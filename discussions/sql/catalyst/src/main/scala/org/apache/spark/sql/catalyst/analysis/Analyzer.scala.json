@@ -2924,5 +2924,71 @@
     "commit" : "18d857fa993e2acd7abcb837700e6bc4f3511dd5",
     "line" : 34,
     "diffHunk" : "@@ -1,1 +2040,2044 @@      // resolve the having condition expression, here we skip resolving it in ResolveReferences\n      // and transform it to Filter after aggregate is resolved. See more details in SPARK-31519.\n      case AggregateWithHaving(cond, agg: Aggregate) if agg.resolved =>\n        resolveHaving(Filter(cond, agg), agg)\n"
+  },
+  {
+    "id" : "283f3739-532b-4976-94e7-20d9e16ca20d",
+    "prId" : 28107,
+    "prUrl" : "https://github.com/apache/spark/pull/28107#pullrequestreview-387325730",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "937afdf8-b81b-4855-8eff-b16330e8cd5b",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "can we just add a case above it?\r\n```\r\ncase f: Filter if ResolveAggregateFunctions.containsAggregate(f.condition) => f\r\n\r\ncase q: LogicalPlan =>\r\n  ...\r\n```",
+        "createdAt" : "2020-04-03T14:34:53Z",
+        "updatedAt" : "2020-04-06T09:35:32Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0c94376d-1030-4c0f-b5da-1041fca39a63",
+        "parentId" : "937afdf8-b81b-4855-8eff-b16330e8cd5b",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> can we just add a case above it?\r\n> \r\n> ```\r\n> case f: Filter if ResolveAggregateFunctions.containsAggregate(f.condition) => f\r\n> \r\n> case q: LogicalPlan =>\r\n>   ...\r\n> ```\r\n\r\nChanged, for containsAggregate() method, where I put it is better? or add a common interface for Resolve Reference",
+        "createdAt" : "2020-04-03T14:48:47Z",
+        "updatedAt" : "2020-04-06T09:35:32Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "20febcefcf88f02c6188a119722be70085a0a17c",
+    "line" : 11,
+    "diffHunk" : "@@ -1,1 +1399,1403 @@      case f @ Filter(cond, agg @ Aggregate(_, _, _)) if containsAggregate(cond) => f\n\n      case q: LogicalPlan =>\n        logTrace(s\"Attempting to resolve ${q.simpleString(SQLConf.get.maxToStringFields)}\")\n        q.mapExpressions(resolveExpressionTopDown(_, q))"
+  },
+  {
+    "id" : "be9991c7-25fa-4a52-beda-3510bd06a884",
+    "prId" : 28107,
+    "prUrl" : "https://github.com/apache/spark/pull/28107#pullrequestreview-387327667",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "16dd15c9-d189-457a-9b8a-be6fb3f4c16f",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "why can't we reuse `ResolveAggregateFunctions.containsAggregate`?",
+        "createdAt" : "2020-04-03T14:48:30Z",
+        "updatedAt" : "2020-04-06T09:35:32Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "394d00ab-2333-4cbf-8236-a32d2c1d6b35",
+        "parentId" : "16dd15c9-d189-457a-9b8a-be6fb3f4c16f",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> why can't we reuse `ResolveAggregateFunctions.containsAggregate`?\r\n\r\nSince here function is still UnresolvedFunction, we can't just reuse this.",
+        "createdAt" : "2020-04-03T14:51:01Z",
+        "updatedAt" : "2020-04-06T09:35:32Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "20febcefcf88f02c6188a119722be70085a0a17c",
+    "line" : 16,
+    "diffHunk" : "@@ -1,1 +1404,1408 @@    }\n\n    def containsAggregate(e: Expression): Boolean = {\n      e.find {\n        // In current loop, functions maybe unresolved,"
   }
 ]
