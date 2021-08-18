@@ -1,0 +1,79 @@
+[
+  {
+    "id" : "0a4b2a24-4e89-4529-b2f6-669506168a52",
+    "prId" : 28618,
+    "prUrl" : "https://github.com/apache/spark/pull/28618#pullrequestreview-487318447",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b1325969-b465-435b-b9e0-c2959fc2dc3e",
+        "parentId" : null,
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "Here and elsewhere, why rely on `Supplier` when output is memoized ?\r\nReplace with instance instead ?",
+        "createdAt" : "2020-08-20T05:21:57Z",
+        "updatedAt" : "2020-10-17T18:44:19Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1ed82179-f523-4ee2-9425-4c35140130eb",
+        "parentId" : "b1325969-b465-435b-b9e0-c2959fc2dc3e",
+        "authorId" : "806aa501-9ea7-4cec-b017-a84d9a1602d8",
+        "body" : "I believe this is a supplier because at the time the executor components are initialized, the entire SparkEnv instance is not initialized yet, so we want the block resolver to be fetched from the SparkEnv lazily.",
+        "createdAt" : "2020-09-10T00:31:38Z",
+        "updatedAt" : "2020-10-17T18:44:19Z",
+        "lastEditedBy" : "806aa501-9ea7-4cec-b017-a84d9a1602d8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7a35c331-ec22-40ab-bf0e-adfc551e3fb3",
+        "parentId" : "b1325969-b465-435b-b9e0-c2959fc2dc3e",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "Can you elaborate on this ? An example where `SparkEnv` was not initialized but executor shuffle component was ?\r\nThe usages I saw all had `SparkEnv` already available, but I could have missed some flow.",
+        "createdAt" : "2020-09-10T05:49:12Z",
+        "updatedAt" : "2020-10-17T18:44:19Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d9841df4-6339-4b24-acf6-0ab58cf0b2e9",
+        "parentId" : "b1325969-b465-435b-b9e0-c2959fc2dc3e",
+        "authorId" : "806aa501-9ea7-4cec-b017-a84d9a1602d8",
+        "body" : "Because when you get around to actually instantiating the shuffle executor components, you aren't guaranteed to have an IndexShuffleBlockResolver available from the SparkEnv yet.",
+        "createdAt" : "2020-09-10T16:43:33Z",
+        "updatedAt" : "2020-10-17T18:44:19Z",
+        "lastEditedBy" : "806aa501-9ea7-4cec-b017-a84d9a1602d8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9572295d-8e18-4dca-aea4-66f672169529",
+        "parentId" : "b1325969-b465-435b-b9e0-c2959fc2dc3e",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "The flow I see (ignoring tests) is :\r\n`MemoizingShuffleDataIO._executor` -> `LocalDiskShuffleDataIO.initializeShuffleExecutorComponents` -> `LocalDiskShuffleExecutorComponents ctor`\r\n\r\n `_executor` is a `lazy val`, but its construction requires `SparkEnv` to have been set (and so initialized).\r\nFor this path, we will have block manager from `SparkEnv` available to create `IndexShuffleBlockResolver` in `LocalDiskShuffleExecutorComponents`.\r\n\r\nIs there any other path or flow which requires this to be lazy ?",
+        "createdAt" : "2020-09-12T15:43:47Z",
+        "updatedAt" : "2020-10-17T18:44:19Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f509e968-629b-42a1-a6f7-faf25a2a1437",
+        "parentId" : "b1325969-b465-435b-b9e0-c2959fc2dc3e",
+        "authorId" : "806aa501-9ea7-4cec-b017-a84d9a1602d8",
+        "body" : "Hm, I think that now that the laziness is handled at the level above (MemoizingShuffleDataIO) it should be fine to make these non-lazy then. I'll try that and push and check the build after. I recall there being something weird with local mode, but that might have been a state that isn't possible now with the new memoizing layer above.",
+        "createdAt" : "2020-09-13T15:50:23Z",
+        "updatedAt" : "2020-10-17T18:44:19Z",
+        "lastEditedBy" : "806aa501-9ea7-4cec-b017-a84d9a1602d8",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f69cba7d0632e7b260e38a0aa16cf560bd0d94cc",
+    "line" : 25,
+    "diffHunk" : "@@ -1,1 +34,38 @@\n  private final SparkConf sparkConf;\n  private final Supplier<IndexShuffleBlockResolver> blockResolver;\n\n  public LocalDiskShuffleExecutorComponents(SparkConf sparkConf) {"
+  }
+]

@@ -163,5 +163,82 @@
     "commit" : "871c35ffd3d71cef6040849561ae07a8d4e6b370",
     "line" : 122,
     "diffHunk" : "@@ -1,1 +588,592 @@      udf((t: Timestamp, i: Instant) => null.asInstanceOf[TimestampInstantType]))\n    checkAnswer(df.selectExpr(\"buildTimestampInstantType(t, i) as ti\"),\n      Row(null))\n  }\n"
+  },
+  {
+    "id" : "ce2356de-ce39-4ac5-83d9-81c37c1a958d",
+    "prId" : 28645,
+    "prUrl" : "https://github.com/apache/spark/pull/28645#pullrequestreview-418443673",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "51f1c2dd-d463-413b-bed7-91acfb7c5f9e",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "can we also test some special cases:\r\n1. the catalyst schema has more fields than the case class. e.g. `struct<key: int, value: string, col: int>` and `case class TestData(key: Int, value: String)`\r\n2. the fields order doesn't match, e.g. `struct<value: string, key: int>` and `case class TestData(key: Int, value: String)`\r\n3. the catalyst schema has missing fields, e.g. `struct<key: int>` and `case class TestData(key: Int, value: String)`",
+        "createdAt" : "2020-05-26T15:56:23Z",
+        "updatedAt" : "2020-06-19T06:05:17Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f29a62ac985c6714f0cd6ff5bdd919b2fce89723",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +583,587 @@  }\n\n  test(\"case class as element type of Seq/Array\") {\n    val f1 = (s: Seq[TestData]) => s.map(d => d.key * d.value.toInt).sum\n    val myUdf1 = udf(f1)"
+  },
+  {
+    "id" : "259768da-b4f3-4965-906c-56fde37a3f84",
+    "prId" : 28645,
+    "prUrl" : "https://github.com/apache/spark/pull/28645#pullrequestreview-433047949",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3ec37fd4-2800-4bec-a523-98d16bf55fe0",
+        "parentId" : null,
+        "authorId" : "eb4e5e35-a753-4069-bd95-fda614c83ab3",
+        "body" : "some option tests would be good too. \r\n\r\noption in a simple seq:\r\n`Seq(Seq(Some(1), None)).toDF.withColumn(\"value\", udf{ s: Seq[Option[Int]] => s.map(_.map(_ + 1)) }.apply(col(\"value\")) )`\r\n\r\noption for function argument:\r\n`Seq(None, Some(1), None).toDF.withColumn(\"value\", udf{ o: Option[Int] => o.map(_ + 1) }.apply(col(\"value\")))`\r\n\r\nnote that the top level option to express nullability is a very common use case in particular and supported by encoders. the equivalent in Dataset is:\r\n`Seq(None, Some(1), None).toDS.map{ o: Option[Int] => o.map(_ + 1) }`\r\n",
+        "createdAt" : "2020-05-26T17:05:50Z",
+        "updatedAt" : "2020-06-19T06:05:17Z",
+        "lastEditedBy" : "eb4e5e35-a753-4069-bd95-fda614c83ab3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8c81f256-3ec5-4250-9cc6-354fad8fdd28",
+        "parentId" : "3ec37fd4-2800-4bec-a523-98d16bf55fe0",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "There's implementation difference between `udf` and `Dataset.map`. So for the second case you're mentioned, it only work in  `Dataset.map` but fail in `udf`.",
+        "createdAt" : "2020-05-27T13:50:59Z",
+        "updatedAt" : "2020-06-19T06:05:17Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b57ac8de-515b-4cda-afff-eaadd25342dc",
+        "parentId" : "3ec37fd4-2800-4bec-a523-98d16bf55fe0",
+        "authorId" : "eb4e5e35-a753-4069-bd95-fda614c83ab3",
+        "body" : "> There's implementation difference between `udf` and `Dataset.map`. So for the second case you're mentioned, it only work in `Dataset.map` but fail in `udf`.\r\n\r\nif the goal is to stop people from writing their own implementations of udf then the second case is also needed...",
+        "createdAt" : "2020-06-05T13:00:37Z",
+        "updatedAt" : "2020-06-19T06:05:17Z",
+        "lastEditedBy" : "eb4e5e35-a753-4069-bd95-fda614c83ab3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5cb84ece-0614-4d79-8182-7fbd46d95324",
+        "parentId" : "3ec37fd4-2800-4bec-a523-98d16bf55fe0",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "@koertkuipers I've updated to support the second case.",
+        "createdAt" : "2020-06-18T08:19:48Z",
+        "updatedAt" : "2020-06-19T06:05:17Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f29a62ac985c6714f0cd6ff5bdd919b2fce89723",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +583,587 @@  }\n\n  test(\"case class as element type of Seq/Array\") {\n    val f1 = (s: Seq[TestData]) => s.map(d => d.key * d.value.toInt).sum\n    val myUdf1 = udf(f1)"
   }
 ]

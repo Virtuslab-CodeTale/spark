@@ -559,5 +559,159 @@
     "commit" : "635d3ab5be8635e4789345480ca3bcf2f0c72cd8",
     "line" : 14,
     "diffHunk" : "@@ -1,1 +858,862 @@        tableIdentifierPattern.map(catalog.listTables(db, _)).getOrElse(catalog.listTables(db))\n      val filterCachedTables = if (showCached) {\n        tables.filter(table => sparkSession.catalog.isCached(table.quotedString))\n      } else {\n        tables"
+  },
+  {
+    "id" : "d87ab9ee-988c-4e74-b20c-742ea936b561",
+    "prId" : 28647,
+    "prUrl" : "https://github.com/apache/spark/pull/28647#pullrequestreview-421362837",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a719c864-f276-422a-9731-692d3c764685",
+        "parentId" : null,
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "Keep view behavior as before. Hive also does not copy view properties.",
+        "createdAt" : "2020-05-29T07:38:42Z",
+        "updatedAt" : "2020-11-24T09:28:18Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "af71b11f-0e61-4d67-b6c7-da04ab6cb0bb",
+        "parentId" : "a719c864-f276-422a-9731-692d3c764685",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "nit format;\r\n```\r\n\r\n    val newProperties = sourceTableDesc.tableType match {\r\n      case MANAGED | EXTERNAL =>\r\n        // Hive only retain the useful properties through serde class annotation.\r\n        // For better compatible with Hive, we remove the metastore properties.\r\n        sourceTableDesc.properties -- DDLUtils.METASTORE_GENERATED_PROPERTIES ++ properties\r\n\r\n      case VIEW =>\r\n        // For view, we just use new properties\r\n        properties\r\n    }\r\n```",
+        "createdAt" : "2020-05-30T00:58:25Z",
+        "updatedAt" : "2020-11-24T09:28:18Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c45489ad5b8ddd53d5e81fbba4cd08c0b4fd9850",
+    "line" : 28,
+    "diffHunk" : "@@ -1,1 +132,136 @@      case VIEW =>\n        // For view, we just use the new properties\n        properties\n      case other =>\n        throw new IllegalArgumentException("
+  },
+  {
+    "id" : "f5c219f8-17a3-47cb-9c09-4eab8af80ea4",
+    "prId" : 28647,
+    "prUrl" : "https://github.com/apache/spark/pull/28647#pullrequestreview-440692694",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "88047843-e89a-4abd-b570-efcd6d46c2c5",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Why not just compare `newProvider` with `sourceTableDesc.provider`?\r\n\r\nWhen `provider.isEmpty` is true, it covers view case, Hive provider, do we need to copy properties for all these cases?",
+        "createdAt" : "2020-06-30T21:56:10Z",
+        "updatedAt" : "2020-11-24T09:28:18Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "162ae71c-f6f1-4afb-b987-8ca4ee0bb0c9",
+        "parentId" : "88047843-e89a-4abd-b570-efcd6d46c2c5",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "`newProvider` checked `VIEW` and always used `parquet` as the provider.\r\n\r\nWe only copy properties for tables,  and already checked at below code\r\n```\r\nval newProperties = sourceTableDesc.tableType match {\r\n      case MANAGED | EXTERNAL if needCopyProperties =>\r\n        // Hive only retain the useful properties through serde class annotation.\r\n        // For better compatible with Hive, we remove the metastore properties.\r\n        sourceTableDesc.properties -- DDLUtils.METASTORE_GENERATED_PROPERTIES ++ properties\r\n      case MANAGED | EXTERNAL =>\r\n        properties\r\n      case VIEW =>\r\n        // For view, we just use new properties\r\n        properties\r\n      case other =>\r\n        throw new IllegalArgumentException(\r\n          s\"Unknown table type is found at createTableLikeCommand: $other\")\r\n    }\r\n```",
+        "createdAt" : "2020-07-01T00:44:39Z",
+        "updatedAt" : "2020-11-24T09:28:18Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6fd29778-1e35-459e-8c6d-0c6e728f26e5",
+        "parentId" : "88047843-e89a-4abd-b570-efcd6d46c2c5",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Another case is `provider.isDefined` is false and `fileFormat.inputFormat.isDefined` is true. We might copy properties for it if `fileFormat.inputFormat == sourceTableDesc.storage.inputFormat`. Is it valid to copy properties for this case? When the source provider is different to Hive provider?",
+        "createdAt" : "2020-07-01T00:55:40Z",
+        "updatedAt" : "2020-11-24T09:28:18Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f06a0981-2941-4357-ada0-1a73d1454e05",
+        "parentId" : "88047843-e89a-4abd-b570-efcd6d46c2c5",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "`inputFormat` only used in Hive provider right ? it will not happen.",
+        "createdAt" : "2020-07-01T01:22:28Z",
+        "updatedAt" : "2020-11-24T09:28:18Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e78aa7a8-55d9-4735-ae43-b1379447bd3f",
+        "parentId" : "88047843-e89a-4abd-b570-efcd6d46c2c5",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "We already have tests for all the case described above?",
+        "createdAt" : "2020-07-01T01:28:20Z",
+        "updatedAt" : "2020-11-24T09:28:18Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "defc6fe4-be9c-4086-8f96-19d18b8831fa",
+        "parentId" : "88047843-e89a-4abd-b570-efcd6d46c2c5",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "ok, sounds good.",
+        "createdAt" : "2020-07-01T01:29:00Z",
+        "updatedAt" : "2020-11-24T09:28:18Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d144f61c-0519-472d-8ac7-82a4329565ea",
+        "parentId" : "88047843-e89a-4abd-b570-efcd6d46c2c5",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "+1 for @maropu's comment. If we have tests for them, it should be good.",
+        "createdAt" : "2020-07-01T01:33:38Z",
+        "updatedAt" : "2020-11-24T09:28:18Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b33f3eaa-8962-4eba-b96f-1ce2ca46c5b9",
+        "parentId" : "88047843-e89a-4abd-b570-efcd6d46c2c5",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "added more test.",
+        "createdAt" : "2020-07-01T09:17:17Z",
+        "updatedAt" : "2020-11-24T09:28:18Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c45489ad5b8ddd53d5e81fbba4cd08c0b4fd9850",
+    "line" : 17,
+    "diffHunk" : "@@ -1,1 +121,125 @@    // We only copy source tbl properties if the format is the same with each other\n    val needCopyProperties =\n      (provider.isEmpty || provider == sourceTableDesc.provider) &&\n      (fileFormat.inputFormat.isEmpty ||\n        fileFormat.inputFormat == sourceTableDesc.storage.inputFormat)"
+  },
+  {
+    "id" : "68e66a8e-57c7-41dd-98b5-c5ee99d86cae",
+    "prId" : 28647,
+    "prUrl" : "https://github.com/apache/spark/pull/28647#pullrequestreview-440488562",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "05bafc48-ba1b-498f-b183-c9f46658852d",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Plz update the comment, too? `if the formats is the same..`\r\n",
+        "createdAt" : "2020-07-01T01:27:01Z",
+        "updatedAt" : "2020-11-24T09:28:18Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c45489ad5b8ddd53d5e81fbba4cd08c0b4fd9850",
+    "line" : 8,
+    "diffHunk" : "@@ -1,1 +60,64 @@ * by default. Note that, tblproperties is copied into a new table if the table formats including\n * data source providers and storage input formats are the same.\n *\n * Use \"CREATE TABLE t1 LIKE t2 USING file_format\" to specify new provider for t1.\n * For Hive compatibility, use \"CREATE TABLE t1 LIKE t2 STORED AS hiveFormat\""
   }
 ]

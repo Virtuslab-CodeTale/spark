@@ -152,5 +152,148 @@
     "commit" : "7ff4e88627505e092281ec50f6237b3ae994638d",
     "line" : 14,
     "diffHunk" : "@@ -1,1 +958,962 @@\n    @since(3.1)\n    def getCheckpointDir(self):\n        \"\"\"\n        Return the directory where RDDs are checkpointed. Returns None if no"
+  },
+  {
+    "id" : "55578ea3-c643-488e-814b-91353bb89d55",
+    "prId" : 28648,
+    "prUrl" : "https://github.com/apache/spark/pull/28648#pullrequestreview-420179860",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2c28f751-3b77-477f-9d24-0bd4bc290e27",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "So if the first one is a JavaPairRDD, but another is a JavaRDD, this will fail I think when the array is created on the JVM side? do we want to check whether _all_ are a pair or double RDD? I haven't thought through that but it occurred to me.",
+        "createdAt" : "2020-05-28T14:10:05Z",
+        "updatedAt" : "2020-05-29T08:03:10Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c6faa275-9490-4919-a535-11de078ef5a5",
+        "parentId" : "2c28f751-3b77-477f-9d24-0bd4bc290e27",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "It will still work:\r\n\r\n```python\r\n>>> rdd1 = sc.parallelize([1,2,3,4,5])\r\n>>> rdd2 = sc.parallelize([6,7,8,9,10])\r\n>>> pairRDD1 = rdd1.zip(rdd2)\r\n>>> sc.union([rdd1, pairRDD1]).collect()\r\n[1, 2, 3, 4, 5, (1, 6), (2, 7), (3, 8), (4, 9), (5, 10)]\r\n>>> sc.union([pairRDD1, rdd1]).collect()\r\n[(1, 6), (2, 7), (3, 8), (4, 9), (5, 10), 1, 2, 3, 4, 5]\r\n```\r\n\r\nbecause it converts all to `JavaRDD` via `self._reserialize()` when they are different types.",
+        "createdAt" : "2020-05-28T14:25:42Z",
+        "updatedAt" : "2020-05-29T08:03:10Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "79e54cf2-54a2-4ae9-a5b7-0809ef7adb72",
+        "parentId" : "2c28f751-3b77-477f-9d24-0bd4bc290e27",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "And .. actually I think `JavaDoubleRDD` can't be exposed in PySpark if I am not mistaken. It might be unreachable codes but It's just to restore the previous behaviour as is to be extra safe like https://github.com/apache/spark/pull/28648#discussion_r430825553.",
+        "createdAt" : "2020-05-28T14:38:16Z",
+        "updatedAt" : "2020-05-29T08:03:10Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a7b2af405e6050372930c41181ccb974210f262f",
+    "line" : 21,
+    "diffHunk" : "@@ -1,1 +873,877 @@        if is_instance_of(gw, rdds[0]._jrdd, jrdd_cls):\n            cls = jrdd_cls\n        elif is_instance_of(gw, rdds[0]._jrdd, jpair_rdd_cls):\n            cls = jpair_rdd_cls\n        elif is_instance_of(gw, rdds[0]._jrdd, jdouble_rdd_cls):"
+  },
+  {
+    "id" : "7e031db5-1447-4911-807e-9d7cdde1aa08",
+    "prId" : 28648,
+    "prUrl" : "https://github.com/apache/spark/pull/28648#pullrequestreview-421509433",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "85c41f4c-fa66-4ad3-bddc-b3067206f312",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Just curious. Does abstract class like `AbstractJavaRDDLike` work here? I think JavaRDD, JavaPairRDD all inherit `AbstractJavaRDDLike`.",
+        "createdAt" : "2020-05-29T15:33:18Z",
+        "updatedAt" : "2020-05-29T15:33:18Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ca0b1a12-57c1-43b2-81c5-9da22492d858",
+        "parentId" : "85c41f4c-fa66-4ad3-bddc-b3067206f312",
+        "authorId" : "0c293c45-22a6-4358-8a40-adbf7c470575",
+        "body" : "Yeah, was wondering this also?",
+        "createdAt" : "2020-05-29T18:39:42Z",
+        "updatedAt" : "2020-05-29T18:39:45Z",
+        "lastEditedBy" : "0c293c45-22a6-4358-8a40-adbf7c470575",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b5ead7d2-9567-447a-8051-ffbf6c36488c",
+        "parentId" : "85c41f4c-fa66-4ad3-bddc-b3067206f312",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Nope, it seems not working:\r\n\r\n```\r\nTraceback (most recent call last):\r\n  File \"<stdin>\", line 1, in <module>\r\n  File \"/.../spark/python/pyspark/context.py\", line 885, in union\r\n    return RDD(self._jsc.union(jrdds), self, rdds[0]._jrdd_deserializer)\r\n  File \"/.../spark/python/lib/py4j-0.10.9-src.zip/py4j/java_gateway.py\", line 1305, in __call__\r\n  File \"/.../spark/python/pyspark/sql/utils.py\", line 98, in deco\r\n    return f(*a, **kw)\r\n  File \"/.../spark/python/lib/py4j-0.10.9-src.zip/py4j/protocol.py\", line 332, in get_return_value\r\npy4j.protocol.Py4JError: An error occurred while calling o15.union. Trace:\r\npy4j.Py4JException: Method union([class [Lorg.apache.spark.api.java.AbstractJavaRDDLike;]) does not exist\r\n\tat py4j.reflection.ReflectionEngine.getMethod(ReflectionEngine.java:318)\r\n\tat py4j.reflection.ReflectionEngine.getMethod(ReflectionEngine.java:326)\r\n\tat py4j.Gateway.invoke(Gateway.java:274)\r\n\tat py4j.commands.AbstractCommand.invokeMethod(AbstractCommand.java:132)\r\n\tat py4j.commands.CallCommand.execute(CallCommand.java:79)\r\n\tat py4j.GatewayConnection.run(GatewayConnection.java:238)\r\n\tat java.lang.Thread.run(Thread.java:748)\r\n```",
+        "createdAt" : "2020-05-31T09:36:12Z",
+        "updatedAt" : "2020-05-31T09:36:13Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0055b73f-815f-4baf-b4f0-f51bbdf6f965",
+        "parentId" : "85c41f4c-fa66-4ad3-bddc-b3067206f312",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "hmm, I see. It's interesting. Generally I think it should work, but `AbstractJavaRDDLike` doesn't implement some `JavaRDD` methods, e.g. `union`. For now this fix is okay.",
+        "createdAt" : "2020-05-31T16:32:32Z",
+        "updatedAt" : "2020-05-31T16:32:33Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a7b2af405e6050372930c41181ccb974210f262f",
+    "line" : 28,
+    "diffHunk" : "@@ -1,1 +880,884 @@            cls_name = rdds[0]._jrdd.getClass().getCanonicalName()\n            raise TypeError(\"Unsupported Java RDD class %s\" % cls_name)\n        jrdds = gw.new_array(cls, len(rdds))\n        for i in range(0, len(rdds)):\n            jrdds[i] = rdds[i]._jrdd"
+  },
+  {
+    "id" : "ff1f28e9-0a7f-4e1a-a5fa-300e42bc2ed0",
+    "prId" : 28603,
+    "prUrl" : "https://github.com/apache/spark/pull/28603#pullrequestreview-417065536",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "baca081c-8822-4094-b9f3-d32b8d6cd0fe",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Can you check https://github.com/apache/spark/pull/19498? The best way might be just add `lambda x: x` and make it `JavaRDD`.",
+        "createdAt" : "2020-05-22T02:02:42Z",
+        "updatedAt" : "2020-05-22T20:07:32Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0b5c94af-00f5-4690-9437-80c3cb5f3aad",
+        "parentId" : "baca081c-8822-4094-b9f3-d32b8d6cd0fe",
+        "authorId" : "fb1da7a4-0c05-42a2-9913-c8bd60c58a4f",
+        "body" : "sure will take a look thanks",
+        "createdAt" : "2020-05-22T13:11:01Z",
+        "updatedAt" : "2020-05-22T20:07:32Z",
+        "lastEditedBy" : "fb1da7a4-0c05-42a2-9913-c8bd60c58a4f",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "11dd17cd-63b8-447a-a0cb-2cfbb6983fe0",
+        "parentId" : "baca081c-8822-4094-b9f3-d32b8d6cd0fe",
+        "authorId" : "fb1da7a4-0c05-42a2-9913-c8bd60c58a4f",
+        "body" : "@HyukjinKwon Addressed plz take a look again thanks",
+        "createdAt" : "2020-05-22T17:11:18Z",
+        "updatedAt" : "2020-05-22T20:07:32Z",
+        "lastEditedBy" : "fb1da7a4-0c05-42a2-9913-c8bd60c58a4f",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c65be0d6ac8e78f56ca8cd063d9db1012b65f0ab",
+    "line" : 16,
+    "diffHunk" : "@@ -1,1 +869,873 @@        cls = SparkContext._jvm.org.apache.spark.api.java.JavaRDD\n        is_jrdd = is_instance_of(gw, rdds[0]._jrdd, cls)\n        jrdds = gw.new_array(cls, len(rdds))\n        for i in range(0, len(rdds)):\n            if is_jrdd:"
   }
 ]

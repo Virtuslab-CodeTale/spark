@@ -306,5 +306,203 @@
     "commit" : "7519ef5fdc91a7b0f051a97de73055e0506fba47",
     "line" : 128,
     "diffHunk" : "@@ -1,1 +1196,1200 @@        taskData(tid).taskMetrics.isDefined) {\n        val taskMetrics = taskData(tid).taskMetrics.get\n        val currentTaskProgressRate = (taskMetrics.inputMetrics.recordsRead +\n          taskMetrics.shuffleReadMetrics.recordsRead) / (runtimeMs / 1000.0)\n        val progressThreshold ="
+  },
+  {
+    "id" : "613f59df-cb1e-4420-a9f4-c0a6a215d6e4",
+    "prId" : 28656,
+    "prUrl" : "https://github.com/apache/spark/pull/28656#pullrequestreview-419724446",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3147e6cd-39db-49a3-ab6a-22f5d69c09f5",
+        "parentId" : null,
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "I think we should change this to only happen when executorAdded. this is also called on lost and decommission and it doesn't make sense to go to \"lower\" level.  Note we may want to stay away from saying higher in the comment below. The code values, lower is actually more strict - meaning process is lowest value. so perhaps don't say higher or lower but say more local or less local.  Perhaps pass in parameter from executorAdded.",
+        "createdAt" : "2020-05-27T22:24:59Z",
+        "updatedAt" : "2020-05-29T07:49:36Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5c7ba50b-f9ab-4770-9626-5637f724cd5d",
+        "parentId" : "3147e6cd-39db-49a3-ab6a-22f5d69c09f5",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "> I think we should change this to only happen when executorAdded. this is also called on lost and decommission and it doesn't make sense to go to \"lower\" level. \r\n\r\nI think it's impossible to go to \"lower\" or more local level in case of lost and decommission. Lost and decommission would remove executors, so the locality levels can only be less compared to the previous locality levels. It also means, lost and decommission will not add new more local levels.",
+        "createdAt" : "2020-05-28T01:50:07Z",
+        "updatedAt" : "2020-05-29T07:49:36Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "430c8ef9-82af-4eff-b1b8-25c5d837b160",
+        "parentId" : "3147e6cd-39db-49a3-ab6a-22f5d69c09f5",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "> so perhaps don't say higher or lower but say more local or less local.\r\n\r\nYea, good point!",
+        "createdAt" : "2020-05-28T01:51:04Z",
+        "updatedAt" : "2020-05-29T07:49:36Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8744f1ec02db28975a80410b5a01d2c2557ad216",
+    "line" : 10,
+    "diffHunk" : "@@ -1,1 +1114,1118 @@    localityWaits = myLocalityLevels.map(getLocalityWait)\n    currentLocalityIndex = getLocalityIndex(previousLocalityLevel)\n    if (currentLocalityIndex > previousLocalityIndex) {\n      // SPARK-31837: If the new level is more local, shift to the new most local locality\n      // level in terms of better data locality. For example, say the previous locality"
+  },
+  {
+    "id" : "765a1cef-cda0-49b7-827f-516247adfc7a",
+    "prId" : 28656,
+    "prUrl" : "https://github.com/apache/spark/pull/28656#pullrequestreview-421012127",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8c441afe-6490-40cf-8a7f-79ac190d9c6e",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Hi all, there's a defect in the previous implement(always reset `currentLocalityIndex` to 0). Think about such a case, say we have locality levels [PROCESS, NODE, ANY] and current locality level is ANY. After recompute, we might have locality levels [PROCESS, NODE, RACK, ANY]. In this case, I think we'd better shift to RACK level instead of  PROCESS level, since the TaskSetManager has been already delayed for a while on known levels(PROCESS, NODE). So with this update, I think it could also ease our concern on the possible perf regression introduced by aggressive locality level resetting. @bmarcott @tgravescs @cloud-fan ",
+        "createdAt" : "2020-05-29T07:58:32Z",
+        "updatedAt" : "2020-05-29T14:25:36Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9fd24bb0-bbef-42bf-a0bb-752b404e1477",
+        "parentId" : "8c441afe-6490-40cf-8a7f-79ac190d9c6e",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "yes this is one of the cases I was referring to. Ideally you would never run into this case because a host is on a rack so you would always have it. Unfortunately Spark defaults the rack to None so you can. I was going to improve upon it in the jira I filed. We can certainly handle some here if you want",
+        "createdAt" : "2020-05-29T14:19:42Z",
+        "updatedAt" : "2020-05-29T14:19:43Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a5581087-99c3-4cca-b673-1bfa2104996f",
+        "parentId" : "8c441afe-6490-40cf-8a7f-79ac190d9c6e",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "> We can certainly handle some here if you want\r\n\r\nWhat do you mean by \"handle some here\"? I read your JIRA and don't find the specific solution that could be added to this PR. Could you please elaborate more? ",
+        "createdAt" : "2020-05-29T14:28:53Z",
+        "updatedAt" : "2020-05-29T14:28:53Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c6f08691-db09-4120-8a83-655a8d0a4f29",
+        "parentId" : "8c441afe-6490-40cf-8a7f-79ac190d9c6e",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "I just mean there are a bunch of corner cases and I don't think resetting this on every executor added is ideal.  I did not list out all of them.  On Yarn it actually defaults to default-rack rather then None so it actually won't have this issue because every node has a rack.  I agree that the code you have here is an improvement to handle the rack case.",
+        "createdAt" : "2020-05-29T14:33:26Z",
+        "updatedAt" : "2020-05-29T14:33:26Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8744f1ec02db28975a80410b5a01d2c2557ad216",
+    "line" : 15,
+    "diffHunk" : "@@ -1,1 +1119,1123 @@      // levels are [PROCESS, NODE, ANY] and current level is ANY. After recompute, the\n      // locality levels are [PROCESS, NODE, RACK, ANY]. Then, we'll shift to RACK level.\n      currentLocalityIndex = getLocalityIndex(myLocalityLevels.diff(previousMyLocalityLevels).head)\n    }\n  }"
+  },
+  {
+    "id" : "b8520b42-37d2-4749-89fd-2c538a770aea",
+    "prId" : 28619,
+    "prUrl" : "https://github.com/apache/spark/pull/28619#pullrequestreview-418831153",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ef55782e-042c-4b6e-9cc7-7d0a99b78370",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "We need to remove the corresponding task from `tidToExecutorKillTimeMapping` if `speculated` is true?",
+        "createdAt" : "2020-05-26T05:51:34Z",
+        "updatedAt" : "2020-06-15T14:14:24Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dec43382-7cf3-4801-94d7-930246b85706",
+        "parentId" : "ef55782e-042c-4b6e-9cc7-7d0a99b78370",
+        "authorId" : "ad4cb313-47b2-4cfa-9c1f-0a3596794a67",
+        "body" : "We are removing entries from tidToExecutorKillTimeMapping at time when it is removed from `runningTasksSet`.",
+        "createdAt" : "2020-05-26T15:03:36Z",
+        "updatedAt" : "2020-06-15T14:14:24Z",
+        "lastEditedBy" : "ad4cb313-47b2-4cfa-9c1f-0a3596794a67",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4f6ca1b6-b55d-45de-9eef-6d06d5649a26",
+        "parentId" : "ef55782e-042c-4b6e-9cc7-7d0a99b78370",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Then, is it possible that we add redundant speculate tasks for the same tid?",
+        "createdAt" : "2020-05-26T15:38:56Z",
+        "updatedAt" : "2020-06-15T14:14:24Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f47a5700-430e-4dcf-84ff-0277a67cc94d",
+        "parentId" : "ef55782e-042c-4b6e-9cc7-7d0a99b78370",
+        "authorId" : "ad4cb313-47b2-4cfa-9c1f-0a3596794a67",
+        "body" : "The `copiesRunning(index) == 1` condition inside `checkAndSubmitSpeculatableTask` will prevent it. Irrespective of executor decommissioning, that check makes sure that only 1 speculatable task can run for each unique index.",
+        "createdAt" : "2020-05-26T17:09:14Z",
+        "updatedAt" : "2020-06-15T14:14:24Z",
+        "lastEditedBy" : "ad4cb313-47b2-4cfa-9c1f-0a3596794a67",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ab84ab4e-6b71-4439-b7c7-e900d380283b",
+        "parentId" : "ef55782e-042c-4b6e-9cc7-7d0a99b78370",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "I mean if it's possible to add redundant speculate tasks to `speculatableTasks` rather than running multiple  speculate tasks for the same tid at the same time.\r\n\r\nI think the actual prevention is `!speculatableTasks.contains(index)` in `checkAndSubmitSpeculatableTask`, but never mind since `speculatableTasks` is a `HashSet`.",
+        "createdAt" : "2020-05-27T03:22:35Z",
+        "updatedAt" : "2020-06-15T14:14:24Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d87b311be85819ae884e2a24d94926fdd51165de",
+    "line" : 48,
+    "diffHunk" : "@@ -1,1 +1056,1060 @@            taskEndTimeBasedOnMedianDuration\n          if (canExceedDeadline) {\n            speculated = checkAndSubmitSpeculatableTask(tid, time, 0)\n          }\n        }"
+  },
+  {
+    "id" : "dcec1d24-0dcd-4f8c-b266-d6445c647aed",
+    "prId" : 28619,
+    "prUrl" : "https://github.com/apache/spark/pull/28619#pullrequestreview-430685101",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "bbb1f727-18f9-4dfb-a609-bb4910913a3f",
+        "parentId" : null,
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "I am just curious why this solution (introducing the kill time per task ID map: `tidToExecutorKillTimeMapping`) is chosen over storing the kill time per executor (`executorToKillTimeMapping` or something like that). In the later case here would be  something like: \r\n\r\n```scala\r\nif (!speculated && executorToKillTimeMapping.nonEmpty) {\r\n  val taskInfo = taskInfos(tid)\r\n  executorToKillTimeMapping.get(taskInfo.executorId).foreach {  executorKillTime =>\r\n  ...\r\n  }\r\n}\r\n```",
+        "createdAt" : "2020-06-15T11:24:00Z",
+        "updatedAt" : "2020-06-15T14:14:24Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1d37e673-ea65-4bf8-8be6-5138305f1c19",
+        "parentId" : "bbb1f727-18f9-4dfb-a609-bb4910913a3f",
+        "authorId" : "ad4cb313-47b2-4cfa-9c1f-0a3596794a67",
+        "body" : "Yes - We can store executorToKillTimeMapping also. In that case, we have to clean the map when executor is removed. For that we may have to make changes to pass \"removeExecutor\" signal till TaskSetManager.\r\n\r\nI didn't see much difference in both the approaches as total entries we will be creating for a given executor in current approach will be equal to total tasks running for that executor (which shouldn't be a lot).",
+        "createdAt" : "2020-06-15T14:14:34Z",
+        "updatedAt" : "2020-06-15T14:14:35Z",
+        "lastEditedBy" : "ad4cb313-47b2-4cfa-9c1f-0a3596794a67",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d87b311be85819ae884e2a24d94926fdd51165de",
+    "line" : 40,
+    "diffHunk" : "@@ -1,1 +1048,1052 @@      for (tid <- runningTasksSet) {\n        var speculated = checkAndSubmitSpeculatableTask(tid, time, threshold)\n        if (!speculated && tidToExecutorKillTimeMapping.contains(tid)) {\n          // Check whether this task will finish before the exectorKillTime assuming\n          // it will take medianDuration overall. If this task cannot finish within"
   }
 ]

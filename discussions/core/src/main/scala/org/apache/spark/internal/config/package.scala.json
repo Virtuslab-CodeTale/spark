@@ -1186,5 +1186,71 @@
     "commit" : "9c43172daf2b9ad38fce32f5349c87944fa62caa",
     "line" : 7,
     "diffHunk" : "@@ -1,1 +461,465 @@\n  private[spark] val STORAGE_BLOCKMANAGER_HEARTBEAT_TIMEOUT =\n    ConfigBuilder(\"spark.storage.blockManagerHeartbeatTimeoutMs\")\n      .version(\"0.7.0\")\n      .withAlternative(\"spark.storage.blockManagerSlaveTimeoutMs\")"
+  },
+  {
+    "id" : "716b5cf8-eaee-457f-98a8-3b90498aa4d4",
+    "prId" : 28619,
+    "prUrl" : "https://github.com/apache/spark/pull/28619#pullrequestreview-439401780",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "edfb4fd5-7d64-42a3-a822-14617e4c83b0",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "So the timeout is decided by the cloud vendors? What does this config specify?",
+        "createdAt" : "2020-06-17T08:34:46Z",
+        "updatedAt" : "2020-06-17T08:34:46Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e3abec3d-2a7b-4594-8592-695690fffe7a",
+        "parentId" : "edfb4fd5-7d64-42a3-a822-14617e4c83b0",
+        "authorId" : "ad4cb313-47b2-4cfa-9c1f-0a3596794a67",
+        "body" : "@cloud-fan This config can be set by users based on their setups. If they are using AWS spot nodes, timeout can be set to somewhere around 120 seconds, if they are using fix duration 6hrs spot blocks (say they decommission executors at 5:45), timeout can be set to 15 mins and so on.\r\n\r\nIf user doesn't set this timeout, things will remain as they were and tasks running on decommission executors  won't get any special treatment with respect to speculation.",
+        "createdAt" : "2020-06-18T05:17:43Z",
+        "updatedAt" : "2020-06-18T05:17:44Z",
+        "lastEditedBy" : "ad4cb313-47b2-4cfa-9c1f-0a3596794a67",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f68ca0aa-77bc-4f69-bb40-7534007c9730",
+        "parentId" : "edfb4fd5-7d64-42a3-a822-14617e4c83b0",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "is it possible that Spark can get this timeout value from the cluster manager? So that users don't need to set it manually. cc @holdenk ",
+        "createdAt" : "2020-06-18T06:52:00Z",
+        "updatedAt" : "2020-06-18T06:52:01Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d70714bc-2cf4-469d-b8cf-bf146abf2f3c",
+        "parentId" : "edfb4fd5-7d64-42a3-a822-14617e4c83b0",
+        "authorId" : "ad4cb313-47b2-4cfa-9c1f-0a3596794a67",
+        "body" : "@cloud-fan As per my understanding, Worker Decommissioning is getting triggered currently using SIGPWR signal (and not via some message coming from YARN/Kubernetes Cluster manager). So getting this timeout from Spark Cluster Manager might not be possible. We might be able to do this once Spark's Worker Decommissioning logic starts triggering via communication from YARN etc in future. cc  @holdenk ",
+        "createdAt" : "2020-06-22T05:21:35Z",
+        "updatedAt" : "2020-06-22T05:21:35Z",
+        "lastEditedBy" : "ad4cb313-47b2-4cfa-9c1f-0a3596794a67",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4ad52605-dec1-43b3-918d-fb450e03c703",
+        "parentId" : "edfb4fd5-7d64-42a3-a822-14617e4c83b0",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "I believe there are some situations where we can know the length of time from the cluster manager or from Spark it's self, but not all. I think having a configurable default for folks who know their cloud provider environment makes sense",
+        "createdAt" : "2020-06-29T18:35:26Z",
+        "updatedAt" : "2020-06-29T18:35:27Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d87b311be85819ae884e2a24d94926fdd51165de",
+    "line" : 9,
+    "diffHunk" : "@@ -1,1 +1848,1852 @@        \"This config is useful for cloud environments where we know in advance when \" +\n        \"an executor is going to go down after decommissioning signal i.e. around 2 mins \" +\n        \"in aws spot nodes, 1/2 hrs in spot block nodes etc. This config is currently \" +\n        \"used to decide what tasks running on decommission executors to speculate.\")\n      .version(\"3.1.0\")"
   }
 ]

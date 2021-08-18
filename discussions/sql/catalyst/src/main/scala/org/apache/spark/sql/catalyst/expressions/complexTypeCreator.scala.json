@@ -251,5 +251,170 @@
     "commit" : "2b0ac348c9ab5854a37e246a5c498d05095c103c",
     "line" : 57,
     "diffHunk" : "@@ -1,1 +580,584 @@  override def nullable: Boolean = throw new UnresolvedException(this, \"nullable\")\n\n  override def prettyName: String = \"WithField\"\n}\n"
+  },
+  {
+    "id" : "1c77738e-6a23-43a3-8bde-0a2cbebb26e2",
+    "prId" : 28633,
+    "prUrl" : "https://github.com/apache/spark/pull/28633#pullrequestreview-417487389",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0a7bb3d1-5aea-40c5-b74c-f6eeb5a866ef",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Here, I took more conservative approach just by whitelisting. There are some cases that `named_struct` makes arguably more pretty when they are internally used. For example:\r\n\r\n```diff\r\n-| org.apache.spark.sql.catalyst.expressions.ZipWith | zip_with | SELECT zip_with(array(1, 2, 3), array('a', 'b', 'c'), (x, y) -> (y, x)) | struct<zip_with(array(1, 2, 3), array(a, b, c), lambdafunction(named_struct(y, namedlambdavariable(), x, namedlambdavariable()), namedlambdavariable(), namedlambdavariable())):array<struct<y:string,x:int>>> |\r\n+| org.apache.spark.sql.catalyst.expressions.ZipWith | zip_with | SELECT zip_with(array(1, 2, 3), array('a', 'b', 'c'), (x, y) -> (y, x)) | struct<zip_with(array(1, 2, 3), array(a, b, c), lambdafunction(struct(namedlambdavariable(), namedlambdavariable()), namedlambdavariable(), namedlambdavariable())):array<struct<y:string,x:int>>> |\r\n\r\n```",
+        "createdAt" : "2020-05-25T06:42:14Z",
+        "updatedAt" : "2020-05-26T00:11:34Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8e1e0a2ea956697c46060b9c43a7203a541ca703",
+    "line" : 26,
+    "diffHunk" : "@@ -1,1 +325,329 @@    })\n  }\n\n  /**\n   * Returns a named struct with a pretty SQL name. It will show the pretty SQL string"
+  },
+  {
+    "id" : "fdd20be7-543c-47e3-a1ac-00cf489ef5e9",
+    "prId" : 28633,
+    "prUrl" : "https://github.com/apache/spark/pull/28633#pullrequestreview-417542550",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "98eb3f01-2533-4481-8b93-a592b80ecf42",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "nit tnohgh, we cannot reuse the `ExpressionInfo` of `CreateNameStruct` via reflection here?",
+        "createdAt" : "2020-05-25T07:56:41Z",
+        "updatedAt" : "2020-05-26T00:11:34Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "408d418f-0249-4fa6-8775-5971bf8486a4",
+        "parentId" : "98eb3f01-2533-4481-8b93-a592b80ecf42",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Seems like it will need more changes than the current changes to reuse it because we should have a different description for `struct` specifically.",
+        "createdAt" : "2020-05-25T08:22:08Z",
+        "updatedAt" : "2020-05-26T00:11:34Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8e1e0a2ea956697c46060b9c43a7203a541ca703",
+    "line" : 44,
+    "diffHunk" : "@@ -1,1 +342,346 @@  val registryEntry: (String, (ExpressionInfo, FunctionBuilder)) = {\n    val info: ExpressionInfo = new ExpressionInfo(\n      classOf[CreateNamedStruct].getCanonicalName,\n      null,\n      \"struct\","
+  },
+  {
+    "id" : "06d89a77-95ea-4cc4-90a4-b54eeb96ac44",
+    "prId" : 28633,
+    "prUrl" : "https://github.com/apache/spark/pull/28633#pullrequestreview-417548718",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "75f549c2-01bc-431b-8650-b9f677911574",
+        "parentId" : null,
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "Shouldn't you override prettyName as well? In general this seems to have been solved with either a mixin or at the Expression level.",
+        "createdAt" : "2020-05-25T08:27:01Z",
+        "updatedAt" : "2020-05-26T00:11:34Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1e3233ee-4f5b-4712-bc66-0b5719f3268f",
+        "parentId" : "75f549c2-01bc-431b-8650-b9f677911574",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Yup, should be better to do that.",
+        "createdAt" : "2020-05-25T08:32:14Z",
+        "updatedAt" : "2020-05-26T00:11:34Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8e1e0a2ea956697c46060b9c43a7203a541ca703",
+    "line" : 67,
+    "diffHunk" : "@@ -1,1 +455,459 @@  override def prettyName: String = getTagValue(FUNC_ALIAS).getOrElse(\"named_struct\")\n\n  override def sql: String = getTagValue(FUNC_ALIAS).map { alias =>\n    val childrenSQL = children.indices.filter(_ % 2 == 1).map(children(_).sql).mkString(\", \")\n    s\"$alias($childrenSQL)\""
+  },
+  {
+    "id" : "41c1af32-1154-4d70-bd00-350201c8c4a9",
+    "prId" : 28633,
+    "prUrl" : "https://github.com/apache/spark/pull/28633#pullrequestreview-417762879",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "49b15481-8d88-46ba-998b-2900818fba0c",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "maybe better to leave a comment here and refer to `CreateStruct.create`: if there is an alias, it means this is the `struct` function and we should skip the auto-generated alias names in the SQL string.",
+        "createdAt" : "2020-05-25T14:57:12Z",
+        "updatedAt" : "2020-05-26T00:11:34Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8e1e0a2ea956697c46060b9c43a7203a541ca703",
+    "line" : 67,
+    "diffHunk" : "@@ -1,1 +455,459 @@  override def prettyName: String = getTagValue(FUNC_ALIAS).getOrElse(\"named_struct\")\n\n  override def sql: String = getTagValue(FUNC_ALIAS).map { alias =>\n    val childrenSQL = children.indices.filter(_ % 2 == 1).map(children(_).sql).mkString(\", \")\n    s\"$alias($childrenSQL)\""
+  },
+  {
+    "id" : "b3cacc5b-2a6b-4f2b-9cbe-9e0ef606ba3d",
+    "prId" : 28631,
+    "prUrl" : "https://github.com/apache/spark/pull/28631#pullrequestreview-417375904",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "05523d5f-2225-43ff-a7bc-e8639aa50596",
+        "parentId" : null,
+        "authorId" : "6fc88871-fca6-485c-a47e-5e17709c7b68",
+        "body" : "thank you for fixing this. I remember a while back I wasted a few hours trying to find this mythical       `NamedStruct` class/object without success. ",
+        "createdAt" : "2020-05-24T17:17:02Z",
+        "updatedAt" : "2020-05-24T17:23:09Z",
+        "lastEditedBy" : "6fc88871-fca6-485c-a47e-5e17709c7b68",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "61945d4340a4160d064be9b1805c2c0195adc975",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +326,330 @@  val registryEntry: (String, (ExpressionInfo, FunctionBuilder)) = {\n    val info: ExpressionInfo = new ExpressionInfo(\n      getClass.getCanonicalName.stripSuffix(\"$\"),\n      null,\n      \"struct\","
+  },
+  {
+    "id" : "9ca13461-11b5-44a3-8256-c5e66208aa28",
+    "prId" : 28631,
+    "prUrl" : "https://github.com/apache/spark/pull/28631#pullrequestreview-417414037",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8b2f1869-632a-4510-9319-b4d49a0ef6a1",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "hmm, is it actually a `CreateNamedStruct`?",
+        "createdAt" : "2020-05-25T00:34:35Z",
+        "updatedAt" : "2020-05-25T00:34:35Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4c03e3af-a1d2-4daf-b621-10c71de0ad41",
+        "parentId" : "8b2f1869-632a-4510-9319-b4d49a0ef6a1",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "I guess because `CreateStruct.apply` is the actual `FunctionBuilder`? I think either way seems fine to me. `CreateNamedStruct` sounds fine to me too. This class in `ExpressionInfo` isn't used anywhere in Spark if I am not mistaken so won't be a big deal.",
+        "createdAt" : "2020-05-25T01:15:58Z",
+        "updatedAt" : "2020-05-25T02:28:05Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "61945d4340a4160d064be9b1805c2c0195adc975",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +326,330 @@  val registryEntry: (String, (ExpressionInfo, FunctionBuilder)) = {\n    val info: ExpressionInfo = new ExpressionInfo(\n      getClass.getCanonicalName.stripSuffix(\"$\"),\n      null,\n      \"struct\","
   }
 ]
