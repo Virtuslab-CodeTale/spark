@@ -42,5 +42,82 @@
     "commit" : "a796d191013a1dee296b92539e489c8ab471b21d",
     "line" : 82,
     "diffHunk" : "@@ -1,1 +83,87 @@  //     we just check `SparkPlan.requiredChildDistribution` and see if it's possible that the\n  //     the query needs to add exchanges later.\n  //   - The query contains sub-query.\n  private def shouldApplyAQE(plan: SparkPlan, isSubquery: Boolean): Boolean = {\n    conf.getConf(SQLConf.ADAPTIVE_EXECUTION_FORCE_APPLY) || isSubquery || {"
+  },
+  {
+    "id" : "64311705-8afc-4657-aed9-22324be11506",
+    "prId" : 26813,
+    "prUrl" : "https://github.com/apache/spark/pull/26813#pullrequestreview-350664586",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2f87be19-e905-42b8-840e-d4405befdcf8",
+        "parentId" : null,
+        "authorId" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "body" : "It is absolutely ridiculous to do so here. We deliberately added `SubqueryAdaptiveNotSupportedException` to make sure that it's all-in or all-out for the main query and all its subqueries in order to ensure subquery reuse in AQE.",
+        "createdAt" : "2020-01-28T16:38:49Z",
+        "updatedAt" : "2020-01-28T16:38:50Z",
+        "lastEditedBy" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ee1d615b-1cad-46ba-b42a-f5ba942b0ea7",
+        "parentId" : "2f87be19-e905-42b8-840e-d4405befdcf8",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "It's still all-in or all-out. The complete check is `isSubquery || containShuffle(plan) || containSubQuery(plan)`, so we only call `containSubQuery` for the main query.",
+        "createdAt" : "2020-01-30T09:00:59Z",
+        "updatedAt" : "2020-01-30T09:00:59Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8b5e7442c63fe326db7c7f46f7a194fbae8f0d46",
+    "line" : 28,
+    "diffHunk" : "@@ -1,1 +50,54 @@\n  def containSubQuery(plan: SparkPlan): Boolean = {\n    plan.find(_.expressions.exists(_.find {\n      case _: SubqueryExpression => true\n      case _ => false"
+  },
+  {
+    "id" : "27554baf-3c41-4e5f-9848-594e8828f081",
+    "prId" : 26813,
+    "prUrl" : "https://github.com/apache/spark/pull/26813#pullrequestreview-350945196",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c43bcf34-b3ed-4ef2-b7a1-5d6a690052dc",
+        "parentId" : null,
+        "authorId" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "body" : "Do you remember which case would fail because of this? We should not see an Exchange without a logical link in `sparkPlan`, right? If there is one, we need to find out the reason and fix it. ",
+        "createdAt" : "2020-01-28T16:40:19Z",
+        "updatedAt" : "2020-01-28T16:40:19Z",
+        "lastEditedBy" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "67d36b9d-021e-49ad-89a3-40017b3eac01",
+        "parentId" : "c43bcf34-b3ed-4ef2-b7a1-5d6a690052dc",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "it's not about \"no logical plan link\", it's just: we should do AQE if there are already exchanges in the physical plan before `EnsureRequirements`",
+        "createdAt" : "2020-01-30T08:56:31Z",
+        "updatedAt" : "2020-01-30T09:00:30Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9cb3bd6e-a933-4b69-8bda-5ceb157b714f",
+        "parentId" : "c43bcf34-b3ed-4ef2-b7a1-5d6a690052dc",
+        "authorId" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "body" : "If it's test failure related, we need to look into it, otherwise can we pull these changes out into a separate PR, and control the bypass with a flag, so at least we can still cover this code path in testing?",
+        "createdAt" : "2020-01-30T16:07:59Z",
+        "updatedAt" : "2020-01-30T16:07:59Z",
+        "lastEditedBy" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8b5e7442c63fe326db7c7f46f7a194fbae8f0d46",
+    "line" : 22,
+    "diffHunk" : "@@ -1,1 +44,48 @@  def containShuffle(plan: SparkPlan): Boolean = {\n    plan.find {\n      case _: Exchange => true\n      case s: SparkPlan => !s.requiredChildDistribution.forall(_ == UnspecifiedDistribution)\n    }.isDefined"
   }
 ]

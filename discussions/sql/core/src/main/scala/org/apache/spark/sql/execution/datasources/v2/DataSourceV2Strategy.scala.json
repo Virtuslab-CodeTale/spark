@@ -559,5 +559,115 @@
     "commit" : "dfc44923d10fa7cbb5cd6cde4dfcffa19a9e994d",
     "line" : 15,
     "diffHunk" : "@@ -1,1 +229,233 @@      throw new AnalysisException(\"Describing columns is not supported for v2 tables.\")\n\n    case DropTable(r: ResolvedTable, ifExists, _) =>\n      DropTableExec(r.catalog, r.identifier, ifExists) :: Nil\n"
+  },
+  {
+    "id" : "f8f9c48f-cbd2-4640-8a6b-8a71ba659455",
+    "prId" : 26847,
+    "prUrl" : "https://github.com/apache/spark/pull/26847#pullrequestreview-335311069",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e8e3081d-0a18-416c-9060-2fec0f111698",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "where do we remove the comment if it's an empty string?",
+        "createdAt" : "2019-12-20T12:39:20Z",
+        "updatedAt" : "2020-01-03T03:50:51Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4bac4cc7-557c-4714-b3d4-43f7d889b5fc",
+        "parentId" : "e8e3081d-0a18-416c-9060-2fec0f111698",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "we don't remove，we update the map with props_comment->empty string ",
+        "createdAt" : "2019-12-20T12:50:05Z",
+        "updatedAt" : "2020-01-03T03:50:51Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7e3a260a-2669-4310-9481-b97fc7046c94",
+        "parentId" : "e8e3081d-0a18-416c-9060-2fec0f111698",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Then our behavior is different from pgsql and presto?",
+        "createdAt" : "2019-12-20T13:36:52Z",
+        "updatedAt" : "2020-01-03T03:50:51Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "575540f5-8182-4a91-8def-8c97d1afc1a7",
+        "parentId" : "e8e3081d-0a18-416c-9060-2fec0f111698",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "Ok, let’s get this straight.\r\nPostgres treats `null`/`empty string` the same as `null` to delete the comment key-value, but when we run `\\d+ xxx`, the Comment(Description) is a must-show field whether is null or not, see as below,\r\n```sql\r\npostgres=# \\d+\r\n                         List of relations\r\n Schema |    Name     | Type  |  Owner   |    Size    | Description\r\n--------+-------------+-------+----------+------------+-------------\r\n public | b           | table | postgres | 8192 bytes | abc\r\n public | bo          | table | postgres | 8192 bytes |\r\n public | i           | table | postgres | 0 bytes    |\r\n```\r\nIn Spark, w/ or w/o this PR, the Comment(Description) of a database is a must-show field for `describe namespace` as Postgres. When it's null(as if we delete it as Postgres), we have to fill it with an empty string for output.\r\nIn Spark w/o this PR, the Comment(Description) of a table is an optional field for `describe table`, it is not shown if it is null. when it an empty string, the field exists.\r\nIn Spark w/ this PR, the Comment(Description) of a table is a must-show field for `describe table` as Postgres.\r\n\r\nAdditionally, if we delete comment here when it is empty string, then we have to do the same in create-table-comment-clause.`CREATE TABLE(v int) COMMENT ''` should not leave a comment with empty string as it does now. \r\n\r\nAll in all, let's say the same result in different processes between spark and Postgres after this.",
+        "createdAt" : "2019-12-20T15:10:23Z",
+        "updatedAt" : "2020-01-03T03:50:51Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d20b1b2a2beb7cd395b92b4330724bc2c1a2d6bd",
+    "line" : 30,
+    "diffHunk" : "@@ -1,1 +217,221 @@        catalog,\n        namespace,\n        Map(SupportsNamespaces.PROP_COMMENT -> comment)) :: Nil\n\n    case CommentOnTable(ResolvedTable(catalog, identifier, _), comment) =>"
+  },
+  {
+    "id" : "a9430703-3bc7-4ccf-b6ba-fd15fd707f86",
+    "prId" : 26847,
+    "prUrl" : "https://github.com/apache/spark/pull/26847#pullrequestreview-336725929",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3c31fbd5-7da7-4a81-82ae-52ff2ff5559e",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "After some more thoughts, I think it's true that empty string comment is the same as no comment w.r.t. DESCRIBE command. But it's different to catalog developers who can access the properties directly. I think it's better to remove the comment property if the comment string is empty.",
+        "createdAt" : "2019-12-27T08:47:04Z",
+        "updatedAt" : "2020-01-03T03:50:51Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7fffa735-0dd1-481a-9654-52e1b5ededc0",
+        "parentId" : "3c31fbd5-7da7-4a81-82ae-52ff2ff5559e",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "This makes things a bit complicated and inconsistent. With our default implementation now in session catalog, the reserved props are unremovable https://github.com/apache/spark/blob/a0057131690b65b73aa6310500039d3a92466324/sql/core/src/main/scala/org/apache/spark/sql/execution/datasources/v2/V2SessionCatalog.scala#L230-L235.\r\nIf we take null as empty string and update, then the logic between catalogs can be consistent  which also protected by the underlying  command `AlterNamespaceSetPropertiesExec`\r\nhttps://github.com/apache/spark/blob/c32e2286898fe8660c7deed9303f1c5c15b60757/sql/core/src/main/scala/org/apache/spark/sql/execution/datasources/v2/AlterNamespaceSetPropertiesExec.scala#L32-L36",
+        "createdAt" : "2019-12-27T09:38:55Z",
+        "updatedAt" : "2020-01-03T03:50:51Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0e6187b4-eebd-42b7-96f5-5fdbc193e694",
+        "parentId" : "3c31fbd5-7da7-4a81-82ae-52ff2ff5559e",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "OK let's keep it as it is and revisit it later. I think we should only disallow end-users to explicitly remove reserved properties via `ALTER TABLE UNSET TBLPROPERTIES`.",
+        "createdAt" : "2019-12-27T09:57:38Z",
+        "updatedAt" : "2020-01-03T03:50:51Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2c2b7700-3d1d-4ffd-8ac7-93d68d1e9889",
+        "parentId" : "3c31fbd5-7da7-4a81-82ae-52ff2ff5559e",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "yes, I agree with that, we also may need to introduce `Alter Namespace Unset Properties` command too",
+        "createdAt" : "2019-12-27T10:00:18Z",
+        "updatedAt" : "2020-01-03T03:50:51Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d20b1b2a2beb7cd395b92b4330724bc2c1a2d6bd",
+    "line" : 26,
+    "diffHunk" : "@@ -1,1 +213,217 @@      AlterNamespaceSetPropertiesExec(catalog, namespace, properties) :: Nil\n\n    case CommentOnNamespace(ResolvedNamespace(catalog, namespace), comment) =>\n      AlterNamespaceSetPropertiesExec(\n        catalog,"
   }
 ]

@@ -130,5 +130,335 @@
     "commit" : "8b14ce4435dfa6fb5114385bb122ec9a86ca7213",
     "line" : 32,
     "diffHunk" : "@@ -1,1 +89,93 @@      val sizeInBytes = partitionsWithSize.map(_._2).sum\n      tableMeta.copy(stats = Some(CatalogStatistics(sizeInBytes = BigInt(sizeInBytes))))\n    } else if (partitionsWithSize.count(_._2 == 0) <= conf.maxPartNumForStatsCalculateViaFS) {\n      val sizeInBytes =\n        partitionsWithSize.map(pair => {"
+  },
+  {
+    "id" : "71c1f8e9-5d03-4e0f-ae52-8063f379f135",
+    "prId" : 26805,
+    "prUrl" : "https://github.com/apache/spark/pull/26805#pullrequestreview-343777212",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c98a7e36-eafe-409e-93d0-ba1fe2f5a287",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "instead of check the config here and list all partition if not enabled, we can simply check the config in `apply`:\r\nhttps://github.com/apache/spark/pull/26805/files#diff-6be42cfa3c62a7536b1eb1d6447c073cR99",
+        "createdAt" : "2020-01-15T08:09:03Z",
+        "updatedAt" : "2020-01-21T08:07:15Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "916a52e3-8d5d-4e83-b348-f498bc3aae88",
+        "parentId" : "c98a7e36-eafe-409e-93d0-ba1fe2f5a287",
+        "authorId" : "f06b291a-bc5c-4fd8-9bac-e5a6d035891b",
+        "body" : "what about also pruning it in PruneHiveTablePartitions.prunePartitions even metastorePartitionPruning is not enabled.\r\nBecause metastorePartitionPruning should control whether pushing down to hive metastore for early pruning instead of whether do pruning.\r\nPruning should be done no matter metastorePartitionPruning is enabled or not.\r\nWDYT?",
+        "createdAt" : "2020-01-15T09:09:06Z",
+        "updatedAt" : "2020-01-21T08:07:15Z",
+        "lastEditedBy" : "f06b291a-bc5c-4fd8-9bac-e5a6d035891b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6ecb63bf-13d9-4e8a-be0a-7f3145afbfd4",
+        "parentId" : "c98a7e36-eafe-409e-93d0-ba1fe2f5a287",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "then can we add a new config for this optimization?",
+        "createdAt" : "2020-01-16T04:49:41Z",
+        "updatedAt" : "2020-01-21T08:07:15Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "99132c86-dd37-496e-9f80-7e8cf0b143d9",
+        "parentId" : "c98a7e36-eafe-409e-93d0-ba1fe2f5a287",
+        "authorId" : "f06b291a-bc5c-4fd8-9bac-e5a6d035891b",
+        "body" : "you mean adding a config to control whether we should prune table partitions in optimization phase ?\r\nAnd we can check the config in apply , this config can default to be true.\r\nAnd this config can also be checked in PruneFileSourcePartitions.apply.\r\nIs that expected ?",
+        "createdAt" : "2020-01-16T06:15:23Z",
+        "updatedAt" : "2020-01-21T08:07:15Z",
+        "lastEditedBy" : "f06b291a-bc5c-4fd8-9bac-e5a6d035891b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d6f6bb5a-c466-49a4-a023-5f6aa19b00b7",
+        "parentId" : "c98a7e36-eafe-409e-93d0-ba1fe2f5a287",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "yea",
+        "createdAt" : "2020-01-16T09:10:18Z",
+        "updatedAt" : "2020-01-21T08:07:15Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "830a2f36-7670-46ad-add6-2e117ba6c6f1",
+        "parentId" : "c98a7e36-eafe-409e-93d0-ba1fe2f5a287",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "actually, nvm. Users can exclude optimizer rules to disable them. Let's follow `PruneFileSourcePartitions` and always do pruning.",
+        "createdAt" : "2020-01-16T09:12:15Z",
+        "updatedAt" : "2020-01-21T08:07:15Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e6dca80e-74a2-411b-907a-f30fbf2ac034",
+        "parentId" : "c98a7e36-eafe-409e-93d0-ba1fe2f5a287",
+        "authorId" : "f06b291a-bc5c-4fd8-9bac-e5a6d035891b",
+        "body" : "yes, through \"spark.sql.optimizer.excludedRules\".\r\nAlready updated back.",
+        "createdAt" : "2020-01-16T09:33:32Z",
+        "updatedAt" : "2020-01-21T08:07:15Z",
+        "lastEditedBy" : "f06b291a-bc5c-4fd8-9bac-e5a6d035891b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b1798d52147b081c7073f3c096eb886a867b921d",
+    "line" : 60,
+    "diffHunk" : "@@ -1,1 +58,62 @@      relation: HiveTableRelation,\n      partitionFilters: ExpressionSet): Seq[CatalogTablePartition] = {\n    if (conf.metastorePartitionPruning) {\n      session.sessionState.catalog.listPartitionsByFilter(\n        relation.tableMeta.identifier, partitionFilters.toSeq)"
+  },
+  {
+    "id" : "7816acdf-731a-448f-a3d3-ef54ea0f3be5",
+    "prId" : 26805,
+    "prUrl" : "https://github.com/apache/spark/pull/26805#pullrequestreview-344543693",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7dbcc983-b7f2-45ca-aa86-58c886b1dc40",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "can we remove this branch? We should always do the optimization.",
+        "createdAt" : "2020-01-17T06:39:04Z",
+        "updatedAt" : "2020-01-21T08:07:15Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "604c87b9-9ca8-41e0-939b-0d1ce419c752",
+        "parentId" : "7dbcc983-b7f2-45ca-aa86-58c886b1dc40",
+        "authorId" : "f06b291a-bc5c-4fd8-9bac-e5a6d035891b",
+        "body" : "you mean totally remove this if clause and always call       \"session.sessionState.catalog.listPartitionsByFilter\" ?\r\nit means always pushing down to hive metadata for pruning and also make sure returned partitions are exactly what we want. is that expected ?",
+        "createdAt" : "2020-01-17T08:06:29Z",
+        "updatedAt" : "2020-01-21T08:07:15Z",
+        "lastEditedBy" : "f06b291a-bc5c-4fd8-9bac-e5a6d035891b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fce922f5-110a-4d63-82e3-2c0fdd558d4d",
+        "parentId" : "7dbcc983-b7f2-45ca-aa86-58c886b1dc40",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "sorry I misread the code. so there are 2 optimizations:\r\n1. pushdown predicates to hive metastore\r\n2. pushdown predicates earlier to get precise data size info.\r\n\r\nThis rule is for the second optimization, and this branch is for skip the first optimization.\r\n\r\nmakes sense to me",
+        "createdAt" : "2020-01-17T08:45:16Z",
+        "updatedAt" : "2020-01-21T08:07:15Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "90286dd6-9fec-4659-bc6c-275dd5f4ee68",
+        "parentId" : "7dbcc983-b7f2-45ca-aa86-58c886b1dc40",
+        "authorId" : "f06b291a-bc5c-4fd8-9bac-e5a6d035891b",
+        "body" : "so we don't need change here, right?",
+        "createdAt" : "2020-01-17T09:20:03Z",
+        "updatedAt" : "2020-01-21T08:07:15Z",
+        "lastEditedBy" : "f06b291a-bc5c-4fd8-9bac-e5a6d035891b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c28e51ac-4fc3-4f59-abdc-be57b0ca9b0f",
+        "parentId" : "7dbcc983-b7f2-45ca-aa86-58c886b1dc40",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "yes",
+        "createdAt" : "2020-01-17T12:22:07Z",
+        "updatedAt" : "2020-01-21T08:07:15Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b1798d52147b081c7073f3c096eb886a867b921d",
+    "line" : 64,
+    "diffHunk" : "@@ -1,1 +62,66 @@        relation.tableMeta.identifier, partitionFilters.toSeq)\n    } else {\n      ExternalCatalogUtils.prunePartitionsByFilter(relation.tableMeta,\n        session.sessionState.catalog.listPartitions(relation.tableMeta.identifier),\n        partitionFilters.toSeq, conf.sessionLocalTimeZone)"
+  },
+  {
+    "id" : "5a548fb1-12ed-449d-b0eb-92ba702d39ed",
+    "prId" : 26805,
+    "prUrl" : "https://github.com/apache/spark/pull/26805#pullrequestreview-345103752",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2b15a083-e8bf-4e47-a3dc-7f2fae9cb4c2",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "We should exclude partition predicates from filters, like what `PruneFileSourcePartitions` does.",
+        "createdAt" : "2020-01-17T08:53:43Z",
+        "updatedAt" : "2020-01-21T08:07:15Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "59c541a1-e9c4-4398-aa2f-d8e7bd8c1497",
+        "parentId" : "2b15a083-e8bf-4e47-a3dc-7f2fae9cb4c2",
+        "authorId" : "f06b291a-bc5c-4fd8-9bac-e5a6d035891b",
+        "body" : "PruneFileSourcePartitions keeps the partition filters for LogicalRelation, while exclude partition filters for DataSourceV2ScanRelation. What's the reason of this difference ?",
+        "createdAt" : "2020-01-17T09:19:34Z",
+        "updatedAt" : "2020-01-21T08:07:15Z",
+        "lastEditedBy" : "f06b291a-bc5c-4fd8-9bac-e5a6d035891b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5c764a5f-7823-4e01-b4de-a39fd33a718a",
+        "parentId" : "2b15a083-e8bf-4e47-a3dc-7f2fae9cb4c2",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "what do you mean by \"keep\"?",
+        "createdAt" : "2020-01-17T12:21:57Z",
+        "updatedAt" : "2020-01-21T08:07:15Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "134c7091-ecc4-4cac-ba3b-456359809ce5",
+        "parentId" : "2b15a083-e8bf-4e47-a3dc-7f2fae9cb4c2",
+        "authorId" : "f06b291a-bc5c-4fd8-9bac-e5a6d035891b",
+        "body" : "it use all filters, including partition filters, to generate new logical plan for LogicalRelation case : \r\nhttps://github.com/apache/spark/blob/master/sql/core/src/main/scala/org/apache/spark/sql/execution/datasources/PruneFileSourcePartitions.scala#L86\r\n",
+        "createdAt" : "2020-01-17T14:46:48Z",
+        "updatedAt" : "2020-01-21T08:07:15Z",
+        "lastEditedBy" : "f06b291a-bc5c-4fd8-9bac-e5a6d035891b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "261f0715-88c6-4294-b174-7db2f68f9216",
+        "parentId" : "2b15a083-e8bf-4e47-a3dc-7f2fae9cb4c2",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "because DS v1 needs Spark to carry the pushed filter information, via query plans (so that end-user can see it via EXPLAIN). DS v2 will keep the pushed filter information themselves, so Spark doesn't need to keep it.",
+        "createdAt" : "2020-01-17T16:55:13Z",
+        "updatedAt" : "2020-01-21T08:07:15Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "377a4248-edd4-46a9-99d3-d284c4748557",
+        "parentId" : "2b15a083-e8bf-4e47-a3dc-7f2fae9cb4c2",
+        "authorId" : "f06b291a-bc5c-4fd8-9bac-e5a6d035891b",
+        "body" : "By \"DS v2 will keep the pushed filter information themselves\", you mean the case like  [AvroScan.partitionFilters](https://github.com/apache/spark/blob/master/external/avro/src/main/scala/org/apache/spark/sql/v2/avro/AvroScan.scala#L39) ?",
+        "createdAt" : "2020-01-18T01:37:50Z",
+        "updatedAt" : "2020-01-21T08:07:15Z",
+        "lastEditedBy" : "f06b291a-bc5c-4fd8-9bac-e5a6d035891b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7d1d65bc-c4ee-4cd9-8639-9b50294a01a6",
+        "parentId" : "2b15a083-e8bf-4e47-a3dc-7f2fae9cb4c2",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I mean `SupportsPushDownFilters.pushedFilters`. Implementation should carry the pushed filters and report it, then Spark doesn't need to carry it itself.",
+        "createdAt" : "2020-01-20T06:47:01Z",
+        "updatedAt" : "2020-01-21T08:07:15Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b1798d52147b081c7073f3c096eb886a867b921d",
+    "line" : 105,
+    "diffHunk" : "@@ -1,1 +103,107 @@          tableMeta = newTableMeta, prunedPartitions = Some(newPartitions))\n        // Keep partition filters so that they are visible in physical planning\n        Project(projections, Filter(filters.reduceLeft(And), newRelation))\n      } else {\n        op"
+  },
+  {
+    "id" : "bd5467b8-10d5-4ffd-bb49-33000b77485f",
+    "prId" : 26805,
+    "prUrl" : "https://github.com/apache/spark/pull/26805#pullrequestreview-345146356",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "92e8758d-d5e1-488f-b749-0a391ab85f9d",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "can we add a comment like the file source rule to explain why we keep the partition filter?",
+        "createdAt" : "2020-01-20T08:35:28Z",
+        "updatedAt" : "2020-01-21T08:07:15Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ca121ddf-82b2-4bbe-83b0-702320f882ac",
+        "parentId" : "92e8758d-d5e1-488f-b749-0a391ab85f9d",
+        "authorId" : "f06b291a-bc5c-4fd8-9bac-e5a6d035891b",
+        "body" : "sure, thanks.",
+        "createdAt" : "2020-01-20T08:42:02Z",
+        "updatedAt" : "2020-01-21T08:07:15Z",
+        "lastEditedBy" : "f06b291a-bc5c-4fd8-9bac-e5a6d035891b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b1798d52147b081c7073f3c096eb886a867b921d",
+    "line" : 105,
+    "diffHunk" : "@@ -1,1 +103,107 @@          tableMeta = newTableMeta, prunedPartitions = Some(newPartitions))\n        // Keep partition filters so that they are visible in physical planning\n        Project(projections, Filter(filters.reduceLeft(And), newRelation))\n      } else {\n        op"
+  },
+  {
+    "id" : "62a7bacf-e16e-4348-90af-96169bcab953",
+    "prId" : 26805,
+    "prUrl" : "https://github.com/apache/spark/pull/26805#pullrequestreview-356385971",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "bc951be0-452b-4b82-b2ae-fca5aae384c5",
+        "parentId" : null,
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "@fuwhu We need a description about the rule. Could you submit a follow-up PR to add the descriptions to both PruneHiveTablePartitions and PruneFileSourcePartitions?",
+        "createdAt" : "2020-02-08T06:43:02Z",
+        "updatedAt" : "2020-02-08T06:43:02Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "631dde29-d130-46e5-a923-3a99f199fa8f",
+        "parentId" : "bc951be0-452b-4b82-b2ae-fca5aae384c5",
+        "authorId" : "f06b291a-bc5c-4fd8-9bac-e5a6d035891b",
+        "body" : "sure, so you mean just add class description in PruneHiveTablePartitions.scala and PruneFileSourcePartitions.scala file ? Or need to add comment in some doc ?",
+        "createdAt" : "2020-02-08T07:59:11Z",
+        "updatedAt" : "2020-02-08T07:59:12Z",
+        "lastEditedBy" : "f06b291a-bc5c-4fd8-9bac-e5a6d035891b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f5837839-11c2-4c30-8471-187c49f66db6",
+        "parentId" : "bc951be0-452b-4b82-b2ae-fca5aae384c5",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "classdoc is good enough",
+        "createdAt" : "2020-02-10T02:15:23Z",
+        "updatedAt" : "2020-02-10T02:15:23Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fe76af6d-a29b-403c-b6d2-8bafa6ab47c6",
+        "parentId" : "bc951be0-452b-4b82-b2ae-fca5aae384c5",
+        "authorId" : "f06b291a-bc5c-4fd8-9bac-e5a6d035891b",
+        "body" : "@gatorsmile @cloud-fan classdoc added in #27535 , please help review, thanks.",
+        "createdAt" : "2020-02-11T02:05:45Z",
+        "updatedAt" : "2020-02-11T02:05:45Z",
+        "lastEditedBy" : "f06b291a-bc5c-4fd8-9bac-e5a6d035891b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b1798d52147b081c7073f3c096eb886a867b921d",
+    "line" : 33,
+    "diffHunk" : "@@ -1,1 +31,35 @@\n/**\n * TODO: merge this with PruneFileSourcePartitions after we completely make hive as a data source.\n */\nprivate[sql] class PruneHiveTablePartitions(session: SparkSession)"
   }
 ]

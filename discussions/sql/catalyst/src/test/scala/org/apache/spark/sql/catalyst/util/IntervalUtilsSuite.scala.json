@@ -20,5 +20,38 @@
     "commit" : "9db1f370107b14e6d5f772441455b6f89afc6070",
     "line" : 64,
     "diffHunk" : "@@ -1,1 +308,312 @@      ((Int.MaxValue / 9.0) * MICROS_PER_DAY).round))\n    try {\n      divideExact(interval, 0.9)\n      fail(\"Expected to throw an exception on integer overflow\")\n    } catch {"
+  },
+  {
+    "id" : "bedd3551-cb8e-475e-9fe8-ed6d1888d6d4",
+    "prId" : 26815,
+    "prUrl" : "https://github.com/apache/spark/pull/26815#pullrequestreview-371759382",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1a4d88f2-f9df-4538-a6c5-de96f33b6899",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "for multi-unit syntax, do we support `1 day \\t 2 hours`?",
+        "createdAt" : "2020-03-10T08:22:49Z",
+        "updatedAt" : "2020-03-10T08:22:50Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9bcda295-4eb0-4acc-a8a3-8f356852d4e1",
+        "parentId" : "1a4d88f2-f9df-4538-a6c5-de96f33b6899",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "yes. My opinion is that the interval string in multi-unit syntax, we parse each value and each unit separately and they can be produced by the providers separately too so the whitespaces can be in the middle of each part. In year-month and day-time syntax, the string should be considered as a whole part so the whitespaces only appear on both ends, not in the middle.\r\n\r\ntake java.sql.Timestamp for an example, the timestamp string is treated as a whole\r\n\r\n```\r\nscala> java.sql.Timestamp.valueOf(\"2011-11-11 11:11:11.11\\t\")\r\nres8: java.sql.Timestamp = 2011-11-11 11:11:11.11\r\n\r\nscala> java.sql.Timestamp.valueOf(\"2011-11-11 \\t 11:11:11.11\\t\")\r\njava.lang.NumberFormatException: For input string: \"\t 11\"\r\n  at java.lang.NumberFormatException.forInputString(NumberFormatException.java:65)\r\n  at java.lang.Integer.parseInt(Integer.java:569)\r\n  at java.lang.Integer.parseInt(Integer.java:615)\r\n  at java.sql.Timestamp.valueOf(Timestamp.java:243)\r\n  ... 28 elided\r\n```\r\n\r\nAlso, we do the same in Spark\r\n\r\n```\r\nspark-sql> select timestamp '2013-01-02 \\t 00:00:00';\r\nError in query:\r\nCannot parse the TIMESTAMP value: 2013-01-02 \t 00:00:00(line 1, pos 7)\r\n\r\n== SQL ==\r\nselect timestamp '2013-01-02 \\t 00:00:00'\r\n-------^^^\r\n\r\nspark-sql> select timestamp '2013-01-02 00:00:00 \\t';\r\n2013-01-02 00:00:00\r\n```",
+        "createdAt" : "2020-03-10T08:39:39Z",
+        "updatedAt" : "2020-03-10T08:39:39Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4556ad4f01dcbb68892ccc9f25ad4ae92384e8c0",
+    "line" : 23,
+    "diffHunk" : "@@ -1,1 +325,329 @@    // whitespaces\n    check(\"\\t +5 12:40\\t \", DAY, MINUTE, \"5 days 12 hours 40 minutes\")\n    checkFail(\"+5\\t 12:40\", DAY, MINUTE, \"must match day-time format\")\n\n  }"
   }
 ]

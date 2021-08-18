@@ -163,5 +163,247 @@
     "commit" : "59fc68b545a75eac405d0ced7514187f16114cff",
     "line" : 61,
     "diffHunk" : "@@ -1,1 +161,165 @@      } else {\n        val relativeError = 0.05\n        val (summaries, count) = modelDatasetWithDist\n          .select(distCol)\n          .as[Double]"
+  },
+  {
+    "id" : "c6553211-efb5-4ad5-8a53-3e1f0201cd6a",
+    "prId" : 26858,
+    "prUrl" : "https://github.com/apache/spark/pull/26858#pullrequestreview-331010282",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c88d8f11-d941-432a-ae0e-dc8cfa0c8eca",
+        "parentId" : null,
+        "authorId" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "body" : "what is a good number to use here?",
+        "createdAt" : "2019-12-12T06:11:31Z",
+        "updatedAt" : "2019-12-12T06:11:31Z",
+        "lastEditedBy" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "48a91eefad0901881c2b3abd44e6fb49d024ca8a",
+    "line" : 23,
+    "diffHunk" : "@@ -1,1 +142,146 @@      val modelDatasetWithDist = modelDataset.withColumn(distCol, hashDistCol)\n      // for a small dataset, use BoundedPriorityQueue\n      if (count < 1000) {\n        val queue = new BoundedPriorityQueue[Double](count.toInt)(Ordering[Double])\n        modelDatasetWithDist.collect().foreach { case Row(keys, values, distCol: Double) =>"
+  },
+  {
+    "id" : "4546f2af-0a87-4946-b036-7aa58ddc977a",
+    "prId" : 26858,
+    "prUrl" : "https://github.com/apache/spark/pull/26858#pullrequestreview-331546710",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5599037d-d4bd-4385-97d5-f99adc1fed32",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Shouldn't the queue just need numNearestNeighbors elements?",
+        "createdAt" : "2019-12-12T14:27:03Z",
+        "updatedAt" : "2019-12-12T14:29:40Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b1fa640f-9113-409c-a0e4-362007fc98fa",
+        "parentId" : "5599037d-d4bd-4385-97d5-f99adc1fed32",
+        "authorId" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "body" : "Sorry, I should use numNearestNeighbors. Will fix this. ",
+        "createdAt" : "2019-12-12T21:47:17Z",
+        "updatedAt" : "2019-12-12T21:47:18Z",
+        "lastEditedBy" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "48a91eefad0901881c2b3abd44e6fb49d024ca8a",
+    "line" : 24,
+    "diffHunk" : "@@ -1,1 +143,147 @@      // for a small dataset, use BoundedPriorityQueue\n      if (count < 1000) {\n        val queue = new BoundedPriorityQueue[Double](count.toInt)(Ordering[Double])\n        modelDatasetWithDist.collect().foreach { case Row(keys, values, distCol: Double) =>\n          queue += distCol"
+  },
+  {
+    "id" : "cb3414ce-9f3e-456c-8e6c-7b4a87770f9b",
+    "prId" : 26858,
+    "prUrl" : "https://github.com/apache/spark/pull/26858#pullrequestreview-331546785",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9818ed35-849c-4c9f-a167-a56058bba65b",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "I might pull `sortedDistCol(numNearestNeighbors - 1)` into a `val` or else this has to send the whole array. (You don't have to clear the queue)",
+        "createdAt" : "2019-12-12T14:27:53Z",
+        "updatedAt" : "2019-12-12T14:29:40Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6e2acb25-7552-48ba-9f83-789f7d3b5e16",
+        "parentId" : "9818ed35-849c-4c9f-a167-a56058bba65b",
+        "authorId" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "body" : "Will fix this. Thanks!",
+        "createdAt" : "2019-12-12T21:47:26Z",
+        "updatedAt" : "2019-12-12T21:47:26Z",
+        "lastEditedBy" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "48a91eefad0901881c2b3abd44e6fb49d024ca8a",
+    "line" : 30,
+    "diffHunk" : "@@ -1,1 +149,153 @@        var sortedDistCol = queue.toArray.sorted(Ordering[Double])\n        queue.clear()\n        modelDatasetWithDist.filter(col(distCol) <= sortedDistCol(numNearestNeighbors - 1))\n      } else {\n        // Compute threshold to get around k elements."
+  },
+  {
+    "id" : "19843d47-04ba-460f-aec9-03876ba019aa",
+    "prId" : 26858,
+    "prUrl" : "https://github.com/apache/spark/pull/26858#pullrequestreview-331267030",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f0651b43-4524-4ebf-bda6-33db7516ef02",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "keys and values can be `_`",
+        "createdAt" : "2019-12-12T14:28:32Z",
+        "updatedAt" : "2019-12-12T14:29:40Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "48a91eefad0901881c2b3abd44e6fb49d024ca8a",
+    "line" : 25,
+    "diffHunk" : "@@ -1,1 +144,148 @@      if (count < 1000) {\n        val queue = new BoundedPriorityQueue[Double](count.toInt)(Ordering[Double])\n        modelDatasetWithDist.collect().foreach { case Row(keys, values, distCol: Double) =>\n          queue += distCol\n        }"
+  },
+  {
+    "id" : "361cba07-77ea-4c76-9370-3e6ff5a4f664",
+    "prId" : 26858,
+    "prUrl" : "https://github.com/apache/spark/pull/26858#pullrequestreview-334435440",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "638cca76-636a-4b56-b7e2-33d929cf1f01",
+        "parentId" : null,
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "This place should be like:\r\n```scala\r\nval exactThreshold = modelDatasetWithDist\r\n.select(distCol)\r\n.as[Double]\r\n.rdd\r\n.treeAggregate(new BoundedPriorityQueue[Double](numNearestNeighbors)(Ordering[Double].reverse))(\r\nseqOp= (q, v) => q += v,\r\ncombOp = (q1, q2) => q1 ++= q2,\r\ndepth = 2\r\n).toArray.max\r\n```\r\n\r\nAnd this impl should have no dependency on the size of dataset.",
+        "createdAt" : "2019-12-13T06:24:18Z",
+        "updatedAt" : "2019-12-13T06:24:19Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ab9c9df1-7fe8-4f4b-988c-1d1497703e4e",
+        "parentId" : "638cca76-636a-4b56-b7e2-33d929cf1f01",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "this only depends on `numNearestNeighbors`, when it is small (maybe < 10000?).\r\nOn each partition, collect the minmum 10 values, and merge them by `treeAggregate` to get the global minmum 10 values, and the max value in them is the threshold.",
+        "createdAt" : "2019-12-13T06:32:47Z",
+        "updatedAt" : "2019-12-13T06:32:47Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e7a70f00-9f88-41f8-a0de-e2a56df199bf",
+        "parentId" : "638cca76-636a-4b56-b7e2-33d929cf1f01",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "`BoundedPriorityQueue` only maintains the topK entries, so it is safe to absorb a lot of entries.",
+        "createdAt" : "2019-12-13T06:45:34Z",
+        "updatedAt" : "2019-12-13T06:45:35Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1a4561ad-a441-4ae9-a1e7-c060654e29dc",
+        "parentId" : "638cca76-636a-4b56-b7e2-33d929cf1f01",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "approxQuantile already kind of works this way, so I think the point of this PR is avoiding several passes of Spark jobs for tree reduce in this case.\r\n\r\nHowever it's a fair point, I wonder if, overall, this approach is faster than approxQuantile? it already does something like what you're suggesting.",
+        "createdAt" : "2019-12-13T11:04:42Z",
+        "updatedAt" : "2019-12-13T11:04:43Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "af5ed5a9-13ef-4337-aa67-5c0dbb87d26d",
+        "parentId" : "638cca76-636a-4b56-b7e2-33d929cf1f01",
+        "authorId" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "body" : "I tried a small test. I used existing ```BucketedRandomProjectionLSHSuite``` but made the dataset bigger: \r\n```\r\nval data = {\r\n      for (i <- -200 until 200; j <- -200 until 200) yield Vectors.dense(i*10, j*10)\r\n}\r\ndataset = spark.createDataFrame(data1.map(Tuple1.apply)).toDF(\"keys\")\r\n```\r\nSo the dataset count is 160000 and I tested 10000, 9000, 8000, 7000, 6000, 5000, 4000, 3000, 2000 and 1000 nearest neighbors. I didn't see any performance gain using ```BoundedPriorityQueue```. ",
+        "createdAt" : "2019-12-15T07:36:32Z",
+        "updatedAt" : "2019-12-15T07:36:33Z",
+        "lastEditedBy" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d4cb7dd7-9668-4093-b561-f62ed0806b51",
+        "parentId" : "638cca76-636a-4b56-b7e2-33d929cf1f01",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "OK, so we're back to the original question: is it worth collect and top-k via priority queue for a small data set? I'm OK with it, if it speeds things up. Are there any rough benchmarks for small data sets like 10 or 500 elements? the additional code complexity isn't too bad.",
+        "createdAt" : "2019-12-15T14:32:31Z",
+        "updatedAt" : "2019-12-15T14:32:31Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1b68e1c7-cb9f-44ba-b2cd-4a28bb636052",
+        "parentId" : "638cca76-636a-4b56-b7e2-33d929cf1f01",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "I wrongly thought that the `approxNearestNeighbors` only return an approximate threshold, then we can use top-k to obtain an exact threshold.\r\nSince the `approxNearestNeighbors` already gaurantee an enough threshold which had already taken the relative error into account, so **I guess we no longer need a top-k solution.**\r\nA  `BoundedPriorityQueue` only maintains the topK entries, so it should be much smaller than a `QuantileSummaries`, however since there is only one column to process, so there should be no performance gain.\r\n",
+        "createdAt" : "2019-12-17T06:26:44Z",
+        "updatedAt" : "2019-12-17T06:26:44Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e63d71e8-f397-46f1-8674-8b57f10b2492",
+        "parentId" : "638cca76-636a-4b56-b7e2-33d929cf1f01",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "I wrongly thought that the `approxNearestNeighbors` only return an approximate threshold, then we can use top-k to obtain an exact threshold.\r\nSince the `approxNearestNeighbors` already gaurantee an enough threshold which had already taken the relative error into account, so **I guess we no longer need a top-k solution.**\r\nA  `BoundedPriorityQueue` only maintains the topK entries, so it should be much smaller than a `QuantileSummaries`, however since there is only one column to process, so there should be no performance gain.\r\n",
+        "createdAt" : "2019-12-17T06:27:47Z",
+        "updatedAt" : "2019-12-17T06:27:47Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1f4d99ff-7828-4381-a117-923fe96fb3ea",
+        "parentId" : "638cca76-636a-4b56-b7e2-33d929cf1f01",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "A slight performance gain may come from that ` BoundedPriorityQueue` do not need a `count` job to compute the var `approxQuantile`.",
+        "createdAt" : "2019-12-17T06:30:30Z",
+        "updatedAt" : "2019-12-17T06:30:30Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7a02a959-7eea-4fdd-aeeb-b53a46c4024c",
+        "parentId" : "638cca76-636a-4b56-b7e2-33d929cf1f01",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "I agree just implementing this in terms of BoundedPriorityQueue is also a viable solution. I don't know which one is faster. I had assumed the approximate quantile would be as I think it does less work overall, but I haven't tested it. That is, I think it will hang on to fewer than k entries per partition",
+        "createdAt" : "2019-12-17T14:28:08Z",
+        "updatedAt" : "2019-12-17T14:28:09Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "30b1a351-9d77-439e-84b4-1bffd4e64f15",
+        "parentId" : "638cca76-636a-4b56-b7e2-33d929cf1f01",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "I am trying to do some performance tests, however I found that in the public `approxNearestNeighbors` methods , `singleProbe` is always true for now, so our changes in LSH can not be reached in the code path. ",
+        "createdAt" : "2019-12-19T06:50:31Z",
+        "updatedAt" : "2019-12-19T06:50:31Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "48a91eefad0901881c2b3abd44e6fb49d024ca8a",
+    "line" : 24,
+    "diffHunk" : "@@ -1,1 +143,147 @@      // for a small dataset, use BoundedPriorityQueue\n      if (count < 1000) {\n        val queue = new BoundedPriorityQueue[Double](count.toInt)(Ordering[Double])\n        modelDatasetWithDist.collect().foreach { case Row(keys, values, distCol: Double) =>\n          queue += distCol"
   }
 ]

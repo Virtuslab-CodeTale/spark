@@ -1,0 +1,112 @@
+[
+  {
+    "id" : "02d9b0f3-5426-42bf-bd91-2ea79e29c9da",
+    "prId" : 26798,
+    "prUrl" : "https://github.com/apache/spark/pull/26798#pullrequestreview-332055553",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "20c70eb8-58b6-4786-8906-043c146085a1",
+        "parentId" : null,
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Can you use `Logging.uninitialize` for this? That sounds safer (and easier) if it works.",
+        "createdAt" : "2019-12-09T18:57:51Z",
+        "updatedAt" : "2019-12-13T06:45:06Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2ff0ad21-72b0-45c4-aac1-14bce23e5adf",
+        "parentId" : "20c70eb8-58b6-4786-8906-043c146085a1",
+        "authorId" : "3a227965-84e0-47cf-9974-11293764f028",
+        "body" : "I think that we can't use `Logging.uninitialize` because of following 2 reasons.\r\n1. That method doesn't reload the default log4j.properties.\r\n2. Loggers configured in the new test case are not removed. They are removed by invoking `LogManager.resetConfiguration`.  So if we replace the restoration procedure with `Logging.uninitialize`, [this assertion](https://github.com/apache/spark/pull/26798/files#diff-e796b23ac8447d31f622de5ecac88e64R401) will fail.",
+        "createdAt" : "2019-12-13T06:53:38Z",
+        "updatedAt" : "2019-12-13T06:53:38Z",
+        "lastEditedBy" : "3a227965-84e0-47cf-9974-11293764f028",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "13fa803d-7ca8-4540-859b-edc601fbab90",
+        "parentId" : "20c70eb8-58b6-4786-8906-043c146085a1",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "That method only uninitializes log4j (and yes it does call `LogManager.resetConfiguration`). So for the assertion to not fail, you probably need to invoke a method that triggers re-initialization of the logging system (like trying to log something).",
+        "createdAt" : "2019-12-13T18:29:17Z",
+        "updatedAt" : "2019-12-13T18:29:17Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "39f0b21b-53e2-43f2-ab1f-6f229fae6a64",
+        "parentId" : "20c70eb8-58b6-4786-8906-043c146085a1",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Hmm, `LogManager.resetConfiguration` doesn't seem to be called if you have a custom log4j.properties, so maybe this is needed... (Don't remember why that is the case, though.)",
+        "createdAt" : "2019-12-13T18:58:32Z",
+        "updatedAt" : "2019-12-13T18:58:32Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "df78a354a8b0cbce4650685ec2f098a81cb0626d",
+    "line" : 103,
+    "diffHunk" : "@@ -1,1 +382,386 @@    } finally {\n      // Restore log4j settings for this suite\n      val log4jproperties = Thread.currentThread()\n        .getContextClassLoader.getResource(\"log4j.properties\")\n      LogManager.resetConfiguration()"
+  },
+  {
+    "id" : "1e5437b4-5883-4273-ac20-06ea78ccf19a",
+    "prId" : 26798,
+    "prUrl" : "https://github.com/apache/spark/pull/26798#pullrequestreview-332148136",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d2c9437e-efb3-4d7d-a533-e11ed0992e31",
+        "parentId" : null,
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Doesn't seem to be used in any way?",
+        "createdAt" : "2019-12-09T18:59:02Z",
+        "updatedAt" : "2019-12-13T06:45:06Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4070d9c4-0c1c-43a5-ac16-2746a5fedd10",
+        "parentId" : "d2c9437e-efb3-4d7d-a533-e11ed0992e31",
+        "authorId" : "3a227965-84e0-47cf-9974-11293764f028",
+        "body" : "This is used [here](https://github.com/apache/spark/pull/26798/files#diff-e796b23ac8447d31f622de5ecac88e64R392) to ensure that `stderr` is restored.",
+        "createdAt" : "2019-12-13T04:49:53Z",
+        "updatedAt" : "2019-12-13T06:45:06Z",
+        "lastEditedBy" : "3a227965-84e0-47cf-9974-11293764f028",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "82055956-d840-401e-beb9-e15e9aca5734",
+        "parentId" : "d2c9437e-efb3-4d7d-a533-e11ed0992e31",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Yes, but what is changing stderr in the first place? log4j does not.",
+        "createdAt" : "2019-12-13T18:27:01Z",
+        "updatedAt" : "2019-12-13T18:27:01Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0c591752-f468-44d6-a89c-d3e4c6f9eba9",
+        "parentId" : "d2c9437e-efb3-4d7d-a533-e11ed0992e31",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Ah, your test script is doing it.",
+        "createdAt" : "2019-12-13T22:24:12Z",
+        "updatedAt" : "2019-12-13T22:24:12Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "df78a354a8b0cbce4650685ec2f098a81cb0626d",
+    "line" : 40,
+    "diffHunk" : "@@ -1,1 +319,323 @@    val originalRootLogger = LogManager.getRootLogger\n    val originalRootAppender = originalRootLogger.getAppender(\"file\")\n    val originalStderr = System.err\n    val originalReplThresholdLevel = Logging.sparkShellThresholdLevel\n"
+  }
+]

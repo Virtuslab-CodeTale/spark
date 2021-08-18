@@ -427,5 +427,269 @@
     "commit" : "526709b73b87687f48f68486b9c8c7be0866291f",
     "line" : 10,
     "diffHunk" : "@@ -1,1 +435,439 @@   * (See `UnsafeHashedRelation` for example of usage).\n   */\n  public final class MapIteratorWithKeyIndex implements Iterator<Location> {\n\n    /**"
+  },
+  {
+    "id" : "c0e444c4-a6fa-4bb3-a06d-4a290010c3ad",
+    "prId" : 26828,
+    "prUrl" : "https://github.com/apache/spark/pull/26828#pullrequestreview-330306898",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "42bf7dac-f126-45e8-a9b1-23c2e0df8466",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Probably, we need to leave some comments about why the size needs to be divided by 2.",
+        "createdAt" : "2019-12-10T10:24:58Z",
+        "updatedAt" : "2019-12-10T19:57:06Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ed9e6fde-966b-4c01-ab54-f51dec046ca6",
+        "parentId" : "42bf7dac-f126-45e8-a9b1-23c2e0df8466",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "thanks! Added few comments.",
+        "createdAt" : "2019-12-10T19:57:15Z",
+        "updatedAt" : "2019-12-10T19:57:15Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5af25282-2326-4b8d-ad29-6a5039c3a431",
+        "parentId" : "42bf7dac-f126-45e8-a9b1-23c2e0df8466",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Thanks! It looks good to me.",
+        "createdAt" : "2019-12-11T05:35:26Z",
+        "updatedAt" : "2019-12-11T05:35:26Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5ac203e43c836bee295461035c9adacdf9ca1d6f",
+    "line" : 7,
+    "diffHunk" : "@@ -1,1 +744,748 @@        // We use two array entries per key, so the array size is twice the capacity.\n        // We should compare the current capacity of the array, instead of its size.\n        if (numKeys >= growthThreshold && longArray.size() / 2 < MAX_CAPACITY) {\n          try {\n            growAndRehash();"
+  },
+  {
+    "id" : "8a54d6c2-9e48-4892-9494-185c5e401ae2",
+    "prId" : 26828,
+    "prUrl" : "https://github.com/apache/spark/pull/26828#pullrequestreview-487341216",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "12b0f3f4-79b5-4fb2-8025-bf30f1c7745b",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Actually, I also think that we should false canGrowArray like: \r\n\r\n```scala\r\nif (numKeys >= growthThreshold && longArray.size() / 2 >= MAX_CAPACITY) {\r\n  canGrowArray = false;\r\n}\r\n```\r\n\r\nSo as we reach max capacity of the map, canGrowArray is set to false. We can fail next append and let the map spill and fallback to sort-based aggregation in HashAggregate. Thus we can prevent a similar forever-loop happens when we reach max capacity. \r\n\r\ncc @cloud-fan @felixcheung \r\n\r\n",
+        "createdAt" : "2019-12-11T01:56:27Z",
+        "updatedAt" : "2019-12-11T01:56:28Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "50c42f33-fab3-4836-9be6-a7a13aaff2e8",
+        "parentId" : "12b0f3f4-79b5-4fb2-8025-bf30f1c7745b",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "If we do this, we won't call `growAndRehash` here, is it expected?",
+        "createdAt" : "2019-12-12T02:08:01Z",
+        "updatedAt" : "2019-12-12T02:08:01Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d50ee90a-b9b4-4476-86aa-f1eecf5c9c31",
+        "parentId" : "12b0f3f4-79b5-4fb2-8025-bf30f1c7745b",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Oh, I was not meaning to replace current condition, but to add another check. ",
+        "createdAt" : "2019-12-12T02:30:34Z",
+        "updatedAt" : "2019-12-12T03:30:09Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c0f04568-91a8-44a4-b188-e0644870d119",
+        "parentId" : "12b0f3f4-79b5-4fb2-8025-bf30f1c7745b",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "let me think about it. if making sense, will submit another PR for it.",
+        "createdAt" : "2019-12-12T02:32:01Z",
+        "updatedAt" : "2019-12-12T02:32:01Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c909d834-4f6d-4911-a484-230c335365e0",
+        "parentId" : "12b0f3f4-79b5-4fb2-8025-bf30f1c7745b",
+        "authorId" : "b5a22c00-a076-425b-9ae2-bc7d0e8a80b8",
+        "body" : "@viirya I'm encountering the same problem that you describe here. When the map is close to `MAX_CAPACITY` and needs to grow, `numKeys >= growthThreshold && longArray.size() / 2 >= MAX_CAPACITY` is true. This prevents the map from resizing, but currently `canGrowArray` remains `true`. Therefore the map keeps accepting new keys and exceeds its growth threshold. This ultimately causes the query to fail in the UnsafeKVExternalSorter constructor.\r\n\r\nIt looks like you didn't submit a PR for this - is there a reason why not? If there's no problem with your suggested fix, I can submit a PR now.",
+        "createdAt" : "2020-09-13T20:10:06Z",
+        "updatedAt" : "2020-09-13T20:10:06Z",
+        "lastEditedBy" : "b5a22c00-a076-425b-9ae2-bc7d0e8a80b8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "60360545-0e9f-48bd-8641-18d6ef76b547",
+        "parentId" : "12b0f3f4-79b5-4fb2-8025-bf30f1c7745b",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "I submitted another PR targeting the case of reaching `MAX_CAPACITY`. It actually prevents we increase the number of keys to be `MAX_CAPACITY`.",
+        "createdAt" : "2020-09-13T20:25:58Z",
+        "updatedAt" : "2020-09-13T20:25:58Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d5f190f8-9c0e-4692-aa2d-af94cacd6a8c",
+        "parentId" : "12b0f3f4-79b5-4fb2-8025-bf30f1c7745b",
+        "authorId" : "b5a22c00-a076-425b-9ae2-bc7d0e8a80b8",
+        "body" : "Thanks for the quick response! I saw that PR (https://github.com/apache/spark/pull/26914) but I don't think it solves the problem I'm encountering. That PR stops accepting new keys once we have reached `MAX_CAPACITY - 1` keys, but this is too late. By that time, we will have far exceeded the growth threshold. If we attempt to spill the map in this state, the UnsafeKVExternalSorter will not be able to reuse the long array for sorting, causing the query to fail.",
+        "createdAt" : "2020-09-13T20:37:15Z",
+        "updatedAt" : "2020-09-13T20:37:16Z",
+        "lastEditedBy" : "b5a22c00-a076-425b-9ae2-bc7d0e8a80b8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a6457fb4-95ae-4751-8944-96504a6e0edd",
+        "parentId" : "12b0f3f4-79b5-4fb2-8025-bf30f1c7745b",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "I think the problem I posted above, is when we reach `MAX_CAPACITY`, a forever-loop happens during calling lookup. The previous PR fixed it. Sounds like you are encountering another problem?",
+        "createdAt" : "2020-09-13T20:56:11Z",
+        "updatedAt" : "2020-09-13T20:56:11Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "059a553d-7530-4dd1-a4b7-341e36b47c7a",
+        "parentId" : "12b0f3f4-79b5-4fb2-8025-bf30f1c7745b",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : ">  If we attempt to spill the map in this state, the UnsafeKVExternalSorter will not be able to reuse the long array for sorting, causing the query to fail.\r\n\r\nIn `UnsafeKVExternalSorter`, it will check if the long array can be reused or not. Isn't? If it cannot be reused, a new pointer array will be created, no?",
+        "createdAt" : "2020-09-13T21:02:57Z",
+        "updatedAt" : "2020-09-13T21:02:57Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d046cee6-a84f-48fa-945a-efbe3e233830",
+        "parentId" : "12b0f3f4-79b5-4fb2-8025-bf30f1c7745b",
+        "authorId" : "b5a22c00-a076-425b-9ae2-bc7d0e8a80b8",
+        "body" : "> Sounds like you are encountering another problem?\r\n\r\nYou're right, it's not the same problem - I was mistaken in saying so earlier.\r\n\r\n> In UnsafeKVExternalSorter, it will check if the long array can be reused or not. Isn't? If it cannot be reused, a new pointer array will be created, no?\r\n\r\nYes, but by this point the task has typically consumed all available memory, so the allocation of the new pointer array is likely to fail.",
+        "createdAt" : "2020-09-13T21:09:38Z",
+        "updatedAt" : "2020-09-13T21:29:13Z",
+        "lastEditedBy" : "b5a22c00-a076-425b-9ae2-bc7d0e8a80b8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "611a5c74-d22d-4a24-b9e1-a11edfbb0547",
+        "parentId" : "12b0f3f4-79b5-4fb2-8025-bf30f1c7745b",
+        "authorId" : "b5a22c00-a076-425b-9ae2-bc7d0e8a80b8",
+        "body" : "I filed [SPARK-32872](https://issues.apache.org/jira/browse/SPARK-32872) and submitted https://github.com/apache/spark/pull/29744 to fix this.",
+        "createdAt" : "2020-09-13T21:28:24Z",
+        "updatedAt" : "2020-09-13T21:28:25Z",
+        "lastEditedBy" : "b5a22c00-a076-425b-9ae2-bc7d0e8a80b8",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5ac203e43c836bee295461035c9adacdf9ca1d6f",
+    "line" : 9,
+    "diffHunk" : "@@ -1,1 +746,750 @@        if (numKeys >= growthThreshold && longArray.size() / 2 < MAX_CAPACITY) {\n          try {\n            growAndRehash();\n          } catch (SparkOutOfMemoryError oom) {\n            canGrowArray = false;"
+  },
+  {
+    "id" : "91bb9891-84c8-4fc5-8549-58ace2a1e4a9",
+    "prId" : 26828,
+    "prUrl" : "https://github.com/apache/spark/pull/26828#pullrequestreview-330877049",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0ce283c6-dae8-4399-bc22-c767b9a82128",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "@viirya . Can we have explicit test cases for these boundary conditions?\r\n(Sorry, I removed my previous comment.)",
+        "createdAt" : "2019-12-11T17:42:39Z",
+        "updatedAt" : "2019-12-11T17:45:42Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "35003ae3-d335-4484-9e17-a2bf163fbf8b",
+        "parentId" : "0ce283c6-dae8-4399-bc22-c767b9a82128",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "The max capacity is big number. Is it ok to have unit test allocating such big array?",
+        "createdAt" : "2019-12-11T18:07:27Z",
+        "updatedAt" : "2019-12-11T18:07:28Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "789407b9-fde1-4b29-8730-044a93bd09e6",
+        "parentId" : "0ce283c6-dae8-4399-bc22-c767b9a82128",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "I guessed we can use `mock` with simple `growAndRehash` (although I didn't try).",
+        "createdAt" : "2019-12-11T18:49:15Z",
+        "updatedAt" : "2019-12-11T18:49:15Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "59433875-6c6e-4eb0-b397-82f65588465e",
+        "parentId" : "0ce283c6-dae8-4399-bc22-c767b9a82128",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Never mind. I don't want to block this PR and you because this looks urgent. I'll try that later by myself.",
+        "createdAt" : "2019-12-11T18:50:09Z",
+        "updatedAt" : "2019-12-11T18:50:38Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d10a1f1a-682c-4308-a76f-71e4062228ef",
+        "parentId" : "0ce283c6-dae8-4399-bc22-c767b9a82128",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Ok. Sounds good. I will also do test to see if I can add it. Thanks for the suggestion!",
+        "createdAt" : "2019-12-11T18:53:04Z",
+        "updatedAt" : "2019-12-11T18:53:04Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f354c9d7-287b-4a95-8efb-ec730db149bb",
+        "parentId" : "0ce283c6-dae8-4399-bc22-c767b9a82128",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "hmm, even mock with `growAndRehash` to avoid allocate the array, `append` still needs to allocate memory page for values to insert. Mock with `append` makes less sense because it is where this logic remains.",
+        "createdAt" : "2019-12-11T20:49:55Z",
+        "updatedAt" : "2019-12-11T20:49:55Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9691f23b-c96a-4892-aa67-cd99af1f8a2c",
+        "parentId" : "0ce283c6-dae8-4399-bc22-c767b9a82128",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Oh, you already tested that. Got it. Thank you for spending time for that.",
+        "createdAt" : "2019-12-11T22:09:37Z",
+        "updatedAt" : "2019-12-11T22:09:44Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5ac203e43c836bee295461035c9adacdf9ca1d6f",
+    "line" : 7,
+    "diffHunk" : "@@ -1,1 +744,748 @@        // We use two array entries per key, so the array size is twice the capacity.\n        // We should compare the current capacity of the array, instead of its size.\n        if (numKeys >= growthThreshold && longArray.size() / 2 < MAX_CAPACITY) {\n          try {\n            growAndRehash();"
   }
 ]

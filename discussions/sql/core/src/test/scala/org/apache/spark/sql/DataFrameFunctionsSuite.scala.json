@@ -97,5 +97,159 @@
     "commit" : "1bf68f03acce3cb46380ecbadd66693cbff39195",
     "line" : 4,
     "diffHunk" : "@@ -1,1 +1533,1537 @@  }\n\n  test(\"SPARK-31227: Non-nullable null type should not coerce to nullable type in concat\") {\n    val actual = spark.range(1).selectExpr(\"concat(array(), array(1)) as arr\")\n    val expected = spark.range(1).selectExpr(\"array(1) as arr\")"
+  },
+  {
+    "id" : "77f6c4b1-ceb5-4b34-967a-23c53b873eb2",
+    "prId" : 26811,
+    "prUrl" : "https://github.com/apache/spark/pull/26811#pullrequestreview-331822139",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4fa6bea0-05e4-4215-9222-40c448eecd3a",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Since this is a bug, can you split these three tests into a separate test unit and add a test title with the jira ID(SPARK-29600)?",
+        "createdAt" : "2019-12-13T07:10:29Z",
+        "updatedAt" : "2019-12-13T12:33:30Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3dbb09f3-f825-4bba-a4d1-5a568b5cd6dc",
+        "parentId" : "4fa6bea0-05e4-4215-9222-40c448eecd3a",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Also, can you update the title, too?",
+        "createdAt" : "2019-12-13T07:10:45Z",
+        "updatedAt" : "2019-12-13T12:33:30Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "49db9257-de46-47cc-99e2-dfab88f27aa7",
+        "parentId" : "4fa6bea0-05e4-4215-9222-40c448eecd3a",
+        "authorId" : "75554730-8183-463c-bf1d-7cd5b4e9f22b",
+        "body" : "Sure. I'll update",
+        "createdAt" : "2019-12-13T11:47:15Z",
+        "updatedAt" : "2019-12-13T12:33:30Z",
+        "lastEditedBy" : "75554730-8183-463c-bf1d-7cd5b4e9f22b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7b12d6cf78d2228d36192e78cca5a12648c1db80",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +867,871 @@\n  test(\"SPARK-29600: ArrayContains function may return incorrect result for DecimalType\") {\n    checkAnswer(\n      sql(\"select array_contains(array(1.10), 1.1)\"),\n      Seq(Row(true))"
+  },
+  {
+    "id" : "e050d552-de5b-4e64-9510-6b1cdd83ef53",
+    "prId" : 26811,
+    "prUrl" : "https://github.com/apache/spark/pull/26811#pullrequestreview-333262750",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a47ab5bd-4197-4a84-97f7-12a80e593e4a",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "why precision becomes 38 in this case?",
+        "createdAt" : "2019-12-13T12:55:11Z",
+        "updatedAt" : "2019-12-13T12:55:12Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f4b52777-5ed3-4d84-9d45-e75014920264",
+        "parentId" : "a47ab5bd-4197-4a84-97f7-12a80e593e4a",
+        "authorId" : "75554730-8183-463c-bf1d-7cd5b4e9f22b",
+        "body" : "https://github.com/apache/spark/blob/1fc353d51a62cb554e6af23dbc9a613e214e3af1/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/analysis/TypeCoercion.scala#L864-L869\r\nFor query `array_contains(array(1), .01234567890123456790123456780)`\\\r\n`e.inputTypes` will return `Seq(Array(Decimal(38,29)), Decimal(38,29))` and above code will cast `.01234567890123456790123456780` as `Decimal(38,29)`. \r\nPreviously, when we were using `findWiderTypeForTwo`, decimal types were not getting upcasted but `findWiderTypeWithoutStringPromotionForTwo` will successfully upcast DecimalType ",
+        "createdAt" : "2019-12-16T07:01:53Z",
+        "updatedAt" : "2019-12-16T07:01:53Z",
+        "lastEditedBy" : "75554730-8183-463c-bf1d-7cd5b4e9f22b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fefa0ae5-12a6-4eba-949d-65a5d20e78ba",
+        "parentId" : "a47ab5bd-4197-4a84-97f7-12a80e593e4a",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "> Previously, when we were using findWiderTypeForTwo\r\n\r\nBefore this PR, we were using `findTightestCommonType`. Why do we add cast but still can't resolve `ArrayContains`?",
+        "createdAt" : "2019-12-16T11:27:51Z",
+        "updatedAt" : "2019-12-16T11:27:51Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c8849085-6ecb-4987-b282-25d21e47a273",
+        "parentId" : "a47ab5bd-4197-4a84-97f7-12a80e593e4a",
+        "authorId" : "75554730-8183-463c-bf1d-7cd5b4e9f22b",
+        "body" : "Do you mean why in above test case query, `ArrayContains` is throwing `AnalysisException` instead of casting integer to Decimal?\r\n\r\nAn integer cannot be casted to decimal with scale > 28.\r\n\r\n```\r\ndecimalWith28Zeroes = 1.0000000000000000000000000000\r\nSELECT array_contains(array(1), decimalWith28Zeroes);\r\nResult =>> true\r\n```\r\n\r\n```\r\ndecimalWith29Zeroes = 1.00000000000000000000000000000\r\nSELECT array_contains(array(1), decimalWith29Zeroes);\r\nResult =>> AnalysisException\r\n```",
+        "createdAt" : "2019-12-17T06:15:41Z",
+        "updatedAt" : "2019-12-17T06:15:42Z",
+        "lastEditedBy" : "75554730-8183-463c-bf1d-7cd5b4e9f22b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f15a3c1e-4dbf-4ab2-80c9-35c48104a807",
+        "parentId" : "a47ab5bd-4197-4a84-97f7-12a80e593e4a",
+        "authorId" : "75554730-8183-463c-bf1d-7cd5b4e9f22b",
+        "body" : "cc @maropu @cloud-fan ",
+        "createdAt" : "2019-12-17T06:17:18Z",
+        "updatedAt" : "2019-12-17T06:17:19Z",
+        "lastEditedBy" : "75554730-8183-463c-bf1d-7cd5b4e9f22b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d277b42b-9d42-476b-9d2f-a4819940ac9a",
+        "parentId" : "a47ab5bd-4197-4a84-97f7-12a80e593e4a",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Yea I get that we can't do cast here. My question is: since we can't do cast, we should leave the expression un-touched. But now we add cast to one side and leave the expression unresolved. Where do we add that useless cast?",
+        "createdAt" : "2019-12-17T07:22:43Z",
+        "updatedAt" : "2019-12-17T07:22:50Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "15e47a65-6796-45ba-8fb5-f2e136555cf5",
+        "parentId" : "a47ab5bd-4197-4a84-97f7-12a80e593e4a",
+        "authorId" : "75554730-8183-463c-bf1d-7cd5b4e9f22b",
+        "body" : "https://github.com/apache/spark/blob/1fc353d51a62cb554e6af23dbc9a613e214e3af1/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/analysis/TypeCoercion.scala#L864-L869\r\n\r\nThis code is to cast left and right expression one by one. Here,\r\n- `e.childern` is `Seq( array<int>, decimal(29,29))`, and\r\n- `e.inputTypes` will return `Seq(array<decimal(38,29)>, decimal(38,29))`\r\n\r\n`impicitCast(array<int>, array<decimal(38,29)>)` will return `None`, since `int` can't be casted to `decimal(38,29)`.",
+        "createdAt" : "2019-12-17T08:38:34Z",
+        "updatedAt" : "2019-12-17T08:38:34Z",
+        "lastEditedBy" : "75554730-8183-463c-bf1d-7cd5b4e9f22b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "508cdaf1-efe6-4d3f-843c-1359f797f789",
+        "parentId" : "a47ab5bd-4197-4a84-97f7-12a80e593e4a",
+        "authorId" : "75554730-8183-463c-bf1d-7cd5b4e9f22b",
+        "body" : "Above code is creating new expression by updating only right child.",
+        "createdAt" : "2019-12-17T08:40:34Z",
+        "updatedAt" : "2019-12-17T08:40:34Z",
+        "lastEditedBy" : "75554730-8183-463c-bf1d-7cd5b4e9f22b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6d59fb26-edd5-44c3-809f-06f0c973fe2e",
+        "parentId" : "a47ab5bd-4197-4a84-97f7-12a80e593e4a",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "ah thanks for finding this out!",
+        "createdAt" : "2019-12-17T13:14:10Z",
+        "updatedAt" : "2019-12-17T13:14:10Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7b12d6cf78d2228d36192e78cca5a12648c1db80",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +851,855 @@      s\"\"\"\n         |Input to function array_contains should have been array followed by a\n         |value with same element type, but it's [array<int>, decimal(38,29)].\n       \"\"\".stripMargin.replace(\"\\n\", \" \").trim()\n    assert(e1.message.contains(errorMsg1))"
   }
 ]
