@@ -1,0 +1,233 @@
+[
+  {
+    "id" : "8daa0ea0-461f-4dd3-8c60-9ba266394f31",
+    "prId" : 30810,
+    "prUrl" : "https://github.com/apache/spark/pull/30810#pullrequestreview-554554017",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9f1a87f9-27b6-4e72-b936-6eb3bb24d281",
+        "parentId" : null,
+        "authorId" : "99e31844-a5b3-48a2-af71-412edb607a13",
+        "body" : "Will we need to change this value depending on which javaBLAS is selected? vectorized version or F2JBLAS.",
+        "createdAt" : "2020-12-17T07:32:08Z",
+        "updatedAt" : "2021-04-13T23:18:23Z",
+        "lastEditedBy" : "99e31844-a5b3-48a2-af71-412edb607a13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "47eba84b-3b4e-403b-a2e4-27575667ac56",
+        "parentId" : "9f1a87f9-27b6-4e72-b936-6eb3bb24d281",
+        "authorId" : "567dbcaa-2683-46db-af89-e44be673a7cc",
+        "body" : "From the results of the benchmarks (see https://github.com/apache/spark/pull/30810#issuecomment-747405702), the value is likely to be a bit bigger when using vectorized implementation and we will keep something similar for some operations (`dscal`, `dspr`, `dsyr`, `sdot`).\r\n\r\nI'll look at why is the native implementation so much faster for simple operations like `dscal` and `sdot` (especially when `ddot` is equivalent to native), and what we can apply to the vectorized version.",
+        "createdAt" : "2020-12-17T12:23:43Z",
+        "updatedAt" : "2021-04-13T23:18:23Z",
+        "lastEditedBy" : "567dbcaa-2683-46db-af89-e44be673a7cc",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "10595df8cd6ad01c6a9ae5cde49a9974ae58b667",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +27,31 @@  @transient private var _javaBLAS: NetlibBLAS = _\n  @transient private var _nativeBLAS: NetlibBLAS = _\n  private val nativeL1Threshold: Int = 256\n\n  // For level-1 function dspmv, use javaBLAS for better performance."
+  },
+  {
+    "id" : "a2bc6858-a95a-4927-a735-914f735b9a55",
+    "prId" : 30810,
+    "prUrl" : "https://github.com/apache/spark/pull/30810#pullrequestreview-557273279",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "011b8fc8-3c54-4c5a-bb42-662399ae94bd",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "I think we might need to readjust the logic around here. This is meant to avoid calling into native code for very small operations, where it probably isn't a win. I think f2jBLAS should stay, and the nativeBLAS implementation should vary based on availability of the JVM or Netlib implementation?",
+        "createdAt" : "2020-12-22T14:37:28Z",
+        "updatedAt" : "2021-04-13T23:18:23Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4ca3a444-1a93-4bd7-8c14-c391f9ae8001",
+        "parentId" : "011b8fc8-3c54-4c5a-bb42-662399ae94bd",
+        "authorId" : "567dbcaa-2683-46db-af89-e44be673a7cc",
+        "body" : "I would argue for the vector implementation to \"replace\" the f2j one when possible instead of the native one for three reasons. First, the vector implementation is faster than f2j in all cases. Second, the vector implementation doesn't suffer from the overhead of switching between java and native that native has (these are all compiler intrinsic and is completely transparent to the user of the Vector API). And third, because the vector implementation doesn't depend on any other external dependency (other than a recent enough JDK that is used to run the whole of Spark) similarly to f2j.\r\n\r\nThe current fallback chain is as follows:\r\n - for `javaBLAS`: 1. vector, 2. f2j\r\n - for `nativeBLAS`: 1. native, 2. vector, 3. f2j\r\n\r\nThat guarantees to get access to the fastest implementation available given the set of options enabled (compiled with `-Pvectorized`, compiled with JDK16+, ran with JDK16+, installed OpenBLAS or MLK).",
+        "createdAt" : "2020-12-22T17:04:09Z",
+        "updatedAt" : "2021-04-13T23:18:23Z",
+        "lastEditedBy" : "567dbcaa-2683-46db-af89-e44be673a7cc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a9beb052-0c96-4d1a-871c-545037dddec4",
+        "parentId" : "011b8fc8-3c54-4c5a-bb42-662399ae94bd",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "OK I get that. If the Vector API is available, then, no real reason to use the plain Java implementation ever. This makes sense to me. You can still use Netlib + BLAS by providing it if desired.",
+        "createdAt" : "2020-12-22T18:14:33Z",
+        "updatedAt" : "2021-04-13T23:18:23Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "10595df8cd6ad01c6a9ae5cde49a9974ae58b667",
+    "line" : 56,
+    "diffHunk" : "@@ -1,1 +63,67 @@  private[ml] def getBLAS(vectorSize: Int): NetlibBLAS = {\n    if (vectorSize < nativeL1Threshold) {\n      javaBLAS\n    } else {\n      nativeBLAS"
+  },
+  {
+    "id" : "d6a1d7cc-1085-4182-990f-2e8ffda194c5",
+    "prId" : 30810,
+    "prUrl" : "https://github.com/apache/spark/pull/30810#pullrequestreview-557124185",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7b9ca58c-7b8b-4e94-b8e4-6631e8b1ee13",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Nit: the indentation through line 41 seems too far in / uneven",
+        "createdAt" : "2020-12-22T14:40:02Z",
+        "updatedAt" : "2021-04-13T23:18:23Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "10595df8cd6ad01c6a9ae5cde49a9974ae58b667",
+    "line" : 27,
+    "diffHunk" : "@@ -1,1 +36,40 @@          // scalastyle:off classforname\n          Class.forName(\"org.apache.spark.ml.linalg.VectorizedBLAS\", true,\n                          Option(Thread.currentThread().getContextClassLoader)\n                            .getOrElse(getClass.getClassLoader))\n               .newInstance()"
+  },
+  {
+    "id" : "59daf620-52e8-4e46-8160-fc0f23d10480",
+    "prId" : 30810,
+    "prUrl" : "https://github.com/apache/spark/pull/30810#pullrequestreview-557273595",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6f739655-1720-4265-b345-c93868f8941e",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "It looks like the intent here was to never try a vectorized implementation. That might or might not be wrong, but same point - I think we want to keep the separate native vs non-native options above, keep them separate",
+        "createdAt" : "2020-12-22T14:41:31Z",
+        "updatedAt" : "2021-04-13T23:18:23Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fa4348d8-59d5-4975-bd94-771e3071c0ed",
+        "parentId" : "6f739655-1720-4265-b345-c93868f8941e",
+        "authorId" : "567dbcaa-2683-46db-af89-e44be673a7cc",
+        "body" : "The advantage of f2j over native is the absence of the overhead of switching between java and native. This overhead is particularly costly when the size of the inputs is small or whether the f2j implementation is just \"good enough\". The vector implementation is much faster than f2j on both small and large inputs (see https://github.com/luhenry/vectorizedblas/releases/tag/v0.1.11 -> jmh-results.csv for detailed numbers). It would then be wasteful not to take advantage of it when it's available.",
+        "createdAt" : "2020-12-22T17:09:58Z",
+        "updatedAt" : "2021-04-13T23:18:23Z",
+        "lastEditedBy" : "567dbcaa-2683-46db-af89-e44be673a7cc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dfbef052-12d8-4b24-9059-4644440ec05d",
+        "parentId" : "6f739655-1720-4265-b345-c93868f8941e",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "OK that's fine if we're fairly confident that this is a win for this use case. I don't even know if there was a strong reason for it or whether it's still valid.",
+        "createdAt" : "2020-12-22T18:15:06Z",
+        "updatedAt" : "2021-04-13T23:18:23Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "10595df8cd6ad01c6a9ae5cde49a9974ae58b667",
+    "line" : 80,
+    "diffHunk" : "@@ -1,1 +283,287 @@      beta: Double,\n      y: DenseVector): Unit = {\n    javaBLAS.dspmv(\"U\", n, alpha, A.values, x.values, 1, beta, y.values, 1)\n  }\n"
+  },
+  {
+    "id" : "d1bfe3b7-f088-4865-b7dd-7b75a53feae0",
+    "prId" : 30810,
+    "prUrl" : "https://github.com/apache/spark/pull/30810#pullrequestreview-561031822",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ba460b4d-76e4-41e0-b5f3-f5bb456b038d",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "`NetlibBLAS.getInstance` will be called twice for `else` condition. Will it do some initialization twice? Maybe calling `NetlibBLAS.getInstance` before `if...else`?",
+        "createdAt" : "2020-12-23T20:24:30Z",
+        "updatedAt" : "2021-04-13T23:18:23Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e7ca5a28-63de-470f-a5ce-299f1d26e816",
+        "parentId" : "ba460b4d-76e4-41e0-b5f3-f5bb456b038d",
+        "authorId" : "567dbcaa-2683-46db-af89-e44be673a7cc",
+        "body" : "`NetlibBLAS.getInstance` already caches the creation of the NetlibBLAS object. Calling it twice then doesn't lead to the creation of two objects.",
+        "createdAt" : "2021-01-04T13:34:23Z",
+        "updatedAt" : "2021-04-13T23:18:23Z",
+        "lastEditedBy" : "567dbcaa-2683-46db-af89-e44be673a7cc",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "10595df8cd6ad01c6a9ae5cde49a9974ae58b667",
+    "line" : 46,
+    "diffHunk" : "@@ -1,1 +55,59 @@          javaBLAS\n        } else {\n          NetlibBLAS.getInstance\n        }\n    }"
+  },
+  {
+    "id" : "3c9beec1-a140-4586-a47e-aae2fa2c4031",
+    "prId" : 30810,
+    "prUrl" : "https://github.com/apache/spark/pull/30810#pullrequestreview-652010489",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e0ca9b6d-7fd0-4a19-9033-61ec23d1a05d",
+        "parentId" : null,
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "according to the performance test, I think we can increase `nativeL1Threshold` to 512?",
+        "createdAt" : "2021-04-15T02:25:16Z",
+        "updatedAt" : "2021-04-15T02:31:40Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1388688e-5ff3-4dd4-9346-c370c69578b4",
+        "parentId" : "e0ca9b6d-7fd0-4a19-9033-61ec23d1a05d",
+        "authorId" : "567dbcaa-2683-46db-af89-e44be673a7cc",
+        "body" : "I would go even as far as using nativeBLAS exclusively for level-3 operations, and never for level-1 and level-2. The cost of copying the data from managed memory to native memory (necessary to pass the array to native code) is too great relative to the small speed up of native for the level-1 and level-2 routines. ",
+        "createdAt" : "2021-04-20T14:28:07Z",
+        "updatedAt" : "2021-04-20T14:28:07Z",
+        "lastEditedBy" : "567dbcaa-2683-46db-af89-e44be673a7cc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0d2285ba-3d4b-470b-8746-78e82b07aab8",
+        "parentId" : "e0ca9b6d-7fd0-4a19-9033-61ec23d1a05d",
+        "authorId" : "480621e1-cdb5-45ce-a6a3-2d1692427e49",
+        "body" : "netlib-java does not copy memory when using native backend, it uses memory pinning (which has its own problems). Please provide benchmarks to show any degradation.",
+        "createdAt" : "2021-05-05T07:39:07Z",
+        "updatedAt" : "2021-05-05T07:39:07Z",
+        "lastEditedBy" : "480621e1-cdb5-45ce-a6a3-2d1692427e49",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "eb245e5c-0929-4444-b1c3-abd8707ff7cc",
+        "parentId" : "e0ca9b6d-7fd0-4a19-9033-61ec23d1a05d",
+        "authorId" : "480621e1-cdb5-45ce-a6a3-2d1692427e49",
+        "body" : "\"small speed up of native for the level-1 and level-2 routines.\" I think you need to do some more analysis on this. Native can be 10x faster than JVM for reasonable sized matrices. However, as shown in https://github.com/fommil/matrix-toolkits-java the EJML and common-math project are faster for matrices of 10x10 or smaller. If you want to heavily optimise for those usecases, then swap to using EJML which is heavily optimised for that usecase (not just \"something on the JVM\")",
+        "createdAt" : "2021-05-05T07:44:09Z",
+        "updatedAt" : "2021-05-05T07:44:09Z",
+        "lastEditedBy" : "480621e1-cdb5-45ce-a6a3-2d1692427e49",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "10595df8cd6ad01c6a9ae5cde49a9974ae58b667",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +27,31 @@  @transient private var _javaBLAS: NetlibBLAS = _\n  @transient private var _nativeBLAS: NetlibBLAS = _\n  private val nativeL1Threshold: Int = 256\n\n  // For level-1 function dspmv, use javaBLAS for better performance."
+  }
+]

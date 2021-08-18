@@ -416,5 +416,126 @@
     "commit" : "3042bd1a361594600835d7b5f3ffeaa1bba51bc6",
     "line" : 6,
     "diffHunk" : "@@ -1,1 +327,331 @@    namespace: LogicalPlan,\n    pattern: Option[String],\n    override val output: Seq[Attribute] = ShowNamespaces.OUTPUT) extends Command {\n  override def children: Seq[LogicalPlan] = Seq(namespace)\n}"
+  },
+  {
+    "id" : "3626b8c8-bf49-457a-b7b1-a948fcbaf9ec",
+    "prId" : 30806,
+    "prUrl" : "https://github.com/apache/spark/pull/30806#pullrequestreview-553807723",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4b45ef76-d58f-4931-b973-16b04a206459",
+        "parentId" : null,
+        "authorId" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "body" : "Making this optional allows us to reuse the same plan before we construct a write and after. Having `None` here means the logical write hasn't been constructed yet. This allows us to have idempotent rules in the optimizer. ",
+        "createdAt" : "2020-12-16T15:34:38Z",
+        "updatedAt" : "2020-12-21T15:35:33Z",
+        "lastEditedBy" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "882e3210004c0e27aca914b58819008dafdde92a",
+    "line" : 24,
+    "diffHunk" : "@@ -1,1 +98,102 @@    writeOptions: Map[String, String],\n    isByName: Boolean,\n    write: Option[Write] = None) extends V2WriteCommand {\n  override lazy val resolved: Boolean = {\n    table.resolved && query.resolved && outputResolved && deleteExpr.resolved"
+  },
+  {
+    "id" : "9d9bb409-484a-475a-8078-087f2f982661",
+    "prId" : 30806,
+    "prUrl" : "https://github.com/apache/spark/pull/30806#pullrequestreview-556470186",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5fad4910-7f7c-4083-982b-1c1bfb298216",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Shall we add `override lazy val resolved = ... && write.isDefined` in `V2WriteCommand`? It's safer to make sure that the analyzer creates the `Write` object.",
+        "createdAt" : "2020-12-21T14:31:18Z",
+        "updatedAt" : "2020-12-21T15:35:33Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b21327cf-a7af-482d-bf94-06171f525193",
+        "parentId" : "5fad4910-7f7c-4083-982b-1c1bfb298216",
+        "authorId" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "body" : "Sounds like a good idea but we actually construct the `Write` object in the optimizer after the operator optimization is done to ensure we operate on optimal expressions.",
+        "createdAt" : "2020-12-21T15:24:48Z",
+        "updatedAt" : "2020-12-21T15:35:33Z",
+        "lastEditedBy" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e6c6c01e-0113-4042-8a97-f558f48c9297",
+        "parentId" : "5fad4910-7f7c-4083-982b-1c1bfb298216",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "ah I see, let's leave it then.",
+        "createdAt" : "2020-12-21T15:39:37Z",
+        "updatedAt" : "2020-12-21T15:39:37Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "882e3210004c0e27aca914b58819008dafdde92a",
+    "line" : 16,
+    "diffHunk" : "@@ -1,1 +70,74 @@    write: Option[Write] = None) extends V2WriteCommand {\n  override def withNewQuery(newQuery: LogicalPlan): AppendData = copy(query = newQuery)\n  override def withNewTable(newTable: NamedRelation): AppendData = copy(table = newTable)\n}\n"
+  },
+  {
+    "id" : "903b85a1-190f-447b-9842-d30f8c90db38",
+    "prId" : 30806,
+    "prUrl" : "https://github.com/apache/spark/pull/30806#pullrequestreview-562771490",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4e477203-583c-4653-adfc-0333a1cd4642",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Not related to this PR. I'm thinking that if we should have an optional `Scan` object in `DataSourceV2Relation`, instead of having a new logical plan `DataSourceV2ScanRelation`. It's simpler and consistent with the write logical plans. cc  @rdblue ",
+        "createdAt" : "2020-12-21T15:42:17Z",
+        "updatedAt" : "2020-12-21T15:42:17Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3a1bd56f-3ec4-4cdb-8b30-fe0c419275ae",
+        "parentId" : "4e477203-583c-4653-adfc-0333a1cd4642",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "I think that's a good idea.",
+        "createdAt" : "2020-12-21T18:05:05Z",
+        "updatedAt" : "2020-12-21T18:05:05Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "96e05524-ce4c-464a-8a2b-c79d252a633b",
+        "parentId" : "4e477203-583c-4653-adfc-0333a1cd4642",
+        "authorId" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "body" : "Quick question: `DataSourceV2Relation` is also used inside write nodes like `AppendData`. If we add an optional scan, will that mean we will leak a read-specific concept into write plans?\r\n\r\ncc @rdblue @cloud-fan ",
+        "createdAt" : "2020-12-22T09:22:59Z",
+        "updatedAt" : "2020-12-22T09:23:27Z",
+        "lastEditedBy" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ba195a01-a0ba-49a4-9b8c-51638bc6d8a2",
+        "parentId" : "4e477203-583c-4653-adfc-0333a1cd4642",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "For `AppendData`, we intentionally do not treat the `table` as a child, which means the pushdown rule won't apply for it and the `Scan` object will always be None in `AppendData`.",
+        "createdAt" : "2021-01-06T14:54:37Z",
+        "updatedAt" : "2021-01-06T14:54:38Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "882e3210004c0e27aca914b58819008dafdde92a",
+    "line" : 34,
+    "diffHunk" : "@@ -1,1 +137,141 @@    writeOptions: Map[String, String],\n    isByName: Boolean,\n    write: Option[Write] = None) extends V2WriteCommand {\n  override def withNewQuery(newQuery: LogicalPlan): OverwritePartitionsDynamic = {\n    copy(query = newQuery)"
   }
 ]

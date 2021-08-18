@@ -196,5 +196,115 @@
     "commit" : "0c9e5d21a2b14cb5a0dfe9814ab298f2f8d606ad",
     "line" : 25,
     "diffHunk" : "@@ -1,1 +1338,1342 @@    clickTime <= impressionTime + interval 1 hour\n    \"\"\"),\n  joinType = \"leftOuter\"      // can be \"inner\", \"leftOuter\", \"rightOuter\", \"fullOuter\", \"leftSemi\"\n )\n"
+  },
+  {
+    "id" : "fcff8faa-4b80-4244-818f-791ba9e9420e",
+    "prId" : 30789,
+    "prUrl" : "https://github.com/apache/spark/pull/30789#pullrequestreview-553938919",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "98c955e4-9b5c-4c78-bd29-8e414be5d983",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "This is good info but can we get more specific about the tuning? if you see what then you change spark.locality.wait to what, up or down, etc? what is too big, too small, etc",
+        "createdAt" : "2020-12-16T13:31:48Z",
+        "updatedAt" : "2020-12-17T00:49:12Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bb89f6db-f724-43bc-adff-05bfe41d94f0",
+        "parentId" : "98c955e4-9b5c-4c78-bd29-8e414be5d983",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Good point. I added few specific info.",
+        "createdAt" : "2020-12-16T17:51:09Z",
+        "updatedAt" : "2020-12-17T00:49:12Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d93f6dc5628b7514cf2527d49dbf99e3d51b9be3",
+    "line" : 20,
+    "diffHunk" : "@@ -1,1 +1706,1710 @@\nBy changing the Spark configurations related to task scheduling, for example `spark.locality.wait`, users can configure Spark how long to wait to launch a data-local task.\nFor stateful operations in Structured Streaming, it can be used to let state store providers running on the same executors across batches.\n\nSpecifically for built-in HDFS state store provider, users can check the state store metrics such as `loadedMapCacheHitCount` and `loadedMapCacheMissCount`. Ideally,"
+  },
+  {
+    "id" : "d9962e91-3e6e-4474-bc52-951b94bd6bab",
+    "prId" : 30789,
+    "prUrl" : "https://github.com/apache/spark/pull/30789#pullrequestreview-554168581",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d8db4be9-12e2-4ea1-8bee-1d815b1400ff",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Probably explicitly mentioning `microbatches`, or if we still concern about continuous processing, then `during the lifetime of the query`?",
+        "createdAt" : "2020-12-16T23:03:53Z",
+        "updatedAt" : "2020-12-17T00:49:12Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9db18890-6ba8-4bab-8d3e-a425b761064f",
+        "parentId" : "d8db4be9-12e2-4ea1-8bee-1d815b1400ff",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "`batches` would also just work - looks like in further sentences you seem to use `batches` simply.",
+        "createdAt" : "2020-12-16T23:29:56Z",
+        "updatedAt" : "2020-12-17T00:49:12Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d93f6dc5628b7514cf2527d49dbf99e3d51b9be3",
+    "line" : 7,
+    "diffHunk" : "@@ -1,1 +1693,1697 @@\nThe stateful operations store states for events in state stores of executors. State stores occupy resources such as memory and disk space to store the states.\nSo it is more efficient to keep a state store provider running in the same executor across different streaming batches.\nChanging the location of a state store provider requires the extra overhead of loading checkpointed states. The overhead of loading state from checkpoint depends\non the external storage and the size of the state, which tends to hurt the latency of micro-batch run. For some use cases such as processing very large state data,"
+  },
+  {
+    "id" : "0b74ba33-5e9e-489f-bb39-700322e02ba3",
+    "prId" : 30789,
+    "prUrl" : "https://github.com/apache/spark/pull/30789#pullrequestreview-554155313",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b6db13b5-2308-427b-b681-b36b14b6d98c",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "I'd rearrange following sentences to explain happy case, and the bad case. Like...\r\n\r\n\r\n> The stateful operations in Structured Streaming queries rely on the preferred location feature of Spark's RDD to run the state store provider on the same executor. If in the next batch the corresponding state store provider is scheduled on this executor again, it could reuse the previous states and save the time of loading checkpointed states.\r\n> \r\n> However, generally the preferred location is not a hard requirement and it is still possible that Spark schedules tasks to the executors other than the preferred ones. In this case, Spark will load state store providers from checkpointed states on HDFS to new executors. The state store providers run in the previous batch will not be unloaded immediately.\r\n",
+        "createdAt" : "2020-12-16T23:17:36Z",
+        "updatedAt" : "2020-12-17T00:49:12Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d93f6dc5628b7514cf2527d49dbf99e3d51b9be3",
+    "line" : 12,
+    "diffHunk" : "@@ -1,1 +1698,1702 @@loading new state store providers from checkpointed states can be very time-consuming and inefficient.\n\nThe stateful operations in Structured Streaming queries rely on the preferred location feature of Spark's RDD to run the state store provider on the same executor.\nIf in the next batch the corresponding state store provider is scheduled on this executor again, it could reuse the previous states and save the time of loading checkpointed states.\n"
+  },
+  {
+    "id" : "2d57f23b-b1c5-4090-80e7-c47480d040fd",
+    "prId" : 30789,
+    "prUrl" : "https://github.com/apache/spark/pull/30789#pullrequestreview-554202454",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2aed25cb-ba04-4d24-852c-c845d3bc9d35",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "OFF TOPIC (for #30770): probably we may need to allow having different timeout between state RDD and others.",
+        "createdAt" : "2020-12-17T00:56:20Z",
+        "updatedAt" : "2020-12-17T00:56:20Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d93f6dc5628b7514cf2527d49dbf99e3d51b9be3",
+    "line" : 19,
+    "diffHunk" : "@@ -1,1 +1705,1709 @@Spark runs a maintenance task which checks and unloads the state store providers that are inactive on the executors.\n\nBy changing the Spark configurations related to task scheduling, for example `spark.locality.wait`, users can configure Spark how long to wait to launch a data-local task.\nFor stateful operations in Structured Streaming, it can be used to let state store providers running on the same executors across batches.\n"
   }
 ]

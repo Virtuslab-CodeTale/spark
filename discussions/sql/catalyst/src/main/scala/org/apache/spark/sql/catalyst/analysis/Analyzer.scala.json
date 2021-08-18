@@ -1582,5 +1582,71 @@
     "commit" : "4cc5eb1c6c4ee31186dca059154621753b0ee62f",
     "line" : 69,
     "diffHunk" : "@@ -1,1 +2170,2174 @@                  }\n                // This function is not an aggregate function, just return the resolved one.\n                case other if (isDistinct || filter.isDefined) =>\n                  throw QueryCompilationErrors.distinctOrFilterOnlyWithAggregateFunctionError(\n                    other.prettyName)"
+  },
+  {
+    "id" : "f5e92ebe-7aab-44ef-a7b5-0a4c80327f17",
+    "prId" : 30781,
+    "prUrl" : "https://github.com/apache/spark/pull/30781#pullrequestreview-604800572",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "459a92f4-605e-4dfc-8d59-4184b34818b8",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "what if `grouping__id` refers to an actual column (e.g. from a table) in these operators?",
+        "createdAt" : "2021-03-02T13:32:55Z",
+        "updatedAt" : "2021-03-02T13:32:55Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bc989881-6ffb-4c83-8d20-4e91548d6fb2",
+        "parentId" : "459a92f4-605e-4dfc-8d59-4184b34818b8",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "It will throw an analysis exception both after/before this PR, e.g.,\r\n```\r\nscala> sql(\"select * from t3\").show()\r\n+---+---+------------+\r\n|  a|  b|grouping__id|\r\n+---+---+------------+\r\n|  1|  2|           3|\r\n+---+---+------------+\r\n\r\n// with/without this PR\r\nscala> sql(\"select * from t3 where grouping__id > 0\").show()\r\norg.apache.spark.sql.AnalysisException: grouping()/grouping_id() can only be used with GroupingSets/Cube/Rollup;\r\n```\r\nOn the other hand, this PR will change behaviours other than these operators above, e.g.,\r\n```\r\n// The current behaviour\r\nscala> sql(\"select grouping__id from t3\").show()\r\norg.apache.spark.sql.AnalysisException: grouping_id() can only be used with GroupingSets/Cube/Rollup;;\r\n\r\n// w/ this PR\r\nscala> sql(\"select grouping__id from t3\").show()\r\n+------------+\r\n|grouping__id|\r\n+------------+\r\n|           3|\r\n+------------+\r\n```",
+        "createdAt" : "2021-03-03T23:51:36Z",
+        "updatedAt" : "2021-03-03T23:51:36Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "13297229-4439-420b-aa2f-27b68a10e65b",
+        "parentId" : "459a92f4-605e-4dfc-8d59-4184b34818b8",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "This reminds me of `Analyzer.resolveLiteralFunction`. For these identifier-like functions, we should try to resolve them as columns first.\r\n\r\nPersonally, I find the identifier-like functions a very tricky syntax. `CURRENT_DATE` etc. is from the SQL standard so I'm fine with it, plus we treat `CURRENT_DATE` as a reserved keyword under ANSI mode. `grouping__id` is not standard and I'm wondering if we should just forbid it (with a legacy config). Users must use `grouping__id()`.",
+        "createdAt" : "2021-03-04T07:30:06Z",
+        "updatedAt" : "2021-03-04T07:30:07Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1cc69ace-69de-46d0-b9a8-d3bc3afc3398",
+        "parentId" : "459a92f4-605e-4dfc-8d59-4184b34818b8",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "IIUC `grouping__id` exists for hive interoperability? Anyway, the idea looks reasonable. I'll make a PR to follow it.",
+        "createdAt" : "2021-03-05T04:37:50Z",
+        "updatedAt" : "2021-03-05T04:37:50Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "36a23057-b474-4736-bbbe-197f250cf0b6",
+        "parentId" : "459a92f4-605e-4dfc-8d59-4184b34818b8",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "https://github.com/apache/spark/pull/31751",
+        "createdAt" : "2021-03-05T04:38:13Z",
+        "updatedAt" : "2021-03-05T04:38:13Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ebddbb219270a3d4df652f0942145b88e0c000dc",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +2101,2105 @@      case q: LogicalPlan =>\n        val isGroupingIdAllowed = q match {\n          case _: Aggregate | _: GroupingSets | _: Filter | _: Sort => true\n          case _ => false\n        }"
   }
 ]

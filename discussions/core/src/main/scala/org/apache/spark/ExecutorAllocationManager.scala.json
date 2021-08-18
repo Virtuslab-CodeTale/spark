@@ -207,5 +207,38 @@
     "commit" : "74be2eade9824137269996e54b170f7f103767d4",
     "line" : 9,
     "diffHunk" : "@@ -1,1 +803,807 @@          if (stageAttemptToNumSpeculativeTasks.contains(stageAttempt)) {\n            stageAttemptToNumSpeculativeTasks(stageAttempt) -= 1\n          }\n        }\n"
+  },
+  {
+    "id" : "d9547d91-7ddc-4307-9146-fcc6f6a1f826",
+    "prId" : 30795,
+    "prUrl" : "https://github.com/apache/spark/pull/30795#pullrequestreview-557482652",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e4e34873-591c-42a3-8572-02ca9a4b8fc9",
+        "parentId" : null,
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "so I don't agree with this, at least not how its defined.  The user defined the maximum number of executors to use, this is getting more than that. I realize that some are excluded, but this also comes down to a resource utilization question as well. If I am in multi-tenant environment, I want to make sure 1 job doesn't take over the entire cluster. max is one way to do this.  I think we would either need to redefine this, which isn't great for backwards compatibility and could result in unexpected behavior or we add another config that is around the excluded nodes. this would either just be an allow to go over or a allow to go over by X. The downside to this is default would be 0 or false so you would have to configure if you do set max and want to use this feature. But I don't see a lot of jobs setting max unless they are trying to be nice in multi-tenant so it seems ok as long as its in release notes, etc.\r\n\r\n  you will notice the other logic for unschedulableTaskSets does not increase this, just increases the number we ask for.",
+        "createdAt" : "2020-12-18T15:19:48Z",
+        "updatedAt" : "2020-12-18T16:06:17Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c5317faa-ec25-41ce-adec-3733a7f46982",
+        "parentId" : "e4e34873-591c-42a3-8572-02ca9a4b8fc9",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Make sense to me. Add an extra conf would be a good choice.\r\n\r\nAlthough, I'm rethinking this change. It only takes effect when users set the max explicitly and the cluster reaches the max.( By default, max is Int.MaxValue. So we won't reach the max normally.) However, we still want to replace those excluded executors even if the cluster doesn't reach the max. For example, max/2 may be enough for task scheduling. And TaskScheduler also thinks there're max/2 executors without realizing X executors actually excluded.\r\n\r\nSo I think what we actually need here is to forcibly replace excluded executors when dynamic allocation & exclusion (but not kill) are both enabled. And it should not be related to the max value.\r\n\r\n\r\n",
+        "createdAt" : "2020-12-23T03:01:29Z",
+        "updatedAt" : "2020-12-23T03:01:29Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "75cdd1e334c15c8af89c9b0d283bedf12d0f33ee",
+    "line" : 7,
+    "diffHunk" : "@@ -1,1 +505,509 @@    // launch new executors to replace the excluded executors.\n    val exclude = executorMonitor.excludedExecutorCount\n    val maxOverheadExecutors = maxNumExecutors + exclude\n    // Do not request more executors if it would put our target over the upper bound\n    // this is doing a max check per ResourceProfile"
   }
 ]

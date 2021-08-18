@@ -350,5 +350,148 @@
     "commit" : "029fb53bc4484432973bf8f5eda9204dbd01ae89",
     "line" : 23,
     "diffHunk" : "@@ -1,1 +568,572 @@    case _: BinaryArithmetic => true\n    case _: BinaryMathExpression => true\n    case _: AddMonths | _: DateAdd | _: DateAddInterval | _: DateDiff | _: DateSub => true\n    case _: FindInSet | _: RoundBase => true\n    case _ => false"
+  },
+  {
+    "id" : "760183eb-2b38-4cb7-a965-bf0634426e93",
+    "prId" : 30853,
+    "prUrl" : "https://github.com/apache/spark/pull/30853#pullrequestreview-559392661",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "af6a9ce0-6227-47bd-aa0b-d51da745021f",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "`Alias` is not the only exception, we can't apply this optimization for `Generator` as well, as the logical plan `Generate` requires explicit type `Generator`.\r\n\r\nIt happened many times that an optimization rule introduces bugs because it uses denylist instead of allowlist. Let's avoid similar mistakes here, and explicitly list what expressions we should support.\r\n\r\nAn initial list from my mind:\r\n1. IsNull, IsNotNull\r\n2. UnaryMathExpression\r\n3. String2StringExpression\r\n4. Cast\r\n5. BinaryComparison\r\n6. BinaryArithmetic",
+        "createdAt" : "2020-12-28T19:16:05Z",
+        "updatedAt" : "2020-12-28T19:16:05Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c4b2291a-1a32-44ef-87da-181427243a80",
+        "parentId" : "af6a9ce0-6227-47bd-aa0b-d51da745021f",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "Do you think `BinaryExpression` also has this issue?",
+        "createdAt" : "2020-12-29T02:42:27Z",
+        "updatedAt" : "2020-12-29T02:42:28Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "80b39e65-2867-4085-ae21-a3656cbbbcb3",
+        "parentId" : "af6a9ce0-6227-47bd-aa0b-d51da745021f",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I'm not sure, but it's safer to start with an allowlist.  We can extend it later.",
+        "createdAt" : "2020-12-29T04:53:00Z",
+        "updatedAt" : "2020-12-29T04:53:01Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "121c9f2e-4247-4665-bd08-51b4f459f005",
+        "parentId" : "af6a9ce0-6227-47bd-aa0b-d51da745021f",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "https://github.com/apache/spark/pull/30955",
+        "createdAt" : "2020-12-29T06:24:54Z",
+        "updatedAt" : "2020-12-29T06:24:55Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a0995d6404208cc05995ffbb3fd84ac3caf4156f",
+    "line" : 4,
+    "diffHunk" : "@@ -1,1 +543,547 @@  def apply(plan: LogicalPlan): LogicalPlan = plan transform {\n    case q: LogicalPlan => q transformExpressionsUp {\n      case a: Alias => a // Skip an alias.\n      case u @ UnaryExpression(i @ If(_, trueValue, falseValue))\n          if atMostOneUnfoldable(Seq(trueValue, falseValue)) =>"
+  },
+  {
+    "id" : "cf8b5eea-b99a-4255-8226-03b9233e28eb",
+    "prId" : 30852,
+    "prUrl" : "https://github.com/apache/spark/pull/30852#pullrequestreview-557446698",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4993ad86-6805-428b-a851-8fab9c540a9e",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Since this is `all branches are null literal`, could you revise the PR title from `Replace None of elseValue inside CaseWhen if all branches are FalseLiteral` to mention that together?",
+        "createdAt" : "2020-12-23T00:51:34Z",
+        "updatedAt" : "2020-12-23T09:56:43Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d20fedeac9fcca59faea28da418f546d4fd07e20",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +528,532 @@\n      case e @ CaseWhen(branches, None)\n          if branches.forall(_._2.semanticEquals(Literal(null, e.dataType))) =>\n        Literal(null, e.dataType)\n    }"
+  },
+  {
+    "id" : "db5fceb4-d482-4f26-a3a1-124cada5bddc",
+    "prId" : 30790,
+    "prUrl" : "https://github.com/apache/spark/pull/30790#pullrequestreview-555097367",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "dbf7708d-cdbb-4a97-a990-fa9ad3d6f26a",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "nit: we cannot use `transformAllExpressions` here?",
+        "createdAt" : "2020-12-17T07:47:20Z",
+        "updatedAt" : "2020-12-18T08:14:14Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f9a50535-7eda-4f20-bfbe-87c9edac51c4",
+        "parentId" : "dbf7708d-cdbb-4a97-a990-fa9ad3d6f26a",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "This copied from https://github.com/apache/spark/blob/8ccc3c1f8804e34b46fd9bec19a017db61b37f54/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/optimizer/expressions.scala#L474",
+        "createdAt" : "2020-12-17T08:19:42Z",
+        "updatedAt" : "2020-12-18T08:14:14Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a22deb82-7a47-4662-9658-2faea7d56cfb",
+        "parentId" : "dbf7708d-cdbb-4a97-a990-fa9ad3d6f26a",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Ah, I see. I think its okay to simply use `transformAllExpressions` here.",
+        "createdAt" : "2020-12-18T00:43:58Z",
+        "updatedAt" : "2020-12-18T08:14:14Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "cfac0e8655755f770f725f7ec5cd2dc2db950ff6",
+    "line" : 25,
+    "diffHunk" : "@@ -1,1 +541,545 @@  }\n\n  def apply(plan: LogicalPlan): LogicalPlan = plan transform {\n    case q: LogicalPlan => q transformExpressionsUp {\n      case b @ BinaryExpression(i @ If(_, trueValue, falseValue), right)"
+  },
+  {
+    "id" : "32522095-d558-4598-909b-c2598c821920",
+    "prId" : 30790,
+    "prUrl" : "https://github.com/apache/spark/pull/30790#pullrequestreview-555092968",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "bbbe4af1-7f89-492d-a001-083a7c0027b0",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Nice idea.",
+        "createdAt" : "2020-12-18T00:30:53Z",
+        "updatedAt" : "2020-12-18T08:14:14Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "cfac0e8655755f770f725f7ec5cd2dc2db950ff6",
+    "line" : 16,
+    "diffHunk" : "@@ -1,1 +532,536 @@ * Push the foldable expression into (if / case) branches.\n */\nobject PushFoldableIntoBranches extends Rule[LogicalPlan] with PredicateHelper {\n\n  // To be conservative here: it's only a guaranteed win if all but at most only one branch"
   }
 ]

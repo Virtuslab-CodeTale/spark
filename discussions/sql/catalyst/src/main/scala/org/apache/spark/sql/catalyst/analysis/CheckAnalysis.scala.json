@@ -361,5 +361,71 @@
     "commit" : "a2c6575cf06660bee6245bc6a23da8713205c74c",
     "line" : 28,
     "diffHunk" : "@@ -1,1 +166,170 @@      // `ShowTableExtended` should have been converted to the v1 command if the table is v1.\n      case _: ShowTableExtended =>\n        throw new AnalysisException(\"SHOW TABLE EXTENDED is not supported for v2 tables.\")\n\n      case operator: LogicalPlan =>"
+  },
+  {
+    "id" : "da7120e5-dec8-4a7c-b2b1-dc19bc15f315",
+    "prId" : 30878,
+    "prUrl" : "https://github.com/apache/spark/pull/30878#pullrequestreview-556709983",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6be6dd24-bab2-4a31-b85d-cc1687e9e6d1",
+        "parentId" : null,
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "Do we want to throw this exception at a specific node, or is it not needed?\r\n```scala\r\n    /** Fails the analysis at the point where a specific tree node was parsed. */\r\n    def failAnalysis(msg: String): Nothing = {\r\n      throw new AnalysisException(msg, t.origin.line, t.origin.startPosition)\r\n    }\r\n```",
+        "createdAt" : "2020-12-21T22:46:21Z",
+        "updatedAt" : "2020-12-21T22:47:35Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6893510ed0405fef2fd6dab03709151d9da391e0",
+    "line" : 46,
+    "diffHunk" : "@@ -1,1 +134,138 @@      case write: V2WriteCommand if write.table.isInstanceOf[UnresolvedRelation] =>\n        val tblName = write.table.asInstanceOf[UnresolvedRelation].multipartIdentifier\n        throw new NoSuchTableException(s\"Table or view not found: ${tblName.quoted}\")\n\n      case u: UnresolvedV2Relation if isView(u.originalNameParts) =>"
+  },
+  {
+    "id" : "5fa424ec-f191-4236-9acd-c5fe69d9d06c",
+    "prId" : 30878,
+    "prUrl" : "https://github.com/apache/spark/pull/30878#pullrequestreview-557731662",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f8ab63bc-9d23-4f32-ba50-1ef29a1d5d3f",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "One benefit of `u.failAnalysis` is that it can report the error position in SQL string. If we can't keep this feature with the new exception, I'd suggest we don't change the exception type.",
+        "createdAt" : "2020-12-22T08:39:25Z",
+        "updatedAt" : "2020-12-22T08:39:26Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "63242605-dcea-40a9-897e-cdefca138292",
+        "parentId" : "f8ab63bc-9d23-4f32-ba50-1ef29a1d5d3f",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "Should we close this PR or update `NoSuchNamespaceException` and `NoSuchTableException` to handle positions?\r\n\r\nBtw, it looks like there is a bug in keeping the position. I will fix it separately.",
+        "createdAt" : "2020-12-23T03:27:30Z",
+        "updatedAt" : "2020-12-23T03:27:30Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ad16c044-cde6-4a2c-94f4-8f541fa8af5d",
+        "parentId" : "f8ab63bc-9d23-4f32-ba50-1ef29a1d5d3f",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "> ... update NoSuchNamespaceException and NoSuchTableException to handle positions?\r\n\r\nIf it's easy to do, let's go for it. Otherwise, we can close this PR as exception type seems not a big deal to me.",
+        "createdAt" : "2020-12-23T09:01:38Z",
+        "updatedAt" : "2020-12-23T09:01:39Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6893510ed0405fef2fd6dab03709151d9da391e0",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +100,104 @@\n      case u: UnresolvedNamespace =>\n        throw new NoSuchNamespaceException(s\"Namespace not found: ${u.multipartIdentifier.quoted}\")\n\n      case u: UnresolvedTable =>"
   }
 ]
