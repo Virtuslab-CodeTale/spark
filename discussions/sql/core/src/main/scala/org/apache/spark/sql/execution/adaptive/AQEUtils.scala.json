@@ -1,0 +1,101 @@
+[
+  {
+    "id" : "6e82e6fd-6097-4dec-8a2c-85b0378e52c2",
+    "prId" : 33541,
+    "prUrl" : "https://github.com/apache/spark/pull/33541#pullrequestreview-716574052",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e2a8c325-d334-4dd1-8502-3d5af35f23ce",
+        "parentId" : null,
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "How about check if the `outputPartitioning` is equal to `child.outputPartitioning` ?\r\n```\r\n  case unary: UnaryExecNode if unary.outputPartitioning == unary.child.outputPartitioning =>\r\n    getRequiredDistribution(unary.child)\r\n```",
+        "createdAt" : "2021-07-28T03:31:00Z",
+        "updatedAt" : "2021-07-28T03:31:00Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "41018f33-16c0-417f-994e-0e94560b636f",
+        "parentId" : "e2a8c325-d334-4dd1-8502-3d5af35f23ce",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "`Partitioning` does not have the \"semantic equals\" concept. This will be the first place to check the equality of 2 partitionings, which I think is risky.",
+        "createdAt" : "2021-07-28T04:41:54Z",
+        "updatedAt" : "2021-07-28T04:41:54Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "61cc6751e4baad96f0a8b251296c6e58ffbbf3a3",
+    "line" : 43,
+    "diffHunk" : "@@ -1,1 +41,45 @@    case f: FilterExec => getRequiredDistribution(f.child)\n    case s: SortExec if !s.global => getRequiredDistribution(s.child)\n    case c: CollectMetricsExec => getRequiredDistribution(c.child)\n    case p: ProjectExec =>\n      getRequiredDistribution(p.child).flatMap {"
+  },
+  {
+    "id" : "8b02caa8-2186-4979-9b26-53f62adc0bbe",
+    "prId" : 33541,
+    "prUrl" : "https://github.com/apache/spark/pull/33541#pullrequestreview-716594416",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5fd0b974-77e9-4123-a76f-e13906f08ac5",
+        "parentId" : null,
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "shall we check `BroadcastHashJoinExec` ?",
+        "createdAt" : "2021-07-28T03:38:36Z",
+        "updatedAt" : "2021-07-28T03:55:46Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7f7eb5eb-e35d-4059-bf58-7a9898956c5f",
+        "parentId" : "5fd0b974-77e9-4123-a76f-e13906f08ac5",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I don't think so. If people do `df.repartition(...).join(other)`, he/she shouldn't expect that the repartition can remain effective in the final plan.",
+        "createdAt" : "2021-07-28T04:40:29Z",
+        "updatedAt" : "2021-07-28T04:40:29Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b1f767e6-46eb-482a-b73c-d8a4d53e87bc",
+        "parentId" : "5fd0b974-77e9-4123-a76f-e13906f08ac5",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "sounds reasonable",
+        "createdAt" : "2021-07-28T05:32:15Z",
+        "updatedAt" : "2021-07-28T05:32:20Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "61cc6751e4baad96f0a8b251296c6e58ffbbf3a3",
+    "line" : 30,
+    "diffHunk" : "@@ -1,1 +28,32 @@  def getRequiredDistribution(p: SparkPlan): Option[Distribution] = p match {\n    // User-specified repartition is only effective when it's the root node, or under\n    // Project/Filter/LocalSort/CollectMetrics.\n    // Note: we only care about `HashPartitioning` as `EnsureRequirements` can only optimize out\n    // user-specified repartition with `HashPartitioning`."
+  },
+  {
+    "id" : "c4d3c64a-4380-4ea7-8928-1f0f74808de7",
+    "prId" : 33541,
+    "prUrl" : "https://github.com/apache/spark/pull/33541#pullrequestreview-717369265",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "51154e28-8a64-451b-9815-161296aa316d",
+        "parentId" : null,
+        "authorId" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "body" : "Can't think of a better name, but just a note here: This should be a general idea but not AQE specific. ",
+        "createdAt" : "2021-07-28T19:04:21Z",
+        "updatedAt" : "2021-07-28T19:04:21Z",
+        "lastEditedBy" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "61cc6751e4baad96f0a8b251296c6e58ffbbf3a3",
+    "line" : 24,
+    "diffHunk" : "@@ -1,1 +22,26 @@import org.apache.spark.sql.execution.exchange.{REPARTITION_BY_COL, REPARTITION_BY_NUM, ShuffleExchangeExec}\n\nobject AQEUtils {\n\n  // Analyze the given plan and calculate the required distribution of this plan w.r.t. the"
+  }
+]

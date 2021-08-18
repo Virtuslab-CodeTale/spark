@@ -1,0 +1,189 @@
+[
+  {
+    "id" : "00657760-ceb3-418f-aa1e-f9eec29cb965",
+    "prId" : 33492,
+    "prUrl" : "https://github.com/apache/spark/pull/33492#pullrequestreview-713520912",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a3e320b3-ab8a-4da5-a0e5-cc1bc7584e05",
+        "parentId" : null,
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "This is a rename but the old name was misleading as it counts the pending PODs which  unknown by the scheduler.",
+        "createdAt" : "2021-07-23T08:54:41Z",
+        "updatedAt" : "2021-07-23T08:54:41Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2e78f6c08a8a066cc52123c35a5de852b92457c4",
+    "line" : 32,
+    "diffHunk" : "@@ -1,1 +244,248 @@      // This variable is used later to print some debug logs. It's updated when cleaning up\n      // excess pod requests, since currentPendingExecutorsForRpId is immutable.\n      var pendingCountForRpId = currentPendingExecutorsForRpId.size\n\n      val newlyCreatedExecutorsForRpId ="
+  },
+  {
+    "id" : "b84a75ed-be35-4562-9447-25f6c297f259",
+    "prId" : 33492,
+    "prUrl" : "https://github.com/apache/spark/pull/33492#pullrequestreview-713522986",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5c12e82f-7019-4d47-a208-024bca9abd2f",
+        "parentId" : null,
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "This again a rename to avoid \"known\" prefix as it not for scheduler known PODs but PODs for this resource profile.",
+        "createdAt" : "2021-07-23T08:57:21Z",
+        "updatedAt" : "2021-07-23T08:57:21Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2e78f6c08a8a066cc52123c35a5de852b92457c4",
+    "line" : 59,
+    "diffHunk" : "@@ -1,1 +276,280 @@        currentPendingExecutorsForRpId.size + schedulerKnownPendingExecsForRpId.size +\n        newlyCreatedExecutorsForRpId.size + schedulerKnownNewlyCreatedExecsForRpId.size\n      val podCountForRpId = currentRunningCount + notRunningPodCountForRpId\n\n      if (podCountForRpId > targetNum) {"
+  },
+  {
+    "id" : "0713907d-f2aa-4e1e-ad8c-d09fe65028b0",
+    "prId" : 33492,
+    "prUrl" : "https://github.com/apache/spark/pull/33492#pullrequestreview-713524325",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "714d03d1-d37e-46f5-b124-1b7a267d6771",
+        "parentId" : null,
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "Last rename for the same reason as earlier: this are PODs unknow by the scheduler so safe to be removed here (no task can be scheduled on them).",
+        "createdAt" : "2021-07-23T08:59:11Z",
+        "updatedAt" : "2021-07-23T08:59:11Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2e78f6c08a8a066cc52123c35a5de852b92457c4",
+    "line" : 70,
+    "diffHunk" : "@@ -1,1 +284,288 @@            currentTime - createTime > executorIdleTimeout\n          }.keys.take(excess).toList\n        val pendingToDelete = currentPendingExecutorsForRpId\n          .filter(x => isExecutorIdleTimedOut(x._2, currentTime))\n          .take(excess - newlyCreatedToDelete.size)"
+  },
+  {
+    "id" : "70bb4d1f-32fb-4e78-9dad-1dec2849952c",
+    "prId" : 33492,
+    "prUrl" : "https://github.com/apache/spark/pull/33492#pullrequestreview-713542468",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "60a94339-d888-49cb-bce5-1aefc664d640",
+        "parentId" : null,
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "The condition previously used \"outstanding\" which contains pending (unknown by the scheduler) PODs as well but the old condition to call `requestNewExecutors` was:\r\n\r\n```\r\n  if (newlyCreatedExecutorsForRpId.isEmpty\r\n        && knownPodCount < targetNum) {\r\n        requestNewExecutors(targetNum, knownPodCount, applicationId, rpId, k8sKnownPVCNames)\r\n      }\r\n```\r\n\r\nSo here really the emptiness of `newlyCreatedExecutorsForRpId` should be checked.",
+        "createdAt" : "2021-07-23T09:22:58Z",
+        "updatedAt" : "2021-07-23T09:22:58Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2e78f6c08a8a066cc52123c35a5de852b92457c4",
+    "line" : 111,
+    "diffHunk" : "@@ -1,1 +320,324 @@            \"equal to the number of requested executors. Not scaling up further.\")\n        } else {\n          if (newlyCreatedExecutorsForRpId.nonEmpty) {\n            logDebug(s\"Still waiting for ${newlyCreatedExecutorsForRpId.size} executors for \" +\n              s\"ResourceProfile Id $rpId before requesting more.\")"
+  },
+  {
+    "id" : "d9bb5ba9-b365-4880-b92f-3d65e1c7549d",
+    "prId" : 33492,
+    "prUrl" : "https://github.com/apache/spark/pull/33492#pullrequestreview-713544424",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "062e1df7-b763-4240-9b35-89d81d9b22c9",
+        "parentId" : null,
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "Instead of `foreach` here is `flatMap` as we need to do the process in two steps for counting all the not running PODs for all the resource profiles before we decide how to split the remaining pending PODs slot between the resource profiles.",
+        "createdAt" : "2021-07-23T09:25:29Z",
+        "updatedAt" : "2021-07-23T09:25:29Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2e78f6c08a8a066cc52123c35a5de852b92457c4",
+    "line" : 23,
+    "diffHunk" : "@@ -1,1 +228,232 @@      .toSeq\n      .sortBy(_._1)\n      .flatMap { case (rpId, targetNum) =>\n      val podsForRpId = rpIdToExecsAndPodState.getOrElse(rpId, mutable.HashMap.empty)\n"
+  },
+  {
+    "id" : "bfd53eec-8ee0-4ed7-9660-e5ecfe300392",
+    "prId" : 33492,
+    "prUrl" : "https://github.com/apache/spark/pull/33492#pullrequestreview-717317477",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0a9e8d12-e469-457d-9837-5f41a40c4a0c",
+        "parentId" : null,
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "I get this is the old behaviour, but I would think that we might allocate up to max pending so requiring newlyCreated to be empty seems strange to me.",
+        "createdAt" : "2021-07-23T23:15:20Z",
+        "updatedAt" : "2021-07-23T23:15:46Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4e6e28e4-a86a-4091-aee4-5372715524aa",
+        "parentId" : "0a9e8d12-e469-457d-9837-5f41a40c4a0c",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "This is kept intentionally, see https://github.com/apache/spark/pull/33492#discussion_r675961263.\r\n\r\nThe new limit is enforced at https://github.com/apache/spark/blob/adc512d4e1837713713fefc6f64af3b0c6c8cdc8/resource-managers/kubernetes/core/src/main/scala/org/apache/spark/scheduler/cluster/k8s/ExecutorPodsAllocator.scala#L336-L339\r\n",
+        "createdAt" : "2021-07-24T07:26:29Z",
+        "updatedAt" : "2021-07-24T07:26:30Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9e1ab5d7-2887-4300-8002-26580ec12ee0",
+        "parentId" : "0a9e8d12-e469-457d-9837-5f41a40c4a0c",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Cool :)",
+        "createdAt" : "2021-07-28T18:03:42Z",
+        "updatedAt" : "2021-07-28T18:03:42Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2e78f6c08a8a066cc52123c35a5de852b92457c4",
+    "line" : 123,
+    "diffHunk" : "@@ -1,1 +332,336 @@        None\n      }\n    }\n\n    val remainingSlotFromPendingPods = maxPendingPods - totalNotRunningPodCount"
+  },
+  {
+    "id" : "aa74a084-814c-4130-89b2-055ed701c613",
+    "prId" : 33492,
+    "prUrl" : "https://github.com/apache/spark/pull/33492#pullrequestreview-717931383",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3f9b8bd6-2fa7-4171-b624-1ab59c243ce7",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "I removed the previous my comment because I'm also not sure what is the best way to inform the users this situation. Do you think we have a good way to inform to the users when we hit this limitation, @attilapiros ?",
+        "createdAt" : "2021-07-28T23:55:05Z",
+        "updatedAt" : "2021-07-28T23:55:05Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0db78ae8-ecfe-4e68-8e19-a0629cc4bdbe",
+        "parentId" : "3f9b8bd6-2fa7-4171-b624-1ab59c243ce7",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "We could change this to logInfo:\r\nhttps://github.com/apache/spark/blob/adc512d4e1837713713fefc6f64af3b0c6c8cdc8/resource-managers/kubernetes/core/src/main/scala/org/apache/spark/scheduler/cluster/k8s/ExecutorPodsAllocator.scala#L323-L324\r\n\r\nBut for a higher batch allocation size this message could be annoying as every POD status change will generate such a log line while it reaches 0.",
+        "createdAt" : "2021-07-29T10:28:44Z",
+        "updatedAt" : "2021-07-29T10:28:45Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2e78f6c08a8a066cc52123c35a5de852b92457c4",
+    "line" : 121,
+    "diffHunk" : "@@ -1,1 +330,334 @@      } else {\n        // for this resource profile we do not request more PODs\n        None\n      }\n    }"
+  }
+]
