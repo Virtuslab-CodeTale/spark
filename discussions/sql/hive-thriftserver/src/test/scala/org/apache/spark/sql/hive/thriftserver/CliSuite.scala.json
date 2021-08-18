@@ -262,5 +262,93 @@
     "commit" : "cfb95c0f2ed8532edf0339556468e92f70567089",
     "line" : 145,
     "diffHunk" : "@@ -1,1 +269,273 @@    } finally {\n      Utils.deleteRecursively(metastore)\n    }\n  }\n"
+  },
+  {
+    "id" : "3919139a-977a-473d-aa69-20590a3d7247",
+    "prId" : 27933,
+    "prUrl" : "https://github.com/apache/spark/pull/27933#pullrequestreview-375841108",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a2d69381-3451-4f77-a875-d3c1b8bad2e3",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "how do we verify if the warehouse path is picked?",
+        "createdAt" : "2020-03-17T08:33:49Z",
+        "updatedAt" : "2020-03-17T08:56:41Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dca4a2da-98c3-4523-8017-d9f1b6a9686e",
+        "parentId" : "a2d69381-3451-4f77-a875-d3c1b8bad2e3",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "the hive.xxx.xxx.dir is from the global variable `warehousePath`, if the `sparkWareHouseDir` not picked, the db location of default will be the hive one",
+        "createdAt" : "2020-03-17T08:41:43Z",
+        "updatedAt" : "2020-03-17T08:56:41Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "59227b65-f5db-4681-990b-66a7ff3847fe",
+        "parentId" : "a2d69381-3451-4f77-a875-d3c1b8bad2e3",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "I also checked manually\r\n#### now\r\n```sql\r\nkentyao@hulk  ~/Downloads/spark/spark-3.1.0-SNAPSHOT-bin-v20200317  bin/spark-sql -S --conf spark.sql.warehouse.dir=/Users/kentyao/Downloads/spark/spark-3.1.0-SNAPSHOT-bin-v20200317/data/spark-warehouse\r\nspark-sql> desc database default;\r\nDatabase Name\tdefault\r\nComment\tDefault Hive database\r\nLocation\tfile:/Users/kentyao/Downloads/spark/spark-3.1.0-SNAPSHOT-bin-v20200317/data/spark-warehouse\r\nOwner\tpublic\r\n```\r\n#### 3.x and 2.4\r\n```sql\r\n\r\nkentyao@hulk  ~/Downloads/spark/spark-2.4.5-bin-hadoop2.7  bin/spark-sql -S -c spark.sql.warehouse.dir=/Users/kentyao/Downloads/spark/spark-3.1.0-SNAPSHOT-bin-v20200317/data/spark-warehouse\r\nspark-sql> desc database default;\r\nDatabase Name\tdefault\r\nDescription\tDefault Hive database\r\nLocation\tfile:/user/hive/warehouse\r\n```",
+        "createdAt" : "2020-03-17T08:51:53Z",
+        "updatedAt" : "2020-03-17T08:56:41Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "85e54ee5-8d7c-4899-97d3-347144814cd5",
+        "parentId" : "a2d69381-3451-4f77-a875-d3c1b8bad2e3",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "How is it verified?",
+        "createdAt" : "2020-03-17T08:52:36Z",
+        "updatedAt" : "2020-03-17T08:56:41Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d5f67f5a-e415-4ba4-abf8-c5cf940bae28",
+        "parentId" : "a2d69381-3451-4f77-a875-d3c1b8bad2e3",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "In this test, we will run a spark-sql job to check the output\r\n```\r\n[info] - Pick spark.sql.warehouse.dir first for Spark Cli if set *** FAILED *** (1 minute)\r\n[info]   =======================\r\n[info]   CliSuite failure output\r\n[info]   =======================\r\n[info]   Spark SQL CLI command line: ../../bin/spark-sql --master local --driver-java-options -Dderby.system.durability=test --conf spark.ui.enabled=false --hiveconf javax.jdo.option.ConnectionURL=jdbc:derby:;databaseName=/Users/kentyao/spark/target/tmp/spark-3570629a-23a7-4e2a-b21a-9bce68025228;create=true --hiveconf hive.metastore.warehouse.dir=/Users/kentyao/spark/target/tmp/spark-dbe4dd6a-1129-43f5-83bc-62dd2072b410 --hiveconf hive.exec.scratchdir=/Users/kentyao/spark/target/tmp/spark-9422968c-94d0-4251-b591-30cbcc061845 --hiveconf conf1=conftest --hiveconf conf2=1 --conf spark.sql.warehouse.dir=/Users/kentyao/spark/target/tmp/spark-1219faf2-918f-4ac4-8d28-fa4dd2d24c7e\r\n[info]   Exception: java.util.concurrent.TimeoutException: Futures timed out after [1 minute]\r\n[info]   Executed query 0 \"desc database default;\",\r\n[info]   But failed to capture expected output \"/Users/kentyao/spark/target/tmp/spark-1219faf2-918f-4ac4-8d28-fa4dd2d24c7e\" within 1 minute.\r\n```",
+        "createdAt" : "2020-03-17T08:55:08Z",
+        "updatedAt" : "2020-03-17T08:56:41Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "51d077e3e7ab30342cbf15b5ad10eb0ca15fd768",
+    "line" : 20,
+    "diffHunk" : "@@ -1,1 +169,173 @@      \"desc database default;\" -> sparkWareHouseDir.getAbsolutePath\n    )\n    sparkWareHouseDir.delete()\n  }\n"
+  },
+  {
+    "id" : "ed7692b6-ff16-4154-a395-18d7111c71bf",
+    "prId" : 27933,
+    "prUrl" : "https://github.com/apache/spark/pull/27933#pullrequestreview-378144118",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2ac8ae26-b046-40cb-b2d0-81f898fc8860",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Hi, All.\r\nThis test case broke all `Hive 1.2` profile Jenkins jobs in both `branch-3.0` and `master`.\r\n- https://amplab.cs.berkeley.edu/jenkins/view/Spark%20QA%20Test%20(Dashboard)/",
+        "createdAt" : "2020-03-19T22:45:28Z",
+        "updatedAt" : "2020-03-19T22:46:05Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "51d077e3e7ab30342cbf15b5ad10eb0ca15fd768",
+    "line" : 12,
+    "diffHunk" : "@@ -1,1 +161,165 @@  }\n\n  test(\"Pick spark.sql.warehouse.dir first for Spark Cli if set\") {\n    val sparkWareHouseDir = Utils.createTempDir()\n    new File(warehousePath, \"metastore_db\").delete()"
   }
 ]

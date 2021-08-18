@@ -64,5 +64,49 @@
     "commit" : "2d7975ec67d12025f6c09d688d6cdb033ef5072f",
     "line" : 52,
     "diffHunk" : "@@ -1,1 +935,939 @@  override def initialize(name: URI, conf: Configuration): Unit = {\n    super.initialize(name, conf)\n    require(conf.get(\"ds_option\", \"\") == \"value\")\n  }\n}"
+  },
+  {
+    "id" : "8082bb46-d843-4db4-9967-31c11380d7a2",
+    "prId" : 27888,
+    "prUrl" : "https://github.com/apache/spark/pull/27888#pullrequestreview-375001960",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4f306736-3ef2-416e-80aa-e1de9ab37b97",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "@kimtkyeom . I revised your test code. Could you use the following, please?\r\n- Generalize test case name\r\n- Generalize test code by using `format`.\r\n- Generalize test code by adding `orc` together. (This is a test coverage parity: the goal of this test suite.)\r\n```scala\r\n  test(\"SPARK-31116: Select nested schema with case insensitive mode\") {\r\n    // This test case failed at only Parquet. ORC is added for test coverage parity.\r\n    Seq(\"orc\", \"parquet\").foreach { format =>\r\n      Seq(\"true\", \"false\").foreach { nestedSchemaPruningEnabled =>\r\n        withSQLConf(\r\n          SQLConf.CASE_SENSITIVE.key -> \"false\",\r\n          SQLConf.NESTED_SCHEMA_PRUNING_ENABLED.key -> nestedSchemaPruningEnabled) {\r\n          withTempPath { dir =>\r\n            val path = dir.getCanonicalPath\r\n\r\n            // Prepare values for testing nested parquet data\r\n            spark\r\n              .range(1L)\r\n              .selectExpr(\"NAMED_STRUCT('lowercase', id, 'camelCase', id + 1) AS StructColumn\")\r\n              .write\r\n              .format(format)\r\n              .save(path)\r\n\r\n            val exactSchema = \"StructColumn struct<lowercase: LONG, camelCase: LONG>\"\r\n\r\n            checkAnswer(spark.read.schema(exactSchema).format(format).load(path), Row(Row(0, 1)))\r\n\r\n            // In case insensitive manner, parquet's column cases are ignored\r\n            val innerColumnCaseInsensitiveSchema =\r\n              \"StructColumn struct<Lowercase: LONG, camelcase: LONG>\"\r\n            checkAnswer(\r\n              spark.read.schema(innerColumnCaseInsensitiveSchema).format(format).load(path),\r\n              Row(Row(0, 1)))\r\n\r\n            val rootColumnCaseInsensitiveSchema =\r\n              \"structColumn struct<lowercase: LONG, camelCase: LONG>\"\r\n            checkAnswer(\r\n              spark.read.schema(rootColumnCaseInsensitiveSchema).format(format).load(path),\r\n              Row(Row(0, 1)))\r\n          }\r\n        }\r\n      }\r\n    }\r\n  }\r\n```",
+        "createdAt" : "2020-03-16T07:49:54Z",
+        "updatedAt" : "2020-03-16T12:45:40Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8f0a60ac-3836-418d-a4ec-32b59cb8a7d4",
+        "parentId" : "4f306736-3ef2-416e-80aa-e1de9ab37b97",
+        "authorId" : "4ad0d346-13a3-48ad-a114-c9a75205e416",
+        "body" : "Cnaged it. Thank you for your revision.",
+        "createdAt" : "2020-03-16T08:24:25Z",
+        "updatedAt" : "2020-03-16T12:45:40Z",
+        "lastEditedBy" : "4ad0d346-13a3-48ad-a114-c9a75205e416",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9dcc6476-3501-45ab-a004-4283954a2511",
+        "parentId" : "4f306736-3ef2-416e-80aa-e1de9ab37b97",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Thanks!",
+        "createdAt" : "2020-03-16T08:36:25Z",
+        "updatedAt" : "2020-03-16T12:45:40Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a0d9a19b2995e766d5b8a8d751d0426aea367c47",
+    "line" : 43,
+    "diffHunk" : "@@ -1,1 +882,886 @@      }\n    }\n  }\n}\n"
   }
 ]

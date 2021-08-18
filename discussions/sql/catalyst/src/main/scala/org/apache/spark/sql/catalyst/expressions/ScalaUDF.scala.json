@@ -86,5 +86,93 @@
     "commit" : "f29a62ac985c6714f0cd6ff5bdd919b2fce89723",
     "line" : 97,
     "diffHunk" : "@@ -1,1 +1092,1096 @@        // Check `inputPrimitives` when it's not empty in order to figure out the Option\n        // type as non primitive type, e.g., Option[Int]. Fall back to `isPrimitive` when\n        // `inputPrimitives` is empty for other cases, e.g., Java UDF, untyped Scala UDF\n        val primitive = (inputPrimitives.isEmpty && isPrimitive(dt)) ||\n          (inputPrimitives.nonEmpty && inputPrimitives(i))"
+  },
+  {
+    "id" : "f48e45d8-4f84-4bfc-840c-04ca97514af0",
+    "prId" : 27937,
+    "prUrl" : "https://github.com/apache/spark/pull/27937#pullrequestreview-379095039",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8071f5dd-86ba-4b09-9342-d6939152fec8",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "can this be Nil?",
+        "createdAt" : "2020-03-20T08:26:02Z",
+        "updatedAt" : "2020-03-23T09:33:58Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a4ad9b39-a8c2-433e-a4de-4e6feec923b5",
+        "parentId" : "8071f5dd-86ba-4b09-9342-d6939152fec8",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I think need to return `children.map(_ => false)` if `inputEncoders` is empty.",
+        "createdAt" : "2020-03-20T08:28:04Z",
+        "updatedAt" : "2020-03-23T09:33:58Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "126a1587-7305-4d2c-a9f1-2d528a8da615",
+        "parentId" : "8071f5dd-86ba-4b09-9342-d6939152fec8",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "It can be `Nil`.  Previously, Java UDF returns `children.map(_ => false)` and it has the same affect with `Nil` indeed. And also, untyped Scala UDF always input `Nil`. \r\n\r\nBut for typed Scala UDF, it will aways has `inputPrimitives` and `inputTypes`.",
+        "createdAt" : "2020-03-23T02:04:36Z",
+        "updatedAt" : "2020-03-23T09:33:58Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b0b298e2d42785c54b1ffb10125741bce7e217e8",
+    "line" : 56,
+    "diffHunk" : "@@ -1,1 +64,68 @@   * on them.\n   */\n  def inputPrimitives: Seq[Boolean] = {\n    inputEncoders.map { encoderOpt =>\n      // It's possible that some of the inputs don't have a specific encoder(e.g. `Any`)"
+  },
+  {
+    "id" : "725b587d-0dbd-4f38-b90b-712c61a26cc5",
+    "prId" : 27937,
+    "prUrl" : "https://github.com/apache/spark/pull/27937#pullrequestreview-379095052",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ac47ba79-bf92-40b2-bea7-90b4372f006e",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "same here.",
+        "createdAt" : "2020-03-20T08:28:17Z",
+        "updatedAt" : "2020-03-23T09:33:58Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d0222760-01a0-434b-a245-d52ce7ba748d",
+        "parentId" : "ac47ba79-bf92-40b2-bea7-90b4372f006e",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "unless we guarantee `inputEncoders` always have the length of `children`.",
+        "createdAt" : "2020-03-20T08:29:00Z",
+        "updatedAt" : "2020-03-23T09:33:58Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5b55429f-04b0-4ffe-bb0d-a0b9c0fe8a06",
+        "parentId" : "ac47ba79-bf92-40b2-bea7-90b4372f006e",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Similarly, the input types of Java UDF and untyped Scala UDF are always `Nil`.",
+        "createdAt" : "2020-03-23T02:04:39Z",
+        "updatedAt" : "2020-03-23T09:33:58Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b0b298e2d42785c54b1ffb10125741bce7e217e8",
+    "line" : 81,
+    "diffHunk" : "@@ -1,1 +89,93 @@   * type coercion. However, that would require more refactoring of the codebase.\n   */\n  def inputTypes: Seq[AbstractDataType] = {\n    inputEncoders.map { encoderOpt =>\n      if (encoderOpt.isDefined) {"
   }
 ]

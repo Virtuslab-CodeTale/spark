@@ -823,5 +823,126 @@
     "commit" : "920be2c1e20ec5bbddee96b7618bc17166e23b84",
     "line" : 59,
     "diffHunk" : "@@ -1,1 +1153,1157 @@        }\n\n        if (tableMetadata.tableType == VIEW) {\n          tableMetadata\n        } else {"
+  },
+  {
+    "id" : "80be55cf-429b-411e-b9ab-e2d3ba90b9aa",
+    "prId" : 27942,
+    "prUrl" : "https://github.com/apache/spark/pull/27942#pullrequestreview-376567913",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "aa0524cb-b40e-486d-a5ac-9b5555edfb9e",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "BTW, are all views Hive view? It looks a bit weird to treat view as Hive serde table.",
+        "createdAt" : "2020-03-18T02:53:58Z",
+        "updatedAt" : "2020-03-18T02:53:58Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "51486688-4d6d-4de0-8758-bd58c9719fce",
+        "parentId" : "aa0524cb-b40e-486d-a5ac-9b5555edfb9e",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "We have a `DDLUtils.isDatasourceTable` check above. Will other view come to here?",
+        "createdAt" : "2020-03-18T03:09:15Z",
+        "updatedAt" : "2020-03-18T03:09:16Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3634efc9-a3d4-408f-aa9a-1b507c385d73",
+        "parentId" : "aa0524cb-b40e-486d-a5ac-9b5555edfb9e",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Ideally, view is not table so SHOW CREATE TABLE should not work for views. If we don't want to add a SHOW CREATE VIEW and just want to support view in SHOW CREATE TABLE, then I think it's better to not require the AS SERDE.",
+        "createdAt" : "2020-03-18T03:17:48Z",
+        "updatedAt" : "2020-03-18T03:17:48Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "245e6eeb-1abc-4914-a3b7-b1e49934a0a0",
+        "parentId" : "aa0524cb-b40e-486d-a5ac-9b5555edfb9e",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "What you mean \"not require the AS SERDE\"? You mean \"SHOW CREATE TABLE\" should work on Hive view? But \"SHOW CREATE TABLE\" produces Spark DDL, not Hive DDL.",
+        "createdAt" : "2020-03-18T03:42:30Z",
+        "updatedAt" : "2020-03-18T04:10:19Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ef27a7b5-3d40-401a-97d1-5bf6ba2fffe3",
+        "parentId" : "aa0524cb-b40e-486d-a5ac-9b5555edfb9e",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "IMO there is no such thing called \"Hive view\". Spark has permanent views which can be stored in Hive metatore, which is no different from views created by Hive.\r\n\r\nFurthermore, what's the Hive specify syntax for creating views? Maybe we should support views in both SHOW CREATE TABLE and SHOW CREATE TABLE AS SERDE",
+        "createdAt" : "2020-03-18T04:24:24Z",
+        "updatedAt" : "2020-03-18T04:24:24Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d0d625fd-92b2-4360-b25c-85b5041255a6",
+        "parentId" : "aa0524cb-b40e-486d-a5ac-9b5555edfb9e",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "OK. I get your point now.\r\n\r\nThis is Hive syntax for creating views:\r\n\r\n```\r\nCREATE VIEW [IF NOT EXISTS] [db_name.]view_name [(column_name [COMMENT column_comment], ...) ]\r\n  [COMMENT view_comment]\r\n  [TBLPROPERTIES (property_name = property_value, ...)]\r\n  AS SELECT ...;\r\n```\r\nhttps://cwiki.apache.org/confluence/display/Hive/LanguageManual+DDL#LanguageManualDDL-CreateView\r\n\r\n\r\nThis is Spark syntax for creating views:\r\n```\r\nCREATE [OR REPLACE] [[GLOBAL] TEMPORARY] VIEW [IF NOT EXISTS [db_name.]view_name\r\n    create_view_clauses\r\n    AS query;\r\n```\r\nhttps://spark.apache.org/docs/3.0.0-preview/sql-ref-syntax-ddl-create-view.html\r\n\r\nLooks like it is basically the same. I think we could support views in both commands as you said.",
+        "createdAt" : "2020-03-18T04:44:18Z",
+        "updatedAt" : "2020-03-18T04:44:18Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fe529698-c7ca-4347-bf93-93844a4e3ac0",
+        "parentId" : "aa0524cb-b40e-486d-a5ac-9b5555edfb9e",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "If so, then I think I could close this follow-up and prepare a full PR to add the support. WDYT?",
+        "createdAt" : "2020-03-18T04:46:20Z",
+        "updatedAt" : "2020-03-18T04:46:20Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ac7b1d56-33b6-4ac2-9a8e-0cd8b4e4f1cb",
+        "parentId" : "aa0524cb-b40e-486d-a5ac-9b5555edfb9e",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Btw, for a view, what `DDLUtils.isDatasourceTable`  will tell about it?",
+        "createdAt" : "2020-03-18T04:56:09Z",
+        "updatedAt" : "2020-03-18T04:56:09Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "971f7925-ffb0-4e49-99c5-c19b4bf8548b",
+        "parentId" : "aa0524cb-b40e-486d-a5ac-9b5555edfb9e",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "SGTM. To check a view, the provider should be empty and the table type should be VIEW.",
+        "createdAt" : "2020-03-18T05:09:14Z",
+        "updatedAt" : "2020-03-18T05:09:15Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "05028bd6-6407-4a9e-bd9e-7f01f1515090",
+        "parentId" : "aa0524cb-b40e-486d-a5ac-9b5555edfb9e",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "`DDLUtils.isDatasourceTable` and `DDLUtils.isHiveTable` both return false for views.",
+        "createdAt" : "2020-03-18T05:09:58Z",
+        "updatedAt" : "2020-03-18T05:09:59Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "af99434aa34b47901c8fce9a92fad85ea527f15b",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +1111,1115 @@\n        if (tableMetadata.tableType == VIEW) {\n          throw new AnalysisException(\"Hive view isn't supported by SHOW CREATE TABLE. \" +\n            s\"Please use `SHOW CREATE TABLE ${tableMetadata.identifier} AS SERDE` \" +\n            \"to show Hive DDL instead.\")"
   }
 ]

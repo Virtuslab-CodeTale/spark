@@ -119,5 +119,93 @@
     "commit" : "5bf6de5ed486c6af98d0abce8ca2bb390f5091a8",
     "line" : 47,
     "diffHunk" : "@@ -1,1 +70,74 @@\n      if (validMetrics.isEmpty) {\n        updatePlan(Nil)\n      } else {\n        // We may have different pre-shuffle partition numbers, don't reduce shuffle partition"
+  },
+  {
+    "id" : "6fc6db8d-532c-4458-b456-76966d6b283c",
+    "prId" : 27879,
+    "prUrl" : "https://github.com/apache/spark/pull/27879#pullrequestreview-373228530",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "71610ac4-d611-491f-95d9-4b8be3722964",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "So, according to the PR description, do we still need to coalesce if the number of partitions has already been less than `minPartitionNum`?",
+        "createdAt" : "2020-03-11T16:09:01Z",
+        "updatedAt" : "2020-03-12T05:26:31Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9397b0d9-0a15-47cc-a226-554eb256a9d1",
+        "parentId" : "71610ac4-d611-491f-95d9-4b8be3722964",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "We don't. We should make it clear in `ShufflePartitionsUtil`",
+        "createdAt" : "2020-03-11T16:52:27Z",
+        "updatedAt" : "2020-03-12T05:26:31Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5f72dbb6-6520-478f-86b8-5dac3f95ba97",
+        "parentId" : "71610ac4-d611-491f-95d9-4b8be3722964",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "After looking into `ShufflePartitionsUtil`, we may still do coalesce if the partition sizes are really really small. The target size is at least 16 bytes, so if all partitions are 0 size, we still coalesce.\r\n\r\nI don't know why we pick 16, but this makes sense to me as it's obvious an overhead if we launch a task to read just 16 bytes.",
+        "createdAt" : "2020-03-11T17:31:24Z",
+        "updatedAt" : "2020-03-12T05:26:31Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "23054381-d2e7-45a9-b25c-c5084c606729",
+        "parentId" : "71610ac4-d611-491f-95d9-4b8be3722964",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "I see.",
+        "createdAt" : "2020-03-12T01:36:08Z",
+        "updatedAt" : "2020-03-12T05:26:31Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4f1b33ba03cb0a9b32f2deb4fb8a4df0d869a72b",
+    "line" : 33,
+    "diffHunk" : "@@ -1,1 +78,82 @@          lastPartitionIndex = distinctNumPreShufflePartitions.head,\n          advisoryTargetSize = conf.getConf(SQLConf.ADVISORY_PARTITION_SIZE_IN_BYTES),\n          minNumPartitions = minPartitionNum)\n        // This transformation adds new nodes, so we must use `transformUp` here.\n        val stageIds = shuffleStages.map(_.id).toSet"
+  },
+  {
+    "id" : "db3795ed-7fc3-43df-9264-1c85a6f417f8",
+    "prId" : 27879,
+    "prUrl" : "https://github.com/apache/spark/pull/27879#pullrequestreview-372973130",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6c1b3ef0-d7d3-4c0a-939d-52f887600c13",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "This is the reason why we need `session` instead of `conf`?",
+        "createdAt" : "2020-03-11T17:12:05Z",
+        "updatedAt" : "2020-03-12T05:26:31Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ced1d9d0-e36c-4c3a-9d5c-eb5050b73443",
+        "parentId" : "6c1b3ef0-d7d3-4c0a-939d-52f887600c13",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Yup",
+        "createdAt" : "2020-03-11T17:26:39Z",
+        "updatedAt" : "2020-03-12T05:26:31Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4f1b33ba03cb0a9b32f2deb4fb8a4df0d869a72b",
+    "line" : 26,
+    "diffHunk" : "@@ -1,1 +72,76 @@        // is not set, so to avoid perf regressions compared to no coalescing.\n        val minPartitionNum = conf.getConf(SQLConf.COALESCE_PARTITIONS_MIN_PARTITION_NUM)\n          .getOrElse(session.sparkContext.defaultParallelism)\n        val partitionSpecs = ShufflePartitionsUtil.coalescePartitions(\n          validMetrics.toArray,"
   }
 ]

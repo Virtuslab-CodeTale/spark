@@ -768,5 +768,27 @@
     "commit" : "cc6bb863e0390645e7a395cf2069efcfce583823",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +183,187 @@      val clonedSpark = spark.cloneSession()\n      // Coalescing partitions can change result order, so disable it.\n      clonedSpark.sessionState.conf.setConf(SQLConf.COALESCE_PARTITIONS_ENABLED, false)\n      val info = clonedSpark.sessionState.catalog.lookupFunctionInfo(funcId)\n      val className = info.getClassName"
+  },
+  {
+    "id" : "d5c499dc-326b-420a-8fda-b4d2f41a72a3",
+    "prId" : 27926,
+    "prUrl" : "https://github.com/apache/spark/pull/27926#pullrequestreview-375675263",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "19296ac7-da79-4599-a01b-262b854f62f2",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Nice catch! It seems #27542 broke some other queries merging `map<null,null>` and `map<some type, some type>`, e.g., `map_concat`;\r\n```\r\n// the current master\r\nscala> sql(\"select map_concat(map(), map(1, 2))\").show()\r\norg.apache.spark.sql.AnalysisException: cannot resolve 'map_concat(map(), map(1, 2))' due to data type mismatch: input to function map_concat should all be the same type, but it's [map<null,null>, map<int,int>]; line 1 pos 7;\r\n'Project [unresolvedalias(map_concat(map(), map(1, 2)), None)]\r\n+- OneRowRelation\r\n\r\n  at org.apache.spark.sql.catalyst.analysis.package$AnalysisErrorAt.failAnalysis(package.scala:42)\r\n```\r\nThis PR can fix this query, too.",
+        "createdAt" : "2020-03-17T01:00:47Z",
+        "updatedAt" : "2020-03-17T01:00:48Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "125d09408edcbee3a5bae591e949c53c90878ca7",
+    "line" : 9,
+    "diffHunk" : "@@ -1,1 +3493,3497 @@      sql(\"(SELECT map()) UNION ALL (SELECT map(1, 2))\"),\n      Seq(Row(Map[Int, Int]()), Row(Map(1 -> 2))))\n  }\n}\n"
   }
 ]

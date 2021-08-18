@@ -724,5 +724,71 @@
     "commit" : "b8fa18ee1968fb8b9aca84daa67f2419c16dca95",
     "line" : 31,
     "diffHunk" : "@@ -1,1 +1061,1065 @@  // The differences in days between Julian and Proleptic Gregorian dates.\n  // The diff at the index `i` is applicable for all days in the date interval:\n  // [julianGregDiffSwitchDay(i), julianGregDiffSwitchDay(i+1))\n  private val julianGregDiffs = Array(2, 1, 0, -1, -2, -3, -4, -5, -6, -7, -8, -9, -10, 0)\n  // The sorted days in Julian calendar when difference in days between Julian and"
+  },
+  {
+    "id" : "fc5190ec-fdcf-450b-b0fe-4afba989b193",
+    "prId" : 27915,
+    "prUrl" : "https://github.com/apache/spark/pull/27915#pullrequestreview-375126521",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "28ead93b-271e-402d-ace2-2d7d87ea271e",
+        "parentId" : null,
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "We can use particular time zone here because the conversion of \"logical\" days is independent from time zone, actually. `UTC` is selected to avoid the problem of rounding micros to/from days because zone offset in UTC is 0.",
+        "createdAt" : "2020-03-16T11:35:01Z",
+        "updatedAt" : "2020-03-18T14:27:24Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "184fcd8a9d6d177352aa67732f974e7ebf8eaf20",
+    "line" : 94,
+    "diffHunk" : "@@ -1,1 +1000,1004 @@      // the Julian and Gregorian calendar systems\n      .setCalendarType(\"gregory\")\n      .setTimeZone(TimeZoneUTC)\n      .setInstant(Math.multiplyExact(days, MILLIS_PER_DAY))\n      .build()"
+  },
+  {
+    "id" : "c0adcdb7-fdfe-42dd-b26f-ac6eaf404f80",
+    "prId" : 27915,
+    "prUrl" : "https://github.com/apache/spark/pull/27915#pullrequestreview-375390577",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "45becf9c-e1db-4cb8-a5ca-ef4681b82ca4",
+        "parentId" : null,
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "@cloud-fan I do believe this is a bug fix. We should rebase independently from new SQL config `spark.sql.legacy.parquet.rebaseDateTime.enabled` because days are stored as Julian days in Parquet INT96 timestamps.",
+        "createdAt" : "2020-03-16T15:02:55Z",
+        "updatedAt" : "2020-03-18T14:27:24Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "98538d51-851c-4d52-9b2d-9d634eee2b33",
+        "parentId" : "45becf9c-e1db-4cb8-a5ca-ef4681b82ca4",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "This check\r\nhttps://github.com/apache/spark/pull/27915/files#diff-9bca6e248a070768e9f38ee5929411d8R897-R898\r\nreads INT96 timestamp saved by Spark 2.4.5 via:\r\n```scala\r\nscala> spark.conf.set(\"spark.sql.parquet.outputTimestampType\", \"INT96\")\r\n\r\nscala> val df = Seq(\"1001-01-01 01:02:03.123456\").toDF(\"tsS\").select($\"tsS\".cast(\"timestamp\").as(\"ts\"))\r\ndf: org.apache.spark.sql.DataFrame = [ts: timestamp]\r\n\r\nscala> df.write.parquet(\"/Users/maxim/tmp/before_1582/2_4_5_ts_int96\")\r\n\r\nscala> spark.read.parquet(\"/Users/maxim/tmp/before_1582/2_4_5_ts_int96\").show(false)\r\n+--------------------------+\r\n|ts                        |\r\n+--------------------------+\r\n|1001-01-01 01:02:03.123456|\r\n+--------------------------+\r\n```",
+        "createdAt" : "2020-03-16T15:05:36Z",
+        "updatedAt" : "2020-03-18T14:27:24Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bd82a590-55da-4647-823b-62aabc6c8f82",
+        "parentId" : "45becf9c-e1db-4cb8-a5ca-ef4681b82ca4",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "LGTM. INT96 is a legacy timestamp type in parquet and I'm not surprised if it follows the java 7 semantic.",
+        "createdAt" : "2020-03-16T16:40:23Z",
+        "updatedAt" : "2020-03-18T14:27:24Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "184fcd8a9d6d177352aa67732f974e7ebf8eaf20",
+    "line" : 15,
+    "diffHunk" : "@@ -1,1 +150,154 @@    val seconds = (day - JULIAN_DAY_OF_EPOCH).toLong * SECONDS_PER_DAY\n    val micros = SECONDS.toMicros(seconds) + NANOSECONDS.toMicros(nanoseconds)\n    val rebased = rebaseJulianToGregorianMicros(micros)\n    rebased\n  }"
   }
 ]

@@ -636,5 +636,104 @@
     "commit" : "8d45542e915bea1b321f42988b407091065a2539",
     "line" : 3,
     "diffHunk" : "@@ -1,1 +1329,1333 @@      isSrcLocal: Boolean): Unit = {\n    val session = SparkSession.getActiveSession\n    assert(session.nonEmpty)\n    val table = hive.getTable(tableName)\n    val loadFileType = if (replace) {"
+  },
+  {
+    "id" : "4bce5c8b-46c7-465e-8cf3-37af4e8ac83b",
+    "prId" : 27952,
+    "prUrl" : "https://github.com/apache/spark/pull/27952#pullrequestreview-378247182",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ca0768df-7946-41b4-95b5-151bfb4b1b07",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "@Eric5553, do you mean we'll support `SHOW VIEWS` only with Hive 2.3 in Spark side?",
+        "createdAt" : "2020-03-19T03:03:55Z",
+        "updatedAt" : "2020-03-20T17:28:22Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "48ac9399-0ba3-4308-a3cd-6122c3c76543",
+        "parentId" : "ca0768df-7946-41b4-95b5-151bfb4b1b07",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Okay, so it's still possible to look up via `listTables`. Can you fix the PR description? seems not it's a precondition but just for better performance",
+        "createdAt" : "2020-03-19T03:08:24Z",
+        "updatedAt" : "2020-03-20T17:28:22Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "397499fe-d11f-44ee-b736-dea9ed16a365",
+        "parentId" : "ca0768df-7946-41b4-95b5-151bfb4b1b07",
+        "authorId" : "c48b13f0-9ce5-4910-a8eb-aee1ac73ffcb",
+        "body" : "As @cloud-fan suggested in https://github.com/apache/spark/pull/27897#discussion_r394391663, for versions before Hive 2.3, I'll implement the fallback solution using `listTables` and filter the result in PR https://github.com/apache/spark/pull/27897.\r\nThanks for the review! @HyukjinKwon ",
+        "createdAt" : "2020-03-19T03:08:29Z",
+        "updatedAt" : "2020-03-20T17:28:22Z",
+        "lastEditedBy" : "c48b13f0-9ce5-4910-a8eb-aee1ac73ffcb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "028b5564-4800-4b14-ad5e-f5d3b7be66f1",
+        "parentId" : "ca0768df-7946-41b4-95b5-151bfb4b1b07",
+        "authorId" : "c48b13f0-9ce5-4910-a8eb-aee1ac73ffcb",
+        "body" : "Sure, that's a mismatch. Updated the description, thanks :-)",
+        "createdAt" : "2020-03-19T03:15:41Z",
+        "updatedAt" : "2020-03-20T17:28:22Z",
+        "lastEditedBy" : "c48b13f0-9ce5-4910-a8eb-aee1ac73ffcb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "517ac580-d4bd-428d-aeb4-bd008f9ad50f",
+        "parentId" : "ca0768df-7946-41b4-95b5-151bfb4b1b07",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Can't we do the fallback here? It's better to make the low-level API completed, e.g. `getTablesByType` always sucess, but may be optimized with Hive 2.3+ ",
+        "createdAt" : "2020-03-19T06:16:11Z",
+        "updatedAt" : "2020-03-20T17:28:22Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "55b762a8-3836-47f9-8bdc-e157add36876",
+        "parentId" : "ca0768df-7946-41b4-95b5-151bfb4b1b07",
+        "authorId" : "c48b13f0-9ce5-4910-a8eb-aee1ac73ffcb",
+        "body" : "Previously I thought `HiveShim` is a thin layer close to Hive API. Yea, it should be better if we handle it in low-level API. I'll make the change here.",
+        "createdAt" : "2020-03-19T06:32:56Z",
+        "updatedAt" : "2020-03-20T17:28:22Z",
+        "lastEditedBy" : "c48b13f0-9ce5-4910-a8eb-aee1ac73ffcb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "590c86f3-4c9c-4d0e-b235-ab1ef5e10f6c",
+        "parentId" : "ca0768df-7946-41b4-95b5-151bfb4b1b07",
+        "authorId" : "c48b13f0-9ce5-4910-a8eb-aee1ac73ffcb",
+        "body" : "The fallback logic needs to call `HiveClient.getTablesByName`, which got a lot of logic in `HiveClient`. Thus I think it needs to handle the fallback logic in `HiveClient` instead of `HiveShim`. 0a550b17ff24e43144d841ac449b510ef1c297cf WDYT @maropu @cloud-fan @HyukjinKwon , thanks!\r\n\r\nAlso I renamed the `HiveClient.listViews` API to `HiveClient.listTablesByType` to provide a more common interface.",
+        "createdAt" : "2020-03-19T14:14:19Z",
+        "updatedAt" : "2020-03-20T17:28:22Z",
+        "lastEditedBy" : "c48b13f0-9ce5-4910-a8eb-aee1ac73ffcb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "887a6e12-0ce2-41f9-ae63-5d822e2cc69f",
+        "parentId" : "ca0768df-7946-41b4-95b5-151bfb4b1b07",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "We had better keep this `HiveShim` layer simple. +1 for @Eric5553 's suggestion to implement the fallback in `HiveClientImpl` layer.\r\n\r\ncc @gatorsmile ",
+        "createdAt" : "2020-03-20T06:02:30Z",
+        "updatedAt" : "2020-03-20T17:28:22Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ff3777faf81079fb7a5f66c84037b3121f8a846a",
+    "line" : 31,
+    "diffHunk" : "@@ -1,1 +377,381 @@      tableType: TableType): Seq[String] = {\n    throw new UnsupportedOperationException(\"Hive 2.2 and lower versions don't support \" +\n      \"getTablesByType. Please use Hive 2.3 or higher version.\")\n  }\n"
   }
 ]
