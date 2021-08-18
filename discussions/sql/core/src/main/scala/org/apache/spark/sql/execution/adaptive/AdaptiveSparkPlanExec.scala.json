@@ -262,5 +262,82 @@
     "commit" : "932edd7808ba8ae9220658eff37c9c3af77eb09f",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +313,317 @@\n  override def doExecuteBroadcast[T](): broadcast.Broadcast[T] = {\n    getFinalPhysicalPlan() match {\n      case b: BroadcastExchangeExec => b.doExecuteBroadcast()\n      case b: BroadcastQueryStageExec => b.doExecuteBroadcast()"
+  },
+  {
+    "id" : "19fbca19-03ad-4abb-959b-2c7a662f2432",
+    "prId" : 32195,
+    "prUrl" : "https://github.com/apache/spark/pull/32195#pullrequestreview-658929655",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "bd06b1f9-c591-40b0-a923-78668a989437",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "This breaks DPP. I'm not sure exactly why, but the key of stage cache was plan without applying `queryStageOptimizerRules`, now it's different. This probably breaks DPP.",
+        "createdAt" : "2021-04-22T09:26:25Z",
+        "updatedAt" : "2021-04-22T09:26:25Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "80ac25c2-cdaf-4ac4-abf4-25c4ee378667",
+        "parentId" : "bd06b1f9-c591-40b0-a923-78668a989437",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "One idea is to introduce a new phase: `preStageCreationRules`. We can put `ApplyColumnarRulesAndInsertTransitions` and run it before reusing exchanges.",
+        "createdAt" : "2021-04-22T09:28:48Z",
+        "updatedAt" : "2021-04-22T09:28:49Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "14647275-b137-4396-ad08-f99ee6023d78",
+        "parentId" : "bd06b1f9-c591-40b0-a923-78668a989437",
+        "authorId" : "7e060620-bf02-418e-832f-c68dddfa2611",
+        "body" : "Thanks for the suggestions. I am working on this now and will try this out.",
+        "createdAt" : "2021-04-27T16:39:25Z",
+        "updatedAt" : "2021-04-27T16:39:26Z",
+        "lastEditedBy" : "7e060620-bf02-418e-832f-c68dddfa2611",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a3ffcca7-5633-4670-a951-8a17f5f74b1f",
+        "parentId" : "bd06b1f9-c591-40b0-a923-78668a989437",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "thanks for pointing it out. That feels odd to me that it breaks the DPP. I did also notice seems more changes to the way that works in flight: https://github.com/apache/spark/pull/31756/files\r\n\r\n",
+        "createdAt" : "2021-04-27T18:53:05Z",
+        "updatedAt" : "2021-04-27T18:53:05Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "29fa4ec3-dcd1-4bb8-aea1-c20c6f4b5350",
+        "parentId" : "bd06b1f9-c591-40b0-a923-78668a989437",
+        "authorId" : "7e060620-bf02-418e-832f-c68dddfa2611",
+        "body" : "If we merge https://github.com/apache/spark/pull/31756 and then rebase this PR the DPP tests pass so I think this is the best path forward.",
+        "createdAt" : "2021-04-28T18:50:10Z",
+        "updatedAt" : "2021-04-28T18:50:11Z",
+        "lastEditedBy" : "7e060620-bf02-418e-832f-c68dddfa2611",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ac92dedc-0df5-401b-b667-3a56f32d3305",
+        "parentId" : "bd06b1f9-c591-40b0-a923-78668a989437",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "#31756 was merged @andygrove  can you up merge and retest to make sure this works?",
+        "createdAt" : "2021-05-13T13:57:19Z",
+        "updatedAt" : "2021-05-13T13:57:19Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dbe2f9cb1d4de25721d85153c0ca7164f19034f0",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +437,441 @@              // `stageCache` with the new stage.\n              val queryStage = context.stageCache.getOrElseUpdate(\n                newStage.plan.canonicalized, newStage)\n              if (queryStage.ne(newStage)) {\n                newStage = reuseQueryStage(queryStage, e)"
   }
 ]

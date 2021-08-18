@@ -1,0 +1,123 @@
+[
+  {
+    "id" : "ee03cc90-816d-4ef5-8899-cfec3dd0c150",
+    "prId" : 32253,
+    "prUrl" : "https://github.com/apache/spark/pull/32253#pullrequestreview-643661960",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "dc0a81f4-bdc9-4a46-9d03-6418e53ce1c7",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "So if I undestand right, you can remove the `all` artifact below in the profile then? (But keep the profile as empty, with a comment that it's no longer used.)",
+        "createdAt" : "2021-04-23T15:22:26Z",
+        "updatedAt" : "2021-04-26T17:40:42Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d411f67e-484e-4231-b76d-192174cbac96",
+        "parentId" : "dc0a81f4-bdc9-4a46-9d03-6418e53ce1c7",
+        "authorId" : "567dbcaa-2683-46db-af89-e44be673a7cc",
+        "body" : "Today, `dev.ludovic.netlib` does call `com.github.fommil.netlib.BLAS.getInstance()` to probe whether the native libraries are installed. (This call is in `com.github.fommil:core` and is thus all good regarding licensing.) If we remove the content of the `netlib-lgpl` profile and the dependency on `com.github.fommil:all` then we will break the current behavior of probing for native BLAS implementation through `com.github.fommil:native_ref` and `com.github.fommil:native_system` when the user enables `-Pnetlib-lgpl`.\r\n\r\nIn the future, I do want to add JNI-based prober/wrapper for BLAS, LAPACK, and ARPACK (and which are compliment with licensing as discussed above), but that is not done yet. Then, we will be able to remove the reference to `com.github.fommil:all`.\r\n\r\n",
+        "createdAt" : "2021-04-23T15:53:05Z",
+        "updatedAt" : "2021-04-26T17:40:42Z",
+        "lastEditedBy" : "567dbcaa-2683-46db-af89-e44be673a7cc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "71546481-4033-4c11-84d4-dc1cc71a72c4",
+        "parentId" : "dc0a81f4-bdc9-4a46-9d03-6418e53ce1c7",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "I see, so `all` is still needed, and needs to be behind the profile. While not required for license reasons, do any other of your dependencies only makes sense when paired with the `all` artifact, and so should be in the profile too?\r\n",
+        "createdAt" : "2021-04-23T16:40:31Z",
+        "updatedAt" : "2021-04-26T17:40:42Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d7681665-c192-4c9c-8e74-b08a1e05b86d",
+        "parentId" : "dc0a81f4-bdc9-4a46-9d03-6418e53ce1c7",
+        "authorId" : "567dbcaa-2683-46db-af89-e44be673a7cc",
+        "body" : "No, the only dependency of interest is `com.github.fommil`. The others are junit for testing, and jmh for benchmarking (in the `dev.ludovic.netlib:benchmarks` package only).",
+        "createdAt" : "2021-04-23T18:45:00Z",
+        "updatedAt" : "2021-04-26T17:40:42Z",
+        "lastEditedBy" : "567dbcaa-2683-46db-af89-e44be673a7cc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "18bab2a8-78a3-4c0e-b6b1-36dabc438286",
+        "parentId" : "dc0a81f4-bdc9-4a46-9d03-6418e53ce1c7",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Dumb question, this all works perfectly fine then without the profile active, without netlib-java `all`? then I think we're OK. If the effect is the same: works without the profile, accelerated with the profile (and presence of OpenBLAS etc) then I think this change is OK.",
+        "createdAt" : "2021-04-23T18:50:55Z",
+        "updatedAt" : "2021-04-26T17:40:42Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "566d113f-4634-4f9f-b3d6-b01446a15b1e",
+        "parentId" : "dc0a81f4-bdc9-4a46-9d03-6418e53ce1c7",
+        "authorId" : "567dbcaa-2683-46db-af89-e44be673a7cc",
+        "body" : "Long story short: yes, it works without the profile active (and is even faster, data in https://github.com/apache/spark/pull/32253#issue-619173915), and is hardware accelerated with the profile or when the Foreign Linker API is active.\r\n\r\nLet me document what gets probed and the impact of having the profile in place, I think this is going to clarify many of the questions you've had.",
+        "createdAt" : "2021-04-23T20:43:45Z",
+        "updatedAt" : "2021-04-26T17:40:42Z",
+        "lastEditedBy" : "567dbcaa-2683-46db-af89-e44be673a7cc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6fa4900d-060f-4294-99aa-e124a4d908ed",
+        "parentId" : "dc0a81f4-bdc9-4a46-9d03-6418e53ce1c7",
+        "authorId" : "567dbcaa-2683-46db-af89-e44be673a7cc",
+        "body" : "As updated in the description, the order in which each implementations are used is the following:\r\n\r\n\r\n```\r\n|                       | BLAS.nativeBLAS                                    | BLAS.javaBLAS                                      |\r\n| --------------------- | -------------------------------------------------- | -------------------------------------------------- |\r\n| with -Pnetlib-lgpl    | 1. dev.ludovic.netlib.blas.NetlibNativeBLAS, a     | 1. dev.ludovic.netlib.blas.VectorizedBLAS          |\r\n|                       |     wrapper for com.github.fommil:all              |    (JDK16+, relies on the Vector API, requires     |\r\n|                       | 2. dev.ludovic.netlib.blas.ForeignBLAS (JDK16+,    |     `--add-modules=jdk.incubator.vector` on JDK16) |\r\n|                       |    relies on the Foreign Linker API, requires      | 2. dev.ludovic.netlib.blas.Java11BLAS (JDK11+)     |\r\n|                       |    `--add-modules=jdk.incubator.foreign            | 3. dev.ludovic.netlib.blas.JavaBLAS                |\r\n|                       |     -Dforeign.restricted=warn`)                    | 4. dev.ludovic.netlib.blas.NetlibF2jBLAS, a        |\r\n|                       | 3. fails to load, falls back to BLAS.javaBLAS in   |     wrapper for com.github.fommil:core             |\r\n|                       |     org.apache.spark.ml.linalg.BLAS                |                                                    |\r\n| --------------------- | -------------------------------------------------- | -------------------------------------------------- |\r\n| without -Pnetlib-lgpl | 1. dev.ludovic.netlib.blas.ForeignBLAS (JDK16+,    | 1. dev.ludovic.netlib.blas.VectorizedBLAS          |\r\n|                       |    relies on the Foreign Linker API, requires      |    (JDK16+, relies on the Vector API, requires     |\r\n|                       |    `--add-modules=jdk.incubator.foreign            |     `--add-modules=jdk.incubator.vector` on JDK16) |\r\n|                       |     -Dforeign.restricted=warn`)                    | 2. dev.ludovic.netlib.blas.Java11BLAS (JDK11+)     |\r\n|                       | 2. fails to load, falls back to BLAS.javaBLAS in   | 3. dev.ludovic.netlib.blas.JavaBLAS                |\r\n|                       |     org.apache.spark.ml.linalg.BLAS                | 4. dev.ludovic.netlib.blas.NetlibF2jBLAS, a        |\r\n|                       |                                                    |     wrapper for com.github.fommil:core             |\r\n| --------------------- | -------------------------------------------------- | -------------------------------------------------- |\r\n```",
+        "createdAt" : "2021-04-23T21:02:19Z",
+        "updatedAt" : "2021-04-26T17:40:42Z",
+        "lastEditedBy" : "567dbcaa-2683-46db-af89-e44be673a7cc",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "17edfebb92586c77c8806f2a63daaa166f524657",
+    "line" : 8,
+    "diffHunk" : "@@ -1,1 +80,84 @@      <groupId>dev.ludovic.netlib</groupId>\n      <artifactId>blas</artifactId>\n    </dependency>\n  </dependencies>\n  <profiles>"
+  },
+  {
+    "id" : "3fb14565-eca6-4b97-96a3-86d16b3cba22",
+    "prId" : 32253,
+    "prUrl" : "https://github.com/apache/spark/pull/32253#pullrequestreview-644945610",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "475216d9-9df7-4c42-acb0-d8d3b5cfc98b",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "So graphx and mllib-local would not need ARPACK, LAPACK?",
+        "createdAt" : "2021-04-26T14:50:18Z",
+        "updatedAt" : "2021-04-26T17:40:42Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fa629f5c-0203-4ed6-8aa0-1acf2977011a",
+        "parentId" : "475216d9-9df7-4c42-acb0-d8d3b5cfc98b",
+        "authorId" : "567dbcaa-2683-46db-af89-e44be673a7cc",
+        "body" : "There is currently no uses for ARPACK nor LAPACK in mllib-local or graphx. The only place it's used is in `org.apache.spark.mllib.linalg.CholeskyDecomposition` and `org.apache.spark.mllib.linalg.EigenValueDecomposition`.",
+        "createdAt" : "2021-04-26T17:37:29Z",
+        "updatedAt" : "2021-04-26T17:40:42Z",
+        "lastEditedBy" : "567dbcaa-2683-46db-af89-e44be673a7cc",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "17edfebb92586c77c8806f2a63daaa166f524657",
+    "line" : 7,
+    "diffHunk" : "@@ -1,1 +79,83 @@    <dependency>\n      <groupId>dev.ludovic.netlib</groupId>\n      <artifactId>blas</artifactId>\n    </dependency>\n  </dependencies>"
+  }
+]

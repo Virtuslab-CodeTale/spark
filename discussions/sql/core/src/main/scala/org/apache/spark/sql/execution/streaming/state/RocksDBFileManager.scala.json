@@ -405,5 +405,379 @@
     "commit" : "c05b140f73f855a148ccedaf753841fb94a4ab1d",
     "line" : 99,
     "diffHunk" : "@@ -1,1 +112,116 @@ * - Immutable files can be reused only across adjacent checkpoints/versions.\n * - This class is thread-safe. Specifically, it is safe to concurrently delete old files from a\n *   different thread than the task thread saving files.\n *\n * @param dfsRootDir  Directory where the [version].zip files will be stored"
+  },
+  {
+    "id" : "7802d45d-0ee1-4a41-aa58-c57388e6797b",
+    "prId" : 32272,
+    "prUrl" : "https://github.com/apache/spark/pull/32272#pullrequestreview-658743489",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1fbec635-1f6f-4ada-abbc-bf6efc0c6ca9",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "why we need to avoid it?",
+        "createdAt" : "2021-04-22T04:40:26Z",
+        "updatedAt" : "2021-04-22T04:41:24Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "60676102-4afe-4a61-b585-2f388186b0a7",
+        "parentId" : "1fbec635-1f6f-4ada-abbc-bf6efc0c6ca9",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "It's related to the usage for RocksDB, we don't always have log files. But we must have sst files.",
+        "createdAt" : "2021-04-25T09:46:17Z",
+        "updatedAt" : "2021-04-25T09:46:17Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c3a357fa-bcd7-44b7-88c0-08da9c3b5c31",
+        "parentId" : "1fbec635-1f6f-4ada-abbc-bf6efc0c6ca9",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "I think the point here is excluding empty field (correct?) vs leaving empty field with `[]`. Seems like a small optimization.",
+        "createdAt" : "2021-05-01T02:47:11Z",
+        "updatedAt" : "2021-05-01T02:47:11Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "44051136-305f-4ab4-b088-91b154cddc7d",
+        "parentId" : "1fbec635-1f6f-4ada-abbc-bf6efc0c6ca9",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "Yes, the `logFiles` field not always has value.",
+        "createdAt" : "2021-05-13T09:38:06Z",
+        "updatedAt" : "2021-05-13T09:38:07Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f52adac64ae66a3d01da23bee69106bd17b1a4e7",
+    "line" : 44,
+    "diffHunk" : "@@ -1,1 +42,46 @@  def json: String = {\n    // We turn this field into a null to avoid write a empty logFiles field in the json.\n    val nullified = if (logFiles.isEmpty) this.copy(logFiles = null) else this\n    mapper.writeValueAsString(nullified)\n  }"
+  },
+  {
+    "id" : "69335993-117e-4b2a-bf50-ed268d44c639",
+    "prId" : 32272,
+    "prUrl" : "https://github.com/apache/spark/pull/32272#pullrequestreview-644118451",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4c56ff84-206c-4ab1-a3d4-115f3c74f82c",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Does it mean that a DFS copy can be mapped to more than one local file names?",
+        "createdAt" : "2021-04-22T04:44:04Z",
+        "updatedAt" : "2021-04-22T04:44:04Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5d94aa28-84c3-4525-bf3b-2dc2e7780207",
+        "parentId" : "4c56ff84-206c-4ab1-a3d4-115f3c74f82c",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "When do we reuse the DFS copies?",
+        "createdAt" : "2021-04-22T04:44:40Z",
+        "updatedAt" : "2021-04-22T04:44:40Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2c245167-17b9-4d64-9f64-27b10ff1fe8f",
+        "parentId" : "4c56ff84-206c-4ab1-a3d4-115f3c74f82c",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "Yes. Can be mapped to more than one local file but for different tasks. The most common scenario is task/stage retry.",
+        "createdAt" : "2021-04-25T09:53:25Z",
+        "updatedAt" : "2021-04-25T09:53:25Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f52adac64ae66a3d01da23bee69106bd17b1a4e7",
+    "line" : 102,
+    "diffHunk" : "@@ -1,1 +100,104 @@/**\n * A RocksDBImmutableFile maintains a mapping between a local RocksDB file name and the name of\n * its copy on DFS. Since these files are immutable, their DFS copies can be reused.\n */\nsealed trait RocksDBImmutableFile {"
+  },
+  {
+    "id" : "6015e768-a96a-4a5f-b8b0-f6789596f4e1",
+    "prId" : 32272,
+    "prUrl" : "https://github.com/apache/spark/pull/32272#pullrequestreview-644118833",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "bedc63ec-d588-4b2e-85b4-cfb8fb63be62",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "If a DFS copy can be mapped to more than one local file names, shouldn't two local file names the same one even their local file names are different, if their DFS file names are the same?",
+        "createdAt" : "2021-04-22T04:45:56Z",
+        "updatedAt" : "2021-04-22T04:45:57Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "59c590b6-3b64-4089-863f-a47894869ca5",
+        "parentId" : "bedc63ec-d588-4b2e-85b4-cfb8fb63be62",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "The DFS file name contains UUID, it shouldn't be the same. Normally we use the local file name to filter whether the file is existing locally.",
+        "createdAt" : "2021-04-25T09:57:28Z",
+        "updatedAt" : "2021-04-25T09:57:28Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f52adac64ae66a3d01da23bee69106bd17b1a4e7",
+    "line" : 115,
+    "diffHunk" : "@@ -1,1 +113,117 @@  def isSameFile(otherFile: File): Boolean = {\n    otherFile.getName == localFileName && otherFile.length() == sizeBytes\n  }\n}\n"
+  },
+  {
+    "id" : "d650b9da-b3cb-4655-a656-1333a31f9a25",
+    "prId" : 32272,
+    "prUrl" : "https://github.com/apache/spark/pull/32272#pullrequestreview-663906958",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "58cd9a42-4611-48b0-bdc9-4a1516697de6",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Would it produce same output with `json`? Since this doesn't manipulate empty logFiles field. Otherwise is it by intention to handle json and prettyJson differently?",
+        "createdAt" : "2021-05-01T02:49:56Z",
+        "updatedAt" : "2021-05-01T03:20:38Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "05a120ab-9dcb-44aa-a429-dccaf7a21c85",
+        "parentId" : "58cd9a42-4611-48b0-bdc9-4a1516697de6",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "The only difference is the `logFiles` fields. Actually the `prettyJson` field is for providing a readable string for log. `json` field is for files writing.",
+        "createdAt" : "2021-05-13T09:37:10Z",
+        "updatedAt" : "2021-05-13T09:37:10Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "94d14e22-65b9-40e0-89fe-f0b325bb9176",
+        "parentId" : "58cd9a42-4611-48b0-bdc9-4a1516697de6",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "OK I see where it is used. Just for logging - got it.",
+        "createdAt" : "2021-05-20T03:32:13Z",
+        "updatedAt" : "2021-05-20T03:32:14Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f52adac64ae66a3d01da23bee69106bd17b1a4e7",
+    "line" : 48,
+    "diffHunk" : "@@ -1,1 +46,50 @@  }\n\n  def prettyJson: String = Serialization.writePretty(this)(RocksDBCheckpointMetadata.format)\n\n  def writeToFile(metadataFile: File): Unit = {"
+  },
+  {
+    "id" : "8fb30d2b-8992-4f93-9a0e-b5fc59f4803d",
+    "prId" : 32272,
+    "prUrl" : "https://github.com/apache/spark/pull/32272#pullrequestreview-660314256",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2c48bdb1-8eb6-4866-8e56-a9100d53d732",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "<del>About backward-compatibility, shall we introduce version number?</del>\r\n\r\nOh, I saw it below. I also forgot I saw it before...",
+        "createdAt" : "2021-05-15T07:06:02Z",
+        "updatedAt" : "2021-05-15T07:08:39Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f52adac64ae66a3d01da23bee69106bd17b1a4e7",
+    "line" : 34,
+    "diffHunk" : "@@ -1,1 +32,36 @@/**\n * Classes to represent metadata of checkpoints saved to DFS. Since this is converted to JSON, any\n * changes to this MUST be backward-compatible.\n */\ncase class RocksDBCheckpointMetadata("
+  },
+  {
+    "id" : "8f0d40be-ab78-49b8-b100-a3ca29312488",
+    "prId" : 32272,
+    "prUrl" : "https://github.com/apache/spark/pull/32272#pullrequestreview-670894767",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "00e14914-c09e-423e-99bc-74effb2e7108",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Hmm, so if a log file not archived, it is not immutable? But `RocksDBLogFile` is actually `RocksDBImmutableFile`?",
+        "createdAt" : "2021-05-15T07:13:50Z",
+        "updatedAt" : "2021-05-15T07:14:25Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "612322b6-3beb-4a3e-a71c-9fa14e1cd82a",
+        "parentId" : "00e14914-c09e-423e-99bc-74effb2e7108",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "That's right. This is because we only generate the RocksDBLogFile object in the operation of checkpointing. Let's keep this comment open and I'll link this with the caller side for full context. (The caller side is the next PR as my plan - the save path of RocksDBFileManager).",
+        "createdAt" : "2021-05-17T08:13:16Z",
+        "updatedAt" : "2021-05-17T08:13:17Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0e450cac-f1a0-4b45-b72f-c08e4371e746",
+        "parentId" : "00e14914-c09e-423e-99bc-74effb2e7108",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "I read the save path, but still a bit confused. Is there a log file which is not archived log file? I mean why only archived log file is immutable? `isArchivedLogFile` considers a log file is archived by looking at its parent dir, so when we move a log file to `LOG_FILES_LOCAL_SUBDIR` and make it immutable?",
+        "createdAt" : "2021-05-23T01:58:16Z",
+        "updatedAt" : "2021-05-23T01:58:16Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ac0ea0b4-9109-4781-be8c-fd25028eb414",
+        "parentId" : "00e14914-c09e-423e-99bc-74effb2e7108",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "```\r\nIs there a log file which is not archived log file?...so when we move a log file to LOG_FILES_LOCAL_SUBDIR and make it immutable?\r\n```\r\nYes, per the [example](https://github.com/facebook/rocksdb/wiki/Write-Ahead-Log#life-cycle-of-a-wal), the archival is triggered when the flushing happens. The save path is used for syncing the necessary files to DFS, and the save path is called in the commit operation of a state store provider.",
+        "createdAt" : "2021-05-24T17:03:10Z",
+        "updatedAt" : "2021-05-24T17:03:10Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fa4f0492-dc28-4b82-9621-d0fad7a07c67",
+        "parentId" : "00e14914-c09e-423e-99bc-74effb2e7108",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Yea, this is somehow confusing part to me. Do we have a change to touch log files before they are archived?",
+        "createdAt" : "2021-05-24T17:07:21Z",
+        "updatedAt" : "2021-05-24T17:07:22Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "927e7d5b-4ccf-418b-8e66-4de386d61699",
+        "parentId" : "00e14914-c09e-423e-99bc-74effb2e7108",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "No, we won't change any files generated by Rocksdb, just sync them with DFS. ",
+        "createdAt" : "2021-05-24T17:13:59Z",
+        "updatedAt" : "2021-05-24T17:14:00Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "735edda8-2b2e-4f38-8f0e-8162d4c292ad",
+        "parentId" : "00e14914-c09e-423e-99bc-74effb2e7108",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "So there won't be any non-archived log files touched by this. Why we need to distinguish archived log files?",
+        "createdAt" : "2021-05-24T17:27:40Z",
+        "updatedAt" : "2021-05-24T17:27:40Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bbda27ab-2f72-4540-8837-988db413744b",
+        "parentId" : "00e14914-c09e-423e-99bc-74effb2e7108",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Do you mean we sync up non-archived log files in `localOtherFiles` to DFS?\r\n\r\n```scala\r\nval (localImmutableFiles, localOtherFiles) = allCheckpointFiles.partition(isImmutableFile)\r\n...\r\nzipToDfsFile(localOtherFiles :+ metadataFile, dfsBatchZipFile(version))\r\n```",
+        "createdAt" : "2021-05-24T17:29:28Z",
+        "updatedAt" : "2021-05-24T17:29:29Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2f70156f-cdc7-4377-8edf-6c2611360238",
+        "parentId" : "00e14914-c09e-423e-99bc-74effb2e7108",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "```\r\nWhy we need to distinguish archived log files?\r\n```\r\n\r\nBecause we'll build a mapping between archived log files and versions. https://github.com/apache/spark/pull/32582/files#diff-e3d3914d0398d61fdd299b1f8d3e869ec6a86e97606677c724969e421c9bf44eR135\r\n\r\n```\r\nDo you mean we sync up non-archived log files in localOtherFiles to DFS?\r\n```\r\nYes. The DFS directory structure was explained in the doc and code comment [here](https://github.com/apache/spark/pull/32582/files#diff-e3d3914d0398d61fdd299b1f8d3e869ec6a86e97606677c724969e421c9bf44eR72)",
+        "createdAt" : "2021-05-25T01:04:56Z",
+        "updatedAt" : "2021-05-25T01:04:56Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "169ad1d0-bebe-4286-83ea-48323646071e",
+        "parentId" : "00e14914-c09e-423e-99bc-74effb2e7108",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "The DFS directory structure only explains SST files, but doesn't mention log files. Does `metadata` also  contain mapping between `archive/00008.log` and `logs/00008-[uuid3].log`? Are archived log files also shared across checkpoint versions?",
+        "createdAt" : "2021-05-25T06:41:31Z",
+        "updatedAt" : "2021-05-25T06:41:31Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b271e373-35a9-4096-a2f2-f036d0683d5a",
+        "parentId" : "00e14914-c09e-423e-99bc-74effb2e7108",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Looks they are shared too as they are immutable files. Can you also update the code comment there?",
+        "createdAt" : "2021-05-25T06:56:31Z",
+        "updatedAt" : "2021-05-25T06:56:31Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "aa64e43d-ece0-47e8-b6ad-75b9d4a06127",
+        "parentId" : "00e14914-c09e-423e-99bc-74effb2e7108",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "```\r\nLooks they are shared too as they are immutable files. Can you also update the code comment there?\r\n```\r\nYes that's right. All the immutable files (sst and log files) are contained in checkpoint metadata and shared across checkpoint versions. The un-archived log files are only contained in the ${version}.zip and mapped with a specific checkpoint version.\r\n\r\nI think the structure already contains log files. Do you mean I need to emphasize it in the comments [here](https://github.com/apache/spark/pull/32582/files#diff-e3d3914d0398d61fdd299b1f8d3e869ec6a86e97606677c724969e421c9bf44eR74-R77)?",
+        "createdAt" : "2021-05-25T07:19:00Z",
+        "updatedAt" : "2021-05-25T07:19:20Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "06d71614-85e4-4273-a8d1-167eaea384b1",
+        "parentId" : "00e14914-c09e-423e-99bc-74effb2e7108",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "I saw archived log files in the structure, but the comment only mentions SST files. So I thought if it is different than SST files. I think it is better to  mention archived log files along with SST files in the comments.",
+        "createdAt" : "2021-05-25T07:26:10Z",
+        "updatedAt" : "2021-05-25T07:26:10Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2e1e9927-a839-407d-88c2-3dcfdf01a319",
+        "parentId" : "00e14914-c09e-423e-99bc-74effb2e7108",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "Ah yeah. I know why you feel confused. Make sense, I'll emphasize the \"sst files and log files\" together in the comments to avoid making others confuse. Thanks!",
+        "createdAt" : "2021-05-25T07:33:39Z",
+        "updatedAt" : "2021-05-25T07:33:39Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a5908bf4-0664-4dff-a52c-0d8b1cf9f179",
+        "parentId" : "00e14914-c09e-423e-99bc-74effb2e7108",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "The comment changed in https://github.com/apache/spark/pull/32582/files#diff-e3d3914d0398d61fdd299b1f8d3e869ec6a86e97606677c724969e421c9bf44eR77-R80",
+        "createdAt" : "2021-05-28T03:08:56Z",
+        "updatedAt" : "2021-05-28T03:08:57Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f52adac64ae66a3d01da23bee69106bd17b1a4e7",
+    "line" : 164,
+    "diffHunk" : "@@ -1,1 +162,166 @@    isLogFile(file.getName) && file.getParentFile.getName == LOG_FILES_LOCAL_SUBDIR\n\n  def isImmutableFile(file: File): Boolean = isSstFile(file.getName) || isArchivedLogFile(file)\n}"
   }
 ]

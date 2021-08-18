@@ -75,5 +75,445 @@
     "commit" : "25cc5463d1cb45f81125d45d54100bd0e3dfbffe",
     "line" : 31,
     "diffHunk" : "@@ -1,1 +88,92 @@  /** Write an iterator of records. */\n  def writeWithIterator(iterator: Iterator[InternalRow]): Unit = {\n    var count = 0L\n    while (iterator.hasNext) {\n      writeWithMetrics(iterator.next(), count)"
+  },
+  {
+    "id" : "f5feab50-9cc2-4038-83a4-47421f90a990",
+    "prId" : 32198,
+    "prUrl" : "https://github.com/apache/spark/pull/32198#pullrequestreview-641514276",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "bd4a28b6-d17d-4daa-bdc9-2e3e80b42a52",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I'd like to add a new method in the base class\r\n```\r\nprotected def releaseCurrentWriter() ...\r\n```\r\nThen `releaseResources` simply calls `releaseCurrentWriter`. The child should call `releaseCurrentWriter` when needed, instead of `super[FileFormatDataWriter].releaseResources()`, which looks pretty weird.",
+        "createdAt" : "2021-04-21T09:02:17Z",
+        "updatedAt" : "2021-04-26T19:23:59Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6f64c99d-95cc-4658-a5d1-f19a774f26a5",
+        "parentId" : "bd4a28b6-d17d-4daa-bdc9-2e3e80b42a52",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@cloud-fan - yes I agree with that looks pretty weird. Good idea and updated.",
+        "createdAt" : "2021-04-21T21:20:16Z",
+        "updatedAt" : "2021-04-26T19:23:59Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "efe026cc797db994787b6a556aee699d6a79d4af",
+    "line" : 24,
+    "diffHunk" : "@@ -1,1 +58,62 @@  /** Release resources of `currentWriter`. */\n  protected def releaseCurrentWriter(): Unit = {\n    if (currentWriter != null) {\n      try {\n        currentWriter.close()"
+  },
+  {
+    "id" : "e8c622c6-1ab2-4715-80ab-1e92a5956bd1",
+    "prId" : 32198,
+    "prUrl" : "https://github.com/apache/spark/pull/32198#pullrequestreview-641602433",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ceaf029e-3feb-4de6-bea4-50a01cf07644",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "is it possible that `currentWriter` is not null when we reach here?",
+        "createdAt" : "2021-04-21T09:07:57Z",
+        "updatedAt" : "2021-04-26T19:23:59Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "05d0eec3-eca4-4c22-8c3c-6f31a9dbd94f",
+        "parentId" : "ceaf029e-3feb-4de6-bea4-50a01cf07644",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@cloud-fan - yes it should be not null here as it indicates the last active writer. `currentWriter` is always put inside `concurrentWriters` in `retrieveWriterInMap()`. So it should be closed below when iterating `concurrentWriters.values`.",
+        "createdAt" : "2021-04-21T21:23:57Z",
+        "updatedAt" : "2021-04-26T19:23:59Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ed4f29e8-b319-4501-8323-b7e36ea9656c",
+        "parentId" : "ceaf029e-3feb-4de6-bea4-50a01cf07644",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "Actually I found a bug that I don't update writer status in map, if creating a new writer when exceeding number of records limit per file. Restructured the code to fix it, and added the test for the case.",
+        "createdAt" : "2021-04-21T22:34:04Z",
+        "updatedAt" : "2021-04-26T19:23:59Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "efe026cc797db994787b6a556aee699d6a79d4af",
+    "line" : 284,
+    "diffHunk" : "@@ -1,1 +395,399 @@   */\n  override protected def releaseResources(): Unit = {\n    currentWriter = null\n    concurrentWriters.values.foreach(status => {\n      if (status.outputWriter != null) {"
+  },
+  {
+    "id" : "d6fc179b-29dd-4763-9b48-5ff5d998c4b9",
+    "prId" : 32198,
+    "prUrl" : "https://github.com/apache/spark/pull/32198#pullrequestreview-641902336",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "da80002c-e726-489c-950f-4ff511f04d87",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "It's a new writer, the initial value of currentWriter should be null?",
+        "createdAt" : "2021-04-22T07:40:12Z",
+        "updatedAt" : "2021-04-26T19:23:59Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8d6b5386-f370-4d4a-bbc1-79d1b9b162c3",
+        "parentId" : "da80002c-e726-489c-950f-4ff511f04d87",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "`currentWriter` is initialized in `newOutputWriter` above.",
+        "createdAt" : "2021-04-22T08:11:57Z",
+        "updatedAt" : "2021-04-26T19:23:59Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "efe026cc797db994787b6a556aee699d6a79d4af",
+    "line" : 397,
+    "diffHunk" : "@@ -1,1 +503,507 @@      concurrentWriters.put(\n        currentWriterId.copy(),\n        new WriterStatus(currentWriter, recordsInFile, fileCounter))\n      if (concurrentWriters.size >= concurrentOutputWriterSpec.maxWriters && !sorted) {\n        // Fall back to sort-based sequential writer mode."
+  },
+  {
+    "id" : "77da6ffe-fcd2-4f07-85a4-574f118579ff",
+    "prId" : 32198,
+    "prUrl" : "https://github.com/apache/spark/pull/32198#pullrequestreview-642567989",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0caa8f64-3c5f-4262-bb49-686082616198",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "shall we reset `recordsInFile` as well?",
+        "createdAt" : "2021-04-22T07:40:49Z",
+        "updatedAt" : "2021-04-26T19:23:59Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ebe96433-f687-4252-a9cb-bf24e106bb12",
+        "parentId" : "0caa8f64-3c5f-4262-bb49-686082616198",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@cloud-fan - it's reset in `newOutputWriter`. Though it's tricky, I think it makes sense that whenever a new output writer is needed (i.e. calling `newOutputWriter`), `recordsInFile` should be reset to 0 (so it's part of method in `newOutputWriter`), but not necessarily for `fileCounter` (so it's not part of method in `newOutputWriter`).",
+        "createdAt" : "2021-04-22T08:11:01Z",
+        "updatedAt" : "2021-04-26T19:23:59Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f6dc8ecc-20da-413b-a7ec-fcff8a0bd2e0",
+        "parentId" : "0caa8f64-3c5f-4262-bb49-686082616198",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Let's make the name clearer. How about `renewCurrentWriter` or something similar?",
+        "createdAt" : "2021-04-22T08:59:41Z",
+        "updatedAt" : "2021-04-26T19:24:00Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6a12f12c-74e8-4f5b-830b-e9378c95ad84",
+        "parentId" : "0caa8f64-3c5f-4262-bb49-686082616198",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@cloud-fan - sure, updated with `renewCurrentWriter`.",
+        "createdAt" : "2021-04-22T19:01:33Z",
+        "updatedAt" : "2021-04-26T19:24:00Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "efe026cc797db994787b6a556aee699d6a79d4af",
+    "line" : 381,
+    "diffHunk" : "@@ -1,1 +487,491 @@      fileCounter = status.fileCounter\n    } else {\n      fileCounter = 0\n      renewCurrentWriter(\n        currentWriterId.partitionValues,"
+  },
+  {
+    "id" : "f8129e46-c7e6-4107-8067-15ab4e69d322",
+    "prId" : 32198,
+    "prUrl" : "https://github.com/apache/spark/pull/32198#pullrequestreview-644275082",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7b1ba28a-3e00-47ea-8dad-37dda42b086f",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "This looks a bit fragile as the map key is mutable. Can we always create a new `WriterIndex` instance when needed and make `WriterIndex` immutable?",
+        "createdAt" : "2021-04-22T07:43:22Z",
+        "updatedAt" : "2021-04-26T19:23:59Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3bb5ed52-4b41-4612-bfec-e991aea894e6",
+        "parentId" : "7b1ba28a-3e00-47ea-8dad-37dda42b086f",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "> Can we always create a new WriterIndex instance when needed and make WriterIndex immutable?\r\n\r\nI am worried about that we may need to create a new `WriterIndex` a lot as data layout has no order and it may switch between writers per each row a lot, and in the worst case we need to create a new `WriterIndex` per row to lookup in the map, and has GC issue.\r\n\r\nIf we are worried about correctness, is test in `DataFrameReaderWriterSuite.scala` releasing your concern?",
+        "createdAt" : "2021-04-22T08:08:50Z",
+        "updatedAt" : "2021-04-26T19:23:59Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "04e72793-7351-4452-ab7c-543b41c1a412",
+        "parentId" : "7b1ba28a-3e00-47ea-8dad-37dda42b086f",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "makes sense, let's leave it then",
+        "createdAt" : "2021-04-22T08:56:37Z",
+        "updatedAt" : "2021-04-26T19:24:00Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5dd235a6-e83f-4088-977c-ea6339f0339a",
+        "parentId" : "7b1ba28a-3e00-47ea-8dad-37dda42b086f",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Can we add a comment to explain it?",
+        "createdAt" : "2021-04-23T07:12:51Z",
+        "updatedAt" : "2021-04-26T19:24:00Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f9403f78-4789-406b-a373-c10cfd1774ef",
+        "parentId" : "7b1ba28a-3e00-47ea-8dad-37dda42b086f",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@cloud-fan - sure, added.",
+        "createdAt" : "2021-04-26T05:29:17Z",
+        "updatedAt" : "2021-04-26T19:24:00Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "efe026cc797db994787b6a556aee699d6a79d4af",
+    "line" : 278,
+    "diffHunk" : "@@ -1,1 +389,393 @@   * if switching between concurrent writers frequently.\n   */\n  private val currentWriterId = WriterIndex(None, None)\n\n  /**"
+  },
+  {
+    "id" : "cbbb4bb3-4d94-4d83-baa3-44c015356461",
+    "prId" : 32198,
+    "prUrl" : "https://github.com/apache/spark/pull/32198#pullrequestreview-642753150",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c904b21d-1b63-474e-8707-780cd8c173d9",
+        "parentId" : null,
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "Do we need to go thru these even after `sorted` is set to `true`?",
+        "createdAt" : "2021-04-22T22:18:20Z",
+        "updatedAt" : "2021-04-26T19:24:00Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bf4356a6-a5b2-4b95-9a51-38ef1f567feb",
+        "parentId" : "c904b21d-1b63-474e-8707-780cd8c173d9",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@imback82 - yes we need. Even in sort-based write, for every row we need to get partition values and/or bucket id, as we need to check if these values of current row are same as previous row's or not. If not same, a new output writer is needed. This is same behavior as original `DynamicPartitionDataWriter.write()`.",
+        "createdAt" : "2021-04-22T22:37:19Z",
+        "updatedAt" : "2021-04-26T19:24:00Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2fed3245-1705-4677-81b7-49f9b42b9e58",
+        "parentId" : "c904b21d-1b63-474e-8707-780cd8c173d9",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "Got it. Thanks for the explanation.",
+        "createdAt" : "2021-04-22T22:50:41Z",
+        "updatedAt" : "2021-04-26T19:24:00Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "efe026cc797db994787b6a556aee699d6a79d4af",
+    "line" : 300,
+    "diffHunk" : "@@ -1,1 +410,414 @@  override def write(record: InternalRow): Unit = {\n    val nextPartitionValues = if (isPartitioned) Some(getPartitionValues(record)) else None\n    val nextBucketId = if (isBucketed) Some(getBucketId(record)) else None\n\n    if (currentWriterId.partitionValues != nextPartitionValues ||"
+  },
+  {
+    "id" : "e05aa7d5-e866-4def-839b-8eb8e06a983d",
+    "prId" : 32198,
+    "prUrl" : "https://github.com/apache/spark/pull/32198#pullrequestreview-642765122",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "bdb7c918-50b4-4e2e-b832-b0563b9202b8",
+        "parentId" : null,
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "Maybe add an assert before this (`assert(concurrentWriters.size <= concurrentOutputWriterSpec.maxWriters)`), since it depends on `sorted` and `concurrentWriters.remove` outside this function?",
+        "createdAt" : "2021-04-22T22:20:10Z",
+        "updatedAt" : "2021-04-26T19:24:00Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c27564b9-7525-4c03-b596-43b8ebbfebd5",
+        "parentId" : "bdb7c918-50b4-4e2e-b832-b0563b9202b8",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@imback82 - I am hesitating to introduce assertion as this are on row execution path unless it's very necessary. Are you worried about `concurrentWriters.size > concurrentOutputWriterSpec.maxWriters`? Note this is the only place in file to add new keys into map (the only `.put()` call), and it has the check for size immediately at next line.",
+        "createdAt" : "2021-04-22T22:29:44Z",
+        "updatedAt" : "2021-04-26T19:24:00Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7a369d99-8b91-42ec-b094-a4c950094ae4",
+        "parentId" : "bdb7c918-50b4-4e2e-b832-b0563b9202b8",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "The only concern I had was there is no \"clear\" guard against the `put`; e.g., the check for size in the next line doesn't guard against this \"put\" - it sets `sorted` to `true` and based on the flag, it removes current writer from `concurrentWriters`, etc. So it was bit hard for me to follow. :)",
+        "createdAt" : "2021-04-22T22:49:26Z",
+        "updatedAt" : "2021-04-26T19:24:00Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "35aece17-dd27-48c4-ae0e-c8d98805f633",
+        "parentId" : "bdb7c918-50b4-4e2e-b832-b0563b9202b8",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "ok, updated to add add assertion before `put`. The assertion is different before and after sort.",
+        "createdAt" : "2021-04-22T23:14:16Z",
+        "updatedAt" : "2021-04-26T19:24:00Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "efe026cc797db994787b6a556aee699d6a79d4af",
+    "line" : 395,
+    "diffHunk" : "@@ -1,1 +501,505 @@            s\" which is beyond max value ${concurrentOutputWriterSpec.maxWriters + 1}\")\n      }\n      concurrentWriters.put(\n        currentWriterId.copy(),\n        new WriterStatus(currentWriter, recordsInFile, fileCounter))"
+  },
+  {
+    "id" : "aabf489c-138c-47ec-b6d5-1874b9c335e2",
+    "prId" : 32198,
+    "prUrl" : "https://github.com/apache/spark/pull/32198#pullrequestreview-644398636",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "90ffca86-524e-4cf3-9b38-e89a4bc1377a",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "This can be `protected` now.",
+        "createdAt" : "2021-04-23T05:56:58Z",
+        "updatedAt" : "2021-04-26T19:24:00Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5866167c-ba2d-4ecc-a59b-9e0c9fc05924",
+        "parentId" : "90ffca86-524e-4cf3-9b38-e89a4bc1377a",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "We have [data source v2 writers depend on this and has a counter](https://github.com/apache/spark/blob/master/sql/core/src/main/scala/org/apache/spark/sql/execution/datasources/v2/WriteToDataSourceV2Exec.scala#L390-L394), and this `write` is part of `DataWriter` API. Shall we change it later?",
+        "createdAt" : "2021-04-26T05:18:37Z",
+        "updatedAt" : "2021-04-26T19:24:00Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ca926887-8ef0-450f-9a93-d414e4beaad9",
+        "parentId" : "90ffca86-524e-4cf3-9b38-e89a4bc1377a",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "ah I see, let's keep it.",
+        "createdAt" : "2021-04-26T08:30:39Z",
+        "updatedAt" : "2021-04-26T19:24:00Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "efe026cc797db994787b6a556aee699d6a79d4af",
+    "line" : 42,
+    "diffHunk" : "@@ -1,1 +75,79 @@\n  /** Writes a record. */\n  def write(record: InternalRow): Unit\n\n"
+  },
+  {
+    "id" : "7eff859c-f5ac-48ac-9e56-9da8eaa0339f",
+    "prId" : 32198,
+    "prUrl" : "https://github.com/apache/spark/pull/32198#pullrequestreview-644275082",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "fd19bb49-76a1-4f92-acff-1828587b5730",
+        "parentId" : null,
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "Just for future perfermance debug. Can we add a info log at this code place ?",
+        "createdAt" : "2021-04-23T07:31:24Z",
+        "updatedAt" : "2021-04-26T19:24:00Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ce964070-1914-4d43-aea0-461f484628c7",
+        "parentId" : "fd19bb49-76a1-4f92-acff-1828587b5730",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@ulysses-you - good callout. Updated with a info logging. I think it makes sense to account how many tasks have been fallbacked and show on UI, I will take that as a followup.",
+        "createdAt" : "2021-04-26T05:38:18Z",
+        "updatedAt" : "2021-04-26T19:24:00Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "efe026cc797db994787b6a556aee699d6a79d4af",
+    "line" : 403,
+    "diffHunk" : "@@ -1,1 +509,513 @@          \"Fall back from concurrent writers to sort-based sequential writer. You may change \" +\n          s\"threshold with configuration ${SQLConf.MAX_CONCURRENT_OUTPUT_FILE_WRITERS.key}\")\n        sorted = true\n      }\n    }"
+  },
+  {
+    "id" : "f5ecdbd6-2001-478c-8a25-f932663c5450",
+    "prId" : 32198,
+    "prUrl" : "https://github.com/apache/spark/pull/32198#pullrequestreview-645031262",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3a15abb4-2722-44a4-bb6d-3eaeed9457e4",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "shall we call it right after when `sorted` becomes true?",
+        "createdAt" : "2021-04-26T08:36:36Z",
+        "updatedAt" : "2021-04-26T19:24:00Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b6b2d52f-d5bc-4250-846d-9590277f0d88",
+        "parentId" : "3a15abb4-2722-44a4-bb6d-3eaeed9457e4",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "I wish I could do it to tight the logic more closely, but unfortunately no. We need to write a record (`writeRecord`) between (1).set the `sorted` to true (`setupCurrentWriterUsingMap`) and (2).clean up current writer status (`clearCurrentWriterStatus`).\r\n\r\n`writeRecord` will change the status of `recordsInFile` to be increased by 1.",
+        "createdAt" : "2021-04-26T19:21:36Z",
+        "updatedAt" : "2021-04-26T19:24:00Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "efe026cc797db994787b6a556aee699d6a79d4af",
+    "line" : 413,
+    "diffHunk" : "@@ -1,1 +519,523 @@  private def clearCurrentWriterStatus(): Unit = {\n    if (currentWriterId.partitionValues.isDefined || currentWriterId.bucketId.isDefined) {\n      updateCurrentWriterStatusInMap()\n    }\n    currentWriterId.partitionValues = None"
   }
 ]
