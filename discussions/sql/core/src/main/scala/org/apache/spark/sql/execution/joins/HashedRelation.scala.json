@@ -141,5 +141,192 @@
     "commit" : "5309b66b23af2ffe7999edbd8f0c11f26628805d",
     "line" : 13,
     "diffHunk" : "@@ -1,1 +951,955 @@/**\n * A special HashedRelation indicates it built from a empty input:Iterator[InternalRow].\n * get & getValue will return null just like\n * empty LongHashedRelation or empty UnsafeHashedRelation does.\n */"
+  },
+  {
+    "id" : "ac8522e7-9347-47b1-9f4f-0e97d796a1b1",
+    "prId" : 29342,
+    "prUrl" : "https://github.com/apache/spark/pull/29342#pullrequestreview-467157414",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5fe17e80-d83a-4bd1-a918-bc662ed4ace1",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "If isLookupAware is not implemented to work with isNullAware then we should assert that the two are mutually exclusively enabled. ",
+        "createdAt" : "2020-08-06T16:26:23Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d4ad8d7c-ad8e-40b9-89ae-f23f923ae6ac",
+        "parentId" : "5fe17e80-d83a-4bd1-a918-bc662ed4ace1",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@agrawaldevesh - updated with a check to throw exception in this case.",
+        "createdAt" : "2020-08-07T17:00:26Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "36a3f6fc-ea0c-4f62-8c7c-a05b73c3a31a",
+        "parentId" : "5fe17e80-d83a-4bd1-a918-bc662ed4ace1",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "^^^ So now isNullAware can work with allowsNullKey ? I don't see an exclusive or check below anymore.",
+        "createdAt" : "2020-08-13T17:46:26Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "55a4d493-48cd-417e-9185-b056e34aa4d4",
+        "parentId" : "5fe17e80-d83a-4bd1-a918-bc662ed4ace1",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@agrawaldevesh - was accidentally removed during iterations. added back. Thanks.",
+        "createdAt" : "2020-08-13T21:57:48Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "526709b73b87687f48f68486b9c8c7be0866291f",
+    "line" : 191,
+    "diffHunk" : "@@ -1,1 +441,445 @@      sizeEstimate: Int,\n      taskMemoryManager: TaskMemoryManager,\n      isNullAware: Boolean = false,\n      allowsNullKey: Boolean = false): HashedRelation = {\n    require(!(isNullAware && allowsNullKey),"
+  },
+  {
+    "id" : "9da1ab33-421d-43b8-820f-abfa06241c24",
+    "prId" : 29342,
+    "prUrl" : "https://github.com/apache/spark/pull/29342#pullrequestreview-467101936",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8eeb08ae-23d2-46e4-866c-f4c7c2890fe5",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Could it be problematic that resultRow is reuse here as a part of embedding it in valueRowWithKeyIndex ? Ideally I think we allocate a new fresh copy of the row owned by the valueRow that is then updated here. \r\n\r\nCurrently, as written, modifying `resultRow` without valueRow elsewhere might lead to issues.",
+        "createdAt" : "2020-08-13T17:43:43Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9b6c5ade-280e-4acd-9ee2-af6033b0a5d9",
+        "parentId" : "8eeb08ae-23d2-46e4-866c-f4c7c2890fe5",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@agrawaldevesh - not sure if I fully understand this, but if you are talking about potentially misusing between `resultRow` and `valueRowWithKeyIndex`, yes it can lead to arbitrary kind of bug. One can argue that this is same problem for `resultRow` and [`JoinedRow`](https://github.com/apache/spark/blob/master/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/expressions/JoinedRow.scala) . `valueRowWithKeyIndex` is wrapper for `resultRow`, similar as `JoinedRow` is wrapper for `resultRow`.",
+        "createdAt" : "2020-08-13T18:52:11Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4c85cd06-f6a3-46dc-8813-70a2c288f62d",
+        "parentId" : "8eeb08ae-23d2-46e4-866c-f4c7c2890fe5",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Okay. Sorry I am new to this code as well :-P But if this is the precedent then fine. \r\n\r\nIf I was coding this, I would have allocate a new row inside of valueRowWithKeyIndex, and then call valueRowWithKeyIndex.row.pointTo(loc.getValueBase, loc.getValueOffset, loc.getValueLength).\r\n\r\nBut its okay since there is already precedent.",
+        "createdAt" : "2020-08-13T20:29:51Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "526709b73b87687f48f68486b9c8c7be0866291f",
+    "line" : 173,
+    "diffHunk" : "@@ -1,1 +296,300 @@        }\n        val loc = iter.next()\n        resultRow.pointTo(loc.getValueBase, loc.getValueOffset, loc.getValueLength)\n        valueRowWithKeyIndex.update(loc.getKeyIndex, resultRow)\n      }"
+  },
+  {
+    "id" : "b8054774-658c-4cbc-83c1-301c8b7fadd3",
+    "prId" : 29342,
+    "prUrl" : "https://github.com/apache/spark/pull/29342#pullrequestreview-468010952",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e729a18e-10eb-4709-b7d3-c6268f010987",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "ditto in https://github.com/apache/spark/pull/29342/files#r470463130",
+        "createdAt" : "2020-08-14T07:48:00Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "11506db1-558c-4b22-97ea-6c549e7c69fd",
+        "parentId" : "e729a18e-10eb-4709-b7d3-c6268f010987",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@cloud-fan - per your comment in the other place, I take the current naming is okay as well, let me know if it's not the case, thanks.",
+        "createdAt" : "2020-08-15T20:45:36Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "526709b73b87687f48f68486b9c8c7be0866291f",
+    "line" : 27,
+    "diffHunk" : "@@ -1,1 +90,94 @@   * Returns the maximum number of allowed keys index.\n   */\n  def maxNumKeysIndex: Int\n\n  /**"
+  },
+  {
+    "id" : "a5e30d1f-988c-4d67-915a-b300ab8fe03a",
+    "prId" : 29342,
+    "prUrl" : "https://github.com/apache/spark/pull/29342#pullrequestreview-467925221",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2bf236c6-a130-407e-b0d5-3e0517c82e13",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Is this for unique key case only?",
+        "createdAt" : "2020-08-14T20:15:09Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dc6d5fb9-0e57-407f-8113-4376c94cdf1c",
+        "parentId" : "2bf236c6-a130-407e-b0d5-3e0517c82e13",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@viirya - yes. Similar to definition of `def getValue(key: InternalRow): InternalRow` above. I added comment to say `Returns key index and matched single row.`, to be consistent with comment of `getValue`. Hope this is clear enough.",
+        "createdAt" : "2020-08-14T20:41:38Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4987213a-3319-46ef-9251-8e06ea9e5fa7",
+        "parentId" : "2bf236c6-a130-407e-b0d5-3e0517c82e13",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Can you add comment saying this is for unique key case?",
+        "createdAt" : "2020-08-14T23:02:14Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5b30c1b9-dfc5-4b53-82b5-d82874507f2c",
+        "parentId" : "2bf236c6-a130-407e-b0d5-3e0517c82e13",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@viirya - sure, added.",
+        "createdAt" : "2020-08-14T23:53:29Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "526709b73b87687f48f68486b9c8c7be0866291f",
+    "line" : 17,
+    "diffHunk" : "@@ -1,1 +80,84 @@   * Returns null if there is no matched rows.\n   */\n  def getValueWithKeyIndex(key: InternalRow): ValueRowWithKeyIndex\n\n  /**"
   }
 ]

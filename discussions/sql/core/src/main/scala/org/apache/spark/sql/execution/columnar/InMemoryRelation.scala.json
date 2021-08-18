@@ -1,0 +1,145 @@
+[
+  {
+    "id" : "108217c5-071e-48b2-9db0-0f60f7e091a1",
+    "prId" : 29344,
+    "prUrl" : "https://github.com/apache/spark/pull/29344#pullrequestreview-460533176",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5ad55c05-cc4b-4fbf-bc1a-c7afd6c7a2e5",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Nice, @dongjoon-hyun. What about just fixing `CachedBatchSerializerSuite` not to extend `SharedSparkSessionBase`? For example, like `ExecutorSideSQLConfSuite` or `SparkSessionExtensionSuite`. I think that would be simpler and a more isolated fix.",
+        "createdAt" : "2020-08-04T05:00:09Z",
+        "updatedAt" : "2020-08-04T05:00:09Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fb5d62e6-a8d1-41e1-b0ff-3f68c0a37f9f",
+        "parentId" : "5ad55c05-cc4b-4fbf-bc1a-c7afd6c7a2e5",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Ya. I thought that way first, but this is more general way because SPARK-32274 make SQL cache serialization pluggable. We may have another test suite in the future.",
+        "createdAt" : "2020-08-04T05:05:28Z",
+        "updatedAt" : "2020-08-04T05:05:28Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3b21d1e1-ba65-4934-a01a-24ae8494271b",
+        "parentId" : "5ad55c05-cc4b-4fbf-bc1a-c7afd6c7a2e5",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Also, the test resource clean-up had better be centralized at `SharedSparkSession` in order to not to forget.",
+        "createdAt" : "2020-08-04T05:06:12Z",
+        "updatedAt" : "2020-08-04T05:06:22Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "61d1bf42-edc5-43e3-b1ef-10f08145e355",
+        "parentId" : "5ad55c05-cc4b-4fbf-bc1a-c7afd6c7a2e5",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "BTW, I'm still open to your idea. Let's see the original author and committer opinion. Thanks.",
+        "createdAt" : "2020-08-04T05:07:34Z",
+        "updatedAt" : "2020-08-04T05:07:44Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5045f31b-fd5b-4139-b115-719541458310",
+        "parentId" : "5ad55c05-cc4b-4fbf-bc1a-c7afd6c7a2e5",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Does it really help? `InMemoryRelation.ser` doesn't belong to any session and is global.\r\n\r\nI think a simpler fix is to clear it in `CachedBatchSerializerSuite.beforeAll` and `afterAll`.",
+        "createdAt" : "2020-08-04T05:08:43Z",
+        "updatedAt" : "2020-08-04T05:08:43Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "444ad539-14c6-4855-8c2a-5efb7cc2d702",
+        "parentId" : "5ad55c05-cc4b-4fbf-bc1a-c7afd6c7a2e5",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "A more complicated fix is to put the serializer instance in `SharedState`. This brings one benefit: users can stop the current spark context, create a new one with a different cache plugin. But I'm not sure if this is a useful feature.",
+        "createdAt" : "2020-08-04T05:13:17Z",
+        "updatedAt" : "2020-08-04T05:13:17Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "009df944-50b8-46fb-afa8-5a0bda7a23e6",
+        "parentId" : "5ad55c05-cc4b-4fbf-bc1a-c7afd6c7a2e5",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Yes. Since this is a new feature and new test coverage, I'm also not sure what is the best here.",
+        "createdAt" : "2020-08-04T05:17:09Z",
+        "updatedAt" : "2020-08-04T05:17:09Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "41850931-e193-416b-a602-b7cff2e456f9",
+        "parentId" : "5ad55c05-cc4b-4fbf-bc1a-c7afd6c7a2e5",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "For this question, yes. The root cause is that InMemoryRelation.ser is a kind of singleton. Since the new configuration is static conf, this will match with the semantic of `InMemoryRelation.ser`. So, the problem is the testing.\r\n> Does it really help? InMemoryRelation.ser doesn't belong to any session and is global.",
+        "createdAt" : "2020-08-04T05:19:11Z",
+        "updatedAt" : "2020-08-04T05:19:11Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7cab7a32-a16c-464c-a34e-954220f27eb7",
+        "parentId" : "5ad55c05-cc4b-4fbf-bc1a-c7afd6c7a2e5",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Let me create another PR for @HyukjinKwon or @cloud-fan idea to compare with this.",
+        "createdAt" : "2020-08-04T05:20:31Z",
+        "updatedAt" : "2020-08-04T05:20:55Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bd1dc3de-bc32-4783-8d93-f736a8381e0e",
+        "parentId" : "5ad55c05-cc4b-4fbf-bc1a-c7afd6c7a2e5",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "First of all, @HyukjinKwon 's idea is unable to remove the failure because `InMemoryRelation.ser` is a singleton.\r\n> What about just fixing CachedBatchSerializerSuite not to extend SharedSparkSessionBase?\r\n\r\nI'm moving to @cloud-fan 's proposal.",
+        "createdAt" : "2020-08-04T05:51:28Z",
+        "updatedAt" : "2020-08-04T05:51:53Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8517de5d-3221-4a77-9dc7-4272d79ea3a4",
+        "parentId" : "5ad55c05-cc4b-4fbf-bc1a-c7afd6c7a2e5",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Thanks @dongjoon-hyun!",
+        "createdAt" : "2020-08-04T05:52:15Z",
+        "updatedAt" : "2020-08-04T05:52:15Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4d7854d0-8249-4863-a327-f12d14ad6c43",
+        "parentId" : "5ad55c05-cc4b-4fbf-bc1a-c7afd6c7a2e5",
+        "authorId" : "d5fd03b5-108c-4a5c-8b02-be6041b0aa48",
+        "body" : "I like @cloud-fan proposal as it will make testing easier as well. ",
+        "createdAt" : "2020-08-04T06:38:22Z",
+        "updatedAt" : "2020-08-04T06:38:22Z",
+        "lastEditedBy" : "d5fd03b5-108c-4a5c-8b02-be6041b0aa48",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8cfe79bc81e48b8a990dcad5d08fa9e4af706d5b",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +279,283 @@\n  /* Visible for testing */\n  private[spark] def clearSerializer(): Unit = synchronized { ser = None }\n\n  def convertToColumnarIfPossible(plan: SparkPlan): SparkPlan = plan match {"
+  }
+]

@@ -339,5 +339,225 @@
     "commit" : "d2468407f3d02e5a191ad373b5f2201a930cbb09",
     "line" : 69,
     "diffHunk" : "@@ -1,1 +498,502 @@    logInfo(s\"Asking executor $executorId to decommissioning.\")\n    scheduler.executorDecommission(executorId, decomInfo)\n    // Send decommission message to the executor (it could have originated on the executor\n    // but not necessarily).\n    CoarseGrainedSchedulerBackend.this.synchronized {"
+  },
+  {
+    "id" : "d0ac6084-ebda-458a-8090-8debd6cd7a55",
+    "prId" : 29367,
+    "prUrl" : "https://github.com/apache/spark/pull/29367#pullrequestreview-464523845",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5c942d78-1167-44a9-aa66-a9391cd62c17",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Is the comment above accurate ? It seems we are indeed replacing the executors that are decommissioned when adjustTargetNumExecutors = true. \r\n\r\nOn a related note, should `adjustTargetNumExecutors` be simply renamed as `replaceDecommissionedExecutors` ? to make the meaning be more direct ?",
+        "createdAt" : "2020-08-08T17:26:14Z",
+        "updatedAt" : "2020-08-12T19:09:04Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6827c571-5527-44aa-8a77-b6a635d1bb07",
+        "parentId" : "5c942d78-1167-44a9-aa66-a9391cd62c17",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Take a look at the comments where this is called and in killExecutors.\r\n\r\nAlso if you look if this flag is enabled it removes the resource from the target resource profile, otherwise it leaves the request as is which means Spark will replace it.",
+        "createdAt" : "2020-08-08T18:23:43Z",
+        "updatedAt" : "2020-08-12T19:09:04Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "23bec9a9-5f9d-4406-954b-6338787a3def",
+        "parentId" : "5c942d78-1167-44a9-aa66-a9391cd62c17",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Okay, I understand this better now. `adjustTargetNumExecutors=true` means that the scheduler will not try to replenish the executor. Otherwise, the scheduler still thinks that the application wants the same number of executors as before.\r\n\r\nI would strongly recommend that you please consider extracting out this piece of common code (shared with `killExecutors`) into a separate helper method. Its fairly subtle and having it one place will both help the readability of this PR and future changes.",
+        "createdAt" : "2020-08-08T22:07:12Z",
+        "updatedAt" : "2020-08-12T19:09:04Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a87fb55c-0123-4f84-89b1-c704e93e7176",
+        "parentId" : "5c942d78-1167-44a9-aa66-a9391cd62c17",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "yeah we could move this into a helper method, that's a good idea.",
+        "createdAt" : "2020-08-10T17:51:40Z",
+        "updatedAt" : "2020-08-12T19:09:05Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b359e517-8878-4b3d-b825-161c76f635e6",
+        "parentId" : "5c942d78-1167-44a9-aa66-a9391cd62c17",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Thanks :-P ",
+        "createdAt" : "2020-08-10T19:42:31Z",
+        "updatedAt" : "2020-08-12T19:09:05Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e970cb10147fb64533f5088edc3a448b5ef198cf",
+    "line" : 109,
+    "diffHunk" : "@@ -1,1 +476,480 @@\n    // If we don't want to replace the executors we are decommissioning\n    if (adjustTargetNumExecutors) {\n      adjustExecutors(executorsToDecommission.map(_._1))\n    }"
+  },
+  {
+    "id" : "1f6ab5e4-d697-4b8d-a2fd-1d78c0f88d0d",
+    "prId" : 29367,
+    "prUrl" : "https://github.com/apache/spark/pull/29367#pullrequestreview-465373030",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d1cad35a-9e28-418f-b865-e775be1fb6cb",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Why is this duplicating the `decommissionExecutor` call above ? I think you are decommissioning twice now: This method is called synchronously by the ExecutorAllocationManager: It sends a message `DecommissionExecutor` to itself, which then calls `decommissionExecutor` on line 425 in this file. This does not smell right to me: both the code duplication and also the double decommissioning.\r\n\r\nI think you want to simply send the message here and let the DriverEndpoint work do the actual decommissioning as before. Ie. only do this: `driverEndpoint.send(DecommissionExecutor(executorId, decomInfo))`\r\n\r\n[Blocker]",
+        "createdAt" : "2020-08-08T23:33:08Z",
+        "updatedAt" : "2020-08-12T19:09:05Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e578b09a-f4da-46b2-8cfc-cb714ea1ef91",
+        "parentId" : "d1cad35a-9e28-418f-b865-e775be1fb6cb",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "^^^ @holdenk ... any thoughts/followup on this ?",
+        "createdAt" : "2020-08-10T19:42:13Z",
+        "updatedAt" : "2020-08-12T19:09:05Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "038b040a-6d79-4184-8c98-52151bd1ad8b",
+        "parentId" : "d1cad35a-9e28-418f-b865-e775be1fb6cb",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Yeah should be able to clean up the duplicated code, I'll take a crack tonight.",
+        "createdAt" : "2020-08-10T22:38:13Z",
+        "updatedAt" : "2020-08-12T19:09:05Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bdfb1a32-48a8-40ef-8b4e-0abfccf3e37f",
+        "parentId" : "d1cad35a-9e28-418f-b865-e775be1fb6cb",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Ok I cleaned up the duplicated function, I'll poke at the possible double driver endpoint send this morning.",
+        "createdAt" : "2020-08-11T17:58:18Z",
+        "updatedAt" : "2020-08-12T19:09:05Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "53f8f9da-8ad7-44be-a440-da2bd402e079",
+        "parentId" : "d1cad35a-9e28-418f-b865-e775be1fb6cb",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "So this is the only non-test place where we call `decommissionBlockManagers`.",
+        "createdAt" : "2020-08-11T19:37:41Z",
+        "updatedAt" : "2020-08-12T19:09:05Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "850ae1f0-c436-4532-9003-37992c9f4df1",
+        "parentId" : "d1cad35a-9e28-418f-b865-e775be1fb6cb",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Looking inside of the EAM I see the call to decom inside of removeExecutors, but I'm not seeing the message.",
+        "createdAt" : "2020-08-11T19:40:43Z",
+        "updatedAt" : "2020-08-12T19:09:05Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e970cb10147fb64533f5088edc3a448b5ef198cf",
+    "line" : 119,
+    "diffHunk" : "@@ -1,1 +486,490 @@\n\n  private def doDecommission(executorId: String,\n      decomInfo: ExecutorDecommissionInfo): Boolean = {\n"
+  },
+  {
+    "id" : "2f4f8e6a-43a0-45a2-8f57-8965990fe877",
+    "prId" : 29367,
+    "prUrl" : "https://github.com/apache/spark/pull/29367#pullrequestreview-465533760",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "58feb959-3654-4455-bdd2-a51afc90f1df",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "I believe there is still a cycle here: Please trace through how `DecommissionExecutor` message is handled: It will eventually call this doDecommission which will send the message again ... If I understand correctly, this may end up live-locking the driver until the poor executor actually dies for good.\r\n\r\nOne way to break this cycle is to directly call `doDecommission` in the handlers for `DecommissionExecutor` in this class's `receive` and `receiveAndReply` methods, with a special flag that forbids re-sending the message.\r\n\r\n[blocker]",
+        "createdAt" : "2020-08-11T21:45:41Z",
+        "updatedAt" : "2020-08-12T19:09:05Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5ecaf483-b8d6-4ad0-a25f-32755c12bb83",
+        "parentId" : "58feb959-3654-4455-bdd2-a51afc90f1df",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Ok so to me in CoarseGrainedSchedulerBackend if we receive a `DecommissionExecutor` we call `decommissionExecutor` in the EAM base class which then calls the `decommissionExecutors` in the Scheduler which, if the executor has not been marked as decommissioning, marks the executor as decommissioning and then calls into `doDecomission` which asks the scheduler and driver and block manager (as appopriate) to take on the next steps in decommissioning.\r\n\r\nOn the driver endpoint we will delegate to this same function, and since the executor is already marked as decommissioned we will no-op. We could drop this message from the driver endpoint, but I figured leaving it there incase it's easier for someone to send a no-reply message to the driver endpoint then the boolean ask makes sense.\r\n\r\nWDYT?",
+        "createdAt" : "2020-08-11T22:44:15Z",
+        "updatedAt" : "2020-08-12T19:09:05Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e1151e7e-a1ab-414a-9f93-65b7ea5308ff",
+        "parentId" : "58feb959-3654-4455-bdd2-a51afc90f1df",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "You are so RIGHT !!!. Sorry, for not spotting that. In which case I think this is not just fine but also neat in that the code paths for decommissioned are pretty nicely converged now. ",
+        "createdAt" : "2020-08-12T01:38:28Z",
+        "updatedAt" : "2020-08-12T19:09:05Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e970cb10147fb64533f5088edc3a448b5ef198cf",
+    "line" : 127,
+    "diffHunk" : "@@ -1,1 +494,498 @@      if (driverEndpoint != null) {\n        logInfo(\"Propagating executor decommission to driver.\")\n        driverEndpoint.send(DecommissionExecutor(executorId, decomInfo))\n      }\n    } catch {"
+  },
+  {
+    "id" : "d35e89a7-e540-45ef-bd6b-290adf483972",
+    "prId" : 29367,
+    "prUrl" : "https://github.com/apache/spark/pull/29367#pullrequestreview-465557158",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0e7339ab-6861-4631-a4c4-58dccf02923c",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "should there be a check for executorsToDecommission.notEmpty ? Otherwise, we will request executors again with no change in the adjustExecutors helper method. Could again lead to some unnecessary strain on the driver. \r\n\r\nNot a big deal because this is one time, since doDecommission isn't called again and again.",
+        "createdAt" : "2020-08-12T01:36:10Z",
+        "updatedAt" : "2020-08-12T19:09:05Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d7f0b2a2-58c4-4c72-b3bb-11634da45a88",
+        "parentId" : "0e7339ab-6861-4631-a4c4-58dccf02923c",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Let me put that logic inside adjustExecutors :)",
+        "createdAt" : "2020-08-12T02:53:53Z",
+        "updatedAt" : "2020-08-12T19:09:05Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e970cb10147fb64533f5088edc3a448b5ef198cf",
+    "line" : 109,
+    "diffHunk" : "@@ -1,1 +476,480 @@\n    // If we don't want to replace the executors we are decommissioning\n    if (adjustTargetNumExecutors) {\n      adjustExecutors(executorsToDecommission.map(_._1))\n    }"
   }
 ]

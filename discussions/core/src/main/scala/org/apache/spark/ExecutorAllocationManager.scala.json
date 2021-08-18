@@ -240,5 +240,170 @@
     "commit" : "75cdd1e334c15c8af89c9b0d283bedf12d0f33ee",
     "line" : 7,
     "diffHunk" : "@@ -1,1 +505,509 @@    // launch new executors to replace the excluded executors.\n    val exclude = executorMonitor.excludedExecutorCount\n    val maxOverheadExecutors = maxNumExecutors + exclude\n    // Do not request more executors if it would put our target over the upper bound\n    // this is doing a max check per ResourceProfile"
+  },
+  {
+    "id" : "06b065e2-0b50-4419-8f59-9eeda6cd8651",
+    "prId" : 29367,
+    "prUrl" : "https://github.com/apache/spark/pull/29367#pullrequestreview-463829692",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d2c4034a-ee7b-427d-b0c5-462005c0d89d",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Please change the warning message to also say something about storage migration. ",
+        "createdAt" : "2020-08-06T05:35:08Z",
+        "updatedAt" : "2020-08-12T19:09:04Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "99d24048-32e7-407c-b1d8-c3e8cb5620f7",
+        "parentId" : "d2c4034a-ee7b-427d-b0c5-462005c0d89d",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "What do you want mentioned about storage migration?",
+        "createdAt" : "2020-08-06T18:58:41Z",
+        "updatedAt" : "2020-08-12T19:09:04Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d282722b-0be3-46b4-b5f5-e1f996f6db2a",
+        "parentId" : "d2c4034a-ee7b-427d-b0c5-462005c0d89d",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Ideally I would have a different log message: \r\n\r\n```\r\n     if (conf.get(config.DYN_ALLOCATION_SHUFFLE_TRACKING_ENABLED)) {\r\n        logWarning(\"Dynamic allocation without a shuffle service is an experimental feature.\")\r\n     } else if (conf.get(WORKER_DECOMMISSION_ENABLED) &&\r\n            conf.get(config.STORAGE_DECOMMISSION_SHUFFLE_BLOCKS_ENABLED)) {\r\n        logWarning(\"Decommissioning with shuffle block migration is an experimental feature.\")\r\n     }\r\n```\r\n",
+        "createdAt" : "2020-08-06T21:39:09Z",
+        "updatedAt" : "2020-08-12T19:09:04Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e55c245b-20e1-4f62-9d4e-3a6602a0793e",
+        "parentId" : "d2c4034a-ee7b-427d-b0c5-462005c0d89d",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "That doesn’t make sense. Dynamic allocation without a shuffle service is the expiremental feature in either case.",
+        "createdAt" : "2020-08-08T18:25:14Z",
+        "updatedAt" : "2020-08-12T19:09:04Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0ec3bbd6-2f79-40b9-bc55-1d32d760c1df",
+        "parentId" : "d2c4034a-ee7b-427d-b0c5-462005c0d89d",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Okay. I understand the intention now. Nevermind :-) ",
+        "createdAt" : "2020-08-08T22:30:21Z",
+        "updatedAt" : "2020-08-12T19:09:05Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e970cb10147fb64533f5088edc3a448b5ef198cf",
+    "line" : 28,
+    "diffHunk" : "@@ -1,1 +214,218 @@          (decommissionEnabled &&\n            conf.get(config.STORAGE_DECOMMISSION_SHUFFLE_BLOCKS_ENABLED))) {\n        logWarning(\"Dynamic allocation without a shuffle service is an experimental feature.\")\n      } else if (!testing) {\n        throw new SparkException(\"Dynamic allocation of executors requires the external \" +"
+  },
+  {
+    "id" : "9d2216ab-358d-4343-817c-b7e802e75c35",
+    "prId" : 29367,
+    "prUrl" : "https://github.com/apache/spark/pull/29367#pullrequestreview-462895113",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "18b4ca15-c8cc-48b3-a073-e5d4da7c8635",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Question: The default implementation of the ExecutorAllocationClient is to call killExecutors. So what does it mean for the WORKER_DECOM_ENABLED = true and the default implementation being called (ie the decommissionExecutors is not overridden) ? Perhaps it means that decommission is enabled by a config but the cluster manager does not support decommission and is thus ignored ? \r\n\r\nIn such an event should we be at parity with the else codepath -- ie `force` should be set to false in ExecutorAllocationClient ?",
+        "createdAt" : "2020-08-06T05:36:56Z",
+        "updatedAt" : "2020-08-12T19:09:04Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4b2cc146-a971-4f29-ac7f-3862bb497496",
+        "parentId" : "18b4ca15-c8cc-48b3-a073-e5d4da7c8635",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "So if someones enabled worker decommissioning and there cluster manager doesn't support it, we delegate to kill. Force is set to false already as a default in the call to `killExecutors`.",
+        "createdAt" : "2020-08-06T19:01:50Z",
+        "updatedAt" : "2020-08-12T19:09:04Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cfb3f764-c14a-4895-a23c-a5c247dc5351",
+        "parentId" : "18b4ca15-c8cc-48b3-a073-e5d4da7c8635",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Great, thanks for double checking that !",
+        "createdAt" : "2020-08-06T21:39:39Z",
+        "updatedAt" : "2020-08-12T19:09:04Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e970cb10147fb64533f5088edc3a448b5ef198cf",
+    "line" : 51,
+    "diffHunk" : "@@ -1,1 +579,583 @@        val executorIdsWithoutHostLoss = executorIdsToBeRemoved.toSeq.map(\n          id => (id, ExecutorDecommissionInfo(\"spark scale down\", false))).toArray\n        client.decommissionExecutors(executorIdsWithoutHostLoss, adjustTargetNumExecutors = false)\n      } else {\n        client.killExecutors(executorIdsToBeRemoved.toSeq, adjustTargetNumExecutors = false,"
+  },
+  {
+    "id" : "17027ef5-b59c-42f0-88d0-0896da685c46",
+    "prId" : 29367,
+    "prUrl" : "https://github.com/apache/spark/pull/29367#pullrequestreview-464610852",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "25105b01-e221-4e85-bf8b-b6354b7797bc",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Actually there is a key big difference between `killExecutors` and `decommissionExecutors`: The former does the actual killing and the latter does 'graceful death': Graceful death waits for all the migrations etc to happen and then the executor exits. I think this may lead to an overcommit: The old executor is still being decommissioned and migrating things, and a new one could be spun up. The two executors are alive at the same time (perhaps on the same node). Would this cause issues ?\r\n\r\nThis problem does not exist for `killExecutors` so much: Kill executor will kill the executor soon enough and thus the overlap window is smaller. ",
+        "createdAt" : "2020-08-08T23:29:25Z",
+        "updatedAt" : "2020-08-12T19:09:05Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d1fae541-f9b7-421c-9c46-1b33da6dfcde",
+        "parentId" : "25105b01-e221-4e85-bf8b-b6354b7797bc",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "We're talking in standalone mode? Multiple executors on the same worker is a deprecated feature so I don't think we have to worry about supporting new functionality with it.",
+        "createdAt" : "2020-08-10T18:23:27Z",
+        "updatedAt" : "2020-08-12T19:09:05Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "61eddf97-c1b8-4a72-8377-6083121cb970",
+        "parentId" : "25105b01-e221-4e85-bf8b-b6354b7797bc",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Okay. It is a little bit unsettling to mer personally, that we don't have a timeout on the time that an executor would take to \"migrate and finally die\", but I guess we can live with that shortcoming for a while. It just reduces the effective cluster capacity for an indeterminate amount of time, which is what makes me slightly queasy about it.",
+        "createdAt" : "2020-08-10T19:41:03Z",
+        "updatedAt" : "2020-08-12T19:09:05Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6cb63c0a-59b1-4b42-a2ec-6e64cb863a16",
+        "parentId" : "25105b01-e221-4e85-bf8b-b6354b7797bc",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "So given this is in the Spark planned scale down path that _seems_ to be ok (the goal is to eventually reduce the capacity).",
+        "createdAt" : "2020-08-10T21:47:21Z",
+        "updatedAt" : "2020-08-12T19:09:05Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e970cb10147fb64533f5088edc3a448b5ef198cf",
+    "line" : 53,
+    "diffHunk" : "@@ -1,1 +581,585 @@        client.decommissionExecutors(executorIdsWithoutHostLoss, adjustTargetNumExecutors = false)\n      } else {\n        client.killExecutors(executorIdsToBeRemoved.toSeq, adjustTargetNumExecutors = false,\n          countFailures = false, force = false)\n      }"
   }
 ]

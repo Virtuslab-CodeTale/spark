@@ -1,0 +1,497 @@
+[
+  {
+    "id" : "c4e6438b-985b-4ed4-9140-60bc6026d9ee",
+    "prId" : 29342,
+    "prUrl" : "https://github.com/apache/spark/pull/29342#pullrequestreview-463461856",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "066e110e-32c6-4604-8538-fddc3b8b3eba",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Should we have a config to disable this feature ?",
+        "createdAt" : "2020-08-06T16:43:15Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "875994fa-ebb7-4ec0-88e0-77f93cda5ad1",
+        "parentId" : "066e110e-32c6-4604-8538-fddc3b8b3eba",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "In this current PR implementation, it seems we can disable it if we set -1 to `spark.sql.autoBroadcastJoinThreshold`.",
+        "createdAt" : "2020-08-06T23:05:09Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "41be7fef-7323-4007-ae34-7b81a3a8a99b",
+        "parentId" : "066e110e-32c6-4604-8538-fddc3b8b3eba",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "I am not sure if that's a good idea: spark.sql.autoBroadcastJoinThreshold is a very widely used config and I think we should have a separate config to disable just this full outer join optimization, without having to turn of BHJ in itself.",
+        "createdAt" : "2020-08-06T23:25:40Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b8552865-a3af-40be-8fa5-f433410afa79",
+        "parentId" : "066e110e-32c6-4604-8538-fddc3b8b3eba",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Yea, I've already asked it above: https://github.com/apache/spark/pull/29342#discussion_r466168517",
+        "createdAt" : "2020-08-06T23:27:34Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a7ea0810-5674-4315-ab88-4c10bb435597",
+        "parentId" : "066e110e-32c6-4604-8538-fddc3b8b3eba",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@agrawaldevesh, @maropu - The feature is essentially disabled by default, as shuffled hash join is disabled by default by [config `spark.sql.join.preferSortMergeJoin=true`](https://github.com/apache/spark/blob/master/sql/core/src/main/scala/org/apache/spark/sql/execution/SparkStrategies.scala#L213). So I don't think we need a separate config to disable this feature. In addition, set -1 to `spark.sql.autoBroadcastJoinThreshold` would [disable BHJ](https://github.com/apache/spark/blob/master/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/optimizer/joins.scala#L278) but not SHJ. [SHJ needs the config to be carefully tuned to be enabled, but not -1](https://github.com/apache/spark/blob/master/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/optimizer/joins.scala#L354). So when user explicitly enables shuffled hash join by (1).setting `spark.sql.join.preferSortMergeJoin`=false, and (2).carefully tuning `spark.sql.autoBroadcastJoinThreshold`, they should probably have a clear mind what they are doing.",
+        "createdAt" : "2020-08-07T17:15:10Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "526709b73b87687f48f68486b9c8c7be0866291f",
+    "line" : 59,
+    "diffHunk" : "@@ -1,1 +87,91 @@      val hashed = buildHashedRelation(buildIter)\n      joinType match {\n        case FullOuter => fullOuterJoin(streamIter, hashed, numOutputRows)\n        case _ => join(streamIter, hashed, numOutputRows)\n      }"
+  },
+  {
+    "id" : "fa1e4f41-1bac-4735-a155-cbb014e8dfed",
+    "prId" : 29342,
+    "prUrl" : "https://github.com/apache/spark/pull/29342#pullrequestreview-466168209",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b49e024b-7316-42fa-8a1b-546512df14c3",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "we don't need to pass the `joinRow` parameter\r\n```\r\nval joinedRow = joinRowWithBuild(buildRow)\r\nif (boundCondition(joinedRow)) {\r\n  matchedKeys.set(keyIndex)\r\n  joinedRow\r\n} else ...\r\n```",
+        "createdAt" : "2020-08-12T07:45:10Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dbe1a53c-1915-4197-aa0a-1c72714da5ab",
+        "parentId" : "b49e024b-7316-42fa-8a1b-546512df14c3",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@cloud-fan - sure, updated.",
+        "createdAt" : "2020-08-12T21:38:45Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8332dbe2-9b97-4639-ab65-d068a8a0105b",
+        "parentId" : "b49e024b-7316-42fa-8a1b-546512df14c3",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@cloud-fan - sure. updated.",
+        "createdAt" : "2020-08-12T21:46:54Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "526709b73b87687f48f68486b9c8c7be0866291f",
+    "line" : 141,
+    "diffHunk" : "@@ -1,1 +169,173 @@          if (boundCondition(joinRow)) {\n            matchedKeys.set(keyIndex)\n            joinRow\n          } else {\n            joinRowWithBuild(buildNullRow)"
+  },
+  {
+    "id" : "4a6998ac-e175-4681-893d-6caded3dac5d",
+    "prId" : 29342,
+    "prUrl" : "https://github.com/apache/spark/pull/29342#pullrequestreview-467101936",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6631481d-1073-44ab-a5a5-e6a6b77a7433",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "I didn't follow why found is again set to true here ? I think it can be left alone ?",
+        "createdAt" : "2020-08-13T17:59:19Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "85275ead-2e02-437f-b6cc-d0998cde760d",
+        "parentId" : "6631481d-1073-44ab-a5a5-e6a6b77a7433",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@agrawaldevesh - @viirya raised same question. See my comment [here](https://github.com/apache/spark/pull/29342#discussion_r467505397). btw [existing left/right outer join for BHJ/SHJ has same logic that you may want to check as well](https://github.com/apache/spark/blob/master/sql/core/src/main/scala/org/apache/spark/sql/execution/joins/HashJoin.scala#L204-L222).",
+        "createdAt" : "2020-08-13T19:07:17Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b1b8fb7a-e950-4e35-b291-61e487ce40fd",
+        "parentId" : "6631481d-1073-44ab-a5a5-e6a6b77a7433",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Actually I see now why this is required. Thanks ",
+        "createdAt" : "2020-08-13T20:30:46Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "526709b73b87687f48f68486b9c8c7be0866291f",
+    "line" : 224,
+    "diffHunk" : "@@ -1,1 +252,256 @@              if (boundCondition(joinRowWithBuild(buildRow))) {\n                markRowMatched(keyIndex, valueIndex)\n                found = true\n                return true\n              }"
+  },
+  {
+    "id" : "f77f1dbe-82d7-4915-9f4a-820bf461bd05",
+    "prId" : 29342,
+    "prUrl" : "https://github.com/apache/spark/pull/29342#pullrequestreview-467005565",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "925503d1-ae6a-49c9-92fa-a516b4fb048f",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Just curious to educate myself: Are we really creating an Option for each build row, or will this be elided away ? In other words, is there a perf penalty of using flatMap here ?",
+        "createdAt" : "2020-08-13T18:03:59Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "45356836-c664-4cb5-8e29-174fa570f946",
+        "parentId" : "925503d1-ae6a-49c9-92fa-a516b4fb048f",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@agrawaldevesh - I don't think so. see my comment below for the code pointer in `HashJoin.scala`, thanks.",
+        "createdAt" : "2020-08-13T19:08:55Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "526709b73b87687f48f68486b9c8c7be0866291f",
+    "line" : 261,
+    "diffHunk" : "@@ -1,1 +289,293 @@        if (!isMatched) {\n          val buildRow = valueRowWithKeyIndex.getValue\n          Some(streamNullJoinRowWithBuild(buildRow))\n        } else {\n          None"
+  },
+  {
+    "id" : "10de7f59-e05f-4cae-bb18-78c3b5a4c697",
+    "prId" : 29342,
+    "prUrl" : "https://github.com/apache/spark/pull/29342#pullrequestreview-467005565",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "da745156-9f11-4a4c-a72d-c3db85991393",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "I understand what this logic does but I am finding it hard to read. Should it be more directly like this:\r\n\r\n```\r\nval keyIndex = valueRowWithKeyIndex.getKeyIndex\r\nif (prevKeyIndex == -1 || keyIndex != prevKeyIndex) {\r\n  valueIndex = 0\r\n} else {\r\n  valueIndex += 1\r\n}\r\n\r\nval isMatched = ....\r\nif (isMatched) {...\r\n} else {...\r\n}\r\nprevKeyIndex = keyIndex\r\n```",
+        "createdAt" : "2020-08-13T18:07:01Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0e7c0f6e-d1ae-4250-8f1c-646e4551a485",
+        "parentId" : "da745156-9f11-4a4c-a72d-c3db85991393",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@agrawaldevesh - the `prevKeyIndex = keyIndex` cannot be last statement as the return value is in `if (!isMatched) {} else {}`. Changed other place as suggested.",
+        "createdAt" : "2020-08-13T19:31:15Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "526709b73b87687f48f68486b9c8c7be0866291f",
+    "line" : 251,
+    "diffHunk" : "@@ -1,1 +279,283 @@      valueRowWithKeyIndex =>\n        val keyIndex = valueRowWithKeyIndex.getKeyIndex\n        if (prevKeyIndex == -1 || keyIndex != prevKeyIndex) {\n          valueIndex = 0\n          prevKeyIndex = keyIndex"
+  },
+  {
+    "id" : "93c44841-9736-4e3d-8393-c7e8bfb17cc2",
+    "prId" : 29342,
+    "prUrl" : "https://github.com/apache/spark/pull/29342#pullrequestreview-467101936",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "17c883bc-3095-4de7-8ed8-0dde21b04165",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "I found `OpenHashSet` , `PrimitiveKeyOpenHashMap` and other friends. I don't have context on why Spark does not use fastutils, but any of those have got to be better than HashSet[Long].\r\n\r\nYou might also want to add a quick comment that `Long` here is (keyIndex << 32 | valueIndex).\r\n\r\nIn addition, would a more accurate renaming of valueIndex be valueIndexForSameKey ? (not saying we have to adopt this name but just trying to follow the notion)",
+        "createdAt" : "2020-08-13T18:14:45Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "eb32cfec-cece-4b32-b3d2-a5e72275bd15",
+        "parentId" : "17c883bc-3095-4de7-8ed8-0dde21b04165",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "> but any of those have got to be better than HashSet[Long]\r\n\r\n@agrawaldevesh - I thought we were agreeing on the execution plan proposed before. I did found `OpenHashSet`, to make sure it's better than `HashSet`, shouldn't we do some benchmark measurement? Could this be a followup?",
+        "createdAt" : "2020-08-13T19:03:59Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "808eb85c-812e-4da5-9d22-fc9586999c12",
+        "parentId" : "17c883bc-3095-4de7-8ed8-0dde21b04165",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Sure. A follow up is fine.",
+        "createdAt" : "2020-08-13T20:21:47Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "526709b73b87687f48f68486b9c8c7be0866291f",
+    "line" : 193,
+    "diffHunk" : "@@ -1,1 +221,225 @@    // TODO(SPARK-32629):record metrics of extra BitSet/HashSet\n    // in full outer shuffled hash join\n    val matchedRows = new mutable.HashSet[Long]\n\n    def markRowMatched(keyIndex: Int, valueIndex: Int): Unit = {"
+  },
+  {
+    "id" : "ad5f2e04-ef50-4dc0-9062-19c8d155753a",
+    "prId" : 29342,
+    "prUrl" : "https://github.com/apache/spark/pull/29342#pullrequestreview-467101936",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "bd4a4a44-5b75-437d-9e30-d205d171f3cd",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Same comment as below for the use of flatMap/Option here: Is this pattern used in the hot path elsewhere in Spark for RDD iterator computation ?",
+        "createdAt" : "2020-08-13T18:15:56Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b427ece0-0697-4a19-a3e6-ddd918393bb6",
+        "parentId" : "bd4a4a44-5b75-437d-9e30-d205d171f3cd",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@agrawaldevesh - SHJ/BHJ inner join non-codegen path - https://github.com/apache/spark/blob/master/sql/core/src/main/scala/org/apache/spark/sql/execution/joins/HashJoin.scala#L159-L166 .",
+        "createdAt" : "2020-08-13T19:02:03Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d6f79ce3-3944-4a0d-8799-4dc8fff6fdb9",
+        "parentId" : "bd4a4a44-5b75-437d-9e30-d205d171f3cd",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Oh great. Thanks for the pointer. ",
+        "createdAt" : "2020-08-13T20:30:13Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "526709b73b87687f48f68486b9c8c7be0866291f",
+    "line" : 158,
+    "diffHunk" : "@@ -1,1 +186,190 @@        if (!isMatched) {\n          val buildRow = valueRowWithKeyIndex.getValue\n          Some(streamNullJoinRowWithBuild(buildRow))\n        } else {\n          None"
+  },
+  {
+    "id" : "c2b758f5-f52f-440c-8d76-7dfb22fab323",
+    "prId" : 29342,
+    "prUrl" : "https://github.com/apache/spark/pull/29342#pullrequestreview-467741983",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0d1b96e1-0251-4619-bd78-94af4ddab08e",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "It's not about `lazy val`. We should do\r\n```\r\nval streamNullJoinRowWithBuild: InternalRow => JoinedRow = buildSide match {\r\n  case BuildLeft => row => {\r\n    joinRow.withRight(streamNullRow)\r\n    joinRow.withLeft(row)\r\n  }\r\n  case ...\r\n}\r\n```\r\n\r\nWhich is clearer.",
+        "createdAt" : "2020-08-14T07:53:10Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5adafa32-8e61-4da9-a111-d4eed609ba83",
+        "parentId" : "0d1b96e1-0251-4619-bd78-94af4ddab08e",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@cloud-fan - I think with `lazy val` I am to address [comment from @viirya ](https://github.com/apache/spark/pull/29342#discussion_r467252553), to only set stream side NULL row once, but not per row, because every row would have stream side NULL row so we only need to set it once. If not `lazy val`, but `val`, the `joinRow.withRight(streamNullRow)` would be eagerly evaluated here which is not right, as `joinRow` being reused later.",
+        "createdAt" : "2020-08-14T17:18:47Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "526709b73b87687f48f68486b9c8c7be0866291f",
+    "line" : 79,
+    "diffHunk" : "@@ -1,1 +107,111 @@    val buildNullRow = new GenericInternalRow(buildOutput.length)\n    val streamNullRow = new GenericInternalRow(streamedOutput.length)\n    lazy val streamNullJoinRowWithBuild = {\n      buildSide match {\n        case BuildLeft =>"
+  },
+  {
+    "id" : "d1a90490-23b3-4e74-9500-21f87cf99fce",
+    "prId" : 29342,
+    "prUrl" : "https://github.com/apache/spark/pull/29342#pullrequestreview-467898833",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f70bce6e-bfd5-4d54-8823-fa639edd72da",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Even though I understand why we are setting `found = true` here, I still find it a bit subtle. I am wondering if you can please add a short comment explaining the rationale for setting found. Thanks.",
+        "createdAt" : "2020-08-14T21:29:19Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "46d42232-2727-4efe-9890-0ea1bdd8eaa0",
+        "parentId" : "f70bce6e-bfd5-4d54-8823-fa639edd72da",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@agrawaldevesh - sure. I will add something like\r\n\r\n```\r\nSet `found` to be true as we only need to return one row but no more.\r\n```\r\n\r\nDoes it sound good to you?",
+        "createdAt" : "2020-08-14T22:05:56Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "526709b73b87687f48f68486b9c8c7be0866291f",
+    "line" : 235,
+    "diffHunk" : "@@ -1,1 +263,267 @@              // Set `found` to be true as we only need to return one row\n              // but no more.\n              found = true\n              return true\n            }"
+  },
+  {
+    "id" : "17817f2f-146c-4958-a87d-4bcedec64ff8",
+    "prId" : 29342,
+    "prUrl" : "https://github.com/apache/spark/pull/29342#pullrequestreview-468083562",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "67be76c3-cfc8-4f1b-bc9f-facbface15ce",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "The `buildDataSize` metric doesn't need to accumulate the overhead of `matchedRows`? In the initial approach, the overhead were included in the hash relation size though.",
+        "createdAt" : "2020-08-15T07:18:58Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "370d72dd-9c4f-4190-b1ea-f5c242b88db5",
+        "parentId" : "67be76c3-cfc8-4f1b-bc9f-facbface15ce",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@maropu - good call. Yes, there's no metrics for this extra bitset/hashset yet in current approach. It's not hard to add, but it needs more discussion on that. E.g., size of `bitset` is pretty clear and easy to get. But size of `HashSet[Long]` seems to need more discussion if we want to get accurate number. To avoid more complexity in this PR, I want to make it as a followup and address it separately. Thanks. ",
+        "createdAt" : "2020-08-15T19:02:19Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7fc22068-a088-4159-ba6e-f734166c19f7",
+        "parentId" : "67be76c3-cfc8-4f1b-bc9f-facbface15ce",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Yea, the follow-up looks okay to me. Could you add TODO comments there?",
+        "createdAt" : "2020-08-16T07:28:39Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "54ea9698-9e5c-4122-a0f2-c0e99ebb25e9",
+        "parentId" : "67be76c3-cfc8-4f1b-bc9f-facbface15ce",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@maropu - sure. updated.",
+        "createdAt" : "2020-08-16T18:22:55Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "526709b73b87687f48f68486b9c8c7be0866291f",
+    "line" : 194,
+    "diffHunk" : "@@ -1,1 +222,226 @@    // in full outer shuffled hash join\n    val matchedRows = new mutable.HashSet[Long]\n\n    def markRowMatched(keyIndex: Int, valueIndex: Int): Unit = {\n      val rowIndex: Long = (keyIndex.toLong << 32) | valueIndex"
+  },
+  {
+    "id" : "e341f6e3-6591-4256-bc6b-a97512c9bdef",
+    "prId" : 29342,
+    "prUrl" : "https://github.com/apache/spark/pull/29342#pullrequestreview-468010952",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4faa29ce-43d8-4799-80a1-bfcf3f48cc70",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Could you add tests for empty hashed relation case?",
+        "createdAt" : "2020-08-15T07:23:12Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f6bcc862-0cb6-4a53-8b7b-5d150e9cb899",
+        "parentId" : "4faa29ce-43d8-4799-80a1-bfcf3f48cc70",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@maropu - good call. added unit tests for `empty build side`, `empty stream side`, and `empty stream and build side` join tests in `JoinSuite.scala`",
+        "createdAt" : "2020-08-15T18:54:55Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "526709b73b87687f48f68486b9c8c7be0866291f",
+    "line" : 67,
+    "diffHunk" : "@@ -1,1 +95,99 @@  private def fullOuterJoin(\n      streamIter: Iterator[InternalRow],\n      hashedRelation: HashedRelation,\n      numOutputRows: SQLMetric): Iterator[InternalRow] = {\n    val joinKeys = streamSideKeyGenerator()"
+  },
+  {
+    "id" : "f8c8919e-b407-4d47-ae8d-a2dd0b41b37b",
+    "prId" : 29342,
+    "prUrl" : "https://github.com/apache/spark/pull/29342#pullrequestreview-468010952",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "420f782c-bf6f-48b8-ae86-c296f344fa5f",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "The same comment here with https://github.com/apache/spark/pull/29342#discussion_r470948744",
+        "createdAt" : "2020-08-15T07:24:40Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "477b8fbc-5caf-4160-af82-bb649fe3617d",
+        "parentId" : "420f782c-bf6f-48b8-ae86-c296f344fa5f",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@maropu - replied back to the original comment, thanks.",
+        "createdAt" : "2020-08-15T20:44:19Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "526709b73b87687f48f68486b9c8c7be0866291f",
+    "line" : 125,
+    "diffHunk" : "@@ -1,1 +153,157 @@    // TODO(SPARK-32629):record metrics of extra BitSet/HashSet\n    // in full outer shuffled hash join\n    val matchedKeys = new BitSet(hashedRelation.maxNumKeysIndex)\n\n    // Process stream side with looking up hash relation"
+  }
+]

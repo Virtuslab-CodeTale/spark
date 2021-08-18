@@ -262,5 +262,104 @@
     "commit" : "ca2900de52497ce5bb3bad90f0f28678248c7595",
     "line" : 4,
     "diffHunk" : "@@ -1,1 +728,732 @@   * <li>`maxCharsPerColumn` (default `-1`): defines the maximum number of characters allowed\n   * for any given value being read. By default, it is -1 meaning unlimited length</li>\n   * <li>`unescapedQuoteHandling` (default `STOP_AT_DELIMITER`): defines how the CsvParser\n   * will handle values with unescaped quotes.\n   *   <ul>"
+  },
+  {
+    "id" : "f5cb76fa-2c46-4c64-958e-4089ec7a453e",
+    "prId" : 29328,
+    "prUrl" : "https://github.com/apache/spark/pull/29328#pullrequestreview-464744301",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "315169b2-bb96-4918-8562-bb870bbe3fb0",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "What I propose is\r\n```\r\ndef load(paths: String*): DataFrame = {\r\n  if (extraOptions.contains(\"path\") && paths.nonEmpty) fail ...\r\n  ...\r\n  if (DSV2) {\r\n    val pathOption = if (paths.isEmpty) {\r\n      None\r\n    } else if (paths.length == 1) {\r\n      Some(\"path\" -> paths.head)\r\n    } else {\r\n      Some(\"paths\" -> ...)\r\n    }\r\n  } else {\r\n    // for DS V1, do not generate extra path option\r\n  }\r\n}\r\n```",
+        "createdAt" : "2020-08-10T04:38:49Z",
+        "updatedAt" : "2020-08-22T23:06:49Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "78e80638-0e58-41de-ac8e-ea5bd76445dd",
+        "parentId" : "315169b2-bb96-4918-8562-bb870bbe3fb0",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "Is the following required (or is this just for semantics)?\r\n\r\n>  else if (paths.length == 1) {\r\n>    Some(\"path\" -> paths.head)\r\n>  }\r\n\r\nI see `paths` should handle one or more paths: https://github.com/apache/spark/blob/8659ec554fe1993fcaf2ec4d1c4745205bddec7d/sql/core/src/main/scala/org/apache/spark/sql/execution/datasources/v2/FileDataSourceV2.scala#L51-L57\r\n\r\n",
+        "createdAt" : "2020-08-10T20:30:27Z",
+        "updatedAt" : "2020-08-22T23:06:49Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "081cc827-5363-46af-842a-c99d4eb1c798",
+        "parentId" : "315169b2-bb96-4918-8562-bb870bbe3fb0",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "It's required, because\r\n```\r\ndef load(path: String): DataFrame = {\r\n  // force invocation of `load(...varargs...)`\r\n  option(\"path\", path).load(Seq.empty: _*)\r\n}\r\n```\r\n\r\nIf we remove this method and always call `def load(paths: String*)`, we should make sure the behavior doesn't change, and we still generate \"path\" option if only one path is given.",
+        "createdAt" : "2020-08-11T03:29:00Z",
+        "updatedAt" : "2020-08-22T23:06:49Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "26a8fcb2-4cad-4930-8ef7-d4a68da02f5a",
+        "parentId" : "315169b2-bb96-4918-8562-bb870bbe3fb0",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "Hmm, `def parquet(path: String)` has been calling `def load(paths: String*)`, not `def load(path: String)`, and it seems to have worked fine so far (other than the inconsistency this PR addresses), no?\r\n\r\nBtw, we shouldn't remove `def load(path: String)` because it breaks the binary compatibility.",
+        "createdAt" : "2020-08-11T04:34:13Z",
+        "updatedAt" : "2020-08-22T23:06:49Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a2a2952b-e602-421c-903b-3685dcbb16d2",
+        "parentId" : "315169b2-bb96-4918-8562-bb870bbe3fb0",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "parquet is a builtin source, so we can make it work anyway. `def load(path: String)` is general for other external sources, and we should guarantee backward compatibility here.",
+        "createdAt" : "2020-08-11T04:42:26Z",
+        "updatedAt" : "2020-08-22T23:06:49Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "33a39d2f-9aa5-4bf9-aad0-28de8259afd5",
+        "parentId" : "315169b2-bb96-4918-8562-bb870bbe3fb0",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "Ah OK. Thanks.",
+        "createdAt" : "2020-08-11T04:44:17Z",
+        "updatedAt" : "2020-08-22T23:06:49Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e1decd4c7921f58446a46081b339d308d36529cc",
+    "line" : 24,
+    "diffHunk" : "@@ -1,1 +250,254 @@        \"read files of Hive data source directly.\")\n    }\n\n    val legacyPathOptionBehavior = sparkSession.sessionState.conf.legacyPathOptionBehavior\n    if (!legacyPathOptionBehavior &&"
+  },
+  {
+    "id" : "c1523652-e623-4e33-8a69-80b2c8fc01eb",
+    "prId" : 29328,
+    "prUrl" : "https://github.com/apache/spark/pull/29328#pullrequestreview-472967776",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "76d2de82-98a3-4f67-a9fd-42688f347416",
+        "parentId" : null,
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "This is needed to restore the legacy behavior. Note that the legacy behavior is different for the following:\r\n* `spark.read.option(\"path\", path).parquet(path)` => path is read twice\r\n* `spark.read.format(\"parquet\").option(\"path\", path).load(path)` => path is read once (option is overwritten)",
+        "createdAt" : "2020-08-22T23:14:28Z",
+        "updatedAt" : "2020-08-22T23:14:32Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e1decd4c7921f58446a46081b339d308d36529cc",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +232,236 @@    // force invocation of `load(...varargs...)`\n    if (sparkSession.sessionState.conf.legacyPathOptionBehavior) {\n      option(\"path\", path).load(Seq.empty: _*)\n    } else {\n      load(Seq(path): _*)"
   }
 ]

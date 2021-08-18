@@ -1,0 +1,35 @@
+[
+  {
+    "id" : "dee0ca59-7116-43bc-b199-a2c37d83a014",
+    "prId" : 29353,
+    "prUrl" : "https://github.com/apache/spark/pull/29353#pullrequestreview-462185968",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0f4e8314-8bd4-474e-80d6-5228c6a9cb52",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "@msamirkhan sorry if I rushed to read but why do we need pull this updater out here? If the field writers are created once, we don't have to bother about reusing the updater for nested types as they are just created once and cheap.",
+        "createdAt" : "2020-08-06T02:29:33Z",
+        "updatedAt" : "2020-08-28T22:54:52Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "36193a7d-6a39-4101-accb-f1a8ba867841",
+        "parentId" : "0f4e8314-8bd4-474e-80d6-5228c6a9cb52",
+        "authorId" : "6e35521d-0def-4310-bc41-de4685fba931",
+        "body" : "Only the top level field writers are currently being created once. For each level below, they are created for each data point. Eg, the case for struct did the following:\r\n\r\n`case st: StructType => (ordinal, value) =>`\r\n`...`\r\n`    val fieldConverters = st.map(_.dataType).map { dt => newWriter(dt, fieldUpdater) }.toArray`\r\n`...`\r\n\r\ni.e., it returns a function, which when called will create relevant fieldConverters. Instead, the field converters should be created outside the function so that they are created only once.\r\n\r\nNow, the updaters can not always be reused. Eg, under an array or a map (i.e., whenever reuseObj turns to false).",
+        "createdAt" : "2020-08-06T04:52:19Z",
+        "updatedAt" : "2020-08-28T22:54:52Z",
+        "lastEditedBy" : "6e35521d-0def-4310-bc41-de4685fba931",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d67ceed965fce5f56f2096032188c6fa9b3cfa5b",
+    "line" : 31,
+    "diffHunk" : "@@ -1,1 +79,83 @@  : (CatalystDataUpdater, Int, WritableComparable[_]) => Unit =\n    dataType match {\n      case NullType => (updater, ordinal, _) =>\n        updater.setNullAt(ordinal)\n"
+  }
+]

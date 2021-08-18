@@ -1,0 +1,79 @@
+[
+  {
+    "id" : "53e3f8f8-c91c-49ad-a528-a1b336c521e4",
+    "prId" : 29367,
+    "prUrl" : "https://github.com/apache/spark/pull/29367#pullrequestreview-464633397",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a5d7cb00-4d07-4408-85b2-e41e3ead1d1e",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "I am confused here: `adjustTargetNumExecutors = true` means that the executor should be replaced (IIUC). Whereas the comment above says \"not be replaced\".",
+        "createdAt" : "2020-08-08T17:26:54Z",
+        "updatedAt" : "2020-08-12T19:09:04Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9b5c127f-4691-44a5-90d1-b87a0d337a60",
+        "parentId" : "a5d7cb00-4d07-4408-85b2-e41e3ead1d1e",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Nope, please re-read the code. This matches the killImplemwntation.",
+        "createdAt" : "2020-08-08T18:31:58Z",
+        "updatedAt" : "2020-08-12T19:09:04Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d6fc57b6-9928-47f8-b67b-dc7b209d6cc8",
+        "parentId" : "a5d7cb00-4d07-4408-85b2-e41e3ead1d1e",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "I did reread the code and now I am sure I understand it: I think `adjustTargetNumExecutors` flag should continue to remain false here, so that it matches the old semantics. This code above does not need to match \"killExecutors\" implementation because it is testing decommissioning and not killing. It didn't even do killing before.\r\n\r\nBefore this PR: decommissioning wouldn't change the requested executors. They remain whatever the test application requested previously. This should continue to hold: This test does not use dynamic allocation and I don't see a need to change this test behavior. \r\n\r\nTypically you don't want to change test behavior unless you are changing the product code associated with it too. Tests typically exist for catching regression and their expectations shouldn't just change in the middle for no reason. \r\n\r\nI would consider this a soft blocker. ",
+        "createdAt" : "2020-08-08T22:14:32Z",
+        "updatedAt" : "2020-08-12T19:09:05Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bab201f8-3f04-4772-af88-b651bb5733e9",
+        "parentId" : "a5d7cb00-4d07-4408-85b2-e41e3ead1d1e",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "^^^ @holdenk ... any thoughts/followup on this ?",
+        "createdAt" : "2020-08-10T19:44:56Z",
+        "updatedAt" : "2020-08-12T19:09:05Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "05e6e7b6-a5ff-4bc1-98d8-0d5c2b9a8b8f",
+        "parentId" : "a5d7cb00-4d07-4408-85b2-e41e3ead1d1e",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "My reasoning here is that by adjusting the executors down here we ensure the task isn't being re-launched and a re-launched executor so it improves the test.",
+        "createdAt" : "2020-08-10T21:53:49Z",
+        "updatedAt" : "2020-08-12T19:09:05Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a3883178-c6d1-463a-8774-13d1796b08c1",
+        "parentId" : "a5d7cb00-4d07-4408-85b2-e41e3ead1d1e",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Okay sure :-) But I guess that dynamic allocation isn't even enabled for this test so executors shouldn't just launch again on this node -- unless a new worker appears (this is standalone local cluster testing) out of nowhere. Spark only launches executors when it detects spare capacity for that -- all that mesos based resourceOffers paradigm. \r\n\r\nIn any case, I understand your intent here now and I am totally cool with that. So please consider this resolved.",
+        "createdAt" : "2020-08-10T22:35:10Z",
+        "updatedAt" : "2020-08-12T19:09:05Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e970cb10147fb64533f5088edc3a448b5ef198cf",
+    "line" : 7,
+    "diffHunk" : "@@ -1,1 +79,83 @@    // Make the executors decommission, finish, exit, and not be replaced.\n    val execsAndDecomInfo = execs.map((_, ExecutorDecommissionInfo(\"\", false))).toArray\n    sched.decommissionExecutors(execsAndDecomInfo, adjustTargetNumExecutors = true)\n    val asyncCountResult = ThreadUtils.awaitResult(asyncCount, 20.seconds)\n    assert(asyncCountResult === 10)"
+  }
+]

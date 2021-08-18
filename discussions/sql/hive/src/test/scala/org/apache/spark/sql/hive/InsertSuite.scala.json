@@ -1,0 +1,90 @@
+[
+  {
+    "id" : "89f64836-90c5-4d9b-9983-e500a38dc8e0",
+    "prId" : 29316,
+    "prUrl" : "https://github.com/apache/spark/pull/29316#pullrequestreview-485631901",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "adb434b9-2a3d-4756-a25e-6febad2132ed",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "why is this a problem only for hive tables?",
+        "createdAt" : "2020-09-08T15:17:17Z",
+        "updatedAt" : "2020-09-16T08:07:57Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "64939ab5-1f5b-4c88-b2e3-e03a10cc8857",
+        "parentId" : "adb434b9-2a3d-4756-a25e-6febad2132ed",
+        "authorId" : "8de20372-3c43-4f6b-838b-45ccb852019b",
+        "body" : "`InsertIntoHadoopFsRelationCommand`\r\nWhen `manageFilesourcePartitions` is turned on,`catalog.listPartitions` is called, here is a check to see if the partition value is empty.\r\n\r\nIn the case that `manageFilesourcePartitions` is not turned on, the partition value is currently not checked, which means that the SQL execution will not fail. If I now move the check logic to the PreprocessTableInsertion rule, this will cause the execution to fail.\r\n\r\nPerhaps this check can only be performed when `tracksPartitionsInCatalog` is equal to true and the static partition is written.",
+        "createdAt" : "2020-09-09T08:06:44Z",
+        "updatedAt" : "2020-09-16T08:07:57Z",
+        "lastEditedBy" : "8de20372-3c43-4f6b-838b-45ccb852019b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "357ef5be-303a-42a3-b3dd-c42de58cdb01",
+        "parentId" : "adb434b9-2a3d-4756-a25e-6febad2132ed",
+        "authorId" : "8de20372-3c43-4f6b-838b-45ccb852019b",
+        "body" : "hive calls `getPartition` when `loadPartition`, here it will check whether the partition value is empty.\r\n\r\n```java\r\npublic Partition getPartition(...){\r\n          || (val != null && val.length() == 0)) {\r\n        throw new HiveException(\"get partition: Value for key \"\r\n            + field.getName() + \" is null or empty\");\r\n}\r\n```",
+        "createdAt" : "2020-09-09T08:10:09Z",
+        "updatedAt" : "2020-09-16T08:07:57Z",
+        "lastEditedBy" : "8de20372-3c43-4f6b-838b-45ccb852019b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b9bedbc0-0d18-4b11-8114-ceedf82c287c",
+        "parentId" : "adb434b9-2a3d-4756-a25e-6febad2132ed",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "> In the case that manageFilesourcePartitions is not turned on, the partition value is currently not checked, which means that the SQL execution will not fail.\r\n\r\nwhat's the behavior then?",
+        "createdAt" : "2020-09-10T03:00:22Z",
+        "updatedAt" : "2020-09-16T08:07:57Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "80353248-03ad-43ea-b3d3-fd0c75a11857",
+        "parentId" : "adb434b9-2a3d-4756-a25e-6febad2132ed",
+        "authorId" : "8de20372-3c43-4f6b-838b-45ccb852019b",
+        "body" : "`InsertIntoHadoopFsRelationCommand`\r\n\r\nWhen writing static partition or  dynamic partition, the `DynamicPartitionDataWriter` will be used, and the partition value of empty will generate the default value(__HIVE_DEFAULT_PARTITION__) through `getPartitionPathString`.\r\n\r\nWhen `manageFilesourcePartitions` is not turned on, the partition information is maintained through the filesystem, so it is not checked whether the partition value is empty.\r\n`insert ovwriter table a partition(d='') select 1` sql will run successfully.\r\n",
+        "createdAt" : "2020-09-10T06:39:55Z",
+        "updatedAt" : "2020-09-16T08:07:57Z",
+        "lastEditedBy" : "8de20372-3c43-4f6b-838b-45ccb852019b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fa6844f7-0c5f-4ba9-87fb-af4e5295f9eb",
+        "parentId" : "adb434b9-2a3d-4756-a25e-6febad2132ed",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "what's the behavior of hive? Does hive treat `d=''` as `d=HIVE_DEFAULT_PARTITION` and can run it?",
+        "createdAt" : "2020-09-10T06:46:34Z",
+        "updatedAt" : "2020-09-16T08:07:57Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a792a957-aced-4325-b837-635af829f144",
+        "parentId" : "adb434b9-2a3d-4756-a25e-6febad2132ed",
+        "authorId" : "8de20372-3c43-4f6b-838b-45ccb852019b",
+        "body" : "hive> INSERT OVERWRITE TABLE  t1 PARTITION(d='')  select 1;\r\n```\r\nCaused by: org.apache.hadoop.hive.ql.parse.SemanticException: Line 1:61 Partition not found ''''\r\n        at org.apache.hadoop.hive.ql.parse.BaseSemanticAnalyzer$tableSpec.<init>(BaseSemanticAnalyzer.java:856)\r\n        at org.apache.hadoop.hive.ql.parse.BaseSemanticAnalyzer$tableSpec.<init>(BaseSemanticAnalyzer.java:727)\r\n        at org.apache.hadoop.hive.ql.parse.SemanticAnalyzer.getMetaData(SemanticAnalyzer.java:1652)\r\n        ... 23 more\r\nCaused by: org.apache.hadoop.hive.ql.metadata.HiveException: get partition: Value for key d is null or empty\r\n        at org.apache.hadoop.hive.ql.metadata.Hive.getPartition(Hive.java:1900)\r\n```\r\n\r\nhive> INSERT OVERWRITE TABLE  t1 PARTITION(d)  select 1,'' as d;\r\nresult:\r\n```\r\nLoading data to table x.t1 partition (d=null)\r\n\t Time taken for load dynamic partitions : 302\r\n\tLoading partition {d=__HIVE_DEFAULT_PARTITION__}\r\n\t Time taken for adding to write entity : 1\r\nPartition x.t1{d=__HIVE_DEFAULT_PARTITION__} stats: [numFiles=1, numRows=1, totalSize=201, rawDataSize=85]\r\n\r\n```\r\n\r\n\r\n",
+        "createdAt" : "2020-09-10T06:55:48Z",
+        "updatedAt" : "2020-09-16T08:07:57Z",
+        "lastEditedBy" : "8de20372-3c43-4f6b-838b-45ccb852019b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "76acc0751b08fe2112b3538de0e25b57e67dc050",
+    "line" : 10,
+    "diffHunk" : "@@ -1,1 +854,858 @@      spark.sql(\n        \"\"\"\n          |CREATE TABLE t1 (c1 int)\n          |PARTITIONED BY (d string)\n          \"\"\".stripMargin)"
+  }
+]

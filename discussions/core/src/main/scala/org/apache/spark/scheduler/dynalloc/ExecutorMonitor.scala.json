@@ -229,5 +229,203 @@
     "commit" : "2ff44993d976517738363d8d1feca1e2371dd9a3",
     "line" : 4,
     "diffHunk" : "@@ -1,1 +587,591 @@      hasActiveShuffle = ids.exists(shuffleIds.contains)\n      if (hadActiveShuffle && isIdle) {\n        shuffleIds.clear()\n        updateTimeout()\n      }"
+  },
+  {
+    "id" : "85de189e-f5e2-4067-bb4f-c932a2576805",
+    "prId" : 29367,
+    "prUrl" : "https://github.com/apache/spark/pull/29367#pullrequestreview-462800278",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "97fe4dc3-9422-476f-b75c-869abd4bd47c",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "I am wondering if the name `markExecutorsDecommissioned` would reflect the intent of this function better ?",
+        "createdAt" : "2020-08-06T05:49:03Z",
+        "updatedAt" : "2020-08-12T19:09:04Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "eefff4d0-bc06-41ad-8c25-6cd48b1fe39f",
+        "parentId" : "97fe4dc3-9422-476f-b75c-869abd4bd47c",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "This matches the function for killing executors (`executorsKilled`), so I think keeping the naming convention consistent is better.",
+        "createdAt" : "2020-08-06T19:07:09Z",
+        "updatedAt" : "2020-08-12T19:09:04Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e970cb10147fb64533f5088edc3a448b5ef198cf",
+    "line" : 31,
+    "diffHunk" : "@@ -1,1 +152,156 @@  }\n\n  private[spark] def executorsDecommissioned(ids: Seq[String]): Unit = {\n    ids.foreach { id =>\n      val tracker = executors.get(id)"
+  },
+  {
+    "id" : "eb94c874-ab5d-4c3b-9fe7-8105102238fe",
+    "prId" : 29367,
+    "prUrl" : "https://github.com/apache/spark/pull/29367#pullrequestreview-463829692",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "75102d7f-b2ce-43e0-9b8b-1fec5c9000dd",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "I didn't quite understand the reason for the change in this hunk: It seems that we should only be changing the KILL message to DECOMMISSION message if I understand the commit message/PR description properly. \r\n\r\nAre we also changing what gets decommissioned or not ?",
+        "createdAt" : "2020-08-06T05:52:10Z",
+        "updatedAt" : "2020-08-12T19:09:04Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dc49ab3b-3f4e-40ef-863e-b68cd906eb81",
+        "parentId" : "75102d7f-b2ce-43e0-9b8b-1fec5c9000dd",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "So since we now move shuffle files around, we need to keep track of the changes if decommissioning and the executor monitor are both enabled.",
+        "createdAt" : "2020-08-06T19:26:11Z",
+        "updatedAt" : "2020-08-12T19:09:04Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6506db55-4e34-4e47-9b1d-235f335b5d13",
+        "parentId" : "75102d7f-b2ce-43e0-9b8b-1fec5c9000dd",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Got it.",
+        "createdAt" : "2020-08-08T22:11:47Z",
+        "updatedAt" : "2020-08-12T19:09:04Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e970cb10147fb64533f5088edc3a448b5ef198cf",
+    "line" : 86,
+    "diffHunk" : "@@ -1,1 +362,366 @@    val exec = ensureExecutorIsTracked(event.blockUpdatedInfo.blockManagerId.executorId,\n      UNKNOWN_RESOURCE_PROFILE_ID)\n\n    // Check if it is a shuffle file, or RDD to pick the correct codepath for update\n    if (!event.blockUpdatedInfo.blockId.isInstanceOf[RDDBlockId]) {"
+  },
+  {
+    "id" : "09b70bea-f5f5-4cfa-95af-a9279868385d",
+    "prId" : 29367,
+    "prUrl" : "https://github.com/apache/spark/pull/29367#pullrequestreview-463829692",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5666fc0a-56da-493f-acb6-cee9ad47afac",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "I am just trying to follow along this code, so pardon me if this is a n00b question: Why are we separately tracking pendingRemoval and decommissioning separately ? Two questions about that:\r\n\r\n- If an executor is marked as decommissioned here, when is it actually removed ? (Outside of dynamic allocation that happens when the executor naturally has a heartbeat failure. ). \r\n- Is my understanding correct that if graceful decommissioning is plugged into dynamic-allocation (this feature) AND the cluster manager supports decommissioning, then pendingRemoval would be empty -- ie executors would only be decommission ?",
+        "createdAt" : "2020-08-08T17:16:52Z",
+        "updatedAt" : "2020-08-12T19:09:04Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5e9c14c3-08b1-46eb-9afd-aaf87c4d6e6f",
+        "parentId" : "5666fc0a-56da-493f-acb6-cee9ad47afac",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "We also kill executors if they end up blacklisted so I think we want to track them separately.",
+        "createdAt" : "2020-08-08T18:31:15Z",
+        "updatedAt" : "2020-08-12T19:09:04Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6c2fe7f9-422b-4a05-a915-3c68c59fc911",
+        "parentId" : "5666fc0a-56da-493f-acb6-cee9ad47afac",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Thanks for clarifying that !",
+        "createdAt" : "2020-08-08T22:11:10Z",
+        "updatedAt" : "2020-08-12T19:09:04Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e970cb10147fb64533f5088edc3a448b5ef198cf",
+    "line" : 77,
+    "diffHunk" : "@@ -1,1 +353,357 @@    if (removed != null) {\n      decrementExecResourceProfileCount(removed.resourceProfileId)\n      if (!removed.pendingRemoval || !removed.decommissioning) {\n        nextTimeout.set(Long.MinValue)\n      }"
+  },
+  {
+    "id" : "4943caf3-3b21-4879-973d-b0ce07706b35",
+    "prId" : 29367,
+    "prUrl" : "https://github.com/apache/spark/pull/29367#pullrequestreview-464613409",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4bb96640-7b84-453e-815b-9ded012f0362",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Is this comment change intended ?",
+        "createdAt" : "2020-08-08T17:17:25Z",
+        "updatedAt" : "2020-08-12T19:09:04Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "80f8b437-c941-477b-809f-33e017e05b51",
+        "parentId" : "4bb96640-7b84-453e-815b-9ded012f0362",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Yes, since we're eventually going to want to use intelligent metrics to decide who to scale down I'd like us to only track shuffle files that are being used not speculative ones. Doesn't need to be addressed right now which is why it's a TODO.",
+        "createdAt" : "2020-08-10T21:52:17Z",
+        "updatedAt" : "2020-08-12T19:09:05Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e970cb10147fb64533f5088edc3a448b5ef198cf",
+    "line" : 68,
+    "diffHunk" : "@@ -1,1 +324,328 @@      // This means that an executor may be marked as having shuffle data, and thus prevented\n      // from being removed, even though the data may not be used.\n      // TODO: Only track used files (SPARK-31974)\n      if (shuffleTrackingEnabled && event.reason == Success) {\n        stageToShuffleID.get(event.stageId).foreach { shuffleId =>"
+  },
+  {
+    "id" : "aa9a3847-3427-45c0-9498-ea301affb1ea",
+    "prId" : 29367,
+    "prUrl" : "https://github.com/apache/spark/pull/29367#pullrequestreview-464612539",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "26c6f324-387a-43fb-8ac1-102dec703c3f",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "I went through all of the usages of executor.pendingRemoval and executor.decommissioning flag: They are treated identically right now. That is for all practical purposes an executor being decommissioned is treated the same as an executor pending to be removed. \r\n\r\nDo you have a use case in mind of why you would like to distinguish b/w these two states ? If you don't need to distinguish, the change would become simpler if you treat a decommissioned executor as pending removal. \r\n\r\nI cannot see where this distinction is relevant in this PR, so perhaps you have a future use case in mind for this distinction ?",
+        "createdAt" : "2020-08-08T23:54:32Z",
+        "updatedAt" : "2020-08-12T19:09:05Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3ed2c9f0-39dc-4464-a91e-c6a422465fe3",
+        "parentId" : "26c6f324-387a-43fb-8ac1-102dec703c3f",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "^^^ @holdenk ... any thoughts/followup on this ?",
+        "createdAt" : "2020-08-10T19:42:55Z",
+        "updatedAt" : "2020-08-12T19:09:05Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3e561251-e1e9-44cc-8510-3e99e5eb4149",
+        "parentId" : "26c6f324-387a-43fb-8ac1-102dec703c3f",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Eventually I'd like us to have better logging and metrics around decommissioning and understanding it's impact versus blacklisting, although to be fair that isn't in the short term.",
+        "createdAt" : "2020-08-10T21:50:36Z",
+        "updatedAt" : "2020-08-12T19:09:05Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e970cb10147fb64533f5088edc3a448b5ef198cf",
+    "line" : 15,
+    "diffHunk" : "@@ -1,1 +116,120 @@      timedOutExecs = executors.asScala\n        .filter { case (_, exec) =>\n          !exec.pendingRemoval && !exec.hasActiveShuffle && !exec.decommissioning}\n        .filter { case (_, exec) =>\n          val deadline = exec.timeoutAt"
   }
 ]

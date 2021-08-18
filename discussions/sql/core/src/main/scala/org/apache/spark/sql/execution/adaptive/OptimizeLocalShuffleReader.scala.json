@@ -20,5 +20,49 @@
     "commit" : "b4b6b15b8841bc6e9e2452861db74440e5dcbcd2",
     "line" : 22,
     "diffHunk" : "@@ -1,1 +87,91 @@      (0 until 1).flatMap { _ =>\n        (splitPoints :+ numMappers).sliding(2).map {\n          case Seq(start, end) => CoalescedMapperPartitionSpec(start, end, numReducers)\n        }\n      }"
+  },
+  {
+    "id" : "b554f62a-d3fc-409e-a36a-5d8fcd4cf334",
+    "prId" : 29307,
+    "prUrl" : "https://github.com/apache/spark/pull/29307#pullrequestreview-458905988",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7efa1fb9-168d-4aba-a3ae-74fadd997255",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "This skips 0 partitions case, right?",
+        "createdAt" : "2020-07-31T03:37:47Z",
+        "updatedAt" : "2020-07-31T04:59:45Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "53f3bde3-8945-4ebd-b26e-9b0e4fded8e5",
+        "parentId" : "7efa1fb9-168d-4aba-a3ae-74fadd997255",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "yea, otherwise we will hit\r\n```\r\nval splitPoints = if (numMappers == 0) {\r\n  Seq.empty\r\n} else ...\r\n```\r\nwhich creates a local reader with 0 partitions.",
+        "createdAt" : "2020-07-31T04:15:18Z",
+        "updatedAt" : "2020-07-31T04:59:45Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f89880bb-08c2-4ad4-a770-f9de612da491",
+        "parentId" : "7efa1fb9-168d-4aba-a3ae-74fadd997255",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "We should be able to turn the `if` into `assert`, but I'd like to only do it in master to be safe.",
+        "createdAt" : "2020-07-31T04:16:00Z",
+        "updatedAt" : "2020-07-31T04:59:45Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2ae792bcce7ad8e806c06a79a7f20c04af253170",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +141,145 @@  def canUseLocalShuffleReader(plan: SparkPlan): Boolean = plan match {\n    case s: ShuffleQueryStageExec =>\n      s.shuffle.canChangeNumPartitions && s.mapStats.isDefined\n    case CustomShuffleReaderExec(s: ShuffleQueryStageExec, partitionSpecs) =>\n      s.shuffle.canChangeNumPartitions && s.mapStats.isDefined && partitionSpecs.nonEmpty"
   }
 ]

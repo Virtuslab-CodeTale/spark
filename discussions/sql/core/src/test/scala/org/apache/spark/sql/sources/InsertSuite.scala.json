@@ -31,5 +31,38 @@
     "commit" : "68fd13176673f2b4fbcec54661fd7dcf8e900e39",
     "line" : 14,
     "diffHunk" : "@@ -1,1 +952,956 @@  }\n\n  test(\"SPARK-35106: insert overwrite with custom partition path\") {\n    withTempPath { path =>\n      withTable(\"t\") {"
+  },
+  {
+    "id" : "159441e3-a26e-4a42-bcad-90e64ff56e96",
+    "prId" : 29316,
+    "prUrl" : "https://github.com/apache/spark/pull/29316#pullrequestreview-488786391",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d0cf0b61-ea4e-44ad-a1b0-77752ec4b185",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "So the partition column can be empty string if it's dynamic. Shall we convert the empty string/null in partition spec to `__HIVE_DEFAULT_PARTITION__` before calling `listPartitions`/`loadPartition`?",
+        "createdAt" : "2020-09-15T14:17:50Z",
+        "updatedAt" : "2020-09-16T08:07:57Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "56db93a4-3804-409d-8d62-5ea455fdc592",
+        "parentId" : "d0cf0b61-ea4e-44ad-a1b0-77752ec4b185",
+        "authorId" : "8de20372-3c43-4f6b-838b-45ccb852019b",
+        "body" : "Generally speaking, it is meaningless for the partition value to be empty, so the static partition value is not allowed to be empty.\r\nDynamic partition may be that the user does not know that the partition field is null or empty, and finally wrote the `__HIVE_DEFAULT_PARTITION__` partition.\r\n\r\n`listPartitions`\r\n```sql\r\nspark-sql> show partitions inserttable ;\r\npart1=1/part2=__HIVE_DEFAULT_PARTITION__\r\nTime taken: 0.2 seconds, Fetched 1 row(s)\r\nspark-sql> desc formatted inserttable partition(part1='1',part2='');\r\nError in query: Partition spec is invalid. The spec ([part1=1, part2=]) contains an empty partition column value;\r\nspark-sql> desc formatted inserttable partition(part1='1',part2='__HIVE_DEFAULT_PARTITION__');\r\ncol_name\tdata_type\tcomment\r\n...\r\nTime taken: 0.348 seconds, Fetched 27 row(s)\r\n```\r\nThe partition value the user sees is `__HIVE_DEFAULT_PARTITION__`, so the user will not specify the partition value empty to query the partition details.\r\n\r\n`loadPartition`\r\nBecause in `DynamicPartitionDataWriter#partitionPathExpression`, the partition value will be null or emtpy converted to `__HIVE_DEFAULT_PARTITION__`, so it can be executed successfully without the need to increase early conversion.\r\n\r\n\r\n\r\n\r\n",
+        "createdAt" : "2020-09-15T15:08:39Z",
+        "updatedAt" : "2020-09-16T08:07:57Z",
+        "lastEditedBy" : "8de20372-3c43-4f6b-838b-45ccb852019b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "76acc0751b08fe2112b3538de0e25b57e67dc050",
+    "line" : 23,
+    "diffHunk" : "@@ -1,1 +886,890 @@      sql(\"INSERT INTO TABLE insertTable PARTITION(part1='1', part2='2') SELECT 1\")\n      sql(\"INSERT INTO TABLE insertTable PARTITION(part1='1', part2) SELECT 1 ,'2' AS part2\")\n      sql(\"INSERT INTO TABLE insertTable PARTITION(part1='1', part2) SELECT 1 ,'' AS part2\")\n    }\n  }"
   }
 ]

@@ -42,5 +42,60 @@
     "commit" : "7e51f35580db72fda11153d76caf232b83e617cd",
     "line" : 381,
     "diffHunk" : "@@ -1,1 +766,770 @@        WithField(\"a2\", UpdateFields(GetStructField('a1, 0), Seq(DropField(\"b3\")))),\n        WithField(\"a2\", UpdateFields(GetStructField('a1, 0), Seq(DropField(\"b3\"), DropField(\"c3\"))))\n      )).as(\"a1\"))\n\n    checkRule(query, expected)"
+  },
+  {
+    "id" : "3557a711-d655-4061-96b1-19f02ea82055",
+    "prId" : 29322,
+    "prUrl" : "https://github.com/apache/spark/pull/29322#pullrequestreview-468826429",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "bf3b20e6-64c0-479c-bc1d-33d697f152ee",
+        "parentId" : null,
+        "authorId" : "6fc88871-fca6-485c-a47e-5e17709c7b68",
+        "body" : "@cloud-fan sorry about this but I've introduced a pretty bad bug in this PR. \r\nThis test is wrong; `query4` should actually NOT equal to `expected`.\r\nThe optimizer rule needs to be improved. \r\nAs a result of this bug, users will get incorrect results in scenarios like the following: \r\n```\r\nsql(\"SELECT named_struct('a', 1, 'b', 2) struct_col\")\r\n.select($\"struct_col\".dropFields(\"a\").getField(\"b\").as(\"b\"))\r\n.show(false)\r\n\r\n// currently returns this: \r\n+---+\r\n|b  |\r\n+---+\r\n|1  |\r\n+---+\r\n\r\n\r\n// when in fact it should return this: \r\n+---+\r\n|b  |\r\n+---+\r\n|2  |\r\n+---+\r\n```\r\nI'm working on the code to fix this. Just trying to make sure I have all the edge cases covered before I submit a PR, hopefully by the end of the weekend.\r\n",
+        "createdAt" : "2020-08-15T18:47:36Z",
+        "updatedAt" : "2020-08-15T18:47:36Z",
+        "lastEditedBy" : "6fc88871-fca6-485c-a47e-5e17709c7b68",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cd0acf75-81f7-469e-b020-3f83914afeee",
+        "parentId" : "bf3b20e6-64c0-479c-bc1d-33d697f152ee",
+        "authorId" : "6fc88871-fca6-485c-a47e-5e17709c7b68",
+        "body" : "@cloud-fan I'm afraid I have to recommend we revert the changes in this PR from master. \r\nThere is another correctness issue I've discovered which exists even in our initial `withField` implementation:\r\n```\r\nsql(\"SELECT CAST(NULL AS struct<a:int,b:int>) struct_col\")\r\n.select($\"struct_col\".withField(\"d\", lit(4)).getField(\"d\").as(\"d\"))\r\n\r\n// currently returns this\r\n+---+\r\n|d  |\r\n+---+\r\n|4  |\r\n+---+\r\n\r\n// when in fact it should return this: \r\n+----+\r\n|d   |\r\n+----+\r\n|null|\r\n+----+\r\n```\r\nI'd like to get `withField` right before coming back to `dropFields`. \r\nIf that sounds good to you, here is the order of PRs I propose: \r\n1. Revert `dropFields` changes immediately\r\n2. Fix the above issue in `withField` (the real issue is in the optimizer rule) through another PR asap\r\n3. Figure out how to implement `dropFields` in another PR in the future. I think I have to go back to the drawing board for this one . The combination of requirements (return null for null input struct, allow nested API calls, allow users to arbitrarily mix `dropFields` and `withField` and `getField` in the same query and still generate reasonably well-optimized physical plans in a timely basis) is making for a slightly trickier programming exercise than I anticipated and needs a more robust testing strategy.  \r\n\r\nPlease let me know your thoughts. ",
+        "createdAt" : "2020-08-17T02:12:18Z",
+        "updatedAt" : "2020-08-17T02:12:54Z",
+        "lastEditedBy" : "6fc88871-fca6-485c-a47e-5e17709c7b68",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ccb84688-6dc5-46cd-936c-b23ec643d036",
+        "parentId" : "bf3b20e6-64c0-479c-bc1d-33d697f152ee",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "thanks for catching it! I've reverted it.",
+        "createdAt" : "2020-08-17T05:19:46Z",
+        "updatedAt" : "2020-08-17T05:19:46Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ea069c3e-3877-4f42-8067-1696f89a3a23",
+        "parentId" : "bf3b20e6-64c0-479c-bc1d-33d697f152ee",
+        "authorId" : "6fc88871-fca6-485c-a47e-5e17709c7b68",
+        "body" : "Thanks, I've filed a JIRA for the `withField` + `getField` bug [here](https://issues.apache.org/jira/browse/SPARK-32641) so we don't lose visibility on it. \r\nI intend to work on it over the weekend. ",
+        "createdAt" : "2020-08-17T20:55:38Z",
+        "updatedAt" : "2020-08-17T20:55:38Z",
+        "lastEditedBy" : "6fc88871-fca6-485c-a47e-5e17709c7b68",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2b0ac348c9ab5854a37e246a5c498d05095c103c",
+    "line" : 27,
+    "diffHunk" : "@@ -1,1 +471,475 @@    val query4 = testStructRelation.select(GetStructField(UpdateFields('struct1, DropField(\"a\") ::\n      WithField(\"a\", Literal(1)) :: Nil), 0, None) as \"outerAtt\")\n    val expected = testStructRelation.select(GetStructField('struct1, 0, None) as \"outerAtt\")\n\n    Seq(query1, query2, query3, query4).foreach {"
   }
 ]

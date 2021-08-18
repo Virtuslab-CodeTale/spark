@@ -42,5 +42,390 @@
     "commit" : "56b7bca38d9952484ef1030a2a2058d97169c223",
     "line" : 17,
     "diffHunk" : "@@ -1,1 +764,768 @@            try {\n              growAndRehash();\n            } catch (OutOfMemoryError oom) {\n              canGrowArray = false;\n            }"
+  },
+  {
+    "id" : "6dd3f668-4d5c-44cf-b3be-dfa8fca4cb6a",
+    "prId" : 29342,
+    "prUrl" : "https://github.com/apache/spark/pull/29342#pullrequestreview-466168209",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "381e383c-1aae-4e02-816e-21b2601b504f",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "nit: `assert isDefined;`",
+        "createdAt" : "2020-08-12T07:29:32Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7f462217-b987-4f46-8dce-02010e89dbdd",
+        "parentId" : "381e383c-1aae-4e02-816e-21b2601b504f",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@cloud-fan - I am following other code in this file. I prefer to keep it as it is for consistency in this file, unless we want to change it strongly.",
+        "createdAt" : "2020-08-12T18:28:40Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "526709b73b87687f48f68486b9c8c7be0866291f",
+    "line" : 77,
+    "diffHunk" : "@@ -1,1 +668,672 @@     */\n    public int getKeyIndex() {\n      assert (isDefined);\n      return pos;\n    }"
+  },
+  {
+    "id" : "4411f6eb-4c7e-4df9-8a13-ad90e055c44f",
+    "prId" : 29342,
+    "prUrl" : "https://github.com/apache/spark/pull/29342#pullrequestreview-467005565",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2f253606-d3d7-40e3-9975-965dc268a152",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "it's the `max number of key index` or `max key index`?  The key index is not contiguous when the `BytesToBytesMap` is not full, e.g. `1,2,3,7, ...`, and I think `max key index` is more correct.",
+        "createdAt" : "2020-08-13T09:10:06Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6ab4b7c3-db51-4247-8fe8-1d93bfdcd90f",
+        "parentId" : "2f253606-d3d7-40e3-9975-965dc268a152",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@cloud-fan - the key index is 0-index-based dis-contiguous, e.g. `0, 1, 2, 3, 7, ...`. The allowed key index value is `[0, longArray.size() / 2 - 1]`. So if we want this method to be `max key index`, we should change to return `(int) (longArray.size() / 2 - 1)`, and we need to change `ShuffledHashJoinExec.fullOuterJoinWithUniqueKey.matchedKeys` to be `new BitSet(hashedRelation.maxKeysIndex + 1)`. Do you think it's worth to making the change here?\r\n\r\nCurrently this is `max number of key index`, which is `(int) (longArray.size() / 2)`, and this looks correct to me. I added one comment for range of allowed key index value. Does it look better?",
+        "createdAt" : "2020-08-13T17:59:02Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "526709b73b87687f48f68486b9c8c7be0866291f",
+    "line" : 58,
+    "diffHunk" : "@@ -1,1 +483,487 @@\n  /**\n   * The maximum number of allowed keys index.\n   *\n   * The value of allowed keys index is in the range of [0, maxNumKeysIndex - 1]."
+  },
+  {
+    "id" : "84da2e03-265f-4fc0-8a8f-4e4f8be8da41",
+    "prId" : 29342,
+    "prUrl" : "https://github.com/apache/spark/pull/29342#pullrequestreview-467157414",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d00726df-0498-4fb4-9901-469cf5ca91b7",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Should there be any bounds check done on `numRecords` to ensure that keyIndex won't wrap around ? Or is this tooo internal an iterator to care about this ? \r\n\r\nBasically keyIndex can grow beyond the longArray.size() if numRecords is sufficiently big ? ",
+        "createdAt" : "2020-08-13T16:46:51Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c3a0e80c-653b-4022-9212-14a1707b9e64",
+        "parentId" : "d00726df-0498-4fb4-9901-469cf5ca91b7",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "> Basically keyIndex can grow beyond the longArray.size() if numRecords is sufficiently big ?\r\n\r\n@agrawaldevesh - no. If that happens, then there's a bug in `BytesToBytesMap` and we need to fail loudly anyway. I intentionally avoid bound checking for every key probing to avoid doing extra unnecessary work for saving CPU. But if others also think we should add that, I can add bound check too.",
+        "createdAt" : "2020-08-13T18:42:51Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "363115cd-0115-4624-a87e-b821b0cd86b4",
+        "parentId" : "d00726df-0498-4fb4-9901-469cf5ca91b7",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Obviously you would do the bound checking in the constructor of this iterator and not per row. ",
+        "createdAt" : "2020-08-13T20:26:15Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "192924b1-673d-4938-a5e3-9f213dcc68fa",
+        "parentId" : "d00726df-0498-4fb4-9901-469cf5ca91b7",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@agrawaldevesh - sorry if we are not in the same page. I am referring to the check of\r\n\r\n```\r\nkeyIndex < longArray.size() / 2\r\n```\r\n\r\nWhat's the checking on your mind? how do you do the bound checking in the constructor?",
+        "createdAt" : "2020-08-13T20:44:08Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7999d44b-fa4a-41d5-9851-32a184109ce1",
+        "parentId" : "d00726df-0498-4fb4-9901-469cf5ca91b7",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "I don't have strong preferences for checking of `keyIndex`. I was more referring to making sure numRecords <= numValues. I think if we guarantee that, then keyIndex shouldn't grow beyond longArray.size().\r\n\r\nI also think that the bound check may not be relatively expensive compared to the `taskMemoryManager.getPage(fullKeyAddress)` call buried inside of Location.with. That should be pretty memory bound.  ",
+        "createdAt" : "2020-08-13T21:06:00Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9d3a43eb-78d7-47d3-a2a9-1448735a07e1",
+        "parentId" : "d00726df-0498-4fb4-9901-469cf5ca91b7",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@agrawaldevesh - I see, and I got your point now. basically you are suggesting:\r\n\r\n```\r\nprivate MapIteratorWithKeyIndex() {\r\n  this.numRecords = numValues;\r\n  this.loc = new Location();\r\n}\r\n```\r\n\r\nright?",
+        "createdAt" : "2020-08-13T21:12:14Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bc1020cd-7da9-499b-a328-50ecd4928ac7",
+        "parentId" : "d00726df-0498-4fb4-9901-469cf5ca91b7",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Exactly, that way we know that numRecords is 'safe' and shouldn't overflow keyIndex",
+        "createdAt" : "2020-08-13T21:37:09Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "07a0c088-54c6-4434-93a2-3c94b82849ae",
+        "parentId" : "d00726df-0498-4fb4-9901-469cf5ca91b7",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@agrawaldevesh - sure, updated.",
+        "createdAt" : "2020-08-13T21:55:15Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "526709b73b87687f48f68486b9c8c7be0866291f",
+    "line" : 37,
+    "diffHunk" : "@@ -1,1 +462,466 @@        }\n        loc.with(keyIndex, 0, true);\n        keyIndex++;\n      }\n      numRecords--;"
+  },
+  {
+    "id" : "5285ac08-4865-4272-8675-fe14f298d07d",
+    "prId" : 29342,
+    "prUrl" : "https://github.com/apache/spark/pull/29342#pullrequestreview-467157414",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "790da16a-9938-4528-bbd6-53f0d27df462",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "I am wondering if we MUST introduce a new terminology `keyIndex` in this class ? Is `pos` equivalent to `keyIndex` ? I think it's betters to stick to the existing concepts in the class unless it is quite a stretch.",
+        "createdAt" : "2020-08-13T16:53:06Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "82060198-5f01-438e-aed1-e30c15ffeba0",
+        "parentId" : "790da16a-9938-4528-bbd6-53f0d27df462",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@agrawaldevesh - are you suggesting a series naming of `MapIteratorWithPos`, `getPos`, `maxNumPos`, `iteratorWithPos`? I feel this is more confusing than `KeyIndex`, and we anyway need some `KeyIndex` notion in `HashedRelation` and `ShuffledHashJoinExec`. How about just leaving it as `keyIndex` here? ",
+        "createdAt" : "2020-08-13T18:40:29Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6d417c6d-98b0-4057-95d3-c6b7d466cdda",
+        "parentId" : "790da16a-9938-4528-bbd6-53f0d27df462",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "There is no existing mention of keyIndex in neither HashedRelation nor ShuffledHashJoinExec. That is a term that this PR is introducing and thus either this PR should clearly define them or stick to consistent nomenclature (which sounds hard to do, I agree!).\r\n\r\nI am okay with the words keyIndex/valueIndex if you can please define what they clearly mean somewhere. How about defining them in BytesToBytesMap ? \r\n\r\nFor example: \r\nkeyIndex: The index in longArray where the key is stored\r\nvalueIndex: The index of the tuple in the chain of tuples having the same key. That is the a certain key is found thrice, the value indices of its tuples will be 0, 1, and 2. Note that value indices of tuples with different keys are incomparable.\r\n\r\n(Actually I don't fully understand the concept of valueIndex still :-P, so this is my \"guess\" of what it means).\r\n\r\nIs the meaning of keyIndex and valueIndex the same in HashedRelation and other places ?",
+        "createdAt" : "2020-08-13T20:23:30Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2d477f83-ad90-4b8f-b7a4-b2d45a899141",
+        "parentId" : "790da16a-9938-4528-bbd6-53f0d27df462",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@agrawaldevesh - I got your motivation and thank you for concrete suggestion.\r\n\r\nFor `keyIndex` explanation comment I will add here.\r\nFor `valueIndex` explanation comment I will add in `ShuffledHashJoin.fullOuterJoinWithNonUniqueKey()`, as that is the place to create/use value index.\r\n\r\nDoes it sound good? Thanks",
+        "createdAt" : "2020-08-13T20:51:11Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "62a9509f-dd49-44b4-8972-8933b3cfa873",
+        "parentId" : "790da16a-9938-4528-bbd6-53f0d27df462",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "SGTM",
+        "createdAt" : "2020-08-13T21:07:48Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dd7c63b5-6e6d-4d64-901f-942e2296f98f",
+        "parentId" : "790da16a-9938-4528-bbd6-53f0d27df462",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@agrawaldevesh - sure. updated.",
+        "createdAt" : "2020-08-13T21:54:33Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "526709b73b87687f48f68486b9c8c7be0866291f",
+    "line" : 15,
+    "diffHunk" : "@@ -1,1 +440,444 @@     * The index in `longArray` where the key is stored.\n     */\n    private int keyIndex = 0;\n\n    private int numRecords;"
+  },
+  {
+    "id" : "c2cea868-3d0d-4133-95aa-de1c0314c3c5",
+    "prId" : 29342,
+    "prUrl" : "https://github.com/apache/spark/pull/29342#pullrequestreview-467005565",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ce8df141-5169-4f12-8eef-f3d6ee058552",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "See comment above about possibility eliminating this notion of keyIndex and sticking with pos.",
+        "createdAt" : "2020-08-13T16:53:34Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0fc39714-e42e-414d-b0e3-553ceb819265",
+        "parentId" : "ce8df141-5169-4f12-8eef-f3d6ee058552",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@agrawaldevesh - replied back in above comment, thanks.",
+        "createdAt" : "2020-08-13T18:43:05Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "526709b73b87687f48f68486b9c8c7be0866291f",
+    "line" : 76,
+    "diffHunk" : "@@ -1,1 +667,671 @@     * Returns index for key.\n     */\n    public int getKeyIndex() {\n      assert (isDefined);\n      return pos;"
+  },
+  {
+    "id" : "8c45ae21-e2bc-4b38-902a-5aed9fbd0fe2",
+    "prId" : 29342,
+    "prUrl" : "https://github.com/apache/spark/pull/29342#pullrequestreview-467117255",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2db33724-9639-445e-8409-588d07f0ffb1",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "This is the only instantiation of MapIteratorWithKeyIndex. How about adding a default constructor with these args ? That would alleviate my questions around the bound checking of numRecords.",
+        "createdAt" : "2020-08-13T20:27:30Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0204bb99-3692-4b3d-81a9-efddec2bea12",
+        "parentId" : "2db33724-9639-445e-8409-588d07f0ffb1",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@agrawaldevesh - I want to double check our understanding of bound checking per comment above, before making this change. Thanks.",
+        "createdAt" : "2020-08-13T20:45:54Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "526709b73b87687f48f68486b9c8c7be0866291f",
+    "line" : 53,
+    "diffHunk" : "@@ -1,1 +478,482 @@   * the behavior of the returned iterator is undefined.\n   */\n  public MapIteratorWithKeyIndex iteratorWithKeyIndex() {\n    return new MapIteratorWithKeyIndex();\n  }"
+  },
+  {
+    "id" : "a78c9311-85eb-41f7-8aab-0199830d7933",
+    "prId" : 29342,
+    "prUrl" : "https://github.com/apache/spark/pull/29342#pullrequestreview-467373943",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "aaf6115c-414f-4897-8950-4226b5d24f4a",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "maybe `maxAllowedKeyIndex` is more accurate.\r\n\r\ne.g. it's possible that the max key index is 90 while the `longArray` can hold 100 keys. So the `maxAllowedKeyIndex` is 100 not 90.",
+        "createdAt" : "2020-08-14T07:43:06Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2a86e851-58ad-49ef-b713-f00ef748e65e",
+        "parentId" : "aaf6115c-414f-4897-8950-4226b5d24f4a",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "nvm, I think `maxNumKeysIndex` is also ok, because index starts from  0 and increases by 1.",
+        "createdAt" : "2020-08-14T07:50:18Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "526709b73b87687f48f68486b9c8c7be0866291f",
+    "line" : 62,
+    "diffHunk" : "@@ -1,1 +487,491 @@   * The value of allowed keys index is in the range of [0, maxNumKeysIndex - 1].\n   */\n  public int maxNumKeysIndex() {\n    return (int) (longArray.size() / 2);\n  }"
+  },
+  {
+    "id" : "0ae8041a-ed83-49f8-867b-80b98879f37d",
+    "prId" : 29342,
+    "prUrl" : "https://github.com/apache/spark/pull/29342#pullrequestreview-467932618",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "062e1ee0-d6eb-40ae-9ff9-8584f702cdbc",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Looks like `keyIndex` is not exposed outside this map iterator? then maybe call it `MapIteratorPreserveKeyIndex`?",
+        "createdAt" : "2020-08-14T20:00:39Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "15257cca-64af-45a9-84b1-0c1e86c2fc45",
+        "parentId" : "062e1ee0-d6eb-40ae-9ff9-8584f702cdbc",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@viirya - you can think of `Location` returned by `MapIteratorWithKeyIndex.next()` indirectly exposes the `keyIndex`. I don't have a strong preference here, @cloud-fan WDYT here?",
+        "createdAt" : "2020-08-14T20:39:54Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "00a92019-0cd2-4b13-8bb3-512bbf337bdb",
+        "parentId" : "062e1ee0-d6eb-40ae-9ff9-8584f702cdbc",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "I don't have a preference, too, but the current one looks okay to me.",
+        "createdAt" : "2020-08-15T00:46:08Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "526709b73b87687f48f68486b9c8c7be0866291f",
+    "line" : 10,
+    "diffHunk" : "@@ -1,1 +435,439 @@   * (See `UnsafeHashedRelation` for example of usage).\n   */\n  public final class MapIteratorWithKeyIndex implements Iterator<Location> {\n\n    /**"
   }
 ]

@@ -42,5 +42,236 @@
     "commit" : "f699118df05e25193a81c9bedce5b4eb10023079",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +751,755 @@\n      // LEFT SEMI JOIN without bound condition does not spill\n      assertNotSpilled(sparkContext, \"left semi join\") {\n        checkAnswer(\n          sql(\"SELECT * FROM testData LEFT SEMI JOIN testData2 ON key = a WHERE key = 2\"),"
+  },
+  {
+    "id" : "7f250606-da44-4de5-929d-1ec65b72c01c",
+    "prId" : 29342,
+    "prUrl" : "https://github.com/apache/spark/pull/29342#pullrequestreview-466168209",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "cbab678e-34bb-4a0e-845e-c6615282d34d",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "I am curious if it might be possible to unconditionally enable this optimization for _all_ full outer joins to make sure that this optimization unconditionally works ? A similar approach was taken in PR #29104, if you search for `CONFIG_DIM1 spark.sql.optimizeNullAwareAntiJoin=true` in all `.sql` files like `group-by-filter.sql` for example. ",
+        "createdAt" : "2020-08-08T07:05:02Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "621aabca-2d36-4ab7-822f-c01dec607062",
+        "parentId" : "cbab678e-34bb-4a0e-845e-c6615282d34d",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@agrawaldevesh - I actually found [there are existing tests for comparing BHJ/SHJ/SMJ already in that test suite](https://github.com/apache/spark/blob/master/sql/core/src/test/resources/sql-tests/inputs/subquery/in-subquery/in-joins.sql#L8-L10). But the config value for SHJ is wrong which should not be spark.sql.autoBroadcastJoinThreshold=-1. Created a followup JIRA (https://issues.apache.org/jira/browse/SPARK-32577) to fix it.",
+        "createdAt" : "2020-08-10T02:12:35Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1704c427-7e13-4217-be3a-0c363a487b31",
+        "parentId" : "cbab678e-34bb-4a0e-845e-c6615282d34d",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "I didn't fully follow: Do you mean that until https://issues.apache.org/jira/browse/SPARK-32577 is fixed we don't have very high confidence in this optimization truly producing the same results as without it ?\r\n\r\nAll I am trying to ascertain is whether this optimization is safe in all cases: Would the results produced for full outer join be identical both with and without this optimization ? My understanding is that currently, this is only validated by the above scala unit tests that have been newly added, but it hasn't been fully validated for all full-outer-join scenarios due to https://issues.apache.org/jira/browse/SPARK-32577. Is that an accurate understanding ?",
+        "createdAt" : "2020-08-10T02:51:33Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4d252b9d-4430-49f4-9da1-6c708a1b007b",
+        "parentId" : "cbab678e-34bb-4a0e-845e-c6615282d34d",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "> Do you mean that until https://issues.apache.org/jira/browse/SPARK-32577 is fixed we don't have very high confidence in this optimization truly producing the same results as without it ?\r\n\r\nNo. I am saying that there are existing tests for comparing BHJ/SHJ/SMJ per my last comment link, but it does not trigger SHJ as expected due to wrong config. But that can be fixed separately as that is to fix a regression in unit test.\r\n\r\nTo enable/disable SHJ for bulk of test queries is not very easy, as SHJ depending on [carefully tuning of threshold config](https://github.com/apache/spark/pull/29342#discussion_r467167531), there's no way to disable/enable SHJ for a query with true/false config. So to validate SHJ for all test queries under `sql-tests`, I need to tune the config for every join queries, which I think it would involve too much work. In addition, I noticed for newly added features, we rarely use `sql-tests` for validation by enabling/disabling feature, but mostly adding unit test. Wondering how do you think the added unit test in `JoinSuite.scala`?",
+        "createdAt" : "2020-08-10T03:38:16Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c2125225-71e6-4bb1-b369-47e58e5e2988",
+        "parentId" : "cbab678e-34bb-4a0e-845e-c6615282d34d",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Thanks for noticing the lack in the test coverage and explaining this to me ! I understand this better now.\r\n\r\nBut you see where I am coming from :-) I am simply concerned about data corruption (more precisely wrong result computation). \r\n\r\nIdeally, we should first fix the test, land that fix and then retest this PR with the tests fixed. It seems like it shouldn't be too hard, nor cause any merge conflicts, but it would delay landing this PR.\r\n\r\nAs a compromise, may I please suggest that:\r\n- Make that test change as mentioned in SPARK-32577 locally and run the sql tests locally to verify that they work.\r\n- Run JoinSuite with code coverage enabled and ensure that all of the changed code paths in this PR are covered. \r\n\r\nI recently worked on a join related feature and I was humbled by how many bugs I was able to make around nulls, strings and its relationship with downstream union queries :-D\r\n\r\nI think the tests in JoinSuite are good, but I am more concerned about the unknown unknowns and any regressions. And interactions of join with other operators like aggregations and unions.\r\n\r\nThis is not a blocker at all !. Just due diligence and paranoia.",
+        "createdAt" : "2020-08-10T06:35:17Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ef91314d-dbe6-4670-bb23-49a3ae562871",
+        "parentId" : "cbab678e-34bb-4a0e-845e-c6615282d34d",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@agrawaldevesh - sure. I will follow your compromised suggestion here. Please see the previous comment for code coverage screenshot. thanks.",
+        "createdAt" : "2020-08-12T21:56:08Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "526709b73b87687f48f68486b9c8c7be0866291f",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +1190,1194 @@  }\n\n  test(\"SPARK-32399: Full outer shuffled hash join\") {\n    val inputDFs = Seq(\n      // Test unique join key"
+  },
+  {
+    "id" : "06eeff20-95be-41a8-81a6-cc3d33518a9f",
+    "prId" : 29342,
+    "prUrl" : "https://github.com/apache/spark/pull/29342#pullrequestreview-468083562",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "474b9146-73bc-4d7b-9e6f-b01841660dc4",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "How about uncorrelated nulls too : 'i % 2 == 0' on the left and say 'i % 3 == 0'",
+        "createdAt" : "2020-08-10T06:28:34Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "67363e04-b151-439e-984a-87d3c79769a9",
+        "parentId" : "474b9146-73bc-4d7b-9e6f-b01841660dc4",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@agrawaldevesh - sure. updated.",
+        "createdAt" : "2020-08-12T21:48:35Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "be34fa8b-3f26-4cb2-b504-e16538d65132",
+        "parentId" : "474b9146-73bc-4d7b-9e6f-b01841660dc4",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "^^^ Pardon me, but this also appears lost. Where is the new test for uncorrelated nulls ? ",
+        "createdAt" : "2020-08-14T21:31:04Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "32bd05a6-d647-47ae-9d1b-28fa5437cb2e",
+        "parentId" : "474b9146-73bc-4d7b-9e6f-b01841660dc4",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@agrawaldevesh - I updated in line 1217 to be `spark.range(30).map(i => if (i % 3 == 0) i else null)` as you suggested. Am I missing anything here?",
+        "createdAt" : "2020-08-14T22:06:48Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8c119d67-05f2-4dc9-b264-740cfd50556e",
+        "parentId" : "474b9146-73bc-4d7b-9e6f-b01841660dc4",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Oh I see you have combined it into the multiple join key code path. \r\n\r\nIs it worth having uncorrelated nulls as a single key code test too ? (like on line 1211)",
+        "createdAt" : "2020-08-14T22:35:46Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ec7ebc54-1779-48d5-b942-66120f4efead",
+        "parentId" : "474b9146-73bc-4d7b-9e6f-b01841660dc4",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@agrawaldevesh - sure, added.",
+        "createdAt" : "2020-08-16T18:23:17Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "526709b73b87687f48f68486b9c8c7be0866291f",
+    "line" : 43,
+    "diffHunk" : "@@ -1,1 +1228,1232 @@        $\"k1\" === $\"k2\"),\n      // Test multiple join keys\n      (spark.range(10).map(i => if (i % 2 == 0) i else null).selectExpr(\n        \"value as k1\", \"cast(value % 5 as short) as k2\", \"cast(value * 3 as long) as k3\"),\n        spark.range(30).map(i => if (i % 3 == 0) i else null).selectExpr("
+  },
+  {
+    "id" : "eb9f2068-e72b-4c19-91d1-c4c25f76d172",
+    "prId" : 29342,
+    "prUrl" : "https://github.com/apache/spark/pull/29342#pullrequestreview-467101240",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "13809108-4241-41a4-8229-97e639f609eb",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "You have used the word 'careful tuning' several times but I am not fully following out of my stupidity: Do you mean that to say that the broadcast threshold should be chosen to be larger than the build side size, so as to NOT trigger a BHJ ? \r\n\r\nPerhaps add a comment above this line to explain to the reader why the configs are chosen the way they are: For example why shuffle-partitions is 2 etc.\r\n\r\nBtw, is it worth testing with shuffle partitions = 1 ?",
+        "createdAt" : "2020-08-10T06:31:20Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f960345f-a021-4e3a-b575-695f96fef8e9",
+        "parentId" : "13809108-4241-41a4-8229-97e639f609eb",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "> You have used the word 'careful tuning' several times but I am not fully following out of my stupidity: Do you mean that to say that the broadcast threshold should be chosen to be larger than the build side size, so as to NOT trigger a BHJ ?\r\n\r\n@agrawaldevesh - shuffled hash join depends on these two configs (broadcast join threshold and number of shuffle partitions), to be enabled. Planner side of logic is [here](https://github.com/apache/spark/blob/master/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/optimizer/joins.scala#L347-L355). Only when one side of join is smaller than (broadcast_join_threshold * number_of_shuffle_partitions), the shuffled hash join can be triggered (another requirement is another side should be 3x larger than this side, code is [here](https://github.com/apache/spark/blob/master/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/optimizer/joins.scala#L365)).\r\n\r\nUpdated with one comment for this.\r\n\r\n\r\n> Btw, is it worth testing with shuffle partitions = 1 ?\r\n\r\nI don't think so, as if there's only one shuffle partition, we should use broadcast hash join instead.",
+        "createdAt" : "2020-08-12T21:55:11Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "73e3a579-d50e-43bc-afbe-b93b587b331a",
+        "parentId" : "13809108-4241-41a4-8229-97e639f609eb",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "The code pointers are helpful ! I am wondering if you could add some \"derivation\" for the use of the magic constant 80 in the code comments ? ",
+        "createdAt" : "2020-08-13T17:51:03Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cebf20de-1736-40f1-bca4-12770f6a2ba9",
+        "parentId" : "13809108-4241-41a4-8229-97e639f609eb",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "> I am wondering if you could add some \"derivation\" for the use of the magic constant 80 in the code comments ?\r\n\r\n@agrawaldevesh - I feel it's hard. It depends on estimated size for the join child and we have multiple test cases here.",
+        "createdAt" : "2020-08-13T19:38:15Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "19487f35-6ed0-40a4-a942-ce88de7b0b7c",
+        "parentId" : "13809108-4241-41a4-8229-97e639f609eb",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Okay fine :-P the assert on line 1234 convinces me that the magic number \"works\". Tricking this thing to use SHJ is hard !.",
+        "createdAt" : "2020-08-13T19:57:49Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "112bc31a-e477-4956-aedd-55b0a46cb596",
+        "parentId" : "13809108-4241-41a4-8229-97e639f609eb",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@agrawaldevesh - yes you feel my pain when crafting this kind of unit test :).",
+        "createdAt" : "2020-08-13T20:20:42Z",
+        "updatedAt" : "2020-08-16T18:24:08Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "526709b73b87687f48f68486b9c8c7be0866291f",
+    "line" : 53,
+    "diffHunk" : "@@ -1,1 +1238,1242 @@        // Set broadcast join threshold and number of shuffle partitions,\n        // as shuffled hash join depends on these two configs.\n        SQLConf.AUTO_BROADCASTJOIN_THRESHOLD.key -> \"80\",\n        SQLConf.SHUFFLE_PARTITIONS.key -> \"2\") {\n        val smjDF = df1.join(df2, joinExprs, \"full\")"
   }
 ]

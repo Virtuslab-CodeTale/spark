@@ -42,5 +42,115 @@
     "commit" : "bbaae3ed9b96ca517ec5435838ac37feb578c959",
     "line" : 40,
     "diffHunk" : "@@ -1,1 +152,156 @@            // maximum allowed common outputs.\n            if (!hasCommonNonDeterministic(fields, aliases) &&\n                !moreThanMaxAllowedCommonOutput(fields, aliases)) {\n              val substitutedFields =\n                fields.map(substitute(aliases)).asInstanceOf[Seq[NamedExpression]]"
+  },
+  {
+    "id" : "2ad5c226-04c3-40d2-b271-c822090e5d64",
+    "prId" : 29304,
+    "prUrl" : "https://github.com/apache/spark/pull/29304#pullrequestreview-459613992",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "00c9b975-81d4-4f8c-80e6-c2e68d13e422",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "nit format; how about this?\r\n```\r\n        val joinKeys = ArrayBuffer[(Expression, Expression)]()\r\n\r\n        // All predicate must match pattern condition: Or(EqualTo(a=b), IsNull(EqualTo(a=b)))\r\n        val allMatch = predicates.forall {\r\n          case Or(e @ EqualTo(leftExpr: Expression, rightExpr: Expression),\r\n              IsNull(e2 @ EqualTo(_, _))) if e.semanticEquals(e2) =>\r\n            if (canEvaluate(leftExpr, left) && canEvaluate(rightExpr, right)) {\r\n              joinKeys += ((leftExpr, rightExpr))\r\n              true\r\n            } else if (canEvaluate(leftExpr, right) && canEvaluate(rightExpr, left)) {\r\n              joinKeys += ((rightExpr, leftExpr))\r\n              true\r\n            } else {\r\n              false\r\n            }\r\n          case _ =>\r\n            false\r\n        }\r\n\r\n        if (allMatch) {\r\n          Some(joinKeys.unzip)\r\n        } else {\r\n          None\r\n        }\r\n```",
+        "createdAt" : "2020-08-01T14:26:44Z",
+        "updatedAt" : "2020-08-04T22:55:52Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "95b2eb7a-0475-4bf6-8716-7022833aaaf7",
+        "parentId" : "00c9b975-81d4-4f8c-80e6-c2e68d13e422",
+        "authorId" : "cce1c782-0596-44b6-8b99-6b77d2cca53c",
+        "body" : "updated",
+        "createdAt" : "2020-08-02T01:48:00Z",
+        "updatedAt" : "2020-08-04T22:55:52Z",
+        "lastEditedBy" : "cce1c782-0596-44b6-8b99-6b77d2cca53c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "054581ae1d8f6148db7ec952ac23e5668ff9dc75",
+    "line" : 54,
+    "diffHunk" : "@@ -1,1 +413,417 @@\n        // All predicate must match pattern condition: Or(EqualTo(a=b), IsNull(EqualTo(a=b)))\n        val allMatch = predicates.forall {\n          case Or(e @ EqualTo(leftExpr: Expression, rightExpr: Expression),\n              IsNull(e2 @ EqualTo(_, _))) if e.semanticEquals(e2) =>"
+  },
+  {
+    "id" : "4b6fe113-1230-4ecc-a072-9936135c27f0",
+    "prId" : 29304,
+    "prUrl" : "https://github.com/apache/spark/pull/29304#pullrequestreview-459663332",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "37365877-7531-4961-b713-d518adf91ea0",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "hm, I think its better to add some fine-grained tests for this extractor. WDYT?",
+        "createdAt" : "2020-08-02T12:05:01Z",
+        "updatedAt" : "2020-08-04T22:55:52Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0384d5b9-7418-447c-a524-f73734340c79",
+        "parentId" : "37365877-7531-4961-b713-d518adf91ea0",
+        "authorId" : "cce1c782-0596-44b6-8b99-6b77d2cca53c",
+        "body" : "agreed, i will add test upon it.",
+        "createdAt" : "2020-08-02T16:54:30Z",
+        "updatedAt" : "2020-08-04T22:55:52Z",
+        "lastEditedBy" : "cce1c782-0596-44b6-8b99-6b77d2cca53c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "054581ae1d8f6148db7ec952ac23e5668ff9dc75",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +394,398 @@}\n\nobject ExtractNullAwareAntiJoinKeys extends JoinSelectionHelper with PredicateHelper {\n\n  // FYI. Extra information about Null Aware Anti Join."
+  },
+  {
+    "id" : "ae1bd537-5ea5-42d8-9f9a-aeaff7f3bdce",
+    "prId" : 29304,
+    "prUrl" : "https://github.com/apache/spark/pull/29304#pullrequestreview-459705011",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3be0c7ae-7ce6-4063-b966-1bd5db78ea2b",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "IIUC this pattern matching depends on the `RewritePredicateSubquery` code:\r\nhttps://github.com/apache/spark/blob/0693d8bbf2942ab96ffe705ef0fc3fe4b0d9ec11/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/optimizer/subquery.scala#L140\r\n\r\nThis is okay now, but I'm a little worried that it does not work well if the `RewritePredicateSubquery` code will be updated; for example, if both attributes are non-nullable in a join condition, we might be able to remove `IsNull(c)`  for optimization in the `RewritePredicateSubquery` rule.",
+        "createdAt" : "2020-08-03T01:11:12Z",
+        "updatedAt" : "2020-08-04T22:55:52Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "46a20b57-3acd-4180-80ae-8b6255fa1155",
+        "parentId" : "3be0c7ae-7ce6-4063-b966-1bd5db78ea2b",
+        "authorId" : "cce1c782-0596-44b6-8b99-6b77d2cca53c",
+        "body" : "yes. the IsNull being removed case is considered, we only do NAAJ optimize with the Or condition still exists.\r\n\r\nBasically, the NAAJ Optimize switch triggered at SparkStrategies, which I think optimizer is done its job. it's save to put this pattern check in physical plan state\r\n\r\n```\r\n// negative hand-written left anti join\r\n      // testData.key nullable false\r\n      // testData2.a nullable false\r\n      // isnull(key = a) isnull(key+1=a) will be optimized to true literal and removed\r\n      joinExec = assertJoin((\r\n        \"SELECT * FROM testData LEFT ANTI JOIN testData3 ON (key = a OR ISNULL(key = a)) \" +\r\n          \"AND (key + 1 = a OR ISNULL(key + 1 = a))\",\r\n        classOf[BroadcastHashJoinExec]))\r\n      assert(!joinExec.asInstanceOf[BroadcastHashJoinExec].isNullAwareAntiJoin)\r\n```",
+        "createdAt" : "2020-08-03T01:39:47Z",
+        "updatedAt" : "2020-08-04T22:55:52Z",
+        "lastEditedBy" : "cce1c782-0596-44b6-8b99-6b77d2cca53c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d4983291-72c2-4847-a551-fe65b0f859c4",
+        "parentId" : "3be0c7ae-7ce6-4063-b966-1bd5db78ea2b",
+        "authorId" : "cce1c782-0596-44b6-8b99-6b77d2cca53c",
+        "body" : "in JoinSuite Line 1209. FYI.",
+        "createdAt" : "2020-08-03T01:40:47Z",
+        "updatedAt" : "2020-08-04T22:55:52Z",
+        "lastEditedBy" : "cce1c782-0596-44b6-8b99-6b77d2cca53c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "054581ae1d8f6148db7ec952ac23e5668ff9dc75",
+    "line" : 56,
+    "diffHunk" : "@@ -1,1 +415,419 @@        val allMatch = predicates.forall {\n          case Or(e @ EqualTo(leftExpr: Expression, rightExpr: Expression),\n              IsNull(e2 @ EqualTo(_, _))) if e.semanticEquals(e2) =>\n            if (canEvaluate(leftExpr, left) && canEvaluate(rightExpr, right)) {\n              joinKeys += ((leftExpr, rightExpr))"
   }
 ]
