@@ -1,0 +1,112 @@
+[
+  {
+    "id" : "c8e0d020-63c9-446b-b042-c7e9e400a0e8",
+    "prId" : 33711,
+    "prUrl" : "https://github.com/apache/spark/pull/33711#pullrequestreview-729196088",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9ad4375f-cf56-4596-bebd-ef159891a4b4",
+        "parentId" : null,
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "`AllTuples` is only interesting when the underlying file scan operator has only 1 bucket. So I think we need have a way to check the scan operator to have only 1 bucket as well.",
+        "createdAt" : "2021-08-11T19:21:16Z",
+        "updatedAt" : "2021-08-11T19:25:45Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bdf532e6-cd80-4965-a607-2885e3f38991",
+        "parentId" : "9ad4375f-cf56-4596-bebd-ef159891a4b4",
+        "authorId" : "764fa38b-fbb0-4c57-955b-77974e2520bd",
+        "body" : "`AllTuples` require a single partition. I don't think the additional check for the number of buckets is required.",
+        "createdAt" : "2021-08-11T20:26:05Z",
+        "updatedAt" : "2021-08-11T20:26:05Z",
+        "lastEditedBy" : "764fa38b-fbb0-4c57-955b-77974e2520bd",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c054be57-81c0-4d64-a081-8dd71041e22e",
+        "parentId" : "9ad4375f-cf56-4596-bebd-ef159891a4b4",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "For a query like below\r\n\r\n```\r\nSELECT SUM(id)\r\nFROM t1\r\n```\r\n\r\nIf table `t1` has more than 1 bucket (say 4 buckets), we can still disable bucket scan, because scan will have 4 RDD partitions/tasks with bucketed scan, and it does not satisfy single partition requirement from `AllTuples`.",
+        "createdAt" : "2021-08-11T20:37:16Z",
+        "updatedAt" : "2021-08-11T20:37:54Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ec73dcc6-6a40-45b9-88ea-3fc26ae9ba02",
+        "parentId" : "9ad4375f-cf56-4596-bebd-ef159891a4b4",
+        "authorId" : "764fa38b-fbb0-4c57-955b-77974e2520bd",
+        "body" : "If you disable bucket scan, then it will not enter the `disableBucketWithInterestingPartition` right?",
+        "createdAt" : "2021-08-11T20:56:36Z",
+        "updatedAt" : "2021-08-11T20:56:36Z",
+        "lastEditedBy" : "764fa38b-fbb0-4c57-955b-77974e2520bd",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9101157a-187e-4640-8ab6-07c185723c93",
+        "parentId" : "9ad4375f-cf56-4596-bebd-ef159891a4b4",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "Actually after a second thought, I think the change here should work. For the query like https://github.com/apache/spark/pull/33711#discussion_r687173621, the query plan when entering this rule, would be:\r\n\r\n```\r\nHashAggregate(keys=[], functions=[sum(id#41)], output=[sum(id)#45L])\r\n+- Exchange SinglePartition, ENSURE_REQUIREMENTS, [id=#66]\r\n   +- HashAggregate(keys=[], functions=[partial_sum(id#41)], output=[sum#48L])\r\n       +- FileScan\r\n```\r\n\r\nSo the bucket scan will be automatically disabled by the rule, because there's a shuffle between `HashAggregate` and `FileScan`.",
+        "createdAt" : "2021-08-11T21:12:22Z",
+        "updatedAt" : "2021-08-11T21:12:23Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1c6f0071-0178-40bb-b185-313ed4f84367",
+        "parentId" : "9ad4375f-cf56-4596-bebd-ef159891a4b4",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "It's flaky to fix this issue in an optimizer rule since this rule can be disabled sometime. Is it better that change the outpt partitioning in `FileSourceScanExec` to `UnknownPartitioning` if the bucket is 1 ?",
+        "createdAt" : "2021-08-12T01:44:51Z",
+        "updatedAt" : "2021-08-12T01:44:52Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "222f86ce-147e-4aaf-8afa-2b817f516cd7",
+        "parentId" : "9ad4375f-cf56-4596-bebd-ef159891a4b4",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "This is a bug of the `DisableUnnecessaryBucketedScan` rule, IIUC",
+        "createdAt" : "2021-08-12T05:53:10Z",
+        "updatedAt" : "2021-08-12T05:53:10Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "47005599-4b54-4a00-bba7-9fd6be7e33ae",
+        "parentId" : "9ad4375f-cf56-4596-bebd-ef159891a4b4",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@ulysses-you - this is a bug in `DisableUnnecessaryBucketedScan` itself. In addition:\r\n\r\n> Is it better that change the outpt partitioning in FileSourceScanExec to UnknownPartitioning if the bucket is 1 ?\r\n\r\nThis will cause regression for some queries, e.g. the aggregation query in https://github.com/apache/spark/pull/33711#discussion_r687173621. An extra shuffle is needed before aggregation, if the output partitioning is changed from `HashPartitioning(id, 1)` to `UnknownPartitioning`. ",
+        "createdAt" : "2021-08-12T19:32:32Z",
+        "updatedAt" : "2021-08-12T19:32:33Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c2a14a4c-2b9a-4a69-be30-8ea5fe2c1c22",
+        "parentId" : "9ad4375f-cf56-4596-bebd-ef159891a4b4",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "ah I see it, thank you @cloud-fan @c21 !",
+        "createdAt" : "2021-08-13T01:32:57Z",
+        "updatedAt" : "2021-08-13T01:32:57Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "266a5f1bedb640b0adfc2a07a0f0cb7d66188c5c",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +121,125 @@  private def hasInterestingPartition(plan: SparkPlan): Boolean = {\n    plan.requiredChildDistribution.exists {\n      case _: ClusteredDistribution | _: HashClusteredDistribution | AllTuples => true\n      case _ => false\n    }"
+  }
+]
