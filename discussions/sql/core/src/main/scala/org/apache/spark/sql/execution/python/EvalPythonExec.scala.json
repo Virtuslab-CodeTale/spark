@@ -174,5 +174,27 @@
     "commit" : "46613dda79fad1173c2f6305f8fefd5fa44b803b",
     "line" : 56,
     "diffHunk" : "@@ -1,1 +167,171 @@        // works under `synchronized(context)`. We might need to consider to improve in the future.\n        // It's a bad idea to hold an implicit lock when calling user's listener because it's\n        // pretty easy to cause surprising deadlock.\n        context.wait(10)\n"
+  },
+  {
+    "id" : "4022c7ce-a62d-4c65-bccd-c1eb13515527",
+    "prId" : 30177,
+    "prUrl" : "https://github.com/apache/spark/pull/30177#pullrequestreview-519294184",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "cf02d7df-19ed-4a62-843d-df59931dd552",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "BTW, one thing I would like to note that this is not a clean shot.\r\n\r\nThis is rather a bandaid fix because the consumption in the iterator is async-ed from the main task thread. So, the close can happen at any point in the upstream, e.g. in the middle of `hasNext`, and it still can cause the same issue.\r\n\r\nTo completely fix this, IMHO, we should sync completely. Then there's no point of having a separate thread to process Python UDFs.\r\n\r\nI think the cause is basically similar with that `input_file_name` due to un-sync between this thread and main thread (see https://github.com/apache/spark/pull/24958#issuecomment-511364075).\r\n\r\nIf there's a better option, it'd be great but I think this fix is good enough (given that I see similar approach in `ContinuousQueuedDataReader`).\r\n\r\nLet me know if I missed something here.",
+        "createdAt" : "2020-10-29T02:51:04Z",
+        "updatedAt" : "2020-10-29T02:51:05Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ac42502576d428325126a38aac8c179dcbc26f88",
+    "line" : 32,
+    "diffHunk" : "@@ -1,1 +150,154 @@\n  override def hasNext: Boolean =\n    !context.isCompleted() && !context.isInterrupted() && iter.hasNext\n\n  override def next(): IN = iter.next()"
   }
 ]

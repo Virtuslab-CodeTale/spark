@@ -97,5 +97,192 @@
     "commit" : "2c7a4395c3dc75ff803b37a29541292104c53cb7",
     "line" : 60,
     "diffHunk" : "@@ -1,1 +353,357 @@    // We are delaying the removal of BlockManagerInfo to avoid a BlockManager reregistration\n    // while a executor is shutting. This unwanted reregistration causes inconsistent bookkeeping\n    // of executors in Spark.\n    // Delaying this removal until blockManagerInfoCleaner decides to remove it ensures\n    // BlockManagerMasterHeartbeatEndpoint does not ask the BlockManager on a recently removed"
+  },
+  {
+    "id" : "41de3732-d325-404f-a52b-6dffbf78df3a",
+    "prId" : 30164,
+    "prUrl" : "https://github.com/apache/spark/pull/30164#pullrequestreview-530769366",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5d544e59-0f14-40bf-a64f-2d9c9899d85d",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "hmm..why we need to set a threshold of the `shuffleMergerLocations`? I think the number of external shuffle service should be static within a cluster(no matter what the resource allocation mode of the application is, dynamic or static) and wouldn't increase unlimitedly.\r\n\r\nBesides, the removed oldest merger may store more merged shuffle data than others...would be better if we could remove depends on merged shuffle data size...but this should be another topic though..",
+        "createdAt" : "2020-11-05T05:39:13Z",
+        "updatedAt" : "2020-11-20T00:32:25Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "50b6dfc3-a506-4872-af7b-4d81116acd94",
+        "parentId" : "5d544e59-0f14-40bf-a64f-2d9c9899d85d",
+        "authorId" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "body" : "This would be useful in a cloud based deployment where the nodes keeps coming up and going down and so the number of External shuffle services for a cluster is not static. \r\n\r\n> Besides, the removed oldest merger may store more merged shuffle data than others...would be better if we could remove depends on merged shuffle data size...but this should be another topic though..\r\n\r\nAgree, the first part of that is to have a pluggable API (https://issues.apache.org/jira/browse/SPARK-33329) that way we can come up with specific implementation based on cloud/on-prem/ as well as based on scheduler backends. This is the basic implementation but eventually we need load balancing between shuffle mergers",
+        "createdAt" : "2020-11-05T19:03:24Z",
+        "updatedAt" : "2020-11-20T00:32:25Z",
+        "lastEditedBy" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e87a454c-c79f-4c85-8649-e1746dca1f45",
+        "parentId" : "5d544e59-0f14-40bf-a64f-2d9c9899d85d",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "Just to clarify, removing a merger does not remove the merged shuffle data on that location. It only prevents using that location for future shuffles. Reducers will still be able to fetch merged shuffle data from the removed merger locations.",
+        "createdAt" : "2020-11-15T06:00:37Z",
+        "updatedAt" : "2020-11-20T00:32:25Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5ce29340c8aa4a6aadfc8d00cb5053a9be9aa839",
+    "line" : 46,
+    "diffHunk" : "@@ -1,1 +382,386 @@        blockManagerId.host, externalShuffleServicePort)\n      if (shuffleMergerLocations.size >= maxRetainedMergerLocations) {\n        shuffleMergerLocations -= shuffleMergerLocations.head._1\n      }\n      shuffleMergerLocations(shuffleServerId.host) = shuffleServerId"
+  },
+  {
+    "id" : "00f35ac3-4547-4ed1-aa3c-e67ca35ab472",
+    "prId" : 30164,
+    "prUrl" : "https://github.com/apache/spark/pull/30164#pullrequestreview-524564885",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "75c5ffd0-03df-4bb9-bf1a-aae821219144",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "I wonder why you need a separate `shuffleMergerLocations` since it doesn't have a big difference comparing to the `BlockManagerId`. I guess this is because of the dynamic allocation case where a node may have no running executors but external shuffle service only...right?",
+        "createdAt" : "2020-11-05T05:42:13Z",
+        "updatedAt" : "2020-11-20T00:32:25Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "365530f3-cf5e-4d0e-8b73-f3952a11c010",
+        "parentId" : "75c5ffd0-03df-4bb9-bf1a-aae821219144",
+        "authorId" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "body" : "Yes, thats right. this is to keep track of locations where an executor ran before that we we know the application has registered with that particular host's External shuffle service which is needed to push the shuffle data.",
+        "createdAt" : "2020-11-05T18:50:02Z",
+        "updatedAt" : "2020-11-20T00:32:25Z",
+        "lastEditedBy" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5ce29340c8aa4a6aadfc8d00cb5053a9be9aa839",
+    "line" : 48,
+    "diffHunk" : "@@ -1,1 +384,388 @@        shuffleMergerLocations -= shuffleMergerLocations.head._1\n      }\n      shuffleMergerLocations(shuffleServerId.host) = shuffleServerId\n    }\n  }"
+  },
+  {
+    "id" : "763c6e0b-81fa-488d-bc4e-d27053683caa",
+    "prId" : 30164,
+    "prUrl" : "https://github.com/apache/spark/pull/30164#pullrequestreview-529606629",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8673911c-d446-46c3-abf6-d60b65cd8edd",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Maybe we could remove the corresponding merger when there's fetch failure happens on it?",
+        "createdAt" : "2020-11-10T06:55:09Z",
+        "updatedAt" : "2020-11-20T00:32:25Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "475862e1-bd37-4fd8-ba3b-1af400f946a9",
+        "parentId" : "8673911c-d446-46c3-abf6-d60b65cd8edd",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "@Ngone51 That is a good idea, is there any concern with adding this @venkata91 ?\r\nBut I would like to add that it would help in only a subset of cases.\r\n\r\nWhat I mean is, when fetch of a merged block fails, executors will fallback to fetching the constituent blocks [1]. A fetch failure would be reported to driver only when both of these fetches fail - the merged block and the mapper output shuffle block fetch. The fallback mechanism would mean that if the individual blocks for a merged block were not computed on the lost host for the parent stage, we wont see the fetch failure.\r\n\r\nWith the recent changes to prefer hosts with active executors, we do improve the chances of detecting lost merger candidates due to lost hosts though.\r\n\r\n[1] Ignoring cases like large blocks which are not candidates for merge, etc.",
+        "createdAt" : "2020-11-10T08:12:49Z",
+        "updatedAt" : "2020-11-20T00:32:25Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1e795d00-d96b-4c06-83bb-d8d76a5b93d6",
+        "parentId" : "8673911c-d446-46c3-abf6-d60b65cd8edd",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "> With the recent changes to prefer hosts with active executors, we do improve the chances of detecting lost merger candidates due to lost hosts though.\r\n\r\nYeah, it shall be fine mostly. But please also note that executors and external shuffle service/merger are two separate processes. So the active executor doesn't necessarily mean the active merger.\r\n\r\nI agree it may not help a lot so I'm fine to not add it now.",
+        "createdAt" : "2020-11-12T09:14:53Z",
+        "updatedAt" : "2020-11-20T00:32:25Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b666ce38-3162-4547-a642-c3e0464a9f4a",
+        "parentId" : "8673911c-d446-46c3-abf6-d60b65cd8edd",
+        "authorId" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "body" : "Yes, makes sense. Still I went ahead and made that change. One question I had is what if its a transient failure due to heavy load or something of that sorts? Do we still want to remove the host from the list in those cases?",
+        "createdAt" : "2020-11-13T00:16:25Z",
+        "updatedAt" : "2020-11-20T00:32:25Z",
+        "lastEditedBy" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5ce29340c8aa4a6aadfc8d00cb5053a9be9aa839",
+    "line" : 7,
+    "diffHunk" : "@@ -1,1 +78,82 @@  // registered an executor in the past. Older hosts are removed when the\n  // maxRetainedMergerLocations size is reached in favor of newer locations.\n  private val shuffleMergerLocations = new mutable.LinkedHashMap[String, BlockManagerId]()\n\n  // Maximum number of merger locations to cache"
+  },
+  {
+    "id" : "e0164d0c-7026-4c8f-8ae9-8e310f324b14",
+    "prId" : 30164,
+    "prUrl" : "https://github.com/apache/spark/pull/30164#pullrequestreview-528519193",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "bbdeebed-82b0-4f71-a1e2-059682149e3e",
+        "parentId" : null,
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "This would be an Iterable right ? Convert it to Set with `toSet` ? Else the cost remains O(N^2)",
+        "createdAt" : "2020-11-10T19:46:26Z",
+        "updatedAt" : "2020-11-20T00:32:25Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6b27d122-c236-4318-a9f2-96ad2a8d733a",
+        "parentId" : "bbdeebed-82b0-4f71-a1e2-059682149e3e",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "Scratch that, did not see the .toSet while creating `blockManagersWithExecutors` !",
+        "createdAt" : "2020-11-10T19:48:09Z",
+        "updatedAt" : "2020-11-20T00:32:25Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "992f6215-26bd-4e64-a324-85bb8a316806",
+        "parentId" : "bbdeebed-82b0-4f71-a1e2-059682149e3e",
+        "authorId" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "body" : "I think it would be a `Set` as `filteredMergersWithExecutors` is already a `Set`. Also double checked the type and it is `Set[String` for `filteredMergersWithExecutorsHosts` ",
+        "createdAt" : "2020-11-10T22:02:36Z",
+        "updatedAt" : "2020-11-20T00:32:25Z",
+        "lastEditedBy" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d4455bfd-b47a-4c74-8b82-15b874f4dad7",
+        "parentId" : "bbdeebed-82b0-4f71-a1e2-059682149e3e",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "Yeah, I missed that - hence my second followup comment :-)",
+        "createdAt" : "2020-11-11T20:42:11Z",
+        "updatedAt" : "2020-11-20T00:32:25Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5ce29340c8aa4a6aadfc8d00cb5053a9be9aa839",
+    "line" : 82,
+    "diffHunk" : "@@ -1,1 +701,705 @@    } else {\n      // Delta mergers added from inactive mergers list to the active mergers list\n      val filteredMergersWithExecutorsHosts = filteredMergersWithExecutors.map(_.host)\n      val filteredMergersWithoutExecutors = shuffleMergerLocations.values\n        .filterNot(x => hostsToFilter.contains(x.host))"
   }
 ]

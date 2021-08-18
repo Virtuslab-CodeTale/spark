@@ -1,0 +1,90 @@
+[
+  {
+    "id" : "e6239af5-1b45-463c-a0d8-dac2022d8c40",
+    "prId" : 30139,
+    "prUrl" : "https://github.com/apache/spark/pull/30139#pullrequestreview-529791642",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "33e4a6c1-514a-46c2-a1df-4bc90d72c9b4",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Do we need this? `AtomicLong` seems efficient enough to always call `chunksBeingTransferred`",
+        "createdAt" : "2020-11-09T08:45:46Z",
+        "updatedAt" : "2020-11-14T02:45:27Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6b7c7073-cf5b-488c-906d-23c751f65852",
+        "parentId" : "33e4a6c1-514a-46c2-a1df-4bc90d72c9b4",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> Do we need this? `AtomicLong` seems efficient enough to always call `chunksBeingTransferred`\r\n\r\nOK,  how do you think about consistency and numerical convergence https://github.com/apache/spark/pull/30139#issuecomment-718528130",
+        "createdAt" : "2020-11-09T08:52:13Z",
+        "updatedAt" : "2020-11-14T02:45:27Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "69407084-7374-441b-a57c-ddb0cdd5edd0",
+        "parentId" : "33e4a6c1-514a-46c2-a1df-4bc90d72c9b4",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "If the concern is we may miss some places that update the state, then maybe only keeping this change is safer.",
+        "createdAt" : "2020-11-09T09:00:57Z",
+        "updatedAt" : "2020-11-14T02:45:27Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bcb644bf-3de2-4495-929c-074641e9428d",
+        "parentId" : "33e4a6c1-514a-46c2-a1df-4bc90d72c9b4",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> If the concern is we may miss some places that update the state, then maybe only keeping this change is safer.\r\n\r\nOK, so I will just revert change about  `if (maxChunksBeingTransferred < Long.MAX_VALUE) {`",
+        "createdAt" : "2020-11-09T09:09:41Z",
+        "updatedAt" : "2020-11-14T02:45:27Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d542bacf-e76c-48c7-8d4d-51bb40068cae",
+        "parentId" : "33e4a6c1-514a-46c2-a1df-4bc90d72c9b4",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Shouldn't we revert the change of `AtomicLong` and only keep `if (maxChunksBeingTransferred < Long.MAX_VALUE)`?",
+        "createdAt" : "2020-11-09T09:33:47Z",
+        "updatedAt" : "2020-11-14T02:45:27Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2d73e22a-f270-4550-af22-ad107a07f0fa",
+        "parentId" : "33e4a6c1-514a-46c2-a1df-4bc90d72c9b4",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> Shouldn't we revert the change of `AtomicLong` and only keep `if (maxChunksBeingTransferred < Long.MAX_VALUE)`?\r\n\r\nAll right,  I didn't get your point of comment https://github.com/apache/spark/pull/30139/files#r519647116, update  now",
+        "createdAt" : "2020-11-09T10:21:44Z",
+        "updatedAt" : "2020-11-14T02:45:27Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8efa4161-9c45-455b-8e1c-07745788e7ec",
+        "parentId" : "33e4a6c1-514a-46c2-a1df-4bc90d72c9b4",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "ping @cloud-fan Any more suggestion?",
+        "createdAt" : "2020-11-13T06:25:55Z",
+        "updatedAt" : "2020-11-14T02:45:27Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "fab5557e1e0a0f4b78868ab98e55b05b997864b2",
+    "line" : 10,
+    "diffHunk" : "@@ -1,1 +89,93 @@        msg.streamChunkId);\n    }\n    if (maxChunksBeingTransferred < Long.MAX_VALUE) {\n      long chunksBeingTransferred = streamManager.chunksBeingTransferred();\n      if (chunksBeingTransferred >= maxChunksBeingTransferred) {"
+  }
+]

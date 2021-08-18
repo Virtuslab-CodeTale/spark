@@ -64,5 +64,38 @@
     "commit" : "9f048008d061bbed27e8df6831b3b5386088669f",
     "line" : 4,
     "diffHunk" : "@@ -1,1 +1630,1634 @@    conf.remove(JARS)\n    conf.remove(FILES)\n    conf.remove(ARCHIVES)\n\n    new Client(new ClientArguments(args), conf, null).run()"
+  },
+  {
+    "id" : "a954517f-32e2-4443-b07d-ed647d835146",
+    "prId" : 30096,
+    "prUrl" : "https://github.com/apache/spark/pull/30096#pullrequestreview-523729706",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ddae59e5-0eeb-4c0e-a739-4838ef5a54ac",
+        "parentId" : null,
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "I would prefer to see this configurable as this could add quite a bit of load to the RM UI.  Also do we really need to print this every time we do the report details when the state changes?  It seems like you only need this when the driver starts, which would help with the load on RM.",
+        "createdAt" : "2020-11-04T19:59:55Z",
+        "updatedAt" : "2020-11-05T16:21:00Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2407b568-d149-44b4-a024-b717a0bf2379",
+        "parentId" : "ddae59e5-0eeb-4c0e-a739-4838ef5a54ac",
+        "authorId" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "body" : "Sure, added a configuration for this.\r\n\r\nYou can't necessarily just do it a single time, since with different application attempts you can get a different driver link. Given that there is already logic in place to only print the report when the status changes, this seems like a pretty low cost. We already poll the RM API to get an `ApplicationReport` once per second (by default). By comparison, this new logic will cause the `appattempts` API to get hit just a few times over the entire lifetime of the application (`ACCEPTED`, `RUNNING`, `FINISHED`). So the relative cost is very low vs. existing logic (up to hundreds or thousands of calls to get application report vs. 3-ish calls to get driver log links).\r\n\r\nThis assumes that you don't have DEBUG logging enabled. One thing we can consider is only updating the driver logs link if `lastState != state`, regardless of the log level.",
+        "createdAt" : "2020-11-04T20:58:03Z",
+        "updatedAt" : "2020-11-05T16:21:00Z",
+        "lastEditedBy" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "42212a8c566776d92d9910e86aff2343055e6680",
+    "line" : 42,
+    "diffHunk" : "@@ -1,1 +1089,1093 @@          logDebug(formatReportDetails(report, getDriverLogsLink(report.getApplicationId)))\n        } else if (lastState != state) {\n          logInfo(formatReportDetails(report, getDriverLogsLink(report.getApplicationId)))\n        }\n      }"
   }
 ]

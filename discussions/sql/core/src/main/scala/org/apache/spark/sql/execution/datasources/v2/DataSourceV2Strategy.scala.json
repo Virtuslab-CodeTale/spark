@@ -482,5 +482,82 @@
     "commit" : "c80e8eb5828ff68a1ebab4f9ee56b55b852ba7d0",
     "line" : 14,
     "diffHunk" : "@@ -1,1 +282,286 @@\n    case AnalyzeTable(_: ResolvedTable, _, _) | AnalyzeColumn(_: ResolvedTable, _, _) =>\n      throw new AnalysisException(\"ANALYZE TABLE is not supported for v2 tables.\")\n\n    case _ => Nil"
+  },
+  {
+    "id" : "a1991a1e-7001-451a-bc23-fead2a5687f8",
+    "prId" : 30079,
+    "prUrl" : "https://github.com/apache/spark/pull/30079#pullrequestreview-524620693",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "07e3f924-f9ca-480e-b19d-f888647bf617",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "not related to this PR, but we should think about how to handle the `purge` flag in v2 API.",
+        "createdAt" : "2020-10-23T05:02:19Z",
+        "updatedAt" : "2020-10-27T21:04:52Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "164abe73-41e2-4ccc-9082-b667f4de4a54",
+        "parentId" : "07e3f924-f9ca-480e-b19d-f888647bf617",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "The `purge` option seems that it should be handled by the catalog implementation, not by Spark (e.g., `ifExists`). We can update `TableCatalog.dropTable` to pass an additional flag, or we could introduce `TableCatalog.purgeTable` for the catalog implementor can optionally implement.",
+        "createdAt" : "2020-11-03T19:20:27Z",
+        "updatedAt" : "2020-11-03T19:20:28Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1d019a98-31e9-4532-9b86-0d70bdef0a29",
+        "parentId" : "07e3f924-f9ca-480e-b19d-f888647bf617",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "How useful is the `purge` option? If it's rarely used, we can just fail v2 DROP TABLE if `purge` is specified.\r\n\r\ncc @rdblue @brkyvz ",
+        "createdAt" : "2020-11-04T03:02:43Z",
+        "updatedAt" : "2020-11-04T03:02:44Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "76ad7be9-9126-48ea-8bdd-103ca2af0a9f",
+        "parentId" : "07e3f924-f9ca-480e-b19d-f888647bf617",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "I think it would make sense to add a variant of `dropTable` that accepts a purge option. Then have a default implementation that ignores it and calls `dropTable` without it. This seems like something that catalogs should be passed.",
+        "createdAt" : "2020-11-04T17:14:24Z",
+        "updatedAt" : "2020-11-04T17:14:25Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "17d89936-14a3-4497-bc42-50dc03b4ae41",
+        "parentId" : "07e3f924-f9ca-480e-b19d-f888647bf617",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Silently ignore the `purge` option as the default behavior looks risky. How about making the new variant of `dropTable` fail by default if `purge==true`?",
+        "createdAt" : "2020-11-05T04:31:41Z",
+        "updatedAt" : "2020-11-05T04:31:41Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "288d47c4-8b7f-4f89-9596-0bcd8dffe166",
+        "parentId" : "07e3f924-f9ca-480e-b19d-f888647bf617",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "I created #30267 based on the feedback.",
+        "createdAt" : "2020-11-05T19:59:23Z",
+        "updatedAt" : "2020-11-05T19:59:23Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dfc44923d10fa7cbb5cd6cde4dfcffa19a9e994d",
+    "line" : 15,
+    "diffHunk" : "@@ -1,1 +229,233 @@      throw new AnalysisException(\"Describing columns is not supported for v2 tables.\")\n\n    case DropTable(r: ResolvedTable, ifExists, _) =>\n      DropTableExec(r.catalog, r.identifier, ifExists) :: Nil\n"
   }
 ]

@@ -42,5 +42,115 @@
     "commit" : "ca1b058b6ccac9178859c56e2f7dd05f4ff68900",
     "line" : 13,
     "diffHunk" : "@@ -1,1 +63,67 @@      boolean authEnabled,\n      long registrationTimeoutMs) {\n    this.transportConf = conf;\n    this.secretKeyHolder = secretKeyHolder;\n    this.authEnabled = authEnabled;"
+  },
+  {
+    "id" : "02ec842c-4b37-48cb-9fdc-28dc5c04fa47",
+    "prId" : 30163,
+    "prUrl" : "https://github.com/apache/spark/pull/30163#pullrequestreview-529833901",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4f9afacb-0d5e-43a4-bc84-7028baca88b4",
+        "parentId" : null,
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "The part we want to get community inputs is whether to put this API inside `ExternalBlockStoreClient` or a separate client.\r\nThis RPC will be used by the Spark driver (DAGScheduler) to finalize the shuffle merge when it decides to do so and to retrieve the corresponding `MergeStatuses` from individual shuffle services for a given shuffle.\r\nRight now, we have to initialize an `ExternalBLockStoreClient` on the DAGScheduler side with some dummy parameters like the following:\r\n`\r\n  private lazy val externalShuffleClient: Option[ExternalShuffleClient] =\r\n\r\n    if (pushBasedShuffleEnabled) {\r\n      val transConf = SparkTransportConf.fromSparkConf(sc.conf, \"shuffle\", 1)\r\n      val shuffleClient = new ExternalShuffleClient(transConf, env.securityManager,\r\n        env.securityManager.isAuthenticationEnabled(),\r\n        sc.conf.get(config.SHUFFLE_REGISTRATION_TIMEOUT))\r\n      shuffleClient.init(sc.conf.getAppId)\r\n      Some(shuffleClient)\r\n    } else {\r\n      None\r\n    }\r\n`\r\n\r\nCC @Ngone51 @jiangxb1987 @attilapiros @tgravescs ",
+        "createdAt" : "2020-10-27T22:55:53Z",
+        "updatedAt" : "2020-11-19T19:51:19Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f4dce350-f7b2-4789-9d8a-ca8209aef611",
+        "parentId" : "4f9afacb-0d5e-43a4-bc84-7028baca88b4",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : " you modified the BlockStoreclient interface to have pushBlocks so why not have this there as well? If everything else is going through the BlockStoreClient to push blocks it seems to make sense to put this there as well.  \r\n\r\nCan't you get the external shuffle client from the block manger on the driver?  I think that manager gets the external shuffle client even though it doesn't really use it. I thought it was all initialized from spark context.\r\n          sc.env.blockManager.blockStoreClient\r\n\r\nnote It think this is hard to review on its own, I had to look at the WIP to get more context, not sure if that means ideally this should be part of another PR, open to others thoughts on that.",
+        "createdAt" : "2020-10-30T20:06:58Z",
+        "updatedAt" : "2020-11-19T19:51:19Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6af7e564-e236-4762-8867-ed46a4a9f6fd",
+        "parentId" : "4f9afacb-0d5e-43a4-bc84-7028baca88b4",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "+1, we can get the client through `sc.env.blockManager.blockStoreClient` and add the method to `BlockStoreClient`.",
+        "createdAt" : "2020-11-03T12:18:01Z",
+        "updatedAt" : "2020-11-19T19:51:19Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "40a847c7-cc4e-41fb-9b24-053549465ac1",
+        "parentId" : "4f9afacb-0d5e-43a4-bc84-7028baca88b4",
+        "authorId" : "e942fa3e-a5b9-4a9f-b9a5-a1afd3c29b2c",
+        "body" : "Good suggestion. I will try it out and update the PR accordingly.",
+        "createdAt" : "2020-11-05T07:57:42Z",
+        "updatedAt" : "2020-11-19T19:51:19Z",
+        "lastEditedBy" : "e942fa3e-a5b9-4a9f-b9a5-a1afd3c29b2c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cd5421be-4343-42d8-93e1-ca33e5261340",
+        "parentId" : "4f9afacb-0d5e-43a4-bc84-7028baca88b4",
+        "authorId" : "e942fa3e-a5b9-4a9f-b9a5-a1afd3c29b2c",
+        "body" : "Tried it out and it worked with our WIP branch. Updated the PR. Please review. Thanks.",
+        "createdAt" : "2020-11-13T07:46:23Z",
+        "updatedAt" : "2020-11-19T19:51:19Z",
+        "lastEditedBy" : "e942fa3e-a5b9-4a9f-b9a5-a1afd3c29b2c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9b3bbe9291e12a7decca46874dfe007285c9d562",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +160,164 @@\n  @Override\n  public void finalizeShuffleMerge(\n      String host,\n      int port,"
+  },
+  {
+    "id" : "2bfe3300-9d65-4796-ae0c-4cf0f077ee47",
+    "prId" : 30163,
+    "prUrl" : "https://github.com/apache/spark/pull/30163#pullrequestreview-534796816",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "18fe3d5a-e32a-4f0b-8f15-d80ffefc4e9d",
+        "parentId" : null,
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "I am uncertain here: is not this one kind of shuffle merge fail too? \r\nSo if you do not call `onShuffleMergeFailure` here then this error is not propagated. \r\nWould not this cause an endless waiting for some kind of asynchronous result at the caller?",
+        "createdAt" : "2020-11-15T10:48:48Z",
+        "updatedAt" : "2020-11-19T19:51:19Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e99770ab-d99c-40d7-a151-a6d5892d6aef",
+        "parentId" : "18fe3d5a-e32a-4f0b-8f15-d80ffefc4e9d",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "Yes, this is a good catch.\r\n`onShuffleMergeFailure` should be called here as well.\r\nIt won't cause an endless waiting in the current implementation though, as the caller (a separate thread in DAGScheduler) would bound the wait for getting merge results from all related shuffle service locations.",
+        "createdAt" : "2020-11-16T02:23:49Z",
+        "updatedAt" : "2020-11-19T19:51:19Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fc17449f-dc49-461b-bae4-ef8897205af7",
+        "parentId" : "18fe3d5a-e32a-4f0b-8f15-d80ffefc4e9d",
+        "authorId" : "e942fa3e-a5b9-4a9f-b9a5-a1afd3c29b2c",
+        "body" : "Added the onShuffleMergeFailure.",
+        "createdAt" : "2020-11-19T19:51:39Z",
+        "updatedAt" : "2020-11-19T19:51:39Z",
+        "lastEditedBy" : "e942fa3e-a5b9-4a9f-b9a5-a1afd3c29b2c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9b3bbe9291e12a7decca46874dfe007285c9d562",
+    "line" : 27,
+    "diffHunk" : "@@ -1,1 +182,186 @@      });\n    } catch (Exception e) {\n      logger.error(\"Exception while sending finalizeShuffleMerge request to {}:{}\",\n        host, port, e);\n      listener.onShuffleMergeFailure(e);"
   }
 ]

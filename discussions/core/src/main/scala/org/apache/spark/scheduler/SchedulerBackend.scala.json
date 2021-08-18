@@ -1,0 +1,46 @@
+[
+  {
+    "id" : "27bd613e-dce6-466b-8a78-5ef7615503a1",
+    "prId" : 30164,
+    "prUrl" : "https://github.com/apache/spark/pull/30164#pullrequestreview-533128756",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "17ab796d-2ce2-4df3-85d9-809226614a19",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "This looks a little inconsistent with https://github.com/apache/spark/pull/30164/files#diff-85de35b2e85646ed499c545a3be1cd3ffd525a88aae835a9c621f877eebadcb6R1314 (`This way, even if this stage gets retried, it would still be merging blocks using the same set...`).",
+        "createdAt" : "2020-11-18T05:51:48Z",
+        "updatedAt" : "2020-11-20T00:32:25Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "909b1fa6-b56f-4fb6-a5fa-1995e02960de",
+        "parentId" : "17ab796d-2ce2-4df3-85d9-809226614a19",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "So, both are true as of today. Did I understand correctly?",
+        "createdAt" : "2020-11-18T05:52:26Z",
+        "updatedAt" : "2020-11-20T00:32:25Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "65d7c546-579d-49fd-8c3f-c3f64020165b",
+        "parentId" : "17ab796d-2ce2-4df3-85d9-809226614a19",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "Both are true.\r\n`getShufflePushMergerLocations` will be invoked only once per `ShuffleDependency`.\r\nThus retried stages will get the same merger locations.\r\nIn #30062, the way we implemented the block push handling logic would ignore blocks received after shuffle finalization.\r\n\r\nhttps://github.com/apache/spark/blob/dd32f45d2058d00293330c01d3d9f53ecdbc036c/common/network-shuffle/src/main/java/org/apache/spark/network/shuffle/RemoteBlockPushResolver.java#L132\r\n\r\nSo, blocks pushed from the retry stage will be ignored, and this is what's stated in this comment about `push based shuffle is disabled for both stage retry and stage reuse cases`.\r\nIgnoring blocks pushed from the retry stage is reasonable, since the block data from these retried tasks most likely have already been merged.\r\nMaking sure the retried stage use the same merger location is critical to ensure we don't run into data duplication issues.\r\n\r\nThe only exception is for indeterministic stage retry, which we have created SPARK-32923 for it.",
+        "createdAt" : "2020-11-18T06:09:44Z",
+        "updatedAt" : "2020-11-20T00:32:25Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5ce29340c8aa4a6aadfc8d00cb5053a9be9aa839",
+    "line" : 15,
+    "diffHunk" : "@@ -1,1 +97,101 @@   * Get the list of host locations for push based shuffle\n   *\n   * Currently push based shuffle is disabled for both stage retry and stage reuse cases\n   * (for eg: in the case where few partitions are lost due to failure). Hence this method\n   * should be invoked only once for a ShuffleDependency."
+  }
+]

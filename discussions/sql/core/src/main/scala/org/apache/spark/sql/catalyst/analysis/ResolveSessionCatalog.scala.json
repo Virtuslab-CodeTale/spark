@@ -262,5 +262,82 @@
     "commit" : "c80e8eb5828ff68a1ebab4f9ee56b55b852ba7d0",
     "line" : 33,
     "diffHunk" : "@@ -1,1 +260,264 @@\n    case DescribeColumn(ResolvedV1TableOrViewIdentifier(ident), colNameParts, isExtended) =>\n      DescribeColumnCommand(ident.asTableIdentifier, colNameParts, isExtended)\n\n    // For CREATE TABLE [AS SELECT], we should use the v1 command if the catalog is resolved to the"
+  },
+  {
+    "id" : "5d9bfa59-5795-4f54-81de-4d0a06b4d91f",
+    "prId" : 30079,
+    "prUrl" : "https://github.com/apache/spark/pull/30079#pullrequestreview-518153344",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f869b9ef-cc4b-47ce-b717-b884f13759f3",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "nit: shall we add an assert here to make sure it's not temp view?",
+        "createdAt" : "2020-10-26T09:28:59Z",
+        "updatedAt" : "2020-10-27T21:04:52Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c6edfa5a-1e25-4772-a280-b1b660cd1f5d",
+        "parentId" : "f869b9ef-cc4b-47ce-b717-b884f13759f3",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "You mean to make sure it's a temp view?\r\n\r\nFor v1, there are few checks for handling views/temp views inside `DropTableCommand`:\r\nhttps://github.com/apache/spark/blob/11bbb130df7b083f42acf0207531efe3912d89eb/sql/core/src/main/scala/org/apache/spark/sql/execution/command/ddl.scala#L226-L229\r\n\r\nDo you want me to copy the checks here?",
+        "createdAt" : "2020-10-26T15:24:41Z",
+        "updatedAt" : "2020-10-27T21:04:52Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "967eed43-5204-4ca3-9ffd-ae92d8061229",
+        "parentId" : "f869b9ef-cc4b-47ce-b717-b884f13759f3",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "just `assert(r.isTemp)`",
+        "createdAt" : "2020-10-27T15:06:55Z",
+        "updatedAt" : "2020-10-27T21:04:52Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "972a61ea-1211-4692-89eb-a6a60e3cbad0",
+        "parentId" : "f869b9ef-cc4b-47ce-b717-b884f13759f3",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "If we put the assert here, the output call stack doesn't seem to be very helpful to the user:\r\n```\r\njava.lang.AssertionError: assertion failed\r\n\tat scala.Predef$.assert(Predef.scala:208)\r\n\tat org.apache.spark.sql.catalyst.analysis.ResolveSessionCatalog$$anonfun$apply$1.applyOrElse(ResolveSessionCatalog.scala:376)\r\n\tat org.apache.spark.sql.catalyst.analysis.ResolveSessionCatalog$$anonfun$apply$1.applyOrElse(ResolveSessionCatalog.scala:47)\r\n\tat org.apache.spark.sql.catalyst.plans.logical.AnalysisHelper.$anonfun$resolveOperatorsUp$3(AnalysisHelper.scala:90)\r\n\tat org.apache.spark.sql.catalyst.trees.CurrentOrigin$.withOrigin(TreeNode.scala:74)\r\n```\r\n, also there is an existing test around it: \r\nhttps://github.com/apache/spark/blob/3f2a2b5fe6ada37ef86f00737387e6cf2496df74/sql/hive/src/test/scala/org/apache/spark/sql/hive/execution/HiveDDLSuite.scala#L1057\r\n\r\nI am throwing an exception instead similar to how `DropTableCommand` is handling. Please let me know what you think about this.",
+        "createdAt" : "2020-10-27T21:09:59Z",
+        "updatedAt" : "2020-10-27T21:09:59Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dfc44923d10fa7cbb5cd6cde4dfcffa19a9e994d",
+    "line" : 28,
+    "diffHunk" : "@@ -1,1 +373,377 @@\n    // v1 DROP TABLE supports temp view.\n    case DropTable(r: ResolvedView, ifExists, purge) =>\n      if (!r.isTemp) {\n        throw new AnalysisException("
+  },
+  {
+    "id" : "f73dc153-a403-4d9c-8b75-409d6c5c4522",
+    "prId" : 30079,
+    "prUrl" : "https://github.com/apache/spark/pull/30079#pullrequestreview-518338984",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e0ffc66d-4ce3-4dc4-bd23-b591d1b4e392",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Currently, it's duplicated with the check in `DropTableCommand`. I think it's OK as we want to move to v2 commands eventually.",
+        "createdAt" : "2020-10-28T05:44:12Z",
+        "updatedAt" : "2020-10-28T05:44:12Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dfc44923d10fa7cbb5cd6cde4dfcffa19a9e994d",
+    "line" : 29,
+    "diffHunk" : "@@ -1,1 +374,378 @@    // v1 DROP TABLE supports temp view.\n    case DropTable(r: ResolvedView, ifExists, purge) =>\n      if (!r.isTemp) {\n        throw new AnalysisException(\n          \"Cannot drop a view with DROP TABLE. Please use DROP VIEW instead\")"
   }
 ]
