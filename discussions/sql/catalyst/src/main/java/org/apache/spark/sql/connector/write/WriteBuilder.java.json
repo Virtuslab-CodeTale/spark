@@ -1,0 +1,79 @@
+[
+  {
+    "id" : "4ebe24ed-28af-4554-8cdd-79a1ff3639bd",
+    "prId" : 30706,
+    "prUrl" : "https://github.com/apache/spark/pull/30706#pullrequestreview-549648892",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0e4fe5c5-9891-43fc-b8c0-239fdf56caa3",
+        "parentId" : null,
+        "authorId" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "body" : "@sunchao, I thought abou defaulting these implementations as `build().toBatch()` but it will introduce a circular dependency between these methods. Data sources may only implement `buildForBatch`, for example. Right now, calling `buildForStreaming` will produce an exception for them. If we default, this will result in a stackoverflow exception.",
+        "createdAt" : "2020-12-10T11:56:43Z",
+        "updatedAt" : "2020-12-10T13:39:15Z",
+        "lastEditedBy" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d47da54d-6dfe-42cf-a862-09ef9737c644",
+        "parentId" : "0e4fe5c5-9891-43fc-b8c0-239fdf56caa3",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "I think you'll also need to change `WriteBuilder.build` to not override `toBatch` and `toStreaming`? such as\r\n```scala\r\n  default Write build() {\r\n    return new Write() {\r\n    };\r\n  }\r\n```\r\n\r\nwith this, Spark users just need to override `build` method in their DS implementations and the old APIs `buildForBatch` and `buildForStreaming` will automatically pick up the logic in the other methods. ",
+        "createdAt" : "2020-12-10T18:49:32Z",
+        "updatedAt" : "2020-12-10T18:49:33Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d35c121a-2e53-4155-9279-68a73d8ed8d6",
+        "parentId" : "0e4fe5c5-9891-43fc-b8c0-239fdf56caa3",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "@sunchao, I think because of the circular call that @aokolnychyi pointed out, we can either provide a default for `build` or a default for `buildForBatch` / `buildForStreaming`. Anton's approach throws an exception in the old methods, while your approach throws an exception in the new methods.\r\n\r\nI think Anton's approach is the right one because it provides backward-compatibility for sources that currently implement the old methods (`buildForBatch`). Those sources are still compatible without being modified. If we removed the implementation of `toBatch` then we would not be able to call `build` unless the source supported it.\r\n\r\nCompatibility with existing code is the more important concern.",
+        "createdAt" : "2020-12-10T21:18:15Z",
+        "updatedAt" : "2020-12-10T21:18:15Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cc43b1d6-4430-470b-806f-b0330f84a3df",
+        "parentId" : "0e4fe5c5-9891-43fc-b8c0-239fdf56caa3",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "You are right. I overlooked the compatibility issue. Sorry for the wrong suggestion.",
+        "createdAt" : "2020-12-10T22:16:46Z",
+        "updatedAt" : "2020-12-10T22:16:46Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "cc19fd614d9df81d425c95ec81e4c6f34cac2a08",
+    "line" : 46,
+    "diffHunk" : "@@ -1,1 +61,65 @@  @Deprecated\n  default BatchWrite buildForBatch() {\n    throw new UnsupportedOperationException(getClass().getName() +\n      \" does not support batch write\");\n  }"
+  },
+  {
+    "id" : "ebc54361-23dc-4909-9359-d52dfec4d5a7",
+    "prId" : 30706,
+    "prUrl" : "https://github.com/apache/spark/pull/30706#pullrequestreview-549123760",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c5a04416-a365-4eb1-b15a-ad9b2d971f8d",
+        "parentId" : null,
+        "authorId" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "body" : "I decided to deprecate these.",
+        "createdAt" : "2020-12-10T11:56:58Z",
+        "updatedAt" : "2020-12-10T13:39:15Z",
+        "lastEditedBy" : "4a94765a-5775-4d88-b283-6ee68d76ecc7",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "cc19fd614d9df81d425c95ec81e4c6f34cac2a08",
+    "line" : 44,
+    "diffHunk" : "@@ -1,1 +59,63 @@   * @deprecated use {@link #build()} instead.\n   */\n  @Deprecated\n  default BatchWrite buildForBatch() {\n    throw new UnsupportedOperationException(getClass().getName() +"
+  }
+]

@@ -97,5 +97,104 @@
     "commit" : "43367c51cc85c2893d663bc248ee95d4d15cdbde",
     "line" : 16,
     "diffHunk" : "@@ -1,1 +111,115 @@    VersionUtils.majorMinorPatchVersion(hadoopVersion).exists {\n      case (3, 2, v) if v >= 2 => true\n      case _ => false\n    }\n  }"
+  },
+  {
+    "id" : "7636e8dd-d39d-40d5-aa60-dee142188c5a",
+    "prId" : 30701,
+    "prUrl" : "https://github.com/apache/spark/pull/30701#pullrequestreview-569550740",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "85348cd8-148e-49bd-8759-66f7b787442e",
+        "parentId" : null,
+        "authorId" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "body" : "Will this break if `hadoopVersion` is 3.1.0, 3.2.1, etc. (due to the previous issues with the shaded client JARs)?",
+        "createdAt" : "2021-01-15T18:38:27Z",
+        "updatedAt" : "2021-01-15T18:41:06Z",
+        "lastEditedBy" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c632114d-6ecd-4e1a-9650-5df002e5e16c",
+        "parentId" : "85348cd8-148e-49bd-8759-66f7b787442e",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Do you mean [HADOOP-16080](https://issues.apache.org/jira/browse/HADOOP-16080)? yes things could still break in the following cases.\r\n\r\n1. users build Spark without `-Phadoop-cloud` AND use a version doesn't have the fix in HADOOP-16080, such as:\r\n```\r\n$ bin/spark-shell --packages org.apache.hadoop:hadoop-aws:3.2.0,org.apache.hadoop:hadoop-common:3.2.0\r\n```\r\nHowever I think we should recommend users to stick to the same version used by Spark, i.e., 3.2.2\r\n\r\n2. users build Spark with custom Hadoop version such as 3.1.0/3.2.1 you mentioned via the `hadoop.version` property, and use this to talk to cloud storage like S3. \r\n\r\nTo enable these use cases we may have to introduce another Maven property to switch back to non-shaded client, and update here as well.\r\n",
+        "createdAt" : "2021-01-15T19:02:50Z",
+        "updatedAt" : "2021-01-15T19:02:51Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ec81333c-5497-48e2-bc18-6319ed8f5466",
+        "parentId" : "85348cd8-148e-49bd-8759-66f7b787442e",
+        "authorId" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "body" : "Yah I think (2) is my primary concern. We support building against a custom version using `-Dhadoop.version`, but right now it will break if you use `-Phadoop-3 -Dhadoop.version=3.1.0`. This one I believe you can at least work around by changing the `-Dhadoop-client-{runtime,api,minicluster}.artifact` properties, but here there's no way to work around it.",
+        "createdAt" : "2021-01-15T19:14:40Z",
+        "updatedAt" : "2021-01-15T19:14:40Z",
+        "lastEditedBy" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5972792f-4561-4ae4-b1e9-e9c3c99f0c89",
+        "parentId" : "85348cd8-148e-49bd-8759-66f7b787442e",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Got it. Yes we can be more precise here, such as using a version map. I can update this.",
+        "createdAt" : "2021-01-15T19:17:20Z",
+        "updatedAt" : "2021-01-15T19:17:21Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "cccb021189418f4be31b057931f40ef69fcccc4c",
+    "line" : 4,
+    "diffHunk" : "@@ -1,1 +113,117 @@      ivyPath: Option[String],\n      remoteRepos: String): Seq[URL] = {\n    val hadoopJarNames = if (hadoopVersion.startsWith(\"3\")) {\n      Seq(s\"org.apache.hadoop:hadoop-client-api:$hadoopVersion\",\n        s\"org.apache.hadoop:hadoop-client-runtime:$hadoopVersion\")"
+  },
+  {
+    "id" : "d56b9ef7-c5e1-4c6b-87e3-0c9a87dd78a7",
+    "prId" : 30701,
+    "prUrl" : "https://github.com/apache/spark/pull/30701#pullrequestreview-569550200",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7170793b-b630-481b-9027-9b2a35f42acf",
+        "parentId" : null,
+        "authorId" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "body" : "Doesn't Hive pull in other non-shaded Hadoop dependencies that could cause issues? ",
+        "createdAt" : "2021-01-15T18:39:48Z",
+        "updatedAt" : "2021-01-15T18:41:06Z",
+        "lastEditedBy" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "33d13869-8d89-4f14-8523-4185bc417cc3",
+        "parentId" : "7170793b-b630-481b-9027-9b2a35f42acf",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Actually this code is no longer required after #30284. Currently Spark will always load Hadoop classes from the built-in Hadoop version.",
+        "createdAt" : "2021-01-15T19:11:21Z",
+        "updatedAt" : "2021-01-15T19:11:21Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ad41fe2e-77d6-47ba-b766-ed5410fdab2d",
+        "parentId" : "7170793b-b630-481b-9027-9b2a35f42acf",
+        "authorId" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "body" : "Right, I forgot about that one. Thanks for the clarification.",
+        "createdAt" : "2021-01-15T19:16:26Z",
+        "updatedAt" : "2021-01-15T19:16:26Z",
+        "lastEditedBy" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "cccb021189418f4be31b057931f40ef69fcccc4c",
+    "line" : 20,
+    "diffHunk" : "@@ -1,1 +127,131 @@      // this introduced from lower version of Hive could conflict with jars in Hadoop 3.2+, so\n      // exclude here in favor of the ones in Hadoop 3.2+\n      Seq(\"org.apache.hadoop:hadoop-auth\")\n    } else {\n      Seq.empty"
   }
 ]

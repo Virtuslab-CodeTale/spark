@@ -1648,5 +1648,82 @@
     "commit" : "ebddbb219270a3d4df652f0942145b88e0c000dc",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +2101,2105 @@      case q: LogicalPlan =>\n        val isGroupingIdAllowed = q match {\n          case _: Aggregate | _: GroupingSets | _: Filter | _: Sort => true\n          case _ => false\n        }"
+  },
+  {
+    "id" : "dcebde93-8fc5-40c2-ac07-bfd093a2c098",
+    "prId" : 30703,
+    "prUrl" : "https://github.com/apache/spark/pull/30703#pullrequestreview-549978470",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "244da3fd-6bcc-40e9-b8d0-314110a104b3",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "shall we just write `case e if !e.deterministic => e`?",
+        "createdAt" : "2020-12-11T06:52:26Z",
+        "updatedAt" : "2020-12-11T10:30:05Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "aa8e0842-5699-40d5-be4f-5eea9dde853b",
+        "parentId" : "244da3fd-6bcc-40e9-b8d0-314110a104b3",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "First time, I tried this [33eda3c](https://github.com/apache/spark/pull/30703/commits/33eda3cb2575f1d11f013b87cd4196b7668db8ce), but the behavior is unexpected.\r\n\r\nLet's say we have a sql `select * from t order by rand()`, then it will pull out `SortOrder(rand())` into `Project`.\r\n",
+        "createdAt" : "2020-12-11T07:25:32Z",
+        "updatedAt" : "2020-12-11T10:30:05Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "51c5f958-5447-4206-bee6-abeeb9de19f6",
+        "parentId" : "244da3fd-6bcc-40e9-b8d0-314110a104b3",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "ah, so we need to collect leaf non-deterministic nodes here. Shall we create a trait for them?",
+        "createdAt" : "2020-12-11T09:16:13Z",
+        "updatedAt" : "2020-12-11T10:30:05Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6b30f304-bb96-4783-86e0-9b4deb048c2c",
+        "parentId" : "244da3fd-6bcc-40e9-b8d0-314110a104b3",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "I'd like to add a `LeafNondeterministic`, but seems there is not only leaf node, like `Rand(child)`.",
+        "createdAt" : "2020-12-11T09:34:37Z",
+        "updatedAt" : "2020-12-11T10:30:05Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c1853124-74ec-4f3c-a6d1-253686b4c8df",
+        "parentId" : "244da3fd-6bcc-40e9-b8d0-314110a104b3",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Can we make `CallMethodViaReflection` to extend `Nondeterministic`? I think `UserDefinedExpression` is the only exception that its deterministic is a flag.",
+        "createdAt" : "2020-12-11T10:23:25Z",
+        "updatedAt" : "2020-12-11T10:30:05Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "83758db4-1cf5-4ebe-b55a-d9f7aa20e698",
+        "parentId" : "244da3fd-6bcc-40e9-b8d0-314110a104b3",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "ok. try it.",
+        "createdAt" : "2020-12-11T10:30:51Z",
+        "updatedAt" : "2020-12-11T10:30:51Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9ec0654af4795d74dbd594cd02c921b727433abf",
+    "line" : 7,
+    "diffHunk" : "@@ -1,1 +2966,2970 @@        val leafNondeterministic = expr.collect {\n          case n: Nondeterministic => n\n          case udf: UserDefinedExpression if !udf.deterministic => udf\n        }\n        leafNondeterministic.distinct.map { e =>"
   }
 ]

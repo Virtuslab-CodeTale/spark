@@ -196,5 +196,82 @@
     "commit" : "7719c3afa3fcb7c205048b785f23947e1844d804",
     "line" : 56,
     "diffHunk" : "@@ -1,1 +972,976 @@          case e: IOException =>\n            logWarning(\"Exception encountered during deserializing broadcasted map statuses: \", e)\n            throw new SparkException(\"Unable to deserialize broadcasted map statuses\", e)\n        }\n      case _ => throw new IllegalArgumentException(\"Unexpected byte tag = \" + bytes(0))"
+  },
+  {
+    "id" : "626fb1b5-fb32-46e6-852d-c230dcd03aac",
+    "prId" : 30763,
+    "prUrl" : "https://github.com/apache/spark/pull/30763#pullrequestreview-576508076",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5b19a9d7-1f77-4877-933b-696ebfb89985",
+        "parentId" : null,
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "The blocking param does not seem to be used here?",
+        "createdAt" : "2020-12-18T19:03:34Z",
+        "updatedAt" : "2021-03-08T08:42:24Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a7737170-e274-4ffc-90e4-b75c41bfe48e",
+        "parentId" : "5b19a9d7-1f77-4877-933b-696ebfb89985",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "\r\nNo, it isn't used in this implementation. \r\n\r\nBut this  param is still needed in the interface  to override the abstract method coming from the `MapOutputTracker` class:\r\nhttps://github.com/apache/spark/blob/a09ced3589d90c533744a04f0c3b976d4bb42352/core/src/main/scala/org/apache/spark/MapOutputTracker.scala#L391 \r\n\r\nAnd in the abstract `MapOutputTracker` method is introduced to reuse this method in the context cleaning.\r\nhttps://github.com/attilapiros/spark/blob/a09ced3589d90c533744a04f0c3b976d4bb42352/core/src/main/scala/org/apache/spark/ContextCleaner.scala#L223\r\n\r\nWhere we could trigger a blocking or a non-blocking cleanup depending on the config: `spark.cleaner.referenceTracking.blocking.shuffle`.\r\n\r\nSo I think this is fine here.\r\n ",
+        "createdAt" : "2021-01-26T16:07:52Z",
+        "updatedAt" : "2021-03-08T08:42:24Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8e54b41702fd3f8f78d14a57eeb3cf9277b666cc",
+    "line" : 142,
+    "diffHunk" : "@@ -1,1 +884,888 @@\n  /** Unregister shuffle data. */\n  def unregisterShuffle(shuffleId: Int, blocking: Boolean): Boolean = {\n    mapStatuses.remove(shuffleId).isDefined\n  }"
+  },
+  {
+    "id" : "65aa4854-7190-4fb0-befa-5b709f026a6d",
+    "prId" : 30691,
+    "prUrl" : "https://github.com/apache/spark/pull/30691#pullrequestreview-675632947",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "de50587e-dd4d-4b77-af6d-892a2146dc80",
+        "parentId" : null,
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "Is this more logically part of SPARK-32923 and move it out of this PR ?",
+        "createdAt" : "2021-06-02T03:42:49Z",
+        "updatedAt" : "2021-06-02T03:42:50Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d2294fb9-a391-4d03-b6ba-4388378cf23a",
+        "parentId" : "de50587e-dd4d-4b77-af6d-892a2146dc80",
+        "authorId" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "body" : "[SPARK-32923](https://issues.apache.org/jira/browse/SPARK-32923) would handle non deterministic stage retries right? Do you mean we should remove the `mapOutputTracker.unregisterMergeResult` call in `DAGScheduler`? This change is already added as part of [SPARK-32921](https://issues.apache.org/jira/browse/SPARK-32921)",
+        "createdAt" : "2021-06-02T05:24:35Z",
+        "updatedAt" : "2021-06-02T05:24:35Z",
+        "lastEditedBy" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e7d3a389-9d77-46ed-a4a2-83b3cea2e89a",
+        "parentId" : "de50587e-dd4d-4b77-af6d-892a2146dc80",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "This was actually for `unregisterAllMergeResult` below - ended up commenting at wrong line.\r\nBut this is required, let me resolve this comment thread.",
+        "createdAt" : "2021-06-03T19:02:50Z",
+        "updatedAt" : "2021-06-03T19:02:50Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "35d06150f37e01256314af4956c6e8fdcf7244b4",
+    "line" : 74,
+    "diffHunk" : "@@ -1,1 +760,764 @@        if (mergeStatus != null &&\n          (mapIndex.isEmpty || mergeStatus.tracker.contains(mapIndex.get))) {\n          shuffleStatus.removeMergeResult(reduceId, bmAddress)\n          incrementEpoch()\n        }"
   }
 ]

@@ -273,5 +273,104 @@
     "commit" : "815d36b35c294d110cf0770d2f0850d9ae1da151",
     "line" : 7,
     "diffHunk" : "@@ -1,1 +829,833 @@    isExtended: Boolean = false,\n    partitionSpec: Option[TablePartitionSpec] = None) extends RunnableCommand {\n\n  override def run(sparkSession: SparkSession): Seq[Row] = {\n    // Since we need to return a Seq of rows, we will call getTables directly"
+  },
+  {
+    "id" : "786c5bf1-dc6f-4783-a707-b0547d1e783e",
+    "prId" : 30774,
+    "prUrl" : "https://github.com/apache/spark/pull/30774#pullrequestreview-553152156",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "133b23ad-9e44-48b9-9f6f-ea76fc64d68b",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Does this miss the `tableName` if there is in the original cache?",
+        "createdAt" : "2020-12-15T06:57:13Z",
+        "updatedAt" : "2020-12-15T07:49:21Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f17f2fdc-4681-482d-8abe-4bc2702bcb8c",
+        "parentId" : "133b23ad-9e44-48b9-9f6f-ea76fc64d68b",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "Sorry, I didn't get this question. This is creating a new cache with a new table name.",
+        "createdAt" : "2020-12-15T07:33:11Z",
+        "updatedAt" : "2020-12-15T07:49:21Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "be46b523-dd5c-4147-a53d-7457e8f219ef",
+        "parentId" : "133b23ad-9e44-48b9-9f6f-ea76fc64d68b",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Hm, you can check the change like #30769. Especially how it recaches the table. There is a `cacheName` parameter. If the table was cached with a cache name, when recaching it, I think we should keep it.\r\n\r\n```scala\r\n    val cache = session.sharedState.cacheManager.lookupCachedData(v2Relation)\r\n    session.sharedState.cacheManager.uncacheQuery(session, v2Relation, cascade = true)\r\n    session.sharedState.cacheManager.uncacheQuery(session, v2Relation, cascade = true)\r\n    if (recacheTable && cache.isDefined) {\r\n      // save the cache name and cache level for recreation\r\n      val cacheName = cache.get.cachedRepresentation.cacheBuilder.tableName\r\n      val cacheLevel = cache.get.cachedRepresentation.cacheBuilder.storageLevel\r\n\r\n      // recache with the same name and cache level.\r\n      val ds = Dataset.ofRows(session, v2Relation)\r\n      session.sharedState.cacheManager.cacheQuery(ds, cacheName, cacheLevel)\r\n    }\r\n```",
+        "createdAt" : "2020-12-15T08:53:57Z",
+        "updatedAt" : "2020-12-15T08:53:58Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fedffb95-8557-431e-920b-2b778f89df15",
+        "parentId" : "133b23ad-9e44-48b9-9f6f-ea76fc64d68b",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "The previous code seems also recache with the new name?",
+        "createdAt" : "2020-12-15T09:04:35Z",
+        "updatedAt" : "2020-12-15T09:04:35Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "288ad92e-52b7-406c-acd5-74e2a3d2bce3",
+        "parentId" : "133b23ad-9e44-48b9-9f6f-ea76fc64d68b",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "No, the refresh table command for v2 doesn't recache the table before #30769.",
+        "createdAt" : "2020-12-15T09:09:06Z",
+        "updatedAt" : "2020-12-15T09:09:06Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c75e7042-05bb-465b-9140-c920ca9ed6c6",
+        "parentId" : "133b23ad-9e44-48b9-9f6f-ea76fc64d68b",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I mean the previous code in `AlterTableRenameCommand`. We shouldn't change its behavior regarding cache name in this bug fix PR.",
+        "createdAt" : "2020-12-15T14:06:07Z",
+        "updatedAt" : "2020-12-15T14:06:07Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bd71cbd6-78b8-493e-87bd-7f496e013158",
+        "parentId" : "133b23ad-9e44-48b9-9f6f-ea76fc64d68b",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Hmm okay, actually it also sounds like a bug if alter table command changes the cache name. I'm fine to leave it unchanged here.",
+        "createdAt" : "2020-12-15T17:40:02Z",
+        "updatedAt" : "2020-12-15T17:40:02Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0bbe6409-8dcf-41f9-b802-aea8dd9b86cd",
+        "parentId" : "133b23ad-9e44-48b9-9f6f-ea76fc64d68b",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "I believe cache name is used for debug purpose only (for `RDD` name and `InMemoryTableScanExec`). So if the cache name - which is tied to the table name - doesn't change when the table is changed, wouldn't it cause a confusion since it will still refer to the old table name? I can do a follow up PR if this seems like a bug.",
+        "createdAt" : "2020-12-16T00:13:48Z",
+        "updatedAt" : "2020-12-16T00:13:48Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "11603d54d4a6b222edc2c5dbd4755e3a1e9072a2",
+    "line" : 30,
+    "diffHunk" : "@@ -1,1 +205,209 @@      catalog.renameTable(oldName, newName)\n      optStorageLevel.foreach { storageLevel =>\n        sparkSession.catalog.cacheTable(newName.unquotedString, storageLevel)\n      }\n    }"
   }
 ]

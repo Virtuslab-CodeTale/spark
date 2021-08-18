@@ -262,5 +262,126 @@
     "commit" : "40ef4b12ae328493c4a5ae5fd8274a7f839050de",
     "line" : 53,
     "diffHunk" : "@@ -1,1 +430,434 @@      val plan = sparkSession.sessionState.executePlan(viewDef)\n      sparkSession.sharedState.cacheManager.uncacheQuery(\n        sparkSession, plan.analyzed, cascade = viewText.isDefined)\n    } catch {\n      case NonFatal(_) => // ignore"
+  },
+  {
+    "id" : "a8ab8ab8-4502-40cb-9534-9994392ab827",
+    "prId" : 30699,
+    "prUrl" : "https://github.com/apache/spark/pull/30699#pullrequestreview-548904153",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1f372c7a-fab6-4441-88a0-8733bbfac08e",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Yea, the file index is cached in the logical plan so using original `table` logical plan will read incorrect files.",
+        "createdAt" : "2020-12-10T07:07:14Z",
+        "updatedAt" : "2020-12-11T19:02:59Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "bcf2df7d34559bbb078e00e0ba3bca1547a0585f",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +541,545 @@      // creates a new logical plan since the old table refers to old relation which\n      // should be refreshed\n      val newTable = sparkSession.table(tableIdent)\n\n      // recache with the same name and cache level."
+  },
+  {
+    "id" : "a8a7d84b-af8d-4f96-846e-89e920ac36c7",
+    "prId" : 30699,
+    "prUrl" : "https://github.com/apache/spark/pull/30699#pullrequestreview-549724518",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "49a42668-792a-4bc0-9684-3d0e25759fb6",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "BTW, I think we can just call `cacheTable(tableName, storageLevel)` API. It does the same thing.",
+        "createdAt" : "2020-12-10T07:08:15Z",
+        "updatedAt" : "2020-12-11T19:02:59Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "caab8344-1495-4d8d-a514-053880ff8699",
+        "parentId" : "49a42668-792a-4bc0-9684-3d0e25759fb6",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "I think `cacheTable` takes a string as table name? we'll need to modify or have a new overloaded version that takes `TableIdentifier`.",
+        "createdAt" : "2020-12-10T17:27:33Z",
+        "updatedAt" : "2020-12-11T19:02:59Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "17a1e4e7-c304-4c0c-83ae-2ac6a2bfdd2a",
+        "parentId" : "49a42668-792a-4bc0-9684-3d0e25759fb6",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Passing the `tableName` to `cacheTable`?",
+        "createdAt" : "2020-12-10T17:34:24Z",
+        "updatedAt" : "2020-12-11T19:02:59Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4967a7eb-0fd8-4293-a33c-3ff2af29ea90",
+        "parentId" : "49a42668-792a-4bc0-9684-3d0e25759fb6",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "oops you're right, let me change that.",
+        "createdAt" : "2020-12-10T17:37:19Z",
+        "updatedAt" : "2020-12-11T19:02:59Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0c16c70f-495d-432f-a7d4-b56756e6bd9c",
+        "parentId" : "49a42668-792a-4bc0-9684-3d0e25759fb6",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "@viirya even though `cacheTable` looks nicer, we may need to follow the old logic here because of table name. Someone can first cache a table using `db.tbl` as table name and then call `refreshTable` on `tbl` within the database `db`. In this case we'll need to pick up the `db` part from `cache.get.cachedRepresentation.cacheBuilder.tableName`.",
+        "createdAt" : "2020-12-11T00:27:10Z",
+        "updatedAt" : "2020-12-11T19:02:59Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "906a239f-cb51-407c-a07f-9218f4ebe1c3",
+        "parentId" : "49a42668-792a-4bc0-9684-3d0e25759fb6",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Hmm, I see. `cacheTable` doesn't take a custom cache table name as parameter so far.",
+        "createdAt" : "2020-12-11T00:30:19Z",
+        "updatedAt" : "2020-12-11T19:02:59Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bbcaab18-59c9-4a06-934d-46a67b9c6544",
+        "parentId" : "49a42668-792a-4bc0-9684-3d0e25759fb6",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Yea, it also doesn't take `None` as table name but ppl could pass `None` when caching, and perhaps we should maintain that when recaching the table.",
+        "createdAt" : "2020-12-11T00:37:53Z",
+        "updatedAt" : "2020-12-11T19:02:59Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f5e145de-23af-430d-8214-e70dd2f32793",
+        "parentId" : "49a42668-792a-4bc0-9684-3d0e25759fb6",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Okay good. Let's go back to old logic. Thanks for the try.",
+        "createdAt" : "2020-12-11T00:48:26Z",
+        "updatedAt" : "2020-12-11T19:02:59Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "bcf2df7d34559bbb078e00e0ba3bca1547a0585f",
+    "line" : 10,
+    "diffHunk" : "@@ -1,1 +544,548 @@\n      // recache with the same name and cache level.\n      sparkSession.sharedState.cacheManager.cacheQuery(newTable, cacheName, cacheLevel)\n    }\n  }"
   }
 ]
