@@ -471,5 +471,126 @@
     "commit" : "2973dd795e739bb6845856388a9f882425d712e6",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +451,455 @@  private def translateLeafNodeFilter(predicate: Expression): Option[Filter] = predicate match {\n    case expressions.EqualTo(PushableColumn(name), Literal(v, t)) =>\n      Some(sources.EqualTo(name, convertToScala(v, t, false)))\n    case expressions.EqualTo(Literal(v, t), PushableColumn(name)) =>\n      Some(sources.EqualTo(name, convertToScala(v, t, false)))"
+  },
+  {
+    "id" : "7d747a25-a032-4165-843d-f1feecf9a1c7",
+    "prId" : 27817,
+    "prUrl" : "https://github.com/apache/spark/pull/27817#pullrequestreview-372411506",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e12df33b-22f1-47be-8447-9f845ec2de5e",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "OK this is a behavior change.\r\n\r\n`Filter#references` is an `Array[String]` so there is no confusion if we won't quote. What's our plan to support nested fields?",
+        "createdAt" : "2020-03-09T07:35:41Z",
+        "updatedAt" : "2020-03-09T07:35:41Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f3055281-f3a9-4fa2-a9a4-df66e8848a16",
+        "parentId" : "e12df33b-22f1-47be-8447-9f845ec2de5e",
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "Each element in `Filter#references` is a column that this Filter refers to. There can be multiple of them. As a result, quoting on column name that contains `dot` is still needed.",
+        "createdAt" : "2020-03-09T07:53:47Z",
+        "updatedAt" : "2020-03-09T07:53:48Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f0a8cdff-e56e-4728-bf5f-a1033379279f",
+        "parentId" : "e12df33b-22f1-47be-8447-9f845ec2de5e",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Ah sorry I misread it with the v2 reference.\r\n\r\nSo our plan is to use dot to separate nested fields in v1 reference. Is this a 3.1 feature or we plan to make it into 3.0?",
+        "createdAt" : "2020-03-09T08:12:01Z",
+        "updatedAt" : "2020-03-09T08:12:02Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1111eea9-384c-495b-a26b-fcc341f17545",
+        "parentId" : "e12df33b-22f1-47be-8447-9f845ec2de5e",
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "I would like to make it into 3.0 as this lays a good foundation to support features such as pushdown on column containing dots and nested predicate pushdown. Also, I feel it’s a good time to have a small breaking change in 3.0 instead of 3.1. WDYT?",
+        "createdAt" : "2020-03-09T08:32:18Z",
+        "updatedAt" : "2020-03-09T08:32:18Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0ce0dcfe-0692-4d93-aa49-c062aa24d920",
+        "parentId" : "e12df33b-22f1-47be-8447-9f845ec2de5e",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Is this really needed to support column name containing dot?\r\n\r\nAnd a few thoughts to roll it out more smoothly:\r\n1. if we refer to a top-level column, don't quote it (so no breaking change)\r\n2. if we refer to a nested field, use a special encoding (like json array?)\r\n\r\nIf users use a v1 source with Spark 3.0, and Spark pushes down a filter with nested fields, then it would either fail or ignore it as it doesn't recognize the json array encoded column name.\r\n\r\nHowever, if we use dot to separate field names, then v1 source can be broken if a filter is pushed down pointing to a top-level column containing dot.",
+        "createdAt" : "2020-03-09T08:51:23Z",
+        "updatedAt" : "2020-03-09T08:51:23Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "76c39c39-b1d8-44e2-a727-dfe053db69e8",
+        "parentId" : "e12df33b-22f1-47be-8447-9f845ec2de5e",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Implementation-wise, I think it's easier to use dot to separate field names, both for Spark and source developers. I don't know how common it is to see top-level column names containing dot.\r\n\r\ncc @brkyvz @rdblue @imback82 ",
+        "createdAt" : "2020-03-09T08:53:51Z",
+        "updatedAt" : "2020-03-09T08:53:52Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7790e835-6d85-4a74-a3d9-0f339415c929",
+        "parentId" : "e12df33b-22f1-47be-8447-9f845ec2de5e",
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "We support column names containing `dots` in ORC.\r\n\r\nI feel special encoding makes the implementation really over complicated. I believe that currently, only ORC support column name containing `dots`, so the impact is not much. ",
+        "createdAt" : "2020-03-09T19:14:51Z",
+        "updatedAt" : "2020-03-09T19:14:52Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ca43b444-9af3-420b-beb2-ffd589e81b13",
+        "parentId" : "e12df33b-22f1-47be-8447-9f845ec2de5e",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "@dbtsai, I thought Parquet also supports the dots in column names at https://github.com/apache/spark/pull/27780.\r\nAlso, the problem is that there are multiple external sources. Dots can be used to express namespace-like annotations just like our SQL configurations.\r\n\r\nJSON array might not be an option either because column names themselves can be JSON array:\r\n\r\n```scala\r\nscala> sql(\"\"\"select 'a' as `[\"a\", \"'b\"]`\"\"\")\r\nres1: org.apache.spark.sql.DataFrame = [[\"a\", \"'b\"]: string]\r\n```\r\n\r\nIt's unlikely but it's possible breaking change.\r\n\r\nThe only option I can think of now is to have a SQL conf that lists datasources to support to backquote dots in column name (and don't backquote for nested column access).",
+        "createdAt" : "2020-03-10T02:50:47Z",
+        "updatedAt" : "2020-03-10T02:50:48Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "67344b11-e4e6-43dc-91df-1febacc7356d",
+        "parentId" : "e12df33b-22f1-47be-8447-9f845ec2de5e",
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "@HyukjinKwon You are right. I'm just breaking https://github.com/apache/spark/pull/27780 into smaller PR so it's easier to review. Chat with @cloud-fan offline, and I'll close this one and work on the other bigger one to avoid the confusion. Let's discuss how we want to handle the API compatibility in the other PR. ",
+        "createdAt" : "2020-03-10T17:30:01Z",
+        "updatedAt" : "2020-03-10T17:30:02Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4202f18f-fad2-4b14-a4a7-93ab88f68fd1",
+        "parentId" : "e12df33b-22f1-47be-8447-9f845ec2de5e",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Thank you @dbtsai!",
+        "createdAt" : "2020-03-11T00:43:17Z",
+        "updatedAt" : "2020-03-11T00:43:17Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c5fc25f6ee70eb8a9e291020b51fecae580b8e8c",
+    "line" : 10,
+    "diffHunk" : "@@ -1,1 +658,662 @@      case _ => None\n    }\n    helper(e).map(quoteIfNeeded)\n  }\n}"
   }
 ]

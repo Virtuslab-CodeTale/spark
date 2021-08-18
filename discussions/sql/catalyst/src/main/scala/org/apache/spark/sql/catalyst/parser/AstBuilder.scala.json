@@ -1538,5 +1538,137 @@
     "commit" : "25ec746753f29acd5e248d03db48211a3876a7c1",
     "line" : 421,
     "diffHunk" : "@@ -1,1 +3109,3113 @@\n    if (provider.isDefined && serdeInfo.isDefined) {\n      operationNotAllowed(s\"CREATE TABLE ... USING ... ${serdeInfo.get.describe}\", ctx)\n    }\n"
+  },
+  {
+    "id" : "7e3d8fd5-f818-4f8f-92c2-0488080b70be",
+    "prId" : 27861,
+    "prUrl" : "https://github.com/apache/spark/pull/27861#pullrequestreview-372533736",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2f748c55-755e-493c-b257-e2b49adaf630",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "From the ANSI SQL spec: `If WD has no window ordering clause, then the window ordering is implementation-dependent, and all rows are peers.`\r\n\r\nI don't think this is a bug fix but rather a new feature. We need to justify it: what's the behavior of other popular SQL systems like presto, snowflake, redshift, etc.? And what's the benefit for end users?",
+        "createdAt" : "2020-03-11T07:48:17Z",
+        "updatedAt" : "2020-03-22T05:39:39Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "769aa0fd-7ff6-415c-bb8f-349bd47409b6",
+        "parentId" : "2f748c55-755e-493c-b257-e2b49adaf630",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> From the ANSI SQL spec: `If WD has no window ordering clause, then the window ordering is implementation-dependent, and all rows are peers.`\r\n> \r\n> I don't think this is a bug fix but rather a new feature. We need to justify it: what's the behavior of other popular SQL systems like presto, snowflake, redshift, etc.? And what's the benefit for end users?\r\n\r\nI will check other SQL system later.\r\nIn our production, one benefit is we can migrate hive sql to spark sql  smother and don't need to rewrite sql one by one",
+        "createdAt" : "2020-03-11T07:52:23Z",
+        "updatedAt" : "2020-03-22T05:39:39Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d369cbc61811f4334f511fcda9e191a89c040e3c",
+    "line" : 12,
+    "diffHunk" : "@@ -1,1 +1699,1703 @@      ctx.sortItem.asScala.map(visitSortItem)\n    } else {\n      // Same default behaviors like hive, when order spec is null\n      // set partition spec expression as order spec\n      ctx.partition.asScala.map { expr =>"
+  },
+  {
+    "id" : "4489706a-3dd8-4f3c-81c9-cac5b34c7f98",
+    "prId" : 27861,
+    "prUrl" : "https://github.com/apache/spark/pull/27861#pullrequestreview-398783744",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "77cb5bae-7721-4b47-a028-cffa55e13229",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Wait .. why do we set the ordering column as partition column? We should just leave it unspecified so only (non-window) aggregation functions work together with unbounded windows so it doesn't get affected by the order. This is what Scala API does.",
+        "createdAt" : "2020-04-23T02:10:19Z",
+        "updatedAt" : "2020-04-23T02:10:19Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "96719da4-78c9-4c9f-9597-557c5fee8b62",
+        "parentId" : "77cb5bae-7721-4b47-a028-cffa55e13229",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> Wait .. why do we set the ordering column as partition column? We should just leave it unspecified so only (non-window) aggregation functions work together with unbounded windows so it doesn't get affected by the order. This is what Scala API does.\r\n\r\nemmmm， hive doing like this...for me, when user not set order by clause, means he don't care about result order.  For Range DataFrame we can't support this.",
+        "createdAt" : "2020-04-23T02:16:30Z",
+        "updatedAt" : "2020-04-23T02:16:30Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "896ed6b7-966f-4484-a1a6-f20b83ede6ce",
+        "parentId" : "77cb5bae-7721-4b47-a028-cffa55e13229",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "But the results will be useless. When can it be useful if the order is indeterministic for the functions dependent on the order .. ?",
+        "createdAt" : "2020-04-23T02:20:45Z",
+        "updatedAt" : "2020-04-23T02:20:45Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7dbb8298-eb5e-4f3d-807d-143f4c9386be",
+        "parentId" : "77cb5bae-7721-4b47-a028-cffa55e13229",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> But the results will be useless. When can it be useful if the order is indeterministic for the functions dependent on the order .. ?\r\n\r\nIn postgre sql , if we don't specify order column, the result is according to partition column 's default sort order.\r\n```\r\nangerszhu=# explain analyze verbose select id, num, lead(id) over (partition by num) from s4;\r\n                                                    QUERY PLAN                                                     \r\n-------------------------------------------------------------------------------------------------------------------\r\n WindowAgg  (cost=158.51..198.06 rows=2260 width=12) (actual time=0.107..0.122 rows=6 loops=1)\r\n   Output: id, num, lead(id) OVER (?)\r\n   ->  Sort  (cost=158.51..164.16 rows=2260 width=8) (actual time=0.079..0.081 rows=6 loops=1)\r\n         Output: num, id\r\n         Sort Key: s4.num\r\n         Sort Method: quicksort  Memory: 25kB\r\n         ->  Seq Scan on public.s4  (cost=0.00..32.60 rows=2260 width=8) (actual time=0.057..0.061 rows=6 loops=1)\r\n               Output: num, id\r\n Planning Time: 0.114 ms\r\n Execution Time: 0.214 ms\r\n\r\nangerszhu=# explain analyze verbose select id, num, lead(id) over (partition by num order by id) from s4;\r\n                                                    QUERY PLAN                                                     \r\n-------------------------------------------------------------------------------------------------------------------\r\n WindowAgg  (cost=158.51..203.71 rows=2260 width=12) (actual time=0.976..1.017 rows=6 loops=1)\r\n   Output: id, num, lead(id) OVER (?)\r\n   ->  Sort  (cost=158.51..164.16 rows=2260 width=8) (actual time=0.067..0.070 rows=6 loops=1)\r\n         Output: id, num\r\n         Sort Key: s4.num, s4.id\r\n         Sort Method: quicksort  Memory: 25kB\r\n         ->  Seq Scan on public.s4  (cost=0.00..32.60 rows=2260 width=8) (actual time=0.042..0.045 rows=6 loops=1)\r\n               Output: id, num\r\n Planning Time: 0.155 ms\r\n Execution Time: 1.208 ms\r\n(10 rows)\r\n```",
+        "createdAt" : "2020-04-23T02:36:52Z",
+        "updatedAt" : "2020-04-23T02:36:52Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7dfef1dd-3e41-4e9c-b581-bc3613f3c204",
+        "parentId" : "77cb5bae-7721-4b47-a028-cffa55e13229",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "I guess because PostgreSQL can keep the natural order. Spark can't keep the natural order. Is PostgreSQL result deterministic?",
+        "createdAt" : "2020-04-23T02:47:34Z",
+        "updatedAt" : "2020-04-23T02:47:34Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3a9fee6f-f3de-47dd-a77c-4fb78551027d",
+        "parentId" : "77cb5bae-7721-4b47-a028-cffa55e13229",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> deterministic\r\n\r\nFor same sql, result is deterministic.\r\n\r\nAnd we add partition column as order by column by default can keep result deterministic. \r\n\r\n\r\n\r\nI meet this problem when migration hive sql to spark sql.",
+        "createdAt" : "2020-04-23T03:14:11Z",
+        "updatedAt" : "2020-04-23T03:14:11Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "245de7b7-e5a1-4665-bb1a-eb4c35625805",
+        "parentId" : "77cb5bae-7721-4b47-a028-cffa55e13229",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "I think we should not fix it because Spark side at least the results will be non-deterministic. I doubt if this is good to add this support only because of compatibility with other DMBSes when the output is expected to be useless.\r\n\r\nMaybe disallowing it might be a better idea than finding another problem later caused by the different and indeterministic data.\r\n\r\nDo you maybe know other cases from other distributed DBMSs such as presto?",
+        "createdAt" : "2020-04-23T04:01:17Z",
+        "updatedAt" : "2020-04-23T04:01:17Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "80177ae0-5b63-4fc3-b640-35291eb3f996",
+        "parentId" : "77cb5bae-7721-4b47-a028-cffa55e13229",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> I think we should not fix it because Spark side at least the results will be non-deterministic. I doubt if this is good to add this support only because of compatibility with other DMBSes when the output is expected to be useless.\r\n> \r\n> Maybe disallowing it might be a better idea than finding another problem later caused by the different and indeterministic data.\r\n> \r\n> Do you maybe know other cases from other distributed DBMSs such as presto?\r\n\r\nbut in my fix,  we add default order spec, the result will be deterministic.\r\nIn origin way, this kind sql can't run since it will get non-deterministic result and is rejected by  https://github.com/apache/spark/blob/a28ed86a387b286745b30cd4d90b3d558205a5a7/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/analysis/Analyzer.scala#L2773-L2776",
+        "createdAt" : "2020-04-23T06:08:04Z",
+        "updatedAt" : "2020-04-23T06:08:04Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d369cbc61811f4334f511fcda9e191a89c040e3c",
+    "line" : 15,
+    "diffHunk" : "@@ -1,1 +1702,1706 @@      // set partition spec expression as order spec\n      ctx.partition.asScala.map { expr =>\n        SortOrder(expression(expr), Ascending, Ascending.defaultNullOrdering, Set.empty)\n      }\n    }"
   }
 ]

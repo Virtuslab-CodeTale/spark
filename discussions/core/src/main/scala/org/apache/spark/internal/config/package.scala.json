@@ -4354,5 +4354,2425 @@
     "commit" : "ad58e0cc8934f19eefc441f7977b840dfe850c0d",
     "line" : 517,
     "diffHunk" : "@@ -1,1 +1357,1361 @@        \"blocks requested from those block managers which are running on the same host are read \" +\n        \"from the disk directly instead of being fetched as remote blocks over the network.\")\n      .version(\"3.0.0\")\n      .booleanConf\n      .createWithDefault(true)"
+  },
+  {
+    "id" : "b4dae02d-21b7-4171-8acb-3e1ee2773220",
+    "prId" : 27864,
+    "prUrl" : "https://github.com/apache/spark/pull/27864#pullrequestreview-388613385",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "934ca070-a96e-4f5f-9879-efeb371412e9",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Could you explain about the meaning of `decommission` here?\r\n\r\nLet say, we have Spark Thrift Server. In that case, dynamic allocation wants to decommission all workers. Then, what this PR can provide for zero-worker situation?",
+        "createdAt" : "2020-04-07T18:48:30Z",
+        "updatedAt" : "2020-04-23T14:23:15Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "18a36a95-65b2-46b1-a574-cb573976b43a",
+        "parentId" : "934ca070-a96e-4f5f-9879-efeb371412e9",
+        "authorId" : "ad4cb313-47b2-4cfa-9c1f-0a3596794a67",
+        "body" : "@dongjoon-hyun Thanks for the detailed review.\r\n\r\nI couldn't understand your question with respect to dynamic allocation completely (as per my understanding dynamic allocation doesn't initiates decommissioning). This change works together with SPARK-20628 [PR](https://github.com/apache/spark/pull/26440). After SPARK-20628, Spark scheduler starts receiving decommissionExecutor message (because of AWS spot loss, Azure low-priority VMs etc). In such case, we should offload cache data from that executor to other active executors so that we don't eventually loose those cache blocks. This is done in a best effort way i.e. move cache blocks if space is available on active executors. If space is not available on other active executors, then keep the cache blocks.\r\n\r\nNext step after this change is to initiate decommissioning from DynamicAllocation. Let say minExecutor=2, maxExecutor=50. A spark application is running at max 50 executors and all of them have little bit of cache data (say 2GB out of total available 5GB capacity). So DynamicAllocation is not able to downscale any of the executors (although they are idle). In future, DynamicAllocation can leverage changes in this PR to do defragmentation of cache data to fewer set of executors so that some of the executors can be freed up.\r\n\r\nHope this answers your question.",
+        "createdAt" : "2020-04-08T13:57:49Z",
+        "updatedAt" : "2020-04-23T14:23:15Z",
+        "lastEditedBy" : "ad4cb313-47b2-4cfa-9c1f-0a3596794a67",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0cf6535a-186d-4c4f-b384-f5bcfe9366bd",
+        "parentId" : "934ca070-a96e-4f5f-9879-efeb371412e9",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Since this is focused on executor to executor migration supporting zero executors isn't going to be a viable option here. However since were using the same methods for putting blocks, assuming that we add support for storing these blocks in external storage in the future, this approach should be able to be generalized to use that same mechanism if configured.",
+        "createdAt" : "2020-04-16T20:36:58Z",
+        "updatedAt" : "2020-04-23T14:23:15Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "bb324f946019b8d700c517cc5eb2f7c11dc70cfc",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +416,420 @@  private[spark] val STORAGE_DECOMMISSION_ENABLED =\n    ConfigBuilder(\"spark.storage.decommission.enabled\")\n      .doc(\"Whether to decommission the block manager when decommissioning executor\")\n      .version(\"3.1.0\")\n      .booleanConf"
+  },
+  {
+    "id" : "80dc927d-7c47-406d-90fc-e57782d66a6c",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370943941",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8f4a54f9-831c-49a2-83de-b2347d9480c9",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-5479, commit ID: 38112905bc3b33f2ae75274afba1c30e116f6e46#diff-4d2ab44195558d5a9d5f15b8803ef39d",
+        "createdAt" : "2020-03-09T06:49:46Z",
+        "updatedAt" : "2020-03-09T06:49:47Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 9,
+    "diffHunk" : "@@ -1,1 +465,469 @@    ConfigBuilder(\"spark.yarn.isPython\")\n      .internal()\n      .version(\"1.5.0\")\n      .booleanConf\n      .createWithDefault(false)"
+  },
+  {
+    "id" : "192c1139-8f95-4eec-8262-1ddd33a4e5fb",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370944120",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "14923e9f-0c44-446f-baee-e984dd7fab6b",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "No JIRA ID, commit ID: e5c4cd8a5e188592f8786a265c0cd073c69ac886#diff-391214d132a0fb4478f4f9c2313d8966",
+        "createdAt" : "2020-03-09T06:50:19Z",
+        "updatedAt" : "2020-03-09T06:50:20Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 15,
+    "diffHunk" : "@@ -1,1 +470,474 @@\n  private[spark] val CPUS_PER_TASK =\n    ConfigBuilder(\"spark.task.cpus\").version(\"0.5.0\").intConf.createWithDefault(1)\n\n  private[spark] val DYN_ALLOCATION_ENABLED ="
+  },
+  {
+    "id" : "1ed421ce-72c3-41ee-be78-ec36a6b62d6d",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370944241",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "939002a6-7234-4dbe-a6ba-2d3a94847a08",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-3795, commit ID: 8d59b37b02eb36f37bcefafb952519d7dca744ad#diff-364713d7776956cb8b0a771e9b62f82d",
+        "createdAt" : "2020-03-09T06:50:41Z",
+        "updatedAt" : "2020-03-09T06:50:42Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 20,
+    "diffHunk" : "@@ -1,1 +474,478 @@  private[spark] val DYN_ALLOCATION_ENABLED =\n    ConfigBuilder(\"spark.dynamicAllocation.enabled\")\n      .version(\"1.2.0\")\n      .booleanConf\n      .createWithDefault(false)"
+  },
+  {
+    "id" : "207ef152-1963-447f-9491-a0bef119f6a1",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370944349",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "336ebfcf-43ad-40d7-b823-8d1edfaa9b90",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-3795, commit ID: 8d59b37b02eb36f37bcefafb952519d7dca744ad#diff-364713d7776956cb8b0a771e9b62f82d",
+        "createdAt" : "2020-03-09T06:51:03Z",
+        "updatedAt" : "2020-03-09T06:51:03Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 27,
+    "diffHunk" : "@@ -1,1 +480,484 @@  private[spark] val DYN_ALLOCATION_TESTING =\n    ConfigBuilder(\"spark.dynamicAllocation.testing\")\n      .version(\"1.2.0\")\n      .booleanConf\n      .createWithDefault(false)"
+  },
+  {
+    "id" : "b42ac8bb-7453-4854-bb59-1b27d3964fc2",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370944400",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9d84f1ca-7a12-4173-9ed1-cd7d43e19d1c",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-3795, commit ID: 8d59b37b02eb36f37bcefafb952519d7dca744ad#diff-364713d7776956cb8b0a771e9b62f82d",
+        "createdAt" : "2020-03-09T06:51:14Z",
+        "updatedAt" : "2020-03-09T06:51:15Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 34,
+    "diffHunk" : "@@ -1,1 +486,490 @@  private[spark] val DYN_ALLOCATION_MIN_EXECUTORS =\n    ConfigBuilder(\"spark.dynamicAllocation.minExecutors\")\n      .version(\"1.2.0\")\n      .intConf\n      .createWithDefault(0)"
+  },
+  {
+    "id" : "bc409774-93d6-4fde-9294-f79c85d5bdba",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370944472",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "de5e8c4a-55e1-48ef-813b-cef5d31ae779",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-3795, commit ID: 8d59b37b02eb36f37bcefafb952519d7dca744ad#diff-364713d7776956cb8b0a771e9b62f82d",
+        "createdAt" : "2020-03-09T06:51:30Z",
+        "updatedAt" : "2020-03-09T06:51:31Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 46,
+    "diffHunk" : "@@ -1,1 +497,501 @@  private[spark] val DYN_ALLOCATION_MAX_EXECUTORS =\n    ConfigBuilder(\"spark.dynamicAllocation.maxExecutors\")\n      .version(\"1.2.0\")\n      .intConf\n      .createWithDefault(Int.MaxValue)"
+  },
+  {
+    "id" : "29e6800d-3f3f-487a-b215-6440a3045ebf",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370944591",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0caf8981-9fc0-4e61-8a70-a68a6e8365d3",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-4585, commit ID: b2047b55c5fc85de6b63276d8ab9610d2496e08b#diff-b096353602813e47074ace09a3890d56",
+        "createdAt" : "2020-03-09T06:51:52Z",
+        "updatedAt" : "2020-03-09T06:51:53Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 40,
+    "diffHunk" : "@@ -1,1 +492,496 @@  private[spark] val DYN_ALLOCATION_INITIAL_EXECUTORS =\n    ConfigBuilder(\"spark.dynamicAllocation.initialExecutors\")\n      .version(\"1.3.0\")\n      .fallbackConf(DYN_ALLOCATION_MIN_EXECUTORS)\n"
+  },
+  {
+    "id" : "0de59d37-bf8c-4b65-8423-8401d7252af7",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370944721",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "73de62b6-fe78-40e7-8975-66d4065bbd46",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-22683, commit ID: 55c4ca88a3b093ee197a8689631be8d1fac1f10f#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-09T06:52:18Z",
+        "updatedAt" : "2020-03-09T06:52:18Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 53,
+    "diffHunk" : "@@ -1,1 +503,507 @@  private[spark] val DYN_ALLOCATION_EXECUTOR_ALLOCATION_RATIO =\n    ConfigBuilder(\"spark.dynamicAllocation.executorAllocationRatio\")\n      .version(\"2.4.0\")\n      .doubleConf\n      .createWithDefault(1.0)"
+  },
+  {
+    "id" : "b98a9636-968e-4c14-9885-5bd2ecc4a040",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370944828",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7f61548a-145e-4b3d-8133-720fa93412af",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-7955, commit ID: 6faaf15ba311bc3a79aae40a6c9c4befabb6889f#diff-b096353602813e47074ace09a3890d56",
+        "createdAt" : "2020-03-09T06:52:37Z",
+        "updatedAt" : "2020-03-09T06:52:38Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 59,
+    "diffHunk" : "@@ -1,1 +509,513 @@  private[spark] val DYN_ALLOCATION_CACHED_EXECUTOR_IDLE_TIMEOUT =\n    ConfigBuilder(\"spark.dynamicAllocation.cachedExecutorIdleTimeout\")\n      .version(\"1.4.0\")\n      .timeConf(TimeUnit.SECONDS)\n      .checkValue(_ >= 0L, \"Timeout must be >= 0.\")"
+  },
+  {
+    "id" : "2e924c74-67b9-43ff-9253-f4d7e2015b16",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370945006",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7f7c6967-23ce-4200-942e-e86779dbffed",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-3795, commit ID: 8d59b37b02eb36f37bcefafb952519d7dca744ad#diff-364713d7776956cb8b0a771e9b62f82d",
+        "createdAt" : "2020-03-09T06:53:07Z",
+        "updatedAt" : "2020-03-09T06:53:08Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 66,
+    "diffHunk" : "@@ -1,1 +516,520 @@  private[spark] val DYN_ALLOCATION_EXECUTOR_IDLE_TIMEOUT =\n    ConfigBuilder(\"spark.dynamicAllocation.executorIdleTimeout\")\n      .version(\"1.2.0\")\n      .timeConf(TimeUnit.SECONDS)\n      .checkValue(_ >= 0L, \"Timeout must be >= 0.\")"
+  },
+  {
+    "id" : "cd21eabe-6151-4a19-adfd-cfb62732d693",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370945124",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f59e203f-225c-4408-a854-9032dc70c8e6",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-27963, commit ID: 2ddeff97d7329942a98ef363991eeabc3fa71a76#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-09T06:53:31Z",
+        "updatedAt" : "2020-03-09T06:53:31Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 73,
+    "diffHunk" : "@@ -1,1 +523,527 @@  private[spark] val DYN_ALLOCATION_SHUFFLE_TRACKING =\n    ConfigBuilder(\"spark.dynamicAllocation.shuffleTracking.enabled\")\n      .version(\"3.0.0\")\n      .booleanConf\n      .createWithDefault(false)"
+  },
+  {
+    "id" : "bf5d9bcd-1ae1-4b15-8aac-b191eba7a684",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370945350",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a39b4c09-5d97-4aa0-82c4-cf374105f20d",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-27963, commit ID: 2ddeff97d7329942a98ef363991eeabc3fa71a76#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-09T06:54:15Z",
+        "updatedAt" : "2020-03-09T06:54:16Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 79,
+    "diffHunk" : "@@ -1,1 +529,533 @@  private[spark] val DYN_ALLOCATION_SHUFFLE_TIMEOUT =\n    ConfigBuilder(\"spark.dynamicAllocation.shuffleTimeout\")\n      .version(\"3.0.0\")\n      .timeConf(TimeUnit.MILLISECONDS)\n      .checkValue(_ >= 0L, \"Timeout must be >= 0.\")"
+  },
+  {
+    "id" : "7a15c425-d795-48a8-bc67-23966e998871",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370945482",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "715ad0ad-9148-4b1e-ada5-b1b9070973ee",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-3795, commit ID: 8d59b37b02eb36f37bcefafb952519d7dca744ad#diff-364713d7776956cb8b0a771e9b62f82d",
+        "createdAt" : "2020-03-09T06:54:46Z",
+        "updatedAt" : "2020-03-09T06:54:46Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 86,
+    "diffHunk" : "@@ -1,1 +536,540 @@  private[spark] val DYN_ALLOCATION_SCHEDULER_BACKLOG_TIMEOUT =\n    ConfigBuilder(\"spark.dynamicAllocation.schedulerBacklogTimeout\")\n      .version(\"1.2.0\")\n      .timeConf(TimeUnit.SECONDS).createWithDefault(1)\n"
+  },
+  {
+    "id" : "1f9a3120-cffd-4439-b166-450462256774",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370945524",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "69292fe5-fc37-4054-a17e-ce4c1fda431d",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-3795, commit ID: 8d59b37b02eb36f37bcefafb952519d7dca744ad#diff-364713d7776956cb8b0a771e9b62f82d",
+        "createdAt" : "2020-03-09T06:54:52Z",
+        "updatedAt" : "2020-03-09T06:54:53Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 91,
+    "diffHunk" : "@@ -1,1 +541,545 @@  private[spark] val DYN_ALLOCATION_SUSTAINED_SCHEDULER_BACKLOG_TIMEOUT =\n    ConfigBuilder(\"spark.dynamicAllocation.sustainedSchedulerBacklogTimeout\")\n      .version(\"1.2.0\")\n      .fallbackConf(DYN_ALLOCATION_SCHEDULER_BACKLOG_TIMEOUT)\n"
+  },
+  {
+    "id" : "5404ebfa-c3dc-4a7b-ae18-96e317d366a3",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370945664",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c60c048f-00a0-42b3-a10d-e679f014cd32",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "No JIRA ID, commit ID: e5c4cd8a5e188592f8786a265c0cd073c69ac886#diff-391214d132a0fb4478f4f9c2313d8966",
+        "createdAt" : "2020-03-09T06:55:19Z",
+        "updatedAt" : "2020-03-09T06:55:19Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 95,
+    "diffHunk" : "@@ -1,1 +545,549 @@\n  private[spark] val LOCALITY_WAIT = ConfigBuilder(\"spark.locality.wait\")\n    .version(\"0.5.0\")\n    .timeConf(TimeUnit.MILLISECONDS)\n    .createWithDefaultString(\"3s\")"
+  },
+  {
+    "id" : "1690e445-fa95-443a-a5a2-65387e431bdd",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370945771",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7d1337d8-b3ef-4dbe-8aa9-40e2304415d0",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-3796, commit ID: f55218aeb1e9d638df6229b36a59a15ce5363482#diff-2b643ea78c1add0381754b1f47eec132",
+        "createdAt" : "2020-03-09T06:55:40Z",
+        "updatedAt" : "2020-03-09T06:55:41Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 102,
+    "diffHunk" : "@@ -1,1 +551,555 @@  private[spark] val SHUFFLE_SERVICE_ENABLED =\n    ConfigBuilder(\"spark.shuffle.service.enabled\")\n      .version(\"1.2.0\")\n      .booleanConf\n      .createWithDefault(false)"
+  },
+  {
+    "id" : "adcabb12-b61b-40ca-8ae1-0b1cab8d8469",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370945933",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "63b1e749-7b25-41f6-9d08-9f0a0a7d8036",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-27677, commit ID: e9f3f62b2c0f521f3cc23fef381fc6754853ad4f#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-09T06:56:16Z",
+        "updatedAt" : "2020-03-09T06:56:17Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 112,
+    "diffHunk" : "@@ -1,1 +561,565 @@        \"persisted blocks are considered idle after \" +\n        \"'spark.dynamicAllocation.executorIdleTimeout' and will be released accordingly.\")\n      .version(\"3.0.0\")\n      .booleanConf\n      .createWithDefault(false)"
+  },
+  {
+    "id" : "e8021cc5-5e50-407f-b1ea-79e220112f73",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370946069",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "868b8170-7f52-4810-baa4-9dabe32f6aed",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-26288, commit ID: 8b0aa59218c209d39cbba5959302d8668b885cf6#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-09T06:56:43Z",
+        "updatedAt" : "2020-03-09T06:56:43Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 120,
+    "diffHunk" : "@@ -1,1 +569,573 @@      .doc(\"Whether to use db in ExternalShuffleService. Note that this only affects \" +\n        \"standalone mode.\")\n      .version(\"3.0.0\")\n      .booleanConf\n      .createWithDefault(true)"
+  },
+  {
+    "id" : "0085b4fe-8265-4f7e-bcc5-e67a582f659f",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370946191",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3ef121f6-5d1e-4785-b224-069ca13d3967",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-3796, commit ID: f55218aeb1e9d638df6229b36a59a15ce5363482#diff-2b643ea78c1add0381754b1f47eec132",
+        "createdAt" : "2020-03-09T06:57:05Z",
+        "updatedAt" : "2020-03-09T06:57:06Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 126,
+    "diffHunk" : "@@ -1,1 +574,578 @@\n  private[spark] val SHUFFLE_SERVICE_PORT =\n    ConfigBuilder(\"spark.shuffle.service.port\").version(\"1.2.0\").intConf.createWithDefault(7337)\n\n  private[spark] val KEYTAB = ConfigBuilder(\"spark.kerberos.keytab\")"
+  },
+  {
+    "id" : "b133c6ad-0d71-4b3b-912b-7a662e934cfc",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370946285",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7629cd3c-db26-4e11-9dc8-59a1ee6bc0f1",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-25372, commit ID: 51540c2fa677658be954c820bc18ba748e4c8583#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-09T06:57:27Z",
+        "updatedAt" : "2020-03-09T06:57:27Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 130,
+    "diffHunk" : "@@ -1,1 +578,582 @@  private[spark] val KEYTAB = ConfigBuilder(\"spark.kerberos.keytab\")\n    .doc(\"Location of user's keytab.\")\n    .version(\"3.0.0\")\n    .stringConf.createOptional\n"
+  },
+  {
+    "id" : "e4934e13-5ce9-4438-a83c-252a2a456071",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370946348",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "04f9aa0f-5cdc-4a57-8b19-ca9dafcaa575",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-25372, commit ID: 51540c2fa677658be954c820bc18ba748e4c8583#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-09T06:57:40Z",
+        "updatedAt" : "2020-03-09T06:57:40Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 136,
+    "diffHunk" : "@@ -1,1 +583,587 @@  private[spark] val PRINCIPAL = ConfigBuilder(\"spark.kerberos.principal\")\n    .doc(\"Name of the Kerberos principal.\")\n    .version(\"3.0.0\")\n    .stringConf\n    .createOptional"
+  },
+  {
+    "id" : "e1464a66-f298-45f3-bbcc-4f350e9de7e8",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370946465",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "10d39eed-5c89-440d-a1e9-decd5f0ee25f",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-23781, commit ID: 68dde3481ea458b0b8deeec2f99233c2d4c1e056#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-09T06:58:03Z",
+        "updatedAt" : "2020-03-09T06:58:03Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 141,
+    "diffHunk" : "@@ -1,1 +588,592 @@\n  private[spark] val KERBEROS_RELOGIN_PERIOD = ConfigBuilder(\"spark.kerberos.relogin.period\")\n    .version(\"3.0.0\")\n    .timeConf(TimeUnit.SECONDS)\n    .createWithDefaultString(\"1m\")"
+  },
+  {
+    "id" : "97687e04-a72f-477c-af8b-6eddfe1cc9f2",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370946591",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d0269d2d-29b1-4d9e-afa0-2e9bac948fd0",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-26595, commit ID: 2a67dbfbd341af166b1c85904875f26a6dea5ba8#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-09T06:58:28Z",
+        "updatedAt" : "2020-03-09T06:58:29Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 149,
+    "diffHunk" : "@@ -1,1 +598,602 @@        \"'keytab', the default, which requires a keytab to be provided, or 'ccache', which uses \" +\n        \"the local credentials cache.\")\n      .version(\"3.0.0\")\n      .stringConf\n      .checkValues(Set(\"keytab\", \"ccache\"))"
+  },
+  {
+    "id" : "7ff25787-5ac3-428b-90d6-312f3bac212a",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370946731",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e98e0f3f-0116-4722-820c-be90cde5e6cf",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-26766, commit ID: d0443a74d185ec72b747fa39994fa9a40ce974cf#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-09T06:58:53Z",
+        "updatedAt" : "2020-03-09T06:58:54Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 157,
+    "diffHunk" : "@@ -1,1 +607,611 @@    .doc(\"Extra Hadoop filesystem URLs for which to request delegation tokens. The filesystem \" +\n      \"that hosts fs.defaultFS does not need to be listed here.\")\n    .version(\"3.0.0\")\n    .stringConf\n    .toSequence"
+  },
+  {
+    "id" : "93495bdf-07b4-49bf-aee1-e7a95465d95a",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370946862",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e3a5cfc4-62ed-46ac-8744-f8e0d9b34823",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-1126, commit ID: 1617816090e7b20124a512a43860a21232ebf511#diff-4d2ab44195558d5a9d5f15b8803ef39d",
+        "createdAt" : "2020-03-09T06:59:25Z",
+        "updatedAt" : "2020-03-09T06:59:25Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 163,
+    "diffHunk" : "@@ -1,1 +613,617 @@\n  private[spark] val EXECUTOR_INSTANCES = ConfigBuilder(\"spark.executor.instances\")\n    .version(\"1.0.0\")\n    .intConf\n    .createOptional"
+  },
+  {
+    "id" : "e3d0ae1b-424b-4292-bec7-88b3dffc901a",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370946963",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "65d03707-e7db-4116-b46e-1875e6d53218",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-21714, commit ID: d10c9dc3f631a26dbbbd8f5c601ca2001a5d7c80#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-09T06:59:47Z",
+        "updatedAt" : "2020-03-09T06:59:47Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 169,
+    "diffHunk" : "@@ -1,1 +619,623 @@  private[spark] val PY_FILES = ConfigBuilder(\"spark.yarn.dist.pyFiles\")\n    .internal()\n    .version(\"2.2.1\")\n    .stringConf\n    .toSequence"
+  },
+  {
+    "id" : "1bf4e71b-71a5-489c-81ca-0bb3e991d1ef",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370947093",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d949a68d-f137-44dd-acbc-1d5f36f8a49a",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-13830, commit ID: 2ef4c5963bff3574fe17e669d703b25ddd064e5d#diff-5a0de266c82b95adb47d9bca714e1f1b",
+        "createdAt" : "2020-03-09T07:00:08Z",
+        "updatedAt" : "2020-03-09T07:00:08Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 176,
+    "diffHunk" : "@@ -1,1 +626,630 @@  private[spark] val TASK_MAX_DIRECT_RESULT_SIZE =\n    ConfigBuilder(\"spark.task.maxDirectResultSize\")\n      .version(\"2.0.0\")\n      .bytesConf(ByteUnit.BYTE)\n      .createWithDefault(1L << 20)"
+  },
+  {
+    "id" : "7699d31a-141a-4eaf-8006-3d36a878a05f",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370947221",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0e66c4c1-16af-4b51-b042-9563110e6be2",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "No JIRA ID, commit ID: 46eecd110a4017ea0c86cbb1010d0ccd6a5eb2ef#diff-264da78fe625d594eae59d1adabc8ae9",
+        "createdAt" : "2020-03-09T07:00:33Z",
+        "updatedAt" : "2020-03-09T07:00:33Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 182,
+    "diffHunk" : "@@ -1,1 +632,636 @@  private[spark] val TASK_MAX_FAILURES =\n    ConfigBuilder(\"spark.task.maxFailures\")\n      .version(\"0.8.0\")\n      .intConf\n      .createWithDefault(4)"
+  },
+  {
+    "id" : "f12b4366-3ba3-4a66-906d-3f13c3b243d4",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370947340",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b2465d02-526c-4622-9736-b3b2c2e4d89f",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-18761, commit ID: 678d91c1d2283d9965a39656af9d383bad093ba8#diff-5a0de266c82b95adb47d9bca714e1f1b",
+        "createdAt" : "2020-03-09T07:00:57Z",
+        "updatedAt" : "2020-03-09T07:00:57Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 188,
+    "diffHunk" : "@@ -1,1 +638,642 @@  private[spark] val TASK_REAPER_ENABLED =\n    ConfigBuilder(\"spark.task.reaper.enabled\")\n      .version(\"2.0.3\")\n      .booleanConf\n      .createWithDefault(false)"
+  },
+  {
+    "id" : "371c4aa2-dc56-4759-b2c2-b4d90c7f1bc3",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370947395",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5cd66443-1e30-4871-9b60-c753f7ce4e8c",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-18761, commit ID: 678d91c1d2283d9965a39656af9d383bad093ba8#diff-5a0de266c82b95adb47d9bca714e1f1b",
+        "createdAt" : "2020-03-09T07:01:08Z",
+        "updatedAt" : "2020-03-09T07:01:09Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 194,
+    "diffHunk" : "@@ -1,1 +644,648 @@  private[spark] val TASK_REAPER_KILL_TIMEOUT =\n    ConfigBuilder(\"spark.task.reaper.killTimeout\")\n      .version(\"2.0.3\")\n      .timeConf(TimeUnit.MILLISECONDS)\n      .createWithDefault(-1)"
+  },
+  {
+    "id" : "98dea6be-5b6e-46f1-b3e3-b049a0d11684",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370947425",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ce52374b-3f16-4e51-b59e-b71f10fe2c00",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-18761, commit ID: 678d91c1d2283d9965a39656af9d383bad093ba8#diff-5a0de266c82b95adb47d9bca714e1f1b",
+        "createdAt" : "2020-03-09T07:01:15Z",
+        "updatedAt" : "2020-03-09T07:01:15Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 200,
+    "diffHunk" : "@@ -1,1 +650,654 @@  private[spark] val TASK_REAPER_POLLING_INTERVAL =\n    ConfigBuilder(\"spark.task.reaper.pollingInterval\")\n      .version(\"2.0.3\")\n      .timeConf(TimeUnit.MILLISECONDS)\n      .createWithDefaultString(\"10s\")"
+  },
+  {
+    "id" : "aebb8907-a50a-4c53-9db9-b09a70c5642e",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370947465",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8de94ee0-65d2-49ce-a516-180550721ec1",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-18761, commit ID: 678d91c1d2283d9965a39656af9d383bad093ba8#diff-5a0de266c82b95adb47d9bca714e1f1b",
+        "createdAt" : "2020-03-09T07:01:23Z",
+        "updatedAt" : "2020-03-09T07:01:23Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 206,
+    "diffHunk" : "@@ -1,1 +656,660 @@  private[spark] val TASK_REAPER_THREAD_DUMP =\n    ConfigBuilder(\"spark.task.reaper.threadDump\")\n      .version(\"2.0.3\")\n      .booleanConf\n      .createWithDefault(true)"
+  },
+  {
+    "id" : "07a2c24b-4fda-472d-b5a9-0d544512febb",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370947599",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a8b31614-22e8-460c-88ce-57b1cc361b8d",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-17675, commit ID: 9ce7d3e542e786c62f047c13f3001e178f76e06a#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-09T07:01:50Z",
+        "updatedAt" : "2020-03-09T07:01:51Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 213,
+    "diffHunk" : "@@ -1,1 +663,667 @@  private[spark] val BLACKLIST_ENABLED =\n    ConfigBuilder(\"spark.blacklist.enabled\")\n      .version(\"2.1.0\")\n      .booleanConf\n      .createOptional"
+  },
+  {
+    "id" : "2b44a56b-2407-4b9e-a111-8640be43ca29",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370947646",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "fb9752b4-377e-4ab8-8c51-354834bbf283",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-17675, commit ID: 9ce7d3e542e786c62f047c13f3001e178f76e06a#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-09T07:02:03Z",
+        "updatedAt" : "2020-03-09T07:02:03Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 219,
+    "diffHunk" : "@@ -1,1 +669,673 @@  private[spark] val MAX_TASK_ATTEMPTS_PER_EXECUTOR =\n    ConfigBuilder(\"spark.blacklist.task.maxTaskAttemptsPerExecutor\")\n      .version(\"2.1.0\")\n      .intConf\n      .createWithDefault(1)"
+  },
+  {
+    "id" : "f59dd312-7e45-42e2-9086-145485615bd9",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370947871",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "247dba3d-e604-41e0-8e3a-8fd68a3ac5fb",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-17675, commit ID: 9ce7d3e542e786c62f047c13f3001e178f76e06a#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-09T07:02:42Z",
+        "updatedAt" : "2020-03-09T07:02:42Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 225,
+    "diffHunk" : "@@ -1,1 +675,679 @@  private[spark] val MAX_TASK_ATTEMPTS_PER_NODE =\n    ConfigBuilder(\"spark.blacklist.task.maxTaskAttemptsPerNode\")\n      .version(\"2.1.0\")\n      .intConf\n      .createWithDefault(2)"
+  },
+  {
+    "id" : "8a995dbd-dab2-4ea3-8a6f-b0f14b6f835c",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370948055",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "32875719-f6fc-4b0d-b253-2aff73819f01",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-17675, commit ID: 9ce7d3e542e786c62f047c13f3001e178f76e06a#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-09T07:03:19Z",
+        "updatedAt" : "2020-03-09T07:03:19Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 237,
+    "diffHunk" : "@@ -1,1 +687,691 @@  private[spark] val MAX_FAILURES_PER_EXEC_STAGE =\n    ConfigBuilder(\"spark.blacklist.stage.maxFailedTasksPerExecutor\")\n      .version(\"2.1.0\")\n      .intConf\n      .createWithDefault(2)"
+  },
+  {
+    "id" : "e76e8265-2700-4e4c-a7ca-787c29306514",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370948158",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "636f1951-e1a0-4aea-90b3-c2742cc7c437",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-17675, commit ID: 9ce7d3e542e786c62f047c13f3001e178f76e06a#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-09T07:03:39Z",
+        "updatedAt" : "2020-03-09T07:03:39Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 249,
+    "diffHunk" : "@@ -1,1 +699,703 @@  private[spark] val MAX_FAILED_EXEC_PER_NODE_STAGE =\n    ConfigBuilder(\"spark.blacklist.stage.maxFailedExecutorsPerNode\")\n      .version(\"2.1.0\")\n      .intConf\n      .createWithDefault(2)"
+  },
+  {
+    "id" : "b7be5eec-eb15-4845-9db5-5f1c9fe74aec",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370948271",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "001e1e03-6f80-4134-bb8d-783ad96f1c43",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-17675, commit ID: 9ce7d3e542e786c62f047c13f3001e178f76e06a#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-09T07:03:59Z",
+        "updatedAt" : "2020-03-09T07:04:00Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 255,
+    "diffHunk" : "@@ -1,1 +705,709 @@  private[spark] val BLACKLIST_TIMEOUT_CONF =\n    ConfigBuilder(\"spark.blacklist.timeout\")\n      .version(\"2.1.0\")\n      .timeConf(TimeUnit.MILLISECONDS)\n      .createOptional"
+  },
+  {
+    "id" : "1cf57079-f559-4a76-a1cd-159e3a3cf24d",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370948480",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "37646c3f-65ed-4067-b384-223749fc0fc2",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-8425, commit ID: 93cdb8a7d0f124b4db069fd8242207c82e263c52#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-09T07:04:41Z",
+        "updatedAt" : "2020-03-09T07:04:41Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 231,
+    "diffHunk" : "@@ -1,1 +681,685 @@  private[spark] val MAX_FAILURES_PER_EXEC =\n    ConfigBuilder(\"spark.blacklist.application.maxFailedTasksPerExecutor\")\n      .version(\"2.2.0\")\n      .intConf\n      .createWithDefault(2)"
+  },
+  {
+    "id" : "05b58def-4200-454a-a7db-f2ddcd54073d",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370948632",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d530461c-fc7c-42d1-89a5-6b292523ba89",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-8425, commit ID: 93cdb8a7d0f124b4db069fd8242207c82e263c52#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-09T07:05:08Z",
+        "updatedAt" : "2020-03-09T07:05:09Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 243,
+    "diffHunk" : "@@ -1,1 +693,697 @@  private[spark] val MAX_FAILED_EXEC_PER_NODE =\n    ConfigBuilder(\"spark.blacklist.application.maxFailedExecutorsPerNode\")\n      .version(\"2.2.0\")\n      .intConf\n      .createWithDefault(2)"
+  },
+  {
+    "id" : "ca78b322-492d-4c6a-9a7a-590efb51c732",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370948773",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "db9ca63e-79c4-4407-8cc3-98dafa747549",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-16554, commit ID: 6287c94f08200d548df5cc0a401b73b84f9968c4#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-09T07:05:35Z",
+        "updatedAt" : "2020-03-09T07:05:35Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 261,
+    "diffHunk" : "@@ -1,1 +711,715 @@  private[spark] val BLACKLIST_KILL_ENABLED =\n    ConfigBuilder(\"spark.blacklist.killBlacklistedExecutors\")\n      .version(\"2.2.0\")\n      .booleanConf\n      .createWithDefault(false)"
+  },
+  {
+    "id" : "1312ddd9-f0c1-4900-b028-65ab958265a4",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370948889",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9fc21636-79d5-48ad-97f4-2c0dc394aa69",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "No JIRA ID, commit ID: ab747d39ddc7c8a314ed2fb26548fc5652af0d74#diff-bad3987c83bd22d46416d3dd9d208e76",
+        "createdAt" : "2020-03-09T07:06:01Z",
+        "updatedAt" : "2020-03-09T07:06:02Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 268,
+    "diffHunk" : "@@ -1,1 +718,722 @@    ConfigBuilder(\"spark.scheduler.executorTaskBlacklistTime\")\n      .internal()\n      .version(\"1.0.0\")\n      .timeConf(TimeUnit.MILLISECONDS)\n      .createOptional"
+  },
+  {
+    "id" : "ee3d793c-8bd3-40b7-b304-552df71200c0",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370949055",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "187b2a1c-a745-41b0-9c42-419542ba1594",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-13669 and SPARK-20898, commit ID: 9e50a1d37a4cf0c34e20a7c1a910ceaff41535a2#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-09T07:06:29Z",
+        "updatedAt" : "2020-03-09T07:06:30Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 274,
+    "diffHunk" : "@@ -1,1 +724,728 @@  private[spark] val BLACKLIST_FETCH_FAILURE_ENABLED =\n    ConfigBuilder(\"spark.blacklist.application.fetchFailure.enabled\")\n      .version(\"2.3.0\")\n      .booleanConf\n      .createWithDefault(false)"
+  },
+  {
+    "id" : "816cfeba-5bef-4505-bb3e-5a6c3819d225",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370949177",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6774ecaa-f67d-45c5-bfaf-1f124073428e",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-19753, commit ID: dccc0aa3cf957c8eceac598ac81ac82f03b52105#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-09T07:06:55Z",
+        "updatedAt" : "2020-03-09T07:06:55Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 282,
+    "diffHunk" : "@@ -1,1 +734,738 @@        \" a FetchFailure. This is set default to false, which means, we only un-register the \" +\n        \" outputs related to the exact executor(instead of the host) on a FetchFailure.\")\n      .version(\"2.3.0\")\n      .booleanConf\n      .createWithDefault(false)"
+  },
+  {
+    "id" : "ceb533c8-7bf4-4093-be99-95cbfcf069e3",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370949324",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8431db10-1f51-4526-a347-23aa61034666",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-20887, commit ID: 629f38e171409da614fd635bd8dd951b7fde17a4#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-09T07:07:20Z",
+        "updatedAt" : "2020-03-09T07:07:20Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 290,
+    "diffHunk" : "@@ -1,1 +744,748 @@        \".eventqueue.queueName.capacity` first. If it's not configured, Spark will \" +\n        \"use the default capacity specified by this config.\")\n      .version(\"2.3.0\")\n      .intConf\n      .checkValue(_ > 0, \"The capacity of listener bus event queue must be positive\")"
+  },
+  {
+    "id" : "729de323-abe9-4487-b034-9f829a1bdfd9",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370949456",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b78ff7bf-fd9b-4895-b206-b3a77e31a12f",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-20863, commit ID: 2a23cdd078a7409d0bb92cf27718995766c41b1d#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-09T07:07:42Z",
+        "updatedAt" : "2020-03-09T07:07:42Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 298,
+    "diffHunk" : "@@ -1,1 +752,756 @@    ConfigBuilder(\"spark.scheduler.listenerbus.metrics.maxListenerClassesTimed\")\n      .internal()\n      .version(\"2.3.0\")\n      .intConf\n      .createWithDefault(128)"
+  },
+  {
+    "id" : "acfe773b-f4b1-449c-9a47-53de840636dc",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370949611",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b8d32d2d-6bba-47f0-95ca-b38537001270",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-30812, commit ID: 68d7edf9497bea2f73707d32ab55dd8e53088e7c#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-09T07:08:10Z",
+        "updatedAt" : "2020-03-09T07:08:10Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 306,
+    "diffHunk" : "@@ -1,1 +762,766 @@        \"discover the event types that cause performance bottlenecks. The time threshold is \" +\n        \"controlled by spark.scheduler.listenerbus.logSlowEvent.threshold.\")\n      .version(\"3.0.0\")\n      .booleanConf\n      .createWithDefault(true)"
+  },
+  {
+    "id" : "b4af3e49-1b56-4cfd-8947-ed6e0785dca7",
+    "prId" : 27852,
+    "prUrl" : "https://github.com/apache/spark/pull/27852#pullrequestreview-370949719",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ab826c98-8229-4d00-bc48-9cf816d56c3a",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-29001, commit ID: 0346afa8fc348aa1b3f5110df747a64e3b2da388#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-09T07:08:33Z",
+        "updatedAt" : "2020-03-09T07:08:34Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dc79da0cbcfb885820e57167b471ba9a8aea3036",
+    "line" : 314,
+    "diffHunk" : "@@ -1,1 +771,775 @@      .doc(\"The time threshold of whether a event is considered to be taking too much time to \" +\n        s\"process. Log the event if ${LISTENER_BUS_LOG_SLOW_EVENT_ENABLED.key} is true.\")\n      .version(\"3.0.0\")\n      .timeConf(TimeUnit.NANOSECONDS)\n      .createWithDefaultString(\"1s\")"
+  },
+  {
+    "id" : "503e7fd8-d071-4208-9657-e3370c6f8ba9",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370738972",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a5f1838b-e091-4385-996b-86eddeb655de",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-30689, commit ID: 742e35f1d48c2523dda2ce21d73b7ab5ade20582#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-07T11:24:15Z",
+        "updatedAt" : "2020-03-07T11:24:16Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 4,
+    "diffHunk" : "@@ -1,1 +46,50 @@        \"returns the resource information for that resource. It tries the discovery \" +\n        \"script last if none of the plugins return information for that resource.\")\n      .version(\"3.0.0\")\n      .stringConf\n      .toSequence"
+  },
+  {
+    "id" : "7c52246a-43b4-494b-9df2-38b4e147f414",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370738987",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "191ff924-3f11-4f0d-884f-3560d8e0ca00",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-27835, commit ID: 6748b486a9afe8370786efb64a8c9f3470c62dcf#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-07T11:24:51Z",
+        "updatedAt" : "2020-03-07T11:24:51Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 12,
+    "diffHunk" : "@@ -1,1 +57,61 @@        \"The file should be formatted as a JSON array of ResourceAllocation objects. \" +\n        \"Only used internally in standalone mode.\")\n      .version(\"3.0.0\")\n      .stringConf\n      .createOptional"
+  },
+  {
+    "id" : "e6f7242c-62a0-4701-933e-157c0f9b043a",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370739009",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "34c0d081-85e1-4980-b723-2e41211d2f94",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "No JIRA ID, commit ID: 29ee101c73bf066bf7f4f8141c475b8d1bd3cf1c#diff-4d2ab44195558d5a9d5f15b8803ef39d",
+        "createdAt" : "2020-03-07T11:25:20Z",
+        "updatedAt" : "2020-03-07T11:25:21Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 19,
+    "diffHunk" : "@@ -1,1 +63,67 @@  private[spark] val DRIVER_CLASS_PATH =\n    ConfigBuilder(SparkLauncher.DRIVER_EXTRA_CLASSPATH)\n      .version(\"1.0.0\")\n      .stringConf\n      .createOptional"
+  },
+  {
+    "id" : "a52a6454-9cd4-4735-94ea-e6f571ed9dfc",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370739027",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3921c574-98b7-49f6-8b8e-6482d10a6026",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "No JIRA ID, commit ID: 29ee101c73bf066bf7f4f8141c475b8d1bd3cf1c#diff-4d2ab44195558d5a9d5f15b8803ef39d",
+        "createdAt" : "2020-03-07T11:25:43Z",
+        "updatedAt" : "2020-03-07T11:25:44Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 26,
+    "diffHunk" : "@@ -1,1 +70,74 @@    ConfigBuilder(SparkLauncher.DRIVER_EXTRA_JAVA_OPTIONS)\n      .withPrepended(SparkLauncher.DRIVER_DEFAULT_JAVA_OPTIONS)\n      .version(\"1.0.0\")\n      .stringConf\n      .createOptional"
+  },
+  {
+    "id" : "9414c54b-50b3-4644-a6c2-8fba30bca5f9",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370739039",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d67e4556-b534-40f9-b7c0-6fb87b41ac79",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "No JIRA ID, commit ID: 29ee101c73bf066bf7f4f8141c475b8d1bd3cf1c#diff-4d2ab44195558d5a9d5f15b8803ef39d",
+        "createdAt" : "2020-03-07T11:25:54Z",
+        "updatedAt" : "2020-03-07T11:25:54Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 33,
+    "diffHunk" : "@@ -1,1 +76,80 @@  private[spark] val DRIVER_LIBRARY_PATH =\n    ConfigBuilder(SparkLauncher.DRIVER_EXTRA_LIBRARY_PATH)\n      .version(\"1.0.0\")\n      .stringConf\n      .createOptional"
+  },
+  {
+    "id" : "068696de-d841-4d79-8c3c-cd34f995a8e3",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370739049",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "91873d2b-492f-4191-9830-a4e24c0f679f",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-2996, commit ID: 6a1e0f967286945db13d94aeb6ed19f0a347c236#diff-4d2ab44195558d5a9d5f15b8803ef39d",
+        "createdAt" : "2020-03-07T11:26:17Z",
+        "updatedAt" : "2020-03-07T11:26:17Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 40,
+    "diffHunk" : "@@ -1,1 +82,86 @@  private[spark] val DRIVER_USER_CLASS_PATH_FIRST =\n    ConfigBuilder(\"spark.driver.userClassPathFirst\")\n      .version(\"1.3.0\")\n      .booleanConf\n      .createWithDefault(false)"
+  },
+  {
+    "id" : "d04503d9-680f-4fea-b4e1-6df63b3d067f",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370739077",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "519f16e9-2cb7-4ae2-880f-6f6358aaa170",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-1507, commit ID: 2be82b1e66cd188456bbf1e5abb13af04d1629d5#diff-4d2ab44195558d5a9d5f15b8803ef39d",
+        "createdAt" : "2020-03-07T11:26:39Z",
+        "updatedAt" : "2020-03-07T11:26:39Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 46,
+    "diffHunk" : "@@ -1,1 +88,92 @@  private[spark] val DRIVER_CORES = ConfigBuilder(\"spark.driver.cores\")\n    .doc(\"Number of cores to use for the driver process, only in cluster mode.\")\n    .version(\"1.3.0\")\n    .intConf\n    .createWithDefault(1)"
+  },
+  {
+    "id" : "dd9facc8-f167-4036-851b-c97a1ba60365",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370739097",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "861f46a9-8d03-4947-960d-d7a96617bf7d",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-3243, commit ID: c1ffa3e4cdfbd1f84b5c8d8de5d0fb958a19e211#diff-4d2ab44195558d5a9d5f15b8803ef39d",
+        "createdAt" : "2020-03-07T11:27:01Z",
+        "updatedAt" : "2020-03-07T11:27:02Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 52,
+    "diffHunk" : "@@ -1,1 +94,98 @@  private[spark] val DRIVER_MEMORY = ConfigBuilder(SparkLauncher.DRIVER_MEMORY)\n    .doc(\"Amount of memory to use for the driver process, in MiB unless otherwise specified.\")\n    .version(\"1.1.1\")\n    .bytesConf(ByteUnit.MiB)\n    .createWithDefaultString(\"1g\")"
+  },
+  {
+    "id" : "fe6058e1-983f-4f33-b5dc-fd8c5baca7d2",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370739129",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2a5d7568-6f8c-41db-a709-73749b9050ab",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-22646, commit ID: 3f4060c340d6bac412e8819c4388ccba226efcf3#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-07T11:27:22Z",
+        "updatedAt" : "2020-03-07T11:27:22Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 59,
+    "diffHunk" : "@@ -1,1 +101,105 @@    .doc(\"The amount of non-heap memory to be allocated per driver in cluster mode, \" +\n      \"in MiB unless otherwise specified.\")\n    .version(\"2.3.0\")\n    .bytesConf(ByteUnit.MiB)\n    .createOptional"
+  },
+  {
+    "id" : "d4eff228-7f5a-4e34-b7de-6f5567fe4061",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370739145",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ccbe8075-a0e2-44c8-9e9a-b552dcaaf360",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-25118, commit ID: 5f11e8c4cb9a5db037ac239b8fcc97f3a746e772#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-07T11:27:46Z",
+        "updatedAt" : "2020-03-07T11:27:47Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 65,
+    "diffHunk" : "@@ -1,1 +106,110 @@\n  private[spark] val DRIVER_LOG_DFS_DIR =\n    ConfigBuilder(\"spark.driver.log.dfsDir\").version(\"3.0.0\").stringConf.createOptional\n\n  private[spark] val DRIVER_LOG_LAYOUT ="
+  },
+  {
+    "id" : "1a15cc15-48f1-44c7-866e-8d9b64b9b22b",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370739179",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "05a735f3-2b4d-46ff-ba5d-250195ade0d7",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-25118, commit ID: 5f11e8c4cb9a5db037ac239b8fcc97f3a746e772#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-07T11:28:15Z",
+        "updatedAt" : "2020-03-07T11:28:16Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 69,
+    "diffHunk" : "@@ -1,1 +110,114 @@  private[spark] val DRIVER_LOG_LAYOUT =\n    ConfigBuilder(\"spark.driver.log.layout\")\n      .version(\"3.0.0\")\n      .stringConf\n      .createOptional"
+  },
+  {
+    "id" : "61f4247e-e091-44d1-bbb3-903a1bbcc3d0",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370739193",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1663cd2c-690e-4255-800b-dcc1a7480a68",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-25118, commit ID: 5f11e8c4cb9a5db037ac239b8fcc97f3a746e772#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-07T11:28:42Z",
+        "updatedAt" : "2020-03-07T11:30:02Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 75,
+    "diffHunk" : "@@ -1,1 +116,120 @@  private[spark] val DRIVER_LOG_PERSISTTODFS =\n    ConfigBuilder(\"spark.driver.log.persistToDfs.enabled\")\n      .version(\"3.0.0\")\n      .booleanConf\n      .createWithDefault(false)"
+  },
+  {
+    "id" : "c71023d3-2803-4703-b581-e16a9258dff1",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370739263",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3440069e-a9d6-425d-9fd3-8f70065d139e",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-29105, commit ID: 276aaaae8d404975f8701089e9f4dfecd16e0d9f#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-07T11:30:21Z",
+        "updatedAt" : "2020-03-07T11:30:22Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 81,
+    "diffHunk" : "@@ -1,1 +122,126 @@  private[spark] val DRIVER_LOG_ALLOW_EC =\n    ConfigBuilder(\"spark.driver.log.allowErasureCoding\")\n      .version(\"3.0.0\")\n      .booleanConf\n      .createWithDefault(false)"
+  },
+  {
+    "id" : "e6a3ae48-698f-4df4-8730-3f4cd9dac0c4",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370739286",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "96a81c68-55a5-41d2-aec9-ef9601e71ad4",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-1132, commit ID: 79d07d66040f206708e14de393ab0b80020ed96a#diff-364713d7776956cb8b0a771e9b62f82d",
+        "createdAt" : "2020-03-07T11:30:44Z",
+        "updatedAt" : "2020-03-07T11:30:45Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 86,
+    "diffHunk" : "@@ -1,1 +127,131 @@\n  private[spark] val EVENT_LOG_ENABLED = ConfigBuilder(\"spark.eventLog.enabled\")\n    .version(\"1.0.0\")\n    .booleanConf\n    .createWithDefault(false)"
+  },
+  {
+    "id" : "f00f2cf2-7c46-4291-a020-bb977039c731",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370739299",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d5591a0c-8e2f-43b6-82e7-cd63d4cc6583",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-1132, commit ID: 79d07d66040f206708e14de393ab0b80020ed96a#diff-364713d7776956cb8b0a771e9b62f82d",
+        "createdAt" : "2020-03-07T11:31:03Z",
+        "updatedAt" : "2020-03-07T11:31:03Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 91,
+    "diffHunk" : "@@ -1,1 +132,136 @@\n  private[spark] val EVENT_LOG_DIR = ConfigBuilder(\"spark.eventLog.dir\")\n    .version(\"1.0.0\")\n    .stringConf\n    .createWithDefault(EventLoggingListener.DEFAULT_LOG_DIR)"
+  },
+  {
+    "id" : "e9d78d0d-66f6-40fe-b1d1-e0fcdc100bb6",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370739301",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b8b5f1fc-4a2d-4414-b638-49b2b73cc965",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-1132, commit ID: 79d07d66040f206708e14de393ab0b80020ed96a#diff-364713d7776956cb8b0a771e9b62f82d",
+        "createdAt" : "2020-03-07T11:31:10Z",
+        "updatedAt" : "2020-03-07T11:31:10Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 97,
+    "diffHunk" : "@@ -1,1 +138,142 @@  private[spark] val EVENT_LOG_COMPRESS =\n    ConfigBuilder(\"spark.eventLog.compress\")\n      .version(\"1.0.0\")\n      .booleanConf\n      .createWithDefault(false)"
+  },
+  {
+    "id" : "106cd577-f5ed-41ce-a046-36018225ee21",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370739319",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f0b3ed5d-dac7-4bdf-96e0-50ffe8e273b2",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-22050, commit ID: 1437e344ec0c29a44a19f4513986f5f184c44695#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-07T11:31:35Z",
+        "updatedAt" : "2020-03-07T11:31:36Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 103,
+    "diffHunk" : "@@ -1,1 +144,148 @@  private[spark] val EVENT_LOG_BLOCK_UPDATES =\n    ConfigBuilder(\"spark.eventLog.logBlockUpdates.enabled\")\n      .version(\"2.3.0\")\n      .booleanConf\n      .createWithDefault(false)"
+  },
+  {
+    "id" : "4816639b-ca38-4d92-8118-b1b788d9fce8",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370739337",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ad368a82-386b-462e-8c20-b79bb6472716",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-25855, commit ID: 35506dced739ef16136e9f3d5d48c638899d3cec#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-07T11:31:57Z",
+        "updatedAt" : "2020-03-07T11:31:57Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 109,
+    "diffHunk" : "@@ -1,1 +150,154 @@  private[spark] val EVENT_LOG_ALLOW_EC =\n    ConfigBuilder(\"spark.eventLog.erasureCoding.enabled\")\n      .version(\"3.0.0\")\n      .booleanConf\n      .createWithDefault(false)"
+  },
+  {
+    "id" : "8270decc-4687-49bf-9d0f-77c41d97d0fa",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370739355",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0d708b69-692a-48b7-b04c-c59a99e72e9f",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "No JIRA ID, commit ID: d4c8af87994acf3707027e6fab25363f51fd4615#diff-e4a5a68c15eed95d038acfed84b0b66a",
+        "createdAt" : "2020-03-07T11:32:24Z",
+        "updatedAt" : "2020-03-07T11:32:25Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 116,
+    "diffHunk" : "@@ -1,1 +157,161 @@    ConfigBuilder(\"spark.eventLog.testing\")\n      .internal()\n      .version(\"1.0.1\")\n      .booleanConf\n      .createWithDefault(false)"
+  },
+  {
+    "id" : "187ab60b-71c9-43b8-bc94-73dde6dae875",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370739376",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2044471b-3bd2-45e6-acb7-e3b6e91bc890",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-1132, commit ID: 79d07d66040f206708e14de393ab0b80020ed96a#diff-364713d7776956cb8b0a771e9b62f82d",
+        "createdAt" : "2020-03-07T11:32:47Z",
+        "updatedAt" : "2020-03-07T11:32:47Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 122,
+    "diffHunk" : "@@ -1,1 +163,167 @@  private[spark] val EVENT_LOG_OUTPUT_BUFFER_SIZE = ConfigBuilder(\"spark.eventLog.buffer.kb\")\n    .doc(\"Buffer size to use when writing to output streams, in KiB unless otherwise specified.\")\n    .version(\"1.0.0\")\n    .bytesConf(ByteUnit.KiB)\n    .createWithDefaultString(\"100k\")"
+  },
+  {
+    "id" : "3a77f1c4-a538-4e2e-9fb7-e4b7abb58ff6",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370739392",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d6736fc3-ac7e-4b45-94da-87f174d079e6",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-30812, commit ID: 68d7edf9497bea2f73707d32ab55dd8e53088e7c#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-07T11:33:13Z",
+        "updatedAt" : "2020-03-07T11:33:13Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 130,
+    "diffHunk" : "@@ -1,1 +171,175 @@      .doc(\"Whether to write per-stage peaks of executor metrics (for each executor) \" +\n        \"to the event log.\")\n      .version(\"3.0.0\")\n      .booleanConf\n      .createWithDefault(false)"
+  },
+  {
+    "id" : "032aa554-2dbb-4442-b526-95be0dc989d7",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370739410",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c706cf38-77a8-4712-8e66-caf59bf4f821",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-25865, commit ID: e5c502c596563dce8eb58f86e42c1aea2c51ed17#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-07T11:33:41Z",
+        "updatedAt" : "2020-03-07T11:33:41Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 138,
+    "diffHunk" : "@@ -1,1 +180,184 @@        \" the return of GarbageCollectorMXBean.getName. The built-in young generation garbage \" +\n        s\"collectors are ${GarbageCollectionMetrics.YOUNG_GENERATION_BUILTIN_GARBAGE_COLLECTORS}\")\n      .version(\"3.0.0\")\n      .stringConf\n      .toSequence"
+  },
+  {
+    "id" : "0d4921c2-8105-49f8-93ca-f8e875ec0bc8",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370739423",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8bdc4e15-733a-4898-aab9-a97723070920",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-25865, commit ID: e5c502c596563dce8eb58f86e42c1aea2c51ed17#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-07T11:33:49Z",
+        "updatedAt" : "2020-03-07T11:33:49Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 146,
+    "diffHunk" : "@@ -1,1 +190,194 @@        \"the return of GarbageCollectorMXBean.getName. The built-in old generation garbage \" +\n        s\"collectors are ${GarbageCollectionMetrics.OLD_GENERATION_BUILTIN_GARBAGE_COLLECTORS}\")\n      .version(\"3.0.0\")\n      .stringConf\n      .toSequence"
+  },
+  {
+    "id" : "8f0fc0d4-58ad-483d-84f1-6cd5c212bddd",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370739462",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "038cad30-908c-47b9-97ed-d8c0b7165466",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-1132, commit ID: 79d07d66040f206708e14de393ab0b80020ed96a#diff-364713d7776956cb8b0a771e9b62f82d",
+        "createdAt" : "2020-03-07T11:34:12Z",
+        "updatedAt" : "2020-03-07T11:34:13Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 154,
+    "diffHunk" : "@@ -1,1 +197,201 @@  private[spark] val EVENT_LOG_OVERWRITE =\n    ConfigBuilder(\"spark.eventLog.overwrite\")\n      .version(\"1.0.0\")\n      .booleanConf\n      .createWithDefault(false)"
+  },
+  {
+    "id" : "3a85f339-3c42-4986-8b14-47be4411178f",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370739470",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7f16d67b-3a39-487c-94f5-b16c75f8933c",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-23820, commit ID: 71f70130f1b2b4ec70595627f0a02a88e2c0e27d#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-07T11:34:33Z",
+        "updatedAt" : "2020-03-07T11:34:33Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 161,
+    "diffHunk" : "@@ -1,1 +203,207 @@  private[spark] val EVENT_LOG_CALLSITE_LONG_FORM =\n    ConfigBuilder(\"spark.eventLog.longForm.enabled\")\n      .version(\"2.4.0\")\n      .booleanConf\n      .createWithDefault(false)"
+  },
+  {
+    "id" : "35ac491d-a410-4b99-9749-9f5203e578c6",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370739496",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1dfa4907-8caf-488d-b8c3-8a772f915cff",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-28869, commit ID: 100fc58da54e026cda87832a10e2d06eaeccdf87#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-07T11:35:10Z",
+        "updatedAt" : "2020-03-07T11:35:11Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 169,
+    "diffHunk" : "@@ -1,1 +211,215 @@      .doc(\"Whether rolling over event log files is enabled. If set to true, it cuts down \" +\n        \"each event log file to the configured size.\")\n      .version(\"3.0.0\")\n      .booleanConf\n      .createWithDefault(false)"
+  },
+  {
+    "id" : "2dbf859a-c336-411b-8ac6-c83b9a04e7e7",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370739502",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e8acd36e-649e-4265-b5d3-f094fdc4a3fd",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-28869, commit ID: 100fc58da54e026cda87832a10e2d06eaeccdf87#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-07T11:35:18Z",
+        "updatedAt" : "2020-03-07T11:35:18Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 177,
+    "diffHunk" : "@@ -1,1 +219,223 @@      .doc(s\"When ${EVENT_LOG_ENABLE_ROLLING.key}=true, specifies the max size of event log file\" +\n        \" to be rolled over.\")\n      .version(\"3.0.0\")\n      .bytesConf(ByteUnit.BYTE)\n      .checkValue(_ >= ByteUnit.MiB.toBytes(10), \"Max file size of event log should be \" +"
+  },
+  {
+    "id" : "da3f4b47-2eb9-4ec0-b07e-68116ce37a22",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370739520",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8a16c5da-c4c2-4c8d-b08e-1ed5a400e856",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-3377, commit ID: 79e45c9323455a51f25ed9acd0edd8682b4bbb88#diff-364713d7776956cb8b0a771e9b62f82d",
+        "createdAt" : "2020-03-07T11:35:42Z",
+        "updatedAt" : "2020-03-07T11:35:43Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 185,
+    "diffHunk" : "@@ -1,1 +226,230 @@\n  private[spark] val EXECUTOR_ID =\n    ConfigBuilder(\"spark.executor.id\").version(\"1.2.0\").stringConf.createOptional\n\n  private[spark] val EXECUTOR_CLASS_PATH ="
+  },
+  {
+    "id" : "3917b8e9-dbf8-44b2-91f6-b310d26a830e",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370739533",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "68c73f35-ff31-4084-9f7a-a549cfd5b4b8",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "No JIRA ID, commit ID: 29ee101c73bf066bf7f4f8141c475b8d1bd3cf1c#diff-4d2ab44195558d5a9d5f15b8803ef39d",
+        "createdAt" : "2020-03-07T11:36:09Z",
+        "updatedAt" : "2020-03-07T11:36:10Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 190,
+    "diffHunk" : "@@ -1,1 +230,234 @@  private[spark] val EXECUTOR_CLASS_PATH =\n    ConfigBuilder(SparkLauncher.EXECUTOR_EXTRA_CLASSPATH)\n      .version(\"1.0.0\")\n      .stringConf\n      .createOptional"
+  },
+  {
+    "id" : "d819a8c7-3f36-4beb-a61b-43d21bbcb6e9",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370739559",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ccb7b40d-38bd-41ad-8513-f1d0c0e5286a",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-25449, commit ID: 9362c5cc273fdd09f9b3b512e2f6b64bcefc25ab#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-07T11:36:33Z",
+        "updatedAt" : "2020-03-07T11:36:33Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 197,
+    "diffHunk" : "@@ -1,1 +237,241 @@    ConfigBuilder(\"spark.executor.heartbeat.dropZeroAccumulatorUpdates\")\n      .internal()\n      .version(\"3.0.0\")\n      .booleanConf\n      .createWithDefault(true)"
+  },
+  {
+    "id" : "d6588e82-0d43-4d22-a050-cbdc7df7ec6f",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370739577",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f2b48f8c-eae6-4e32-8fc9-4517b0f5ec3a",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-2099, commit ID: 8d338f64c4eda45d22ae33f61ef7928011cc2846#diff-5a0de266c82b95adb47d9bca714e1f1b",
+        "createdAt" : "2020-03-07T11:36:56Z",
+        "updatedAt" : "2020-03-07T11:36:57Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 203,
+    "diffHunk" : "@@ -1,1 +243,247 @@  private[spark] val EXECUTOR_HEARTBEAT_INTERVAL =\n    ConfigBuilder(\"spark.executor.heartbeatInterval\")\n      .version(\"1.1.0\")\n      .timeConf(TimeUnit.MILLISECONDS)\n      .createWithDefaultString(\"10s\")"
+  },
+  {
+    "id" : "70439ece-cc8d-4ffb-b06e-9a909f18f762",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370739590",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5a2cd18b-a92d-4906-b5ab-04b37fe04d04",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-13522, commit ID: 86bf93e65481b8fe5d7532ca6d4cd29cafc9e9dd#diff-5a0de266c82b95adb47d9bca714e1f1b",
+        "createdAt" : "2020-03-07T11:37:20Z",
+        "updatedAt" : "2020-03-07T11:37:21Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 211,
+    "diffHunk" : "@@ -1,1 +250,254 @@    ConfigBuilder(\"spark.executor.heartbeat.maxFailures\")\n      .internal()\n      .version(\"1.6.2\")\n      .intConf\n      .createWithDefault(60)"
+  },
+  {
+    "id" : "d79790a6-7c40-49ce-96f0-569f4ad76ded",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370739617",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "86f1352e-c08e-4a5a-8592-c459d01817c1",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-27324, commit ID: 387ce89a0631f1a4c6668b90ff2a7bbcf11919cd#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-07T11:38:05Z",
+        "updatedAt" : "2020-03-07T11:38:05Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 219,
+    "diffHunk" : "@@ -1,1 +258,262 @@      .doc(\"Whether to collect process tree metrics (from the /proc filesystem) when collecting \" +\n        \"executor metrics.\")\n      .version(\"3.0.0\")\n      .booleanConf\n      .createWithDefault(false)"
+  },
+  {
+    "id" : "ae30eea1-1767-4b5f-a054-6346b6dc03b5",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370739635",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "06eb4b04-4265-4cd4-a063-9acc570ed908",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-26329, commit ID: 80ab19b9fd268adfc419457f12b99a5da7b6d1c7#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-07T11:38:30Z",
+        "updatedAt" : "2020-03-07T11:38:31Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 227,
+    "diffHunk" : "@@ -1,1 +267,271 @@        \"If 0, the polling is done on executor heartbeats. \" +\n        \"If positive, the polling is done at this interval.\")\n      .version(\"3.0.0\")\n      .timeConf(TimeUnit.MILLISECONDS)\n      .createWithDefaultString(\"0\")"
+  },
+  {
+    "id" : "61e39154-93aa-458d-858b-e6dbbfded67b",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370739652",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f6488bd2-a0a9-422b-a139-456bfa1741bd",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "No JIRA ID, commit ID: 29ee101c73bf066bf7f4f8141c475b8d1bd3cf1c#diff-4d2ab44195558d5a9d5f15b8803ef39d",
+        "createdAt" : "2020-03-07T11:39:09Z",
+        "updatedAt" : "2020-03-07T11:39:09Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 234,
+    "diffHunk" : "@@ -1,1 +274,278 @@    ConfigBuilder(SparkLauncher.EXECUTOR_EXTRA_JAVA_OPTIONS)\n      .withPrepended(SparkLauncher.EXECUTOR_DEFAULT_JAVA_OPTIONS)\n      .version(\"1.0.0\")\n      .stringConf\n      .createOptional"
+  },
+  {
+    "id" : "833b154d-0dca-4a33-9e45-f4f0e7c9fdb5",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370739653",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "497ae077-eac3-4863-862d-20282b0fe065",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "No JIRA ID, commit ID: 29ee101c73bf066bf7f4f8141c475b8d1bd3cf1c#diff-4d2ab44195558d5a9d5f15b8803ef39d",
+        "createdAt" : "2020-03-07T11:39:16Z",
+        "updatedAt" : "2020-03-07T11:39:16Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 241,
+    "diffHunk" : "@@ -1,1 +280,284 @@  private[spark] val EXECUTOR_LIBRARY_PATH =\n    ConfigBuilder(SparkLauncher.EXECUTOR_EXTRA_LIBRARY_PATH)\n      .version(\"1.0.0\")\n      .stringConf\n      .createOptional"
+  },
+  {
+    "id" : "4477f64f-9ba0-4b9c-ad52-a51bbeb59a6b",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370739705",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5404d796-3c1c-4648-bc76-29c5375123a1",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-2996, commit ID: 6a1e0f967286945db13d94aeb6ed19f0a347c236#diff-529fc5c06b9731c1fbda6f3db60b16aa",
+        "createdAt" : "2020-03-07T11:39:58Z",
+        "updatedAt" : "2020-03-07T11:39:58Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 248,
+    "diffHunk" : "@@ -1,1 +286,290 @@  private[spark] val EXECUTOR_USER_CLASS_PATH_FIRST =\n    ConfigBuilder(\"spark.executor.userClassPathFirst\")\n      .version(\"1.3.0\")\n      .booleanConf\n      .createWithDefault(false)"
+  },
+  {
+    "id" : "0856a01a-6ccb-4022-8890-a39ffc0a4718",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370739724",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "33ee1a78-e367-4b5a-8993-b73100366622",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-1126, commit ID: 1617816090e7b20124a512a43860a21232ebf511#diff-4d2ab44195558d5a9d5f15b8803ef39d",
+        "createdAt" : "2020-03-07T11:40:24Z",
+        "updatedAt" : "2020-03-07T11:40:24Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 253,
+    "diffHunk" : "@@ -1,1 +291,295 @@\n  private[spark] val EXECUTOR_CORES = ConfigBuilder(SparkLauncher.EXECUTOR_CORES)\n    .version(\"1.0.0\")\n    .intConf\n    .createWithDefault(1)"
+  },
+  {
+    "id" : "466a9ceb-d915-4a35-867e-7b1bac33cf93",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370739753",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2040327f-dae3-41c1-8240-c3f932a0dfb4",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "No JIRA ID, commit ID: 696eec32c982ca516c506de33f383a173bcbd131#diff-4f50ad37deb6742ad45472636c9a870b",
+        "createdAt" : "2020-03-07T11:40:53Z",
+        "updatedAt" : "2020-03-07T11:40:53Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 259,
+    "diffHunk" : "@@ -1,1 +297,301 @@  private[spark] val EXECUTOR_MEMORY = ConfigBuilder(SparkLauncher.EXECUTOR_MEMORY)\n    .doc(\"Amount of memory to use per executor process, in MiB unless otherwise specified.\")\n    .version(\"0.7.0\")\n    .bytesConf(ByteUnit.MiB)\n    .createWithDefaultString(\"1g\")"
+  },
+  {
+    "id" : "d4276077-8991-4982-b0f6-0d22f8f52118",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370740619",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d638a071-2a04-48ef-82b8-26b84d75a51e",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-22646, commit ID: 3f4060c340d6bac412e8819c4388ccba226efcf3#diff-6bdad48cfc34314e89599655442ff210",
+        "createdAt" : "2020-03-07T12:02:53Z",
+        "updatedAt" : "2020-03-07T12:02:53Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 266,
+    "diffHunk" : "@@ -1,1 +304,308 @@    .doc(\"The amount of non-heap memory to be allocated per executor in cluster mode, \" +\n      \"in MiB unless otherwise specified.\")\n    .version(\"2.3.0\")\n    .bytesConf(ByteUnit.MiB)\n    .createOptional"
+  },
+  {
+    "id" : "7c9b367c-73dd-4dac-a678-21e2060ca573",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370740636",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8b3e41aa-738c-4d13-91e1-dc547b28cebd",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "No JIRA ID, commit ID: 0a472840030e4e7e84fe748f7bfa49f1ece599c5#diff-b6cc54c092b861f645c3cd69ea0f91e2",
+        "createdAt" : "2020-03-07T12:03:17Z",
+        "updatedAt" : "2020-03-07T12:03:17Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 274,
+    "diffHunk" : "@@ -1,1 +314,318 @@      \"`spark.deploy.defaultCores` on Spark's standalone cluster manager, or infinite \" +\n      \"(all available cores) on Mesos.\")\n    .version(\"0.6.0\")\n    .intConf\n    .createOptional"
+  },
+  {
+    "id" : "24ca3ff5-1f8d-4e01-9d44-c0617a686582",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370740658",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f63ce544-e963-4d8e-8ae5-9c908eef3dce",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-12251, commit ID: 9870e5c7af87190167ca3845ede918671b9420ca#diff-529fc5c06b9731c1fbda6f3db60b16aa",
+        "createdAt" : "2020-03-07T12:03:42Z",
+        "updatedAt" : "2020-03-07T12:03:42Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 281,
+    "diffHunk" : "@@ -1,1 +321,325 @@    .doc(\"If true, Spark will attempt to use off-heap memory for certain operations. \" +\n      \"If off-heap memory use is enabled, then spark.memory.offHeap.size must be positive.\")\n    .version(\"1.6.0\")\n    .withAlternative(\"spark.unsafe.offHeap\")\n    .booleanConf"
+  },
+  {
+    "id" : "4f100d82-21e0-4502-8a6e-fc140fca5656",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370740669",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a27c6187-80ab-4209-9f5c-11d818ae714a",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-12251, commit ID: 9870e5c7af87190167ca3845ede918671b9420ca#diff-529fc5c06b9731c1fbda6f3db60b16aa",
+        "createdAt" : "2020-03-07T12:04:01Z",
+        "updatedAt" : "2020-03-07T12:04:02Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 289,
+    "diffHunk" : "@@ -1,1 +332,336 @@      \"consumption must fit within some hard limit then be sure to shrink your JVM heap size \" +\n      \"accordingly. This must be set to a positive value when spark.memory.offHeap.enabled=true.\")\n    .version(\"1.6.0\")\n    .bytesConf(ByteUnit.BYTE)\n    .checkValue(_ >= 0, \"The off-heap memory size must not be negative\")"
+  },
+  {
+    "id" : "9decaf3d-a6b9-4364-9c80-89c53c350785",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370740687",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8f91d8fd-ba7b-4ad7-9c5f-b9dc4047c9d1",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-10983, commit ID: b3ffac5178795f2d8e7908b3e77e8e89f50b5f6f#diff-529fc5c06b9731c1fbda6f3db60b16aa",
+        "createdAt" : "2020-03-07T12:04:31Z",
+        "updatedAt" : "2020-03-07T12:04:31Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 297,
+    "diffHunk" : "@@ -1,1 +342,346 @@      \"less working memory may be available to execution and tasks may spill to disk more \" +\n      \"often. Leaving this at the default value is recommended. \")\n    .version(\"1.6.0\")\n    .doubleConf\n    .checkValue(v => v >= 0.0 && v < 1.0, \"Storage fraction must be in [0,1)\")"
+  },
+  {
+    "id" : "fe5da79e-0bc7-42a2-99f4-f5317abb6515",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370740693",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8941ba0f-a3ef-4810-a019-e6417c6a818d",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-10983, commit ID: b3ffac5178795f2d8e7908b3e77e8e89f50b5f6f#diff-529fc5c06b9731c1fbda6f3db60b16aa",
+        "createdAt" : "2020-03-07T12:04:41Z",
+        "updatedAt" : "2020-03-07T12:04:42Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 305,
+    "diffHunk" : "@@ -1,1 +353,357 @@      \"user data structures, and imprecise size estimation in the case of sparse, \" +\n      \"unusually large records. Leaving this at the default value is recommended.  \")\n    .version(\"1.6.0\")\n    .doubleConf\n    .createWithDefault(0.6)"
+  },
+  {
+    "id" : "16922df9-156e-4812-87fe-fd9480120e35",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370740709",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "751d5203-fa91-4fe9-8d3b-d7ab8212daf0",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-1777, commit ID: ecf30ee7e78ea59c462c54db0fde5328f997466c#diff-2b643ea78c1add0381754b1f47eec132",
+        "createdAt" : "2020-03-07T12:05:10Z",
+        "updatedAt" : "2020-03-07T12:05:10Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 310,
+    "diffHunk" : "@@ -1,1 +358,362 @@\n  private[spark] val STORAGE_SAFETY_FRACTION = ConfigBuilder(\"spark.storage.safetyFraction\")\n    .version(\"1.1.0\")\n    .doubleConf\n    .createWithDefault(0.9)"
+  },
+  {
+    "id" : "2229b286-0887-4888-99ce-6e00207e2266",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370740722",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "295fe2be-554a-4b78-be7a-61a6dd32baf5",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-1777, commit ID: ecf30ee7e78ea59c462c54db0fde5328f997466c#diff-692a329b5a7fb4134c55d559457b94e4",
+        "createdAt" : "2020-03-07T12:05:32Z",
+        "updatedAt" : "2020-03-07T12:05:32Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 317,
+    "diffHunk" : "@@ -1,1 +365,369 @@    ConfigBuilder(\"spark.storage.unrollMemoryThreshold\")\n      .doc(\"Initial memory to request before unrolling any block\")\n      .version(\"1.1.0\")\n      .longConf\n      .createWithDefault(1024 * 1024)"
+  },
+  {
+    "id" : "caaeef7d-2b73-4392-bd04-1544dabcacc5",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370740742",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1bff860d-0807-4984-94bb-6e7b8bf33a53",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-15355, commit ID: fa7c582e9442b985a0493fb1dd15b3fb9b6031b4#diff-186864190089a718680accb51de5f0d4",
+        "createdAt" : "2020-03-07T12:05:57Z",
+        "updatedAt" : "2020-03-07T12:05:57Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 325,
+    "diffHunk" : "@@ -1,1 +375,379 @@        \"if there are any existing available replicas. This tries to \" +\n        \"get the replication level of the block to the initial number\")\n      .version(\"2.2.0\")\n      .booleanConf\n      .createWithDefault(false)"
+  },
+  {
+    "id" : "7f0a1b41-e545-4799-bbdd-3eb5208986d1",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370740759",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b8c179f9-ea65-49f8-8674-62db0c44f4b4",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-1145, commit ID: 76339495153dd895667ad609815c887b2c8960ea#diff-abd96f2ae793cd6ea6aab5b96a3c1d7a",
+        "createdAt" : "2020-03-07T12:06:23Z",
+        "updatedAt" : "2020-03-07T12:06:23Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 333,
+    "diffHunk" : "@@ -1,1 +386,390 @@        \"In general, memory mapping has high overhead for blocks close to or below \" +\n        \"the page size of the operating system.\")\n      .version(\"0.9.2\")\n      .bytesConf(ByteUnit.BYTE)\n      .createWithDefaultString(\"2m\")"
+  },
+  {
+    "id" : "ebafc817-39a3-4536-bb50-416365e045b6",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370740775",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0ab805d2-782b-45b3-ac6f-b3b477129de3",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-15353, commit ID: a26afd52198523dbd51dc94053424494638c7de5#diff-2b643ea78c1add0381754b1f47eec132",
+        "createdAt" : "2020-03-07T12:06:45Z",
+        "updatedAt" : "2020-03-07T12:06:45Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 339,
+    "diffHunk" : "@@ -1,1 +392,396 @@  private[spark] val STORAGE_REPLICATION_POLICY =\n    ConfigBuilder(\"spark.storage.replication.policy\")\n      .version(\"2.1.0\")\n      .stringConf\n      .createWithDefaultString(classOf[RandomBlockReplicationPolicy].getName)"
+  },
+  {
+    "id" : "24c6e9d2-6899-4eab-9241-bfb22e072b66",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370740791",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c5765c36-7e4a-4b14-9636-1c12d2acf91e",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-15353, commit ID: a26afd52198523dbd51dc94053424494638c7de5#diff-186864190089a718680accb51de5f0d4",
+        "createdAt" : "2020-03-07T12:07:04Z",
+        "updatedAt" : "2020-03-07T12:07:04Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 345,
+    "diffHunk" : "@@ -1,1 +398,402 @@  private[spark] val STORAGE_REPLICATION_TOPOLOGY_MAPPER =\n    ConfigBuilder(\"spark.storage.replication.topologyMapper\")\n      .version(\"2.1.0\")\n      .stringConf\n      .createWithDefaultString(classOf[DefaultTopologyMapper].getName)"
+  },
+  {
+    "id" : "7227be96-6071-40cd-85aa-f2d9cdc6d795",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370740804",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2c9fce95-9acb-43d4-8aef-1f90d762a8e0",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-3495 and SPARK-3496, commit ID: be0cc9952d6c8b4cfe9ff10a761e0677cba64489#diff-2b643ea78c1add0381754b1f47eec132",
+        "createdAt" : "2020-03-07T12:07:30Z",
+        "updatedAt" : "2020-03-07T12:07:30Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 351,
+    "diffHunk" : "@@ -1,1 +403,407 @@\n  private[spark] val STORAGE_CACHED_PEERS_TTL = ConfigBuilder(\"spark.storage.cachedPeersTtl\")\n    .version(\"1.1.1\")\n    .intConf\n    .createWithDefault(60 * 1000)"
+  },
+  {
+    "id" : "629ed170-ebe3-4ece-97a5-9abc33f6648f",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370740815",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "882d663a-05b9-4a57-81de-f3671dfc3d32",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-3495 and SPARK-3496, commit ID: be0cc9952d6c8b4cfe9ff10a761e0677cba64489#diff-2b643ea78c1add0381754b1f47eec132",
+        "createdAt" : "2020-03-07T12:07:51Z",
+        "updatedAt" : "2020-03-07T12:07:51Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 358,
+    "diffHunk" : "@@ -1,1 +409,413 @@  private[spark] val STORAGE_MAX_REPLICATION_FAILURE =\n    ConfigBuilder(\"spark.storage.maxReplicationFailures\")\n      .version(\"1.1.1\")\n      .intConf\n      .createWithDefault(1)"
+  },
+  {
+    "id" : "8a05382a-653f-487f-b570-7b1e1277885b",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370740831",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b1f20d98-18ac-45f3-9858-2351d2a7d1eb",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-15353, commit ID: a26afd52198523dbd51dc94053424494638c7de5#diff-e550ce522c12a31d805a7d0f41e802af",
+        "createdAt" : "2020-03-07T12:08:19Z",
+        "updatedAt" : "2020-03-07T12:08:20Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 364,
+    "diffHunk" : "@@ -1,1 +414,418 @@\n  private[spark] val STORAGE_REPLICATION_TOPOLOGY_FILE =\n    ConfigBuilder(\"spark.storage.replication.topologyFile\")\n      .version(\"2.1.0\")\n      .stringConf"
+  },
+  {
+    "id" : "65b934c2-e0b5-4f78-a880-910bc626dcf4",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370740846",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e4b59dbd-4e50-4621-93d1-d4691edcf28b",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-13566, commit ID: ab006523b840b1d2dbf3f5ff0a238558e7665a1e#diff-5a0de266c82b95adb47d9bca714e1f1b",
+        "createdAt" : "2020-03-07T12:08:43Z",
+        "updatedAt" : "2020-03-07T12:08:44Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 371,
+    "diffHunk" : "@@ -1,1 +421,425 @@  private[spark] val STORAGE_EXCEPTION_PIN_LEAK =\n    ConfigBuilder(\"spark.storage.exceptionOnPinLeak\")\n      .version(\"1.6.2\")\n      .booleanConf\n      .createWithDefault(false)"
+  },
+  {
+    "id" : "e376f955-2b71-4d7d-bdd5-e389b7df9ce2",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370740869",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5c8b3e3c-655c-4b3c-aa86-f8443a5d0111",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "No JIRA ID, commit ID: 9085ebf3750c7d9bb7c6b5f6b4bdc5b807af93c2#diff-76170a9c8f67b542bc58240a0a12fe08",
+        "createdAt" : "2020-03-07T12:09:18Z",
+        "updatedAt" : "2020-03-07T12:09:18Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 377,
+    "diffHunk" : "@@ -1,1 +427,431 @@  private[spark] val STORAGE_BLOCKMANAGER_TIMEOUTINTERVAL =\n    ConfigBuilder(\"spark.storage.blockManagerTimeoutIntervalMs\")\n      .version(\"0.7.3\")\n      .timeConf(TimeUnit.MILLISECONDS)\n      .createWithDefaultString(\"60s\")"
+  },
+  {
+    "id" : "70dc4fee-f7eb-4389-9902-d7069ab4d109",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370740878",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a542a08a-a817-4a9c-98aa-81df9a71f7a0",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "No JIRA ID, commit ID: 97434f49b8c029e9b78c91ec5f58557cd1b5c943#diff-2ce6374aac24d70c69182b067216e684",
+        "createdAt" : "2020-03-07T12:09:43Z",
+        "updatedAt" : "2020-03-07T12:09:43Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 383,
+    "diffHunk" : "@@ -1,1 +433,437 @@  private[spark] val STORAGE_BLOCKMANAGER_SLAVE_TIMEOUT =\n    ConfigBuilder(\"spark.storage.blockManagerSlaveTimeoutMs\")\n      .version(\"0.7.0\")\n      .timeConf(TimeUnit.MILLISECONDS)\n      .createWithDefaultString(Network.NETWORK_TIMEOUT.defaultValueString)"
+  },
+  {
+    "id" : "6f0e5f12-61bb-4948-a685-cfad630bf70a",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370740892",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "799ace3f-7f51-4d7b-8dee-a0d9cf940564",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-24340, commit ID: 8ef167a5f9ba8a79bb7ca98a9844fe9cfcfea060#diff-916ca56b663f178f302c265b7ef38499",
+        "createdAt" : "2020-03-07T12:10:11Z",
+        "updatedAt" : "2020-03-07T12:10:11Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 391,
+    "diffHunk" : "@@ -1,1 +441,445 @@      .doc(\"Whether or not cleanup the files not served by the external shuffle service \" +\n        \"on executor exits.\")\n      .version(\"2.4.0\")\n      .booleanConf\n      .createWithDefault(true)"
+  },
+  {
+    "id" : "d350b989-fecf-499b-85c9-31d4f3634655",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370740912",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "12eac891-7a6a-48e6-89a9-62ee084c7de6",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "No JIRA ID, commit ID: 815d6bd69a0c1ba0e94fc0785f5c3619b37f19c5#diff-e8b73c5b81c403a5e5d581f97624c510",
+        "createdAt" : "2020-03-07T12:10:34Z",
+        "updatedAt" : "2020-03-07T12:10:34Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 399,
+    "diffHunk" : "@@ -1,1 +449,453 @@      .doc(\"Number of subdirectories inside each path listed in spark.local.dir for \" +\n        \"hashing Block files into.\")\n      .version(\"0.6.0\")\n      .intConf\n      .checkValue(_ > 0, \"The number of subdirectories must be positive.\")"
+  },
+  {
+    "id" : "f6375ffd-f158-42f4-be01-be1f63901f23",
+    "prId" : 27847,
+    "prUrl" : "https://github.com/apache/spark/pull/27847#pullrequestreview-370740937",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e6284954-acc7-492d-958c-89c1abec3793",
+        "parentId" : null,
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "SPARK-13328, commit ID: ff776b2fc1cd4c571fd542dbf807e6fa3373cb34#diff-2b643ea78c1add0381754b1f47eec132",
+        "createdAt" : "2020-03-07T12:10:59Z",
+        "updatedAt" : "2020-03-07T12:10:59Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "98c3def8275c6c2c0eb86ace24c0408613877c1a",
+    "line" : 407,
+    "diffHunk" : "@@ -1,1 +458,462 @@      .doc(\"Max number of failures before this block manager refreshes \" +\n        \"the block locations from the driver.\")\n      .version(\"2.0.0\")\n      .intConf\n      .createWithDefault(5)"
   }
 ]

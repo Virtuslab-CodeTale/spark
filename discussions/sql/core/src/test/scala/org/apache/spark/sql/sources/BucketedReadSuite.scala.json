@@ -108,5 +108,60 @@
     "commit" : "62a04a3e4d94e63b3787533f619e368a7e8d59f6",
     "line" : 55,
     "diffHunk" : "@@ -1,1 +876,880 @@  }\n\n  test(\"bucket coalescing eliminates shuffle\") {\n    withSQLConf(SQLConf.COALESCE_BUCKETS_IN_SORT_MERGE_JOIN_ENABLED.key -> \"true\") {\n      // The side with bucketedTableTestSpec1 will be coalesced to have 4 output partitions."
+  },
+  {
+    "id" : "23a60dd2-4554-4b19-be85-0d4e60703c1c",
+    "prId" : 27842,
+    "prUrl" : "https://github.com/apache/spark/pull/27842#pullrequestreview-371557294",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "46730124-1951-4c34-8765-90dd733f09fa",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Could you add more tests, e.g., orderBy cases?",
+        "createdAt" : "2020-03-08T00:33:40Z",
+        "updatedAt" : "2020-03-10T02:57:27Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3ec7c6dd-4231-4560-a0f6-54ec61152bcb",
+        "parentId" : "46730124-1951-4c34-8765-90dd733f09fa",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "Do you mean something like the following?\r\n```\r\nval t1 = spark.range(10).selectExpr(\"id as k1\").orderBy(\"k1\")\r\n  .selectExpr(\"k1 as k11\").orderBy(\"k11\")\r\nval t2 = spark.range(10).selectExpr(\"id as k2\").orderBy(\"k2\")\r\nt1.join(t2, t1(\"k11\") === t2(\"k2\")).explain(true)\r\n```\r\nExtra `Sort` is optimized away, so it doesn't affect the physical plan (no extra sort).",
+        "createdAt" : "2020-03-08T03:31:09Z",
+        "updatedAt" : "2020-03-10T02:57:27Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5c8c7ace-dd88-4821-9090-49af2b0f3b19",
+        "parentId" : "46730124-1951-4c34-8765-90dd733f09fa",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Ah, I see. How about the aggregate case?",
+        "createdAt" : "2020-03-08T07:11:45Z",
+        "updatedAt" : "2020-03-10T02:57:27Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b9b0682d-1bdc-4ff9-876b-900bb7fa78b6",
+        "parentId" : "46730124-1951-4c34-8765-90dd733f09fa",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "I added a test for `SortAggregateExec`. `HashAggregateExec` and `ObjectAggregateExec` are not affected since ordering is not involved with them.",
+        "createdAt" : "2020-03-09T21:57:55Z",
+        "updatedAt" : "2020-03-10T02:57:27Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "fc6bc62356ef1a4bd23a69d5a73a5c7c78995c03",
+    "line" : 7,
+    "diffHunk" : "@@ -1,1 +608,612 @@    withSQLConf(SQLConf.AUTO_BROADCASTJOIN_THRESHOLD.key -> \"0\") {\n      withTable(\"t\") {\n        df1.repartition(1).write.format(\"parquet\").bucketBy(8, \"i\").sortBy(\"i\").saveAsTable(\"t\")\n        val t1 = spark.table(\"t\")\n        val t2 = t1.selectExpr(\"i as ii\")"
   }
 ]

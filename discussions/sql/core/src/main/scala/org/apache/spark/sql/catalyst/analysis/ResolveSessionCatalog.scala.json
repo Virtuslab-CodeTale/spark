@@ -570,5 +570,203 @@
     "commit" : "9ad57d17bac47ea0f801004ec0aba9197e631bc7",
     "line" : 28,
     "diffHunk" : "@@ -1,1 +272,276 @@    case c @ CreateTableStatement(\n         SessionCatalogAndTable(catalog, tbl), _, _, _, _, _, _, _, _, _) =>\n      assertNoNullTypeInSchema(c.tableSchema)\n      val provider = c.provider.getOrElse(conf.defaultDataSourceName)\n      if (!isV2Provider(provider)) {"
+  },
+  {
+    "id" : "bf83d022-7977-42e2-8a00-51c5f781e307",
+    "prId" : 27838,
+    "prUrl" : "https://github.com/apache/spark/pull/27838#pullrequestreview-371662412",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "494126a3-226e-4fdb-9aa8-20183d8c1e8f",
+        "parentId" : null,
+        "authorId" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "body" : "We shouldn't do this change. Since the default provider of a catalog may be different",
+        "createdAt" : "2020-03-06T19:27:35Z",
+        "updatedAt" : "2020-03-06T20:11:23Z",
+        "lastEditedBy" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "64185e6b-6745-40ec-9f04-4f2e6ed6ff1d",
+        "parentId" : "494126a3-226e-4fdb-9aa8-20183d8c1e8f",
+        "authorId" : "8fec0990-98ca-4639-aa0d-4d79de603820",
+        "body" : "but this is the session catalog? Shouldn't it always use `defaultDataSourceName` to be coherent with sql? ",
+        "createdAt" : "2020-03-06T19:31:05Z",
+        "updatedAt" : "2020-03-06T20:11:23Z",
+        "lastEditedBy" : "8fec0990-98ca-4639-aa0d-4d79de603820",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "09d841a3-d883-4bc4-afee-736c74462fbe",
+        "parentId" : "494126a3-226e-4fdb-9aa8-20183d8c1e8f",
+        "authorId" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "body" : "I think that implementation needs to live within `V2SessionCatalog`, not here",
+        "createdAt" : "2020-03-06T19:50:10Z",
+        "updatedAt" : "2020-03-06T20:11:23Z",
+        "lastEditedBy" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "13990f45-c3d8-446c-8001-e309dcdfa9f2",
+        "parentId" : "494126a3-226e-4fdb-9aa8-20183d8c1e8f",
+        "authorId" : "8fec0990-98ca-4639-aa0d-4d79de603820",
+        "body" : "The create table path is already doing this. Shall I change that too then? https://github.com/apache/spark/blob/master/sql/core/src/main/scala/org/apache/spark/sql/catalyst/analysis/ResolveSessionCatalog.scala#L281",
+        "createdAt" : "2020-03-06T20:11:10Z",
+        "updatedAt" : "2020-03-06T20:51:54Z",
+        "lastEditedBy" : "8fec0990-98ca-4639-aa0d-4d79de603820",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "eb547910-02b1-4814-807e-4b1c29b5b4c9",
+        "parentId" : "494126a3-226e-4fdb-9aa8-20183d8c1e8f",
+        "authorId" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "body" : "hmm... 🤔 @rdblue thoughts?",
+        "createdAt" : "2020-03-06T21:43:33Z",
+        "updatedAt" : "2020-03-06T21:43:33Z",
+        "lastEditedBy" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c794cf95-80ac-4aac-a0e0-e2bde526e013",
+        "parentId" : "494126a3-226e-4fdb-9aa8-20183d8c1e8f",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "I think this should not use Spark's default. The default provider should be determined by the catalog, not by Spark. For example, if my default provider is `parquet` then how should a JDBC catalog interpret this?",
+        "createdAt" : "2020-03-06T22:51:31Z",
+        "updatedAt" : "2020-03-06T22:51:31Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7a43fbc2-a424-4a1c-be0f-48fd0d12e873",
+        "parentId" : "494126a3-226e-4fdb-9aa8-20183d8c1e8f",
+        "authorId" : "8fec0990-98ca-4639-aa0d-4d79de603820",
+        "body" : "Sounds reasonable, though I think the AST builder currently always requires a provider in the sql query? I can make the change for create and replace here to pass None in the properties if not specified. @cloud-fan thoughts?",
+        "createdAt" : "2020-03-06T23:06:52Z",
+        "updatedAt" : "2020-03-06T23:06:52Z",
+        "lastEditedBy" : "8fec0990-98ca-4639-aa0d-4d79de603820",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5b21bad3-7c75-403d-be7d-37a7557025e3",
+        "parentId" : "494126a3-226e-4fdb-9aa8-20183d8c1e8f",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "It's better to put the default provider in `V2SessionCatalog`, but the problem here is: this rule need to know the provider and see if it's v2, and then pick v1 or v2 command.",
+        "createdAt" : "2020-03-09T05:06:13Z",
+        "updatedAt" : "2020-03-09T05:06:13Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4bdc6e33-3879-4e29-a144-3e4fc93e6ff4",
+        "parentId" : "494126a3-226e-4fdb-9aa8-20183d8c1e8f",
+        "authorId" : "8fec0990-98ca-4639-aa0d-4d79de603820",
+        "body" : "Maybe `CatalogPlugin` should expose an interface for the default provider? It's not so clear to me what's the relationship between provider and catalog. Should every catalog have a provider?",
+        "createdAt" : "2020-03-09T20:13:11Z",
+        "updatedAt" : "2020-03-09T20:13:11Z",
+        "lastEditedBy" : "8fec0990-98ca-4639-aa0d-4d79de603820",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9709989e-b5db-4a62-9055-09d809d73b36",
+        "parentId" : "494126a3-226e-4fdb-9aa8-20183d8c1e8f",
+        "authorId" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "body" : "A default provider doesn't make sense for CatalogPlugin, but it can make sense for a `TableCatalog`. V2SessionCatalog then can use the `conf.defaultDataSourceName`. WDYT?\r\n",
+        "createdAt" : "2020-03-09T20:59:35Z",
+        "updatedAt" : "2020-03-09T20:59:36Z",
+        "lastEditedBy" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bc80a44a-9c22-419b-8cf7-c87137db9b66",
+        "parentId" : "494126a3-226e-4fdb-9aa8-20183d8c1e8f",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "The provider doesn't determine whether the command should be run using v1 or v2, the table and catalog do. The provider for the session catalog matters, but not for any other catalog so I don't think changing either the `TableCatalog` or `CatalogPlugin` API is a good idea.\r\n\r\nSince this is limited to the v2 session catalog, let's come up with a way to delegate to the v2 session catalog for this. That, or set a default.",
+        "createdAt" : "2020-03-09T21:20:17Z",
+        "updatedAt" : "2020-03-09T21:20:17Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "02e23156-df9e-4d46-961f-cb8506d3fd14",
+        "parentId" : "494126a3-226e-4fdb-9aa8-20183d8c1e8f",
+        "authorId" : "8fec0990-98ca-4639-aa0d-4d79de603820",
+        "body" : "Can we just say that the existing `defaultDataSourceName` is the default provider for v2 session catalog? Or shall I add another conf for that or add another interface for session catalog? ",
+        "createdAt" : "2020-03-09T22:34:38Z",
+        "updatedAt" : "2020-03-09T22:34:39Z",
+        "lastEditedBy" : "8fec0990-98ca-4639-aa0d-4d79de603820",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0302fca0-f277-492d-9348-49b76941776a",
+        "parentId" : "494126a3-226e-4fdb-9aa8-20183d8c1e8f",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "Now that I understand that this problem is scoped to just how we handle the session catalog, I think it's fine to use the v1 default provider here. That's what the v1 and v2 session catalogs would use anyway.",
+        "createdAt" : "2020-03-09T22:41:01Z",
+        "updatedAt" : "2020-03-09T22:41:01Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ab335ef6-b683-4055-97f1-f6bdad466b24",
+        "parentId" : "494126a3-226e-4fdb-9aa8-20183d8c1e8f",
+        "authorId" : "8fec0990-98ca-4639-aa0d-4d79de603820",
+        "body" : "yup. @brkyvz @cloud-fan Good to go?",
+        "createdAt" : "2020-03-09T23:09:30Z",
+        "updatedAt" : "2020-03-09T23:09:31Z",
+        "lastEditedBy" : "8fec0990-98ca-4639-aa0d-4d79de603820",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e03dd609-c18f-4cef-a031-a53f0a885a38",
+        "parentId" : "494126a3-226e-4fdb-9aa8-20183d8c1e8f",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "yea good to go!",
+        "createdAt" : "2020-03-10T03:34:02Z",
+        "updatedAt" : "2020-03-10T03:34:03Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ffd7a21ae2735d20fa8b8cac393d51ba37a5f3aa",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +306,310 @@    case c @ ReplaceTableStatement(\n         SessionCatalogAndTable(catalog, tbl), _, _, _, _, _, _, _, _, _) =>\n      val provider = c.provider.getOrElse(conf.defaultDataSourceName)\n      if (!isV2Provider(provider)) {\n        throw new AnalysisException(\"REPLACE TABLE is only supported with v2 tables.\")"
+  },
+  {
+    "id" : "19095ded-5531-4a9d-a38d-3a0f8b8b19a2",
+    "prId" : 27838,
+    "prUrl" : "https://github.com/apache/spark/pull/27838#pullrequestreview-370571088",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c6af6652-a7e2-4e07-b1e1-5402d710f0c6",
+        "parentId" : null,
+        "authorId" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "body" : "ditto",
+        "createdAt" : "2020-03-06T19:27:42Z",
+        "updatedAt" : "2020-03-06T20:11:23Z",
+        "lastEditedBy" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ffd7a21ae2735d20fa8b8cac393d51ba37a5f3aa",
+    "line" : 22,
+    "diffHunk" : "@@ -1,1 +322,326 @@    case c @ ReplaceTableAsSelectStatement(\n         SessionCatalogAndTable(catalog, tbl), _, _, _, _, _, _, _, _, _) =>\n      val provider = c.provider.getOrElse(conf.defaultDataSourceName)\n      if (!isV2Provider(provider)) {\n        throw new AnalysisException(\"REPLACE TABLE AS SELECT is only supported with v2 tables.\")"
   }
 ]

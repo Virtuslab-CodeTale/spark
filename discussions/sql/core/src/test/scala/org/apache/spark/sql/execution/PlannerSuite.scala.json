@@ -141,5 +141,60 @@
     "commit" : "7187ebd2e053570d92017100dba4a0738fa2f014",
     "line" : 16,
     "diffHunk" : "@@ -1,1 +463,467 @@      None,\n      shuffle,\n      shuffle.copy())\n\n    val outputPlan = ReuseExchangeAndSubquery.apply(inputPlan)"
+  },
+  {
+    "id" : "611145bc-a9a1-4cf7-ab39-8e1cc6b62d5a",
+    "prId" : 27842,
+    "prUrl" : "https://github.com/apache/spark/pull/27842#pullrequestreview-371691263",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8f5a3243-e018-4703-9ade-c353faba4f65",
+        "parentId" : null,
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "FYI, this is 5 without the fix.",
+        "createdAt" : "2020-03-10T00:25:55Z",
+        "updatedAt" : "2020-03-10T02:57:27Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fc8b44e1-5d1c-4970-b5d6-f73dae649f18",
+        "parentId" : "8f5a3243-e018-4703-9ade-c353faba4f65",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "why do we have sorts between `SortAggregateExec` and `SortMergeJoinExec`?",
+        "createdAt" : "2020-03-10T05:25:33Z",
+        "updatedAt" : "2020-03-10T05:25:33Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "594ba4f9-b11c-4a28-994f-9bdc21bccd8a",
+        "parentId" : "8f5a3243-e018-4703-9ade-c353faba4f65",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "Oh, nothing between them. Two sorts under `SortAggregateExec`:\r\n```\r\n   +- SortAggregate(key=[k2#224L], functions=[collect_list(k2#224L, 0, 0)], output=[k2#224L, collect_list(k2)#236])\r\n      +- *(5) Sort [k2#224L ASC NULLS FIRST], false, 0\r\n         +- Exchange hashpartitioning(k2#224L, 5), true, [id=#151]\r\n            +- SortAggregate(key=[k2#224L], functions=[partial_collect_list(k2#224L, 0, 0)], output=[k2#224L, buf#254])\r\n               +- *(4) Sort [k2#224L ASC NULLS FIRST], false, 0\r\n                  +- *(4) Project [FLOOR((cast(id#222L as double) / 4.0)) AS k2#224L]\r\n                     +- *(4) Range (0, 20, step=1, splits=2)\r\n```",
+        "createdAt" : "2020-03-10T05:34:31Z",
+        "updatedAt" : "2020-03-10T05:34:32Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "02be0123-5700-4776-96bf-4082a3a3e174",
+        "parentId" : "8f5a3243-e018-4703-9ade-c353faba4f65",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "ah i see",
+        "createdAt" : "2020-03-10T05:36:08Z",
+        "updatedAt" : "2020-03-10T05:36:08Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "fc6bc62356ef1a4bd23a69d5a73a5c7c78995c03",
+    "line" : 19,
+    "diffHunk" : "@@ -1,1 +991,995 @@        // We expect two SortExec nodes on each side of join.\n        val sorts = planned.collect { case s: SortExec => s }\n        assert(sorts.size == 4)\n      }\n    }"
   }
 ]

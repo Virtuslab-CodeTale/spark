@@ -1296,5 +1296,126 @@
     "commit" : "a3aa8ebe11de6011fc77daa5b805af1193992d74",
     "line" : 40,
     "diffHunk" : "@@ -1,1 +659,663 @@      classTag: ClassTag[_]): StreamCallbackWithID = {\n    // Delegate shuffle blocks here to resolver if supported\n    if (blockId.isShuffle || blockId.isInternalShuffle) {\n      logInfo(s\"Putting shuffle block ${blockId}\")\n      try {"
+  },
+  {
+    "id" : "81be4847-3332-4f43-9290-8165e3855994",
+    "prId" : 27864,
+    "prUrl" : "https://github.com/apache/spark/pull/27864#pullrequestreview-374643666",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f8d534e7-578f-4644-b96e-9864a1cf591e",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Shall we have a `logDebug` when it's already decommissioning (`blockManagerDecommissioning = true`)?",
+        "createdAt" : "2020-03-13T17:30:56Z",
+        "updatedAt" : "2020-04-23T14:23:15Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "277d9b79-7ac8-4d02-8d07-639bb166c31f",
+        "parentId" : "f8d534e7-578f-4644-b96e-9864a1cf591e",
+        "authorId" : "ad4cb313-47b2-4cfa-9c1f-0a3596794a67",
+        "body" : "done.",
+        "createdAt" : "2020-03-13T22:04:11Z",
+        "updatedAt" : "2020-04-23T14:23:15Z",
+        "lastEditedBy" : "ad4cb313-47b2-4cfa-9c1f-0a3596794a67",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "bb324f946019b8d700c517cc5eb2f7c11dc70cfc",
+    "line" : 101,
+    "diffHunk" : "@@ -1,1 +1777,1781 @@\n  def decommissionBlockManager(): Unit = {\n    if (!blockManagerDecommissioning) {\n      logInfo(\"Starting block manager decommissioning process\")\n      blockManagerDecommissioning = true"
+  },
+  {
+    "id" : "16e5af17-73c7-4a2a-a8bf-38fb1c5e1f85",
+    "prId" : 27864,
+    "prUrl" : "https://github.com/apache/spark/pull/27864#pullrequestreview-399473744",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1a0ee909-9c06-4df4-a3b5-8187335e3735",
+        "parentId" : null,
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "I don't know if we need it but replicateBlock is blocking and it seems like maybe async + futures might help us migrate more blocks? Especially if one host is underload we might block on sending a block to that host before we move forward.",
+        "createdAt" : "2020-04-06T21:00:29Z",
+        "updatedAt" : "2020-04-23T14:23:15Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c246d142-480d-4e94-9bfd-a38dd2dd06f3",
+        "parentId" : "1a0ee909-9c06-4df4-a3b5-8187335e3735",
+        "authorId" : "ad4cb313-47b2-4cfa-9c1f-0a3596794a67",
+        "body" : "@holdenk I am not sure how this will behave when multiple executors on same host machine are decommissioning. And each one of them is doing it in parallel - may cause some sort of network congestion? I have updated code to do replication in ThreadPool of size 4. Maybe we should make this configurable? any suggestions?\r\n",
+        "createdAt" : "2020-04-23T14:29:14Z",
+        "updatedAt" : "2020-04-23T14:35:46Z",
+        "lastEditedBy" : "ad4cb313-47b2-4cfa-9c1f-0a3596794a67",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4fc99724-f129-4594-8bae-230b48ab3cc5",
+        "parentId" : "1a0ee909-9c06-4df4-a3b5-8187335e3735",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Network congestion is certainly a possibility, I think that for now this strike a good balance between simple code and avoiding hanging all transfers if we have one slow target host. We can revisit this in the future if it turns out we need more control in production environments. Sound good?",
+        "createdAt" : "2020-04-23T21:02:14Z",
+        "updatedAt" : "2020-04-23T21:07:09Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "bb324f946019b8d700c517cc5eb2f7c11dc70cfc",
+    "line" : 132,
+    "diffHunk" : "@@ -1,1 +1808,1812 @@      replicateBlocksInfo, \"decommissionRddCacheBlocks\", 4) {\n      case ReplicateBlock(blockId, existingReplicas, maxReplicas) =>\n        val replicatedSuccessfully = replicateBlock(\n          blockId,\n          existingReplicas.toSet,"
+  },
+  {
+    "id" : "ea47baa2-ade8-4ae0-a9f3-292df565efa4",
+    "prId" : 27864,
+    "prUrl" : "https://github.com/apache/spark/pull/27864#pullrequestreview-389982961",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "cb24fbec-723a-403e-a270-515eaa54aa5a",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Shall we have a `logInfo` to match with line 1933, `logInfo(\"Stopping cache replication thread\")`?",
+        "createdAt" : "2020-04-07T18:30:33Z",
+        "updatedAt" : "2020-04-23T14:23:15Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ec4e6fe0-9f26-4d05-8af1-e0e669c313d8",
+        "parentId" : "cb24fbec-723a-403e-a270-515eaa54aa5a",
+        "authorId" : "ad4cb313-47b2-4cfa-9c1f-0a3596794a67",
+        "body" : "done.",
+        "createdAt" : "2020-04-08T13:35:41Z",
+        "updatedAt" : "2020-04-23T14:23:15Z",
+        "lastEditedBy" : "ad4cb313-47b2-4cfa-9c1f-0a3596794a67",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ad73daa2-59ef-4d97-8116-1154268aa608",
+        "parentId" : "cb24fbec-723a-403e-a270-515eaa54aa5a",
+        "authorId" : "ad4cb313-47b2-4cfa-9c1f-0a3596794a67",
+        "body" : "added logInfo.",
+        "createdAt" : "2020-04-08T13:39:04Z",
+        "updatedAt" : "2020-04-23T14:23:15Z",
+        "lastEditedBy" : "ad4cb313-47b2-4cfa-9c1f-0a3596794a67",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "bb324f946019b8d700c517cc5eb2f7c11dc70cfc",
+    "line" : 188,
+    "diffHunk" : "@@ -1,1 +1925,1929 @@    blockReplicationThread.setName(\"block-replication-thread\")\n\n    def start(): Unit = {\n      logInfo(\"Starting block replication thread\")\n      blockReplicationThread.start()"
   }
 ]

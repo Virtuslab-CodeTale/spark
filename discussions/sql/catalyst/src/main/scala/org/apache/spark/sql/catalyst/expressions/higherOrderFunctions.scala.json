@@ -20,5 +20,27 @@
     "commit" : "d00e70596e1b679d2331375629249905e9c75395",
     "line" : 15,
     "diffHunk" : "@@ -1,1 +807,811 @@      keyVar.value.set(map.keyArray().get(i, keyVar.dataType))\n      valueVar.value.set(map.valueArray().get(i, valueVar.dataType))\n      val result = InternalRow.copyValue(functionForEval.eval(inputRow))\n      resultKeys.update(i, result)\n      i += 1"
+  },
+  {
+    "id" : "889548b3-e548-47f5-b716-7218bc90cc8f",
+    "prId" : 27788,
+    "prUrl" : "https://github.com/apache/spark/pull/27788#pullrequestreview-369451061",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "38f3aab9-6375-4ea1-85ef-be69f954b70b",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "This is actually a followup of https://github.com/apache/spark/pull/27655. I am not going to add a test case because we don't guarantee on the naming against `NonSQLExpression` yet. It is just to make it prettier.\r\n\r\nI manually tested as below:\r\n\r\n```scala\r\nval identify = udf((input: Boolean) => input)\r\nspark.range(10).select(identify(exists(array(col(\"id\")), _ % 2 === 0))).show()\r\n```\r\n\r\nBefore:\r\n\r\n```\r\n+-------------------------------------------------------------------------------------+\r\n|UDF(exists(array(id), lambdafunction(((lambda 'x % 2) = 0), lambda 'x, false), true))|\r\n+-------------------------------------------------------------------------------------+\r\n|                                                                                 true|\r\n|                                                                                false|\r\n|                                                                                 true|\r\n...\r\n```\r\n\r\n\r\nAfter:\r\n\r\n```\r\n+-------------------------------------------------------------------------------+\r\n|UDF(exists(array(id), lambdafunction(((lambda 'x % 2) = 0), lambda 'x, false)))|\r\n+-------------------------------------------------------------------------------+\r\n|                                                                           true|\r\n|                                                                          false|\r\n|                                                                           true|\r\n```\r\n\r\nHere, now we hide properly `followThreeValuedLogic` in `ArrayExists`.",
+        "createdAt" : "2020-03-05T10:24:38Z",
+        "updatedAt" : "2020-03-05T10:26:20Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e886efde6f29e4c5f6521179e3456743699f49ef",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +535,539 @@\n  override def stringArgs: Iterator[Any] = super.stringArgs.take(2)\n\n  override def nullable: Boolean =\n    if (followThreeValuedLogic) {"
   }
 ]

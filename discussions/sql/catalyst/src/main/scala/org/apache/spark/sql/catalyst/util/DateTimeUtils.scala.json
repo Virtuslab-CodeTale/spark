@@ -790,5 +790,71 @@
     "commit" : "184fcd8a9d6d177352aa67732f974e7ebf8eaf20",
     "line" : 15,
     "diffHunk" : "@@ -1,1 +150,154 @@    val seconds = (day - JULIAN_DAY_OF_EPOCH).toLong * SECONDS_PER_DAY\n    val micros = SECONDS.toMicros(seconds) + NANOSECONDS.toMicros(nanoseconds)\n    val rebased = rebaseJulianToGregorianMicros(micros)\n    rebased\n  }"
+  },
+  {
+    "id" : "2953bf42-b4a7-4247-8850-1d4928553670",
+    "prId" : 27807,
+    "prUrl" : "https://github.com/apache/spark/pull/27807#pullrequestreview-372556263",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "34c947d0-c356-4d50-92fe-266de0f7f397",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "@MaxGekk, so to clarify, are we going to follow the hybrid of Proleptic Gregorian calendar _and_ Julian calendars in Spark?\r\n\r\n```\r\nscala> sql(\"select date '1100-10-10'\").collect()\r\nres1: Array[org.apache.spark.sql.Row] = Array([1100-10-03])\r\n```\r\n\r\nisn't completely wrong in Proleptic Gregorian calendar up to my knowledge.\r\n",
+        "createdAt" : "2020-03-10T12:11:42Z",
+        "updatedAt" : "2020-03-11T06:21:33Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3a9aef52-51dc-497a-80a0-002ed0e064cb",
+        "parentId" : "34c947d0-c356-4d50-92fe-266de0f7f397",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Spark 3.0 is always Proleptic Gregorian calendar, this PR changes how Spark interacts with external datetime values (java `Date`/`Timestamp` for example).\r\n\r\n```\r\nscala> sql(\"select date '1100-10-10'\").collect()\r\nres1: Array[org.apache.spark.sql.Row] = Array([1100-10-03])\r\n```\r\nThis is wrong whatever calendar we use. Users write `1100-10-10` and then see `1100-10-03` without doing any operation. The reason is, java `Timestamp` uses hybrid calendar, and Spark needs to adjust the datetime values before outputing them to a system with different calendar.",
+        "createdAt" : "2020-03-10T12:25:19Z",
+        "updatedAt" : "2020-03-11T06:21:33Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9db6b7de-51ae-4616-9f53-7444dee40159",
+        "parentId" : "34c947d0-c356-4d50-92fe-266de0f7f397",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "Five cents to Wenchen's answers from my side, the `java.sql.Timestamp`/`java.sql.Date`/`java.util.Date` classes have mixes semantics. They hold \"physical\" duration in milliseconds + nanos together with zoned date-time. The duration from the epoch does not depend on calendar. The classes uses calendar in sync/conversion to zoned date-time. For example, when you take the `year` component via `getYear()`:\r\n```java\r\n    public int getYear() {\r\n        return normalize().getYear() - 1900;\r\n    }\r\n```\r\nIt sets `year`, `month`, `hour` ... in the `normalize` methods using the combined calendar Julian + Gregorian.\r\n\r\nIf you use `java.sql.Timestamp` as a \"container\" for duration, it is ok. For example, we can return `java.sql.Timestamp`/`Date` in `collect()` and extract duration:\r\n```scala\r\nscala> val ts = sql(\"select date '1100-10-10'\").collect()(0).getDate(0)\r\nts: java.sql.Date = 1100-10-03\r\nscala> java.time.Instant.ofEpochMilli(ts.getTime).atZone(java.time.ZoneId.of(\"Europe/Moscow\")).toLocalDate\r\nres2: java.time.LocalDate = 1100-10-10\r\n```\r\nbut if you are going to use some methods of `java.sql.Timestamps`/`java.sql.Date`, they may return unexpected values for dates before `1582-10-15`.\r\n\r\nIn the proposed PR, I changed the ways of initialization of `java.sql.Timestamp`/`Date` - from duration to local date-time. So, if we have an instant which is mapped to 1582-01-01 in Gregorian calendar, we take the local date and interpret it as local date `1582-01-01` in Julian calendar. In this way, date-time components returned by Spark SQL functions like `year()`, `months()` and etc. will equal to values returned by `java.sql.Date.getYear`, `java.sql.Date.getMonth` and etc.\r\n\r\nOf course, the duration in `java.sql.Timestamp`/`java.sql.Date` returned by the `getTime()` method will be different from the values stored in Spark's TIMESTAMP/DATE columns.",
+        "createdAt" : "2020-03-10T17:21:35Z",
+        "updatedAt" : "2020-03-11T06:21:33Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "834f1e58-f0d8-46da-9fde-57f82e9ac8c3",
+        "parentId" : "34c947d0-c356-4d50-92fe-266de0f7f397",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Okay. But why should we change the physical value of the timestamp, instead of doing this at actual time-related operations as we do for timezone? ",
+        "createdAt" : "2020-03-11T08:26:58Z",
+        "updatedAt" : "2020-03-11T08:28:49Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8811fee4-cbcc-4ec2-b16f-6db51efc18f5",
+        "parentId" : "34c947d0-c356-4d50-92fe-266de0f7f397",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Once Spark writes out datetime values to `Date`/`Timestamp`, users have already taken over the control and they can do anything they want. So we must adjust the UTC seconds when we create `Date`/`Timestamp` objects.",
+        "createdAt" : "2020-03-11T08:34:57Z",
+        "updatedAt" : "2020-03-11T08:34:58Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "407cc1fd8584f2a045b8db74cfe50023f13b7919",
+    "line" : 67,
+    "diffHunk" : "@@ -1,1 +139,143 @@    } else {\n      instantToMicros(t.toInstant)\n    }\n  }\n"
   }
 ]

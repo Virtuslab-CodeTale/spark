@@ -31,5 +31,71 @@
     "commit" : "c4c7a5cf0c26cd44d7699c34b40d9ee9b36a58ee",
     "line" : 18,
     "diffHunk" : "@@ -1,1 +843,847 @@  }\n\n  test(\"SPARK-35094: Spark from_json(JsonToStruct) function return wrong value \" +\n    \"in permissive mode in case best effort\") {\n    val s1 = StructField(\"name\", StringType, nullable = true)"
+  },
+  {
+    "id" : "95df80be-9ab9-484a-b54a-aa8a38752ff8",
+    "prId" : 27854,
+    "prUrl" : "https://github.com/apache/spark/pull/27854#pullrequestreview-371726143",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "abbb9197-728f-442b-ad86-2e4cd1a5bb43",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "In these days, the behavior change becomes a tricky issue although it's a bug fix. I'm wondering if this PR is safe (`not a silent behavior change`) in this case because Apache Spark 2.4.x ~ 3.0.0-preview2 returns like the following as mentioned in the PR description. To make it sure,  ping @gatorsmile , @cloud-fan , @marmbrus , @srowen .\r\n```scala\r\nscala> spark.range(1).select(schema_of_json(\"\"\"{\"id\": null}\"\"\")).show\r\n+----------------------------+\r\n|schema_of_json({\"id\": null})|\r\n+----------------------------+\r\n|             struct<id:null>|\r\n+----------------------------+\r\n```",
+        "createdAt" : "2020-03-09T17:34:18Z",
+        "updatedAt" : "2020-03-09T17:34:19Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a4ea729e-b915-4f5f-ad57-7a11a1931118",
+        "parentId" : "abbb9197-728f-442b-ad86-2e4cd1a5bb43",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "From what I read here, the OP issue looks like a clean bug fix. Yes a behavior change but bug fixes are. The change you highlight here is subtler, yes. I think it's reasonable to infer string type rather than null type, but would only do it at 3.0, not Spark 2.x. It would be a release notes item.",
+        "createdAt" : "2020-03-09T17:39:17Z",
+        "updatedAt" : "2020-03-09T17:39:17Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ae6dd8b2-7f21-412e-86c1-d6a66cd3588f",
+        "parentId" : "abbb9197-728f-442b-ad86-2e4cd1a5bb43",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Yep. I agree.",
+        "createdAt" : "2020-03-09T17:54:39Z",
+        "updatedAt" : "2020-03-09T17:54:39Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7aec3ada-11bd-4508-aa5c-3f6cdc2bb031",
+        "parentId" : "abbb9197-728f-442b-ad86-2e4cd1a5bb43",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "@dongjoon-hyun, the problem here is that `struct<id:null>` can't be used as a schema. The main purpose of `schema_of_json` is an alternative for schema inference for `from_json`.\r\n\r\nCurrently, the codes you mentioned don't work with it:\r\n\r\n```scala\r\nval schemaExpr = schema_of_json(lit(\"\"\"{\"id\": null}\"\"\"))\r\nspark.range(1).select(from_json(lit(\"\"\"{\"id\": null}\"\"\"), schemaExpr)).show()\r\n```\r\n\r\n**Before:**\r\n\r\n```\r\norg.apache.spark.sql.catalyst.parser.ParseException:\r\n...\r\n== SQL ==\r\nstruct<id:null>\r\n------^^^\r\n```\r\n\r\n**After:**\r\n\r\n```\r\n+-----------------------+\r\n|from_json({\"id\": null})|\r\n+-----------------------+\r\n|                     []|\r\n+-----------------------+\r\n```\r\n\r\n`struct<id:null>` can't be used anywhere as `null` isn't supported as DDL formatted string.\r\n\r\nIt's unlikely users depend on this behaviour so I personally don't think it's worthwhile to add a configuration and I would even doubt about the release note if this fix only lands to Spark 3.0.",
+        "createdAt" : "2020-03-10T02:23:05Z",
+        "updatedAt" : "2020-03-10T02:53:47Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7c79fff7-26fa-4ed0-918e-d1cc4d406526",
+        "parentId" : "abbb9197-728f-442b-ad86-2e4cd1a5bb43",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Thanks. Got it. It makes sense to me, too.",
+        "createdAt" : "2020-03-10T07:31:32Z",
+        "updatedAt" : "2020-03-10T07:31:32Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4ca013b68dca9a97c24997752218736348458492",
+    "line" : 9,
+    "diffHunk" : "@@ -1,1 +680,684 @@      checkAnswer(\n        spark.range(1).select(schema_of_json(input)),\n        Seq(Row(\"struct<id:string>\")))\n    }\n  }"
   }
 ]
