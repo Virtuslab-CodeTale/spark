@@ -86,5 +86,82 @@
     "commit" : "2c750627182ea1264d567af531c3e343854479a6",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +155,159 @@  def append(): Unit = {\n    assertNoTempView(\"append\")\n    val append = loadTable(catalog, identifier) match {\n      case Some(t) =>\n        AppendData.byName("
+  },
+  {
+    "id" : "dca6d30f-1bd4-4cfb-9738-cd9e8ea04e96",
+    "prId" : 27992,
+    "prUrl" : "https://github.com/apache/spark/pull/27992#pullrequestreview-384111808",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0f04f363-2159-45bc-9ec5-a9b40d1daaba",
+        "parentId" : null,
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "This no longer passes the options as write options because the statement plans don't have write options, only table options.\r\n\r\nThis change should add `writeOptions` to the statement and update conversions to pass them through to the exec plans.",
+        "createdAt" : "2020-03-23T22:03:16Z",
+        "updatedAt" : "2020-03-31T06:29:04Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f2821f1f-d6a1-4979-9259-11fcc3da45d5",
+        "parentId" : "0f04f363-2159-45bc-9ec5-a9b40d1daaba",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "The `Create/ReplaceTableAsSelectStatement` has an `options` field, which is used as the write options, see\r\n\r\nhttps://github.com/apache/spark/blob/27d53de10faa907a53a979b66282a457767b33ba/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/analysis/ResolveCatalogs.scala#L163\r\n\r\nhttps://github.com/apache/spark/blob/27d53de10faa907a53a979b66282a457767b33ba/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/analysis/ResolveCatalogs.scala#L189\r\n\r\nhttps://github.com/apache/spark/blob/27d53de10faa907a53a979b66282a457767b33ba/sql/core/src/main/scala/org/apache/spark/sql/catalyst/analysis/ResolveSessionCatalog.scala#L296\r\n\r\nhttps://github.com/apache/spark/blob/27d53de10faa907a53a979b66282a457767b33ba/sql/core/src/main/scala/org/apache/spark/sql/catalyst/analysis/ResolveSessionCatalog.scala#L335",
+        "createdAt" : "2020-03-25T09:19:10Z",
+        "updatedAt" : "2020-03-31T06:29:04Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a77b0a0c-dea7-4b42-b787-5f6a112f7137",
+        "parentId" : "0f04f363-2159-45bc-9ec5-a9b40d1daaba",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "Okay, I see that we reuse options for both write options and table options.\r\n\r\nDo we want to separate those in the v2 API? I think we only mix them in the v1 API by accident. And we set table properties using `tableProperty`. Seems reasonable to separate table options and use `tableOption` or `storageOption` to set them.",
+        "createdAt" : "2020-03-27T17:14:56Z",
+        "updatedAt" : "2020-03-31T06:29:04Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9baff41c-ec11-4f84-bb33-cc237929f34f",
+        "parentId" : "0f04f363-2159-45bc-9ec5-a9b40d1daaba",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I think about this more, and still not sure about the separation. Yes, Hive table needs this separation, but it's not general and AFAIK most databases do not separate properties and options of a table. For example, if I implement a Cassandra catalog, how shall I deal with properties and options of my `CassandraTable`?\r\n\r\nI think another approach can be: slowly deprecate OPTIONS and only use TBLPROPERTIES. We can always set the Hive table serde properties the same as the table properties.\r\n\r\nAnyway I think we don't need to make a decision here in this PR. I'll just add a new `writeOptions` field to the `CreateTableAsSelectStatement`.",
+        "createdAt" : "2020-03-30T12:54:50Z",
+        "updatedAt" : "2020-03-31T06:29:04Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "eb3b00de-10c6-44bd-b874-8cd279e9c394",
+        "parentId" : "0f04f363-2159-45bc-9ec5-a9b40d1daaba",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "I think it's a good idea to deprecate table options, but that doesn't really matter here. For this PR, we should keep write options separate from table options because they are used for different things.",
+        "createdAt" : "2020-03-30T17:51:34Z",
+        "updatedAt" : "2020-03-31T06:29:04Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8f2c06b4-d0de-4bff-a1bc-fbae4ea87a7d",
+        "parentId" : "0f04f363-2159-45bc-9ec5-a9b40d1daaba",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "yup, so my new change that adds a new `writeOption` field does separate the options of `DataFrameWriter(V2)` from the table options.",
+        "createdAt" : "2020-03-30T18:16:19Z",
+        "updatedAt" : "2020-03-31T06:29:04Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8d948739db7d247a80899b91ab13e5a38018cc21",
+    "line" : 31,
+    "diffHunk" : "@@ -1,1 +119,123 @@  override def create(): Unit = {\n    runCommand(\"create\") {\n      CreateTableAsSelectStatement(\n        tableName,\n        logicalPlan,"
   }
 ]

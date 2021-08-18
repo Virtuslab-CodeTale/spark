@@ -53,5 +53,93 @@
     "commit" : "847934117aebe3aa295b5875ce27822cec38ac04",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +202,206 @@    if (hasExecuted) {\n      // Reset noDataEventTimestamp if we processed any data\n      lastNoExecutionProgressEventTime = triggerClock.getTimeMillis()\n      updateProgress(newProgress)\n    } else {"
+  },
+  {
+    "id" : "86667a19-976d-4196-b615-76d03b14093c",
+    "prId" : 28040,
+    "prUrl" : "https://github.com/apache/spark/pull/28040#pullrequestreview-383246909",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e15a4993-ac11-46be-95ee-63cc0cdd4b8b",
+        "parentId" : null,
+        "authorId" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "body" : "This was also incorrect for no new data micro batches",
+        "createdAt" : "2020-03-26T19:41:34Z",
+        "updatedAt" : "2020-04-07T18:33:53Z",
+        "lastEditedBy" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cd34f165-debb-49aa-b068-dcbfa5e655ee",
+        "parentId" : "e15a4993-ac11-46be-95ee-63cc0cdd4b8b",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Nice finding. We haven't recognized the bug because lastNoDataProgressEventTime is set to Long.MinValue which makes next no new data micro batch to update the progress immediately, which hides the bug. (If that's intentional, well, then it's too tricky and we should have commented here.)\r\n\r\nMaybe we should also rename lastNoDataProgressEventTime as well as the fix changes the semantic?\r\n\r\nAnd we may want to revisit that our intention is updating progress immediately whenever the batch has not run after any batch run.",
+        "createdAt" : "2020-03-27T08:06:41Z",
+        "updatedAt" : "2020-04-07T18:33:53Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a58f65df-1701-476b-ab6b-2edc414dbdd5",
+        "parentId" : "e15a4993-ac11-46be-95ee-63cc0cdd4b8b",
+        "authorId" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "body" : "oh, that's why I'm facing issues... I understand better now",
+        "createdAt" : "2020-03-27T23:12:22Z",
+        "updatedAt" : "2020-04-07T18:33:53Z",
+        "lastEditedBy" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "68bf14793b950f2a71f9cc61005f991577fc3774",
+    "line" : 50,
+    "diffHunk" : "@@ -1,1 +200,204 @@      observedMetrics = new java.util.HashMap(observedMetrics.asJava))\n\n    if (hasExecuted) {\n      // Reset noDataEventTimestamp if we processed any data\n      lastNoExecutionProgressEventTime = Long.MinValue"
+  },
+  {
+    "id" : "ea489b99-04a7-4e17-b9c1-eda28a37f689",
+    "prId" : 28040,
+    "prUrl" : "https://github.com/apache/spark/pull/28040#pullrequestreview-382426518",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "98e342be-73b0-4bc8-b0de-775ae7e689e3",
+        "parentId" : null,
+        "authorId" : "9cd657f0-37cd-41bd-908a-f2c996b95a7a",
+        "body" : "Add scala docs to explain the difference between these two flags. This is pretty confusing, and easy mix up when passing the two booleans.",
+        "createdAt" : "2020-03-26T21:16:09Z",
+        "updatedAt" : "2020-04-07T18:33:53Z",
+        "lastEditedBy" : "9cd657f0-37cd-41bd-908a-f2c996b95a7a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "68bf14793b950f2a71f9cc61005f991577fc3774",
+    "line" : 25,
+    "diffHunk" : "@@ -1,1 +151,155 @@   *                    though the sources don't have any new data.\n   */\n  protected def finishTrigger(hasNewData: Boolean, hasExecuted: Boolean): Unit = {\n    assert(currentTriggerStartOffsets != null && currentTriggerEndOffsets != null)\n    currentTriggerEndTimestamp = triggerClock.getTimeMillis()"
+  },
+  {
+    "id" : "dc97ac11-3ed0-42a6-b10a-e144e38d4d12",
+    "prId" : 28040,
+    "prUrl" : "https://github.com/apache/spark/pull/28040#pullrequestreview-383359463",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "968a3423-eb85-4cce-8b4f-07fc1aec75e7",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "As we changed the semantic of the variable, I think we can update it in `updateProgress` to ensure the variable is updated whenever progress update is happening.",
+        "createdAt" : "2020-03-28T23:47:40Z",
+        "updatedAt" : "2020-04-07T18:33:53Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "68bf14793b950f2a71f9cc61005f991577fc3774",
+    "line" : 54,
+    "diffHunk" : "@@ -1,1 +203,207 @@      // Reset noDataEventTimestamp if we processed any data\n      lastNoExecutionProgressEventTime = Long.MinValue\n      updateProgress(newProgress)\n    } else {\n      val now = triggerClock.getTimeMillis()"
   }
 ]

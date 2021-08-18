@@ -1,0 +1,68 @@
+[
+  {
+    "id" : "520eb44a-74eb-4c69-a88a-49a477a4030f",
+    "prId" : 28040,
+    "prUrl" : "https://github.com/apache/spark/pull/28040#pullrequestreview-382702557",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5c74d9ce-57e4-455c-bdfc-18650112b221",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "This confused me - this value is actually updated in previous time so the better place of this line is after L231. It just works because lastProgress is not updated here.\r\n\r\nThis also makes me thinking the delay of output from no-data microbatch if the trigger interval is quite huge. It should be uncommon as the default trigger is \"immediate\", but it's not impossible with cron-ed continuous execution of once trigger.",
+        "createdAt" : "2020-03-27T09:21:42Z",
+        "updatedAt" : "2020-04-07T18:33:53Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4e8adbae-2b95-49f3-9a7b-c8d1a59a596b",
+        "parentId" : "5c74d9ce-57e4-455c-bdfc-18650112b221",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "I'd also add `AssertOnQuery { _.stateOperatorProgresses.head.numRowsTotal === 3 },`  along with moving this line to make clear no-data microbatch \"decreases\" the number of total rows in state.",
+        "createdAt" : "2020-03-27T09:36:41Z",
+        "updatedAt" : "2020-04-07T18:33:53Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "68bf14793b950f2a71f9cc61005f991577fc3774",
+    "line" : 76,
+    "diffHunk" : "@@ -1,1 +251,255 @@      CheckAnswer(),\n      AssertOnQuery { _.stateNodes.head.metrics(\"numOutputRows\").value === 0 },\n      AssertOnQuery { _.stateOperatorProgresses.head.numRowsUpdated === 1 },\n      AssertOnQuery { _.stateOperatorProgresses.head.numRowsTotal === 3 },\n      AssertOnQuery { _.lastExecutedBatch.sink.numOutputRows == 0 },"
+  },
+  {
+    "id" : "2552cdf8-5699-4168-8df8-9a8582118ed6",
+    "prId" : 28040,
+    "prUrl" : "https://github.com/apache/spark/pull/28040#pullrequestreview-389560641",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "01f23ece-a7d9-402c-b369-a4abfa022357",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "(Good to have) It might be good to have a new operation to consolidate waiting for \"no data batch\" and checking the answer (as they have same pattern except the desired batch ID).\r\n\r\nNot mandatory to do it in this PR.",
+        "createdAt" : "2020-04-07T22:50:31Z",
+        "updatedAt" : "2020-04-07T23:05:00Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c3e848f8-c89c-4d13-9c06-83b8f107fb41",
+        "parentId" : "01f23ece-a7d9-402c-b369-a4abfa022357",
+        "authorId" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "body" : "yeah, it'd be nice to provide an inbuilt function for it if this pattern is used more over time",
+        "createdAt" : "2020-04-07T23:34:49Z",
+        "updatedAt" : "2020-04-07T23:34:50Z",
+        "lastEditedBy" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "68bf14793b950f2a71f9cc61005f991577fc3774",
+    "line" : 48,
+    "diffHunk" : "@@ -1,1 +228,232 @@      // batchId 1 without data\n      AdvanceManualClock(1000L), // watermark = 5\n      Execute { q =>             // wait for the no data batch to complete\n        eventually(timeout(streamingTimeout)) { assert(q.lastProgress.batchId === 1) }\n      },"
+  }
+]

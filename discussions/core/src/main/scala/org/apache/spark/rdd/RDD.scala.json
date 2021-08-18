@@ -372,5 +372,148 @@
     "commit" : "1ed3b12c9d41b3af01ce376da2f7bacc8718cf32",
     "line" : 1,
     "diffHunk" : "@@ -1,1 +1745,1749 @@  // =======================================================================\n  // Other internal methods and fields\n  // =======================================================================\n\n  private var storageLevel: StorageLevel = StorageLevel.NONE"
+  },
+  {
+    "id" : "da0468eb-2928-4836-b84e-18966867dcfa",
+    "prId" : 28038,
+    "prUrl" : "https://github.com/apache/spark/pull/28038#pullrequestreview-388616585",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "65b465e7-8e48-48b8-a680-79f10a442ca9",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Seems it's not thread safe to do so?",
+        "createdAt" : "2020-03-27T02:01:38Z",
+        "updatedAt" : "2020-04-06T22:07:58Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a4b2cb0c-076b-447e-8c36-f9fd9430fbcf",
+        "parentId" : "65b465e7-8e48-48b8-a680-79f10a442ca9",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "I think it's fine, multiple concurrent cleanups would just log an error.",
+        "createdAt" : "2020-03-30T22:12:20Z",
+        "updatedAt" : "2020-04-06T22:07:58Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3775c424-7c72-4ed6-9607-a8f30c7397c0",
+        "parentId" : "65b465e7-8e48-48b8-a680-79f10a442ca9",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "It will also cause driver to send remove message to executors, though no fatal error there.",
+        "createdAt" : "2020-03-31T02:12:55Z",
+        "updatedAt" : "2020-04-06T22:07:58Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "aa1ac694-a1b1-465b-821e-3412047ca85d",
+        "parentId" : "65b465e7-8e48-48b8-a680-79f10a442ca9",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Yes. Talking with @dbtsai he wanted to add a lock on the blocks inside of `doCleanupShuffle`, but given that the only price is duplicated messages to the executors I'm not sure its worth the overhead of keeping track of that many locks.",
+        "createdAt" : "2020-04-02T18:34:55Z",
+        "updatedAt" : "2020-04-06T22:07:58Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3d00d68e-8a5c-40a6-ac24-e7464ba195e8",
+        "parentId" : "65b465e7-8e48-48b8-a680-79f10a442ca9",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "How about this:\r\n\r\nIn `doCleanupShuffle`, we could call `if (MapOutputTrackerMaster.containsShuffle) {...}` before the cleaning.",
+        "createdAt" : "2020-04-03T02:17:32Z",
+        "updatedAt" : "2020-04-06T22:07:58Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0dc8af87-9880-48ee-86aa-9aec1d34845d",
+        "parentId" : "65b465e7-8e48-48b8-a680-79f10a442ca9",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Yeah ok, get is fairly cheap on a `ConcurrentHashmap` I think that balances the tradeoffs well.",
+        "createdAt" : "2020-04-06T21:05:35Z",
+        "updatedAt" : "2020-04-06T22:07:58Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "29019c88e29b85a2d549dd889c018896fa3e10af",
+    "line" : 69,
+    "diffHunk" : "@@ -1,1 +1746,1750 @@        if (dep.isInstanceOf[ShuffleDependency[_, _, _]]) {\n          val shuffleId = dep.asInstanceOf[ShuffleDependency[_, _, _]].shuffleId\n          cleaner.doCleanupShuffle(shuffleId, blocking)\n        }\n        val rdd = dep.rdd"
+  },
+  {
+    "id" : "88f50f11-2866-4cfd-8e06-c4e0a2cd2581",
+    "prId" : 28038,
+    "prUrl" : "https://github.com/apache/spark/pull/28038#pullrequestreview-388965687",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0b4b71be-2c1b-43e2-a47d-31a8666896af",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "hmm...why we only do clean for `None` level rdd?\r\n",
+        "createdAt" : "2020-03-31T02:38:01Z",
+        "updatedAt" : "2020-04-06T22:07:58Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "459e38c7-fab6-49db-9113-6634c2b9d1bd",
+        "parentId" : "0b4b71be-2c1b-43e2-a47d-31a8666896af",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "If someone has persisted an RDD and not unpersisted it we assume they intend to reuse it, and cleaning the shuffle files would be wise. This is important with the ALS code path (the original reason for this feature) so there is a cut point in the graph and we don't go unexpectedly cleaning up users shuffle files.",
+        "createdAt" : "2020-04-02T18:30:37Z",
+        "updatedAt" : "2020-04-06T22:07:58Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ad063e77-7f6c-430e-9603-13cfc87b47df",
+        "parentId" : "0b4b71be-2c1b-43e2-a47d-31a8666896af",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "> cleaning the shuffle files would be wise. \r\n\r\nIf I understand your explanation correctly here, it shall be `not wise`, no?\r\n\r\nAnd if so, IIUC, RDD persist is not backed by shuffle files but an extra copy in memory or disk? ",
+        "createdAt" : "2020-04-03T01:56:44Z",
+        "updatedAt" : "2020-04-06T22:07:58Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d94f263b-05c7-4be0-84b3-a9f157399915",
+        "parentId" : "0b4b71be-2c1b-43e2-a47d-31a8666896af",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Correct, sorry should have written `not wise`. RDD persistence is flexible in what it might be backed by, but generally, it has a higher chance of being evicted than shuffle files.",
+        "createdAt" : "2020-04-06T21:26:22Z",
+        "updatedAt" : "2020-04-06T22:07:58Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "42bc1003-6682-4108-8721-68e77b8b7a3e",
+        "parentId" : "0b4b71be-2c1b-43e2-a47d-31a8666896af",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "I see.",
+        "createdAt" : "2020-04-07T09:59:28Z",
+        "updatedAt" : "2020-04-07T09:59:28Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "29019c88e29b85a2d549dd889c018896fa3e10af",
+    "line" : 73,
+    "diffHunk" : "@@ -1,1 +1750,1754 @@        val rdd = dep.rdd\n        val rddDepsOpt = rdd.internalDependencies\n        if (rdd.getStorageLevel == StorageLevel.NONE) {\n          rddDepsOpt.foreach(deps => deps.foreach(cleanEagerly))\n        }"
   }
 ]

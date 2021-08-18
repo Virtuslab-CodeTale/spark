@@ -559,5 +559,115 @@
     "commit" : "b18437c5998f5df50172732015f66b33c3908d2a",
     "line" : 4,
     "diffHunk" : "@@ -1,1 +230,234 @@    | COMMENT ON TABLE multipartIdentifier IS comment=(STRING | NULL)  #commentTable\n    | REFRESH TABLE multipartIdentifier                                #refreshTable\n    | REFRESH FUNCTION multipartIdentifier                             #refreshFunction\n    | REFRESH (STRING | .*?)                                           #refreshResource\n    | CACHE LAZY? TABLE multipartIdentifier"
+  },
+  {
+    "id" : "6ee0326a-0f45-43dc-b759-d4407dc43996",
+    "prId" : 28026,
+    "prUrl" : "https://github.com/apache/spark/pull/28026#pullrequestreview-382209907",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c9399ae7-75f9-4d1d-b723-9dbbeb3e9ccf",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "shall we put `tableProvider` into `createTableClauses` as well?",
+        "createdAt" : "2020-03-26T03:36:06Z",
+        "updatedAt" : "2020-11-24T17:03:15Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bf276dc2-7fb6-45a6-92ab-a0046c18a627",
+        "parentId" : "c9399ae7-75f9-4d1d-b723-9dbbeb3e9ccf",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "You're welcome to do that in a follow-up. Here, I'm avoiding unnecessary changes.",
+        "createdAt" : "2020-03-26T16:53:56Z",
+        "updatedAt" : "2020-11-24T17:03:15Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "25ec746753f29acd5e248d03db48211a3876a7c1",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +120,124 @@    | SHOW (DATABASES | NAMESPACES) ((FROM | IN) multipartIdentifier)?\n        (LIKE? pattern=STRING)?                                        #showNamespaces\n    | createTableHeader ('(' colTypeList ')')? tableProvider?\n        createTableClauses\n        (AS? query)?                                                   #createTable"
+  },
+  {
+    "id" : "3c90748c-6c64-412d-a816-d1a8015b10ca",
+    "prId" : 28026,
+    "prUrl" : "https://github.com/apache/spark/pull/28026#pullrequestreview-382783999",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7cc58715-c3ae-457a-bedc-24b6272fe053",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "It's a bit weird if we allow mixed usage, like `PARTITION BY (year(a), b string)`, shall we just define 2 `PARTITIONED BY` clauses?",
+        "createdAt" : "2020-03-26T03:37:45Z",
+        "updatedAt" : "2020-11-24T17:03:15Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8dd32eac-8ab8-40e9-b6c0-7964bb4821d6",
+        "parentId" : "7cc58715-c3ae-457a-bedc-24b6272fe053",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "This is allowed in the grammar to give a better error message later. Otherwise it is confusing that `b string` works sometimes, but not others.",
+        "createdAt" : "2020-03-26T16:53:23Z",
+        "updatedAt" : "2020-11-24T17:03:15Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6af54972-c8dc-4245-a2ae-5a444525e23b",
+        "parentId" : "7cc58715-c3ae-457a-bedc-24b6272fe053",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "I'd understand that we will have assertion to force using only one side of pattern at a time.",
+        "createdAt" : "2020-03-27T11:41:09Z",
+        "updatedAt" : "2020-11-24T17:03:15Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "25ec746753f29acd5e248d03db48211a3876a7c1",
+    "line" : 54,
+    "diffHunk" : "@@ -1,1 +738,742 @@    ;\n\npartitionField\n    : transform  #partitionTransform\n    | colType    #partitionColumn"
+  },
+  {
+    "id" : "47fa97d8-9fbc-48e8-978b-0fc8d431e3ea",
+    "prId" : 28026,
+    "prUrl" : "https://github.com/apache/spark/pull/28026#pullrequestreview-515853457",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "96772d2d-c9bf-4ba7-b6c2-715460d3a1a4",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I think an easier way to merge the two syntaxes is\r\n```\r\n(PARTITIONED BY partitioning=partitionFieldList) |\r\n(PARTITIONED BY '(' partitionColumns=colTypeList ')' |\r\n```\r\nThen antlr can help us to guarantee that users can't mix different PARTITION BY syntaxes, and it requires fewer changes in `AstBuilder`.",
+        "createdAt" : "2020-10-22T12:15:01Z",
+        "updatedAt" : "2020-11-24T17:03:15Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2e974ea7-8bf1-4765-94da-403897fe51f3",
+        "parentId" : "96772d2d-c9bf-4ba7-b6c2-715460d3a1a4",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "The result of doing this is a worse error message for a user because the parser would generate an error, instead of the user-friendly error message that is generated by `AstBuilder`. I think an overall worse experience for users isn't worth changing this.",
+        "createdAt" : "2020-10-23T17:07:14Z",
+        "updatedAt" : "2020-11-24T17:03:15Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "25ec746753f29acd5e248d03db48211a3876a7c1",
+    "line" : 36,
+    "diffHunk" : "@@ -1,1 +383,387 @@createTableClauses\n    :((OPTIONS options=tablePropertyList) |\n     (PARTITIONED BY partitioning=partitionFieldList) |\n     skewSpec |\n     bucketSpec |"
   }
 ]

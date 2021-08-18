@@ -2737,5 +2737,49 @@
     "commit" : "29719f9de51e7026584b7882755d3cd7806ae8f5",
     "line" : 14,
     "diffHunk" : "@@ -1,1 +1564,1568 @@ */\nobject ReplaceIntersectWithSemiJoin extends Rule[LogicalPlan] {\n  private def canBroadcast(plan: LogicalPlan): Boolean = {\n    plan.stats.sizeInBytes >= 0 && plan.stats.sizeInBytes <= SQLConf.get.autoBroadcastJoinThreshold\n  }"
+  },
+  {
+    "id" : "694ca68a-ed04-4557-94c8-1bb9ac98b61b",
+    "prId" : 28043,
+    "prUrl" : "https://github.com/apache/spark/pull/28043#pullrequestreview-384358418",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "cd43d134-cbd3-48bf-ae80-8b4c4358f37d",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Although this passes PR Builder, this causes consistent failure after merging for all builds.\r\n```\r\norg.apache.spark.sql.hive.HiveSparkSubmitSuite.temporary Hive UDF: define a UDF and use it\r\norg.apache.spark.sql.hive.HiveSparkSubmitSuite.permanent Hive UDF: define a UDF and use it\r\norg.apache.spark.sql.hive.HiveSparkSubmitSuite.permanent Hive UDF: use a already defined permanent function\r\n```",
+        "createdAt" : "2020-03-31T02:06:36Z",
+        "updatedAt" : "2020-03-31T02:06:36Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e281c85c-8d83-4d00-a002-028cbc101ad7",
+        "parentId" : "cd43d134-cbd3-48bf-ae80-8b4c4358f37d",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "This fails at `checkBatchIdempotence` of `RuleExecutor`.\r\n```\r\n[info]   2020-03-30 19:00:21.097 - stderr> 20/03/30 19:00:21 INFO TemporaryHiveUDFTest: Running a simple query on the table.\r\n[info]   2020-03-30 19:00:21.198 - stderr> Exception in thread \"main\" org.apache.spark.sql.catalyst.errors.package$TreeNodeException:\r\n[info]   2020-03-30 19:00:21.198 - stderr> Once strategy's idempotence is broken for batch RewriteSubquery\r\n[info]   2020-03-30 19:00:21.198 - stderr>  Aggregate [count(1) AS count#15L]       Aggregate [count(1) AS count#15L]\r\n[info]   2020-03-30 19:00:21.198 - stderr>  +- Aggregate [val#5]                    +- Aggregate [val#5]\r\n[info]   2020-03-30 19:00:21.198 - stderr> !   +- Project [val#5]                      +- LocalRelation [val#5]\r\n[info]   2020-03-30 19:00:21.198 - stderr> !      +- LocalRelation [key#4, val#5]\r\n[info]   2020-03-30 19:00:21.198 - stderr>           , tree:\r\n[info]   2020-03-30 19:00:21.198 - stderr> Aggregate [count(1) AS count#15L]\r\n[info]   2020-03-30 19:00:21.198 - stderr> +- Aggregate [val#5]\r\n[info]   2020-03-30 19:00:21.198 - stderr>    +- LocalRelation [val#5]\r\n```",
+        "createdAt" : "2020-03-31T02:07:56Z",
+        "updatedAt" : "2020-03-31T02:07:56Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7bfdabad-3535-4ade-85d4-45a93b0de589",
+        "parentId" : "cd43d134-cbd3-48bf-ae80-8b4c4358f37d",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "I see. We need a separate batch to propagate empty relation after rewriting subquery ",
+        "createdAt" : "2020-03-31T02:18:46Z",
+        "updatedAt" : "2020-03-31T02:18:46Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b084a27dec2f68d179a6c245f2845b45232baf63",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +200,204 @@      RewritePredicateSubquery,\n      ConvertToLocalRelation,\n      PropagateEmptyRelation,\n      ColumnPruning,\n      CollapseProject,"
   }
 ]

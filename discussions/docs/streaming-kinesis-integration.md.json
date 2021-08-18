@@ -1,0 +1,35 @@
+[
+  {
+    "id" : "c7a34c9b-30b0-4b11-9230-82950321dad0",
+    "prId" : 28063,
+    "prUrl" : "https://github.com/apache/spark/pull/28063#pullrequestreview-383442242",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ac0723c6-bbb2-4130-8738-aa636f26d05c",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Hm, how would the `*` expand if this is quoted?",
+        "createdAt" : "2020-03-29T16:27:05Z",
+        "updatedAt" : "2020-03-29T16:28:09Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8c6ea9be-cc3a-400b-a6cf-145fd032518d",
+        "parentId" : "ac0723c6-bbb2-4130-8738-aa636f26d05c",
+        "authorId" : "a40be819-3fcc-4da6-8b44-c1785451c3ce",
+        "body" : "If the path is quoted, the wildcard is expanded by Spark itself and the command works.\r\n\r\n```\r\n~/repos/spark/dist$ bash -x bin/spark-submit --verbose --jars '../external/kinesis-asl-assembly/target/spark-streaming-kinesis-asl-assembly_*.jar' ../external/kinesis-asl/src/main/python/examples/streaming/kinesis_wordcount_asl.py myAppName mySparkStream https://kinesis.ap-northeast-1.amazonaws.com ap-northeast-1 \r\n\r\n[snip]\r\n\r\n+ exec /home/sekikn/repos/spark/dist/bin/spark-class org.apache.spark.deploy.SparkSubmit --verbose --jars '../external/kinesis-asl-assembly/target/spark-streaming-kinesis-asl-assembly_*.jar' ../external/kinesis-asl/src/main/python/examples/streaming/kinesis_wordcount_asl.py myAppName mySparkStream https://kinesis.ap-northeast-1.amazonaws.com ap-northeast-1\r\n\r\n[snip]\r\n\r\nParsed arguments:\r\n\r\n  [snip]\r\n\r\n  primaryResource         file:/home/sekikn/repos/spark/dist/../external/kinesis-asl/src/main/python/examples/streaming/kinesis_wordcount_asl.py\r\n  name                    kinesis_wordcount_asl.py\r\n  childArgs               [myAppName mySparkStream https://kinesis.ap-northeast-1.amazonaws.com ap-northeast-1]\r\n  jars                    file:/home/sekikn/repos/spark/dist/../external/kinesis-asl-assembly/target/spark-streaming-kinesis-asl-assembly_*.jar\r\n\r\n[snip]\r\n\r\nSpark config:\r\n(spark.executor.extraJavaOptions,*********(redacted))\r\n(spark.jars,file:/home/sekikn/repos/spark/external/kinesis-asl-assembly/target/spark-streaming-kinesis-asl-assembly_2.12-3.1.0-SNAPSHOT-sources.jar,file:/home/sekikn/repos/spark/external/kinesis-asl-assembly/target/spark-streaming-kinesis-asl-assembly_2.12-3.1.0-SNAPSHOT-test-sources.jar,file:/home/sekikn/repos/spark/external/kinesis-asl-assembly/target/spark-streaming-kinesis-asl-assembly_2.12-3.1.0-SNAPSHOT-tests.jar,file:/home/sekikn/repos/spark/external/kinesis-asl-assembly/target/spark-streaming-kinesis-asl-assembly_2.12-3.1.0-SNAPSHOT.jar)\r\n(spark.app.name,kinesis_wordcount_asl.py)\r\n\r\n[snip]\r\n```\r\n\r\nBut without them, shell expands the wildcard, so if other jars that match the pattern are in the directory in question, the command fails as follows.\r\n\r\n```\r\n~/repos/spark/dist$ bash -x bin/spark-submit --verbose --jars ../external/kinesis-asl-assembly/target/spark-streaming-kinesis-asl-assembly_*.jar ../external/kinesis-asl/src/main/python/examples/streaming/kinesis_wordcount_asl.py myAppName mySparkStream https://kinesis.ap-northeast-1.amazonaws.com ap-northeast-1\r\n\r\n[snip]\r\n\r\n+ exec /home/sekikn/repos/spark/dist/bin/spark-class org.apache.spark.deploy.SparkSubmit --verbose --jars ../external/kinesis-asl-assembly/target/spark-streaming-kinesis-asl-assembly_2.12-3.1.0-SNAPSHOT.jar ../external/kinesis-asl-assembly/target/spark-streaming-kinesis-asl-assembly_2.12-3.1.0-SNAPSHOT-sources.jar ../external/kinesis-asl-assembly/target/spark-streaming-kinesis-asl-assembly_2.12-3.1.0-SNAPSHOT-tests.jar ../external/kinesis-asl-assembly/target/spark-streaming-kinesis-asl-assembly_2.12-3.1.0-SNAPSHOT-test-sources.jar ../external/kinesis-asl/src/main/python/examples/streaming/kinesis_wordcount_asl.py myAppName mySparkStream https://kinesis.ap-northeast-1.amazonaws.com ap-northeast-1\r\n\r\n[snip]\r\n\r\nParsed arguments:\r\n\r\n  [snip]\r\n\r\n  primaryResource         file:/home/sekikn/repos/spark/dist/../external/kinesis-asl-assembly/target/spark-streaming-kinesis-asl-assembly_2.12-3.1.0-SNAPSHOT-sources.jar\r\n  name                    spark-streaming-kinesis-asl-assembly_2.12-3.1.0-SNAPSHOT-sources.jar\r\n  childArgs               [../external/kinesis-asl-assembly/target/spark-streaming-kinesis-asl-assembly_2.12-3.1.0-SNAPSHOT-tests.jar ../external/kinesis-asl-assembly/target/spark-streaming-kinesis-asl-assembly_2.12-3.1.0-SNAPSHOT-test-sources.jar ../external/kinesis-asl/src/main/python/examples/streaming/kinesis_wordcount_asl.py myAppName mySparkStream https://kinesis.ap-northeast-1.amazonaws.com ap-northeast-1]\r\n  jars                    file:/home/sekikn/repos/spark/dist/../external/kinesis-asl-assembly/target/spark-streaming-kinesis-asl-assembly_2.12-3.1.0-SNAPSHOT.jar\r\n\r\n[snip]\r\n\r\nSpark properties used, including those specified through\r\n --conf and those from the properties file /home/sekikn/repos/spark/dist/conf/spark-defaults.conf:\r\n  (spark.executor.extraJavaOptions,*********(redacted))\r\n  (spark.driver.extraJavaOptions,*********(redacted))\r\n\r\n[snip]\r\n\r\nException in thread \"main\" org.apache.spark.SparkException: No main class set in JAR; please specify one with --class.\r\n\tat org.apache.spark.deploy.SparkSubmit.error(SparkSubmit.scala:940)\r\n\tat org.apache.spark.deploy.SparkSubmit.prepareSubmitEnvironment(SparkSubmit.scala:463)\r\n\tat org.apache.spark.deploy.SparkSubmit.org$apache$spark$deploy$SparkSubmit$$runMain(SparkSubmit.scala:875)\r\n\tat org.apache.spark.deploy.SparkSubmit.doRunMain$1(SparkSubmit.scala:180)\r\n\tat org.apache.spark.deploy.SparkSubmit.submit(SparkSubmit.scala:203)\r\n\tat org.apache.spark.deploy.SparkSubmit.doSubmit(SparkSubmit.scala:90)\r\n\tat org.apache.spark.deploy.SparkSubmit$$anon$2.doSubmit(SparkSubmit.scala:1011)\r\n\tat org.apache.spark.deploy.SparkSubmit$.main(SparkSubmit.scala:1020)\r\n\tat org.apache.spark.deploy.SparkSubmit.main(SparkSubmit.scala)\r\n```",
+        "createdAt" : "2020-03-29T18:46:53Z",
+        "updatedAt" : "2020-03-29T18:46:54Z",
+        "lastEditedBy" : "a40be819-3fcc-4da6-8b44-c1785451c3ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "742c00a2db632cc3f2556a5de54af8260c2c59c2",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +247,251 @@\t<div data-lang=\"python\" markdown=\"1\">\n\n        ./bin/spark-submit --jars 'external/kinesis-asl-assembly/target/spark-streaming-kinesis-asl-assembly_*.jar' \\\n            external/kinesis-asl/src/main/python/examples/streaming/kinesis_wordcount_asl.py \\\n            [Kinesis app name] [Kinesis stream name] [endpoint URL] [region name]"
+  }
+]

@@ -317,5 +317,60 @@
     "commit" : "df38f4e55693a08df4ff045e3579926b3d222266",
     "line" : 9,
     "diffHunk" : "@@ -1,1 +50,54 @@    //[SPARK-31840] Add instance weight support in LogisticRegressionSummary\n    // weightCol in org.apache.spark.ml.classification.LogisticRegressionSummary is present only in current version\n    ProblemFilters.exclude[ReversedMissingMethodProblem](\"org.apache.spark.ml.classification.LogisticRegressionSummary.weightCol\")\n  )\n"
+  },
+  {
+    "id" : "42f7b269-2ae7-4f8c-9036-d3127c871d57",
+    "prId" : 27978,
+    "prUrl" : "https://github.com/apache/spark/pull/27978#pullrequestreview-379655934",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "22c6ba93-fb10-40c2-bf10-9ebd76bc26a2",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Weird: this class is still there, right? is this still definitely a MiMa error? I'm trying to figure out if we're missing something here that causes an incompatible change.\r\n\r\nThis would only go into 3.1 right?\r\nThe refactoring looks OK; hard to evaluate it all.",
+        "createdAt" : "2020-03-22T15:45:37Z",
+        "updatedAt" : "2020-04-29T16:19:43Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0c87d6a3-bf87-45fb-bc4e-8c6918352a4c",
+        "parentId" : "22c6ba93-fb10-40c2-bf10-9ebd76bc26a2",
+        "authorId" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "body" : "This is for 3.1 only.\r\n\r\nThe first two MiMa errors are because of type hierarchy change. \r\n```\r\n[error]  * the type hierarchy of class org.apache.spark.ml.feature.ChiSqSelectorModel is different in current version. Missing types {org.apache.spark.ml.feature.ChiSqSelectorParams}\r\n```\r\nThe 3rd MiMa error is due to return type change.\r\n```\r\n[error]  * method fit(org.apache.spark.sql.Dataset)org.apache.spark.ml.feature.ChiSqSelectorModel in class org.apache.spark.ml.feature.ChiSqSelector has a different result type in current version, where it is org.apache.spark.ml.feature.SelectorModel rather than org.apache.spark.ml.feature.ChiSqSelectorModel\r\n```\r\n",
+        "createdAt" : "2020-03-22T16:48:32Z",
+        "updatedAt" : "2020-04-29T16:19:43Z",
+        "lastEditedBy" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "51f9830d-856b-4c98-897c-3692f38d5c75",
+        "parentId" : "22c6ba93-fb10-40c2-bf10-9ebd76bc26a2",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "The first two seem OK; that won't cause an actual source or binary incompatibility (right?) just because there is an additional class in the hierarchy.\r\n\r\nThe third one doesn't sound quite right. The type should be ChiSqSelectorModel right? do you have to override it in the subclass like you did with methods in ChiSqSelectorModel? the superclass returns this.type which I thought was 'inherited' and would become ChiSqSelectorModel.\r\n\r\nAm I right about that at all, and is there a workaround, or is MiMa incorrect somehow and the type is concretely ChiSqSelectorModel? or is this actually how lots of classes work?",
+        "createdAt" : "2020-03-23T14:25:16Z",
+        "updatedAt" : "2020-04-29T16:19:43Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0f7f93e8-3015-431c-981c-36dfa6398576",
+        "parentId" : "22c6ba93-fb10-40c2-bf10-9ebd76bc26a2",
+        "authorId" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "body" : "Seems I have to override ```fit``` in subclasses. ",
+        "createdAt" : "2020-03-23T17:25:22Z",
+        "updatedAt" : "2020-04-29T16:19:43Z",
+        "lastEditedBy" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "363d382c82cc28037e38c71d7d804cc3c325be98",
+    "line" : 11,
+    "diffHunk" : "@@ -1,1 +45,49 @@    // after: class ChiSqSelector extends PSelector\n    // false positive, no binary incompatibility\n    ProblemFilters.exclude[MissingTypesProblem](\"org.apache.spark.ml.feature.ChiSqSelectorModel\"),\n    ProblemFilters.exclude[MissingTypesProblem](\"org.apache.spark.ml.feature.ChiSqSelector\")\n  )"
   }
 ]

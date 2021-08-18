@@ -592,5 +592,38 @@
     "commit" : "2a9e1e44e03ce0551d619aec52d60cd2757c422b",
     "line" : 14,
     "diffHunk" : "@@ -1,1 +230,234 @@    children: Seq[LogicalPlan],\n    byName: Boolean = false,\n    allowMissingCol: Boolean = false) extends LogicalPlan {\n  assert(!allowMissingCol || byName, \"`allowMissingCol` can be true only if `byName` is true.\")\n"
+  },
+  {
+    "id" : "765d4002-e777-4a5c-9d01-932f339ed8e2",
+    "prId" : 28027,
+    "prUrl" : "https://github.com/apache/spark/pull/28027#pullrequestreview-518056858",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "009f401e-dd74-41bb-a62b-fd060a58224e",
+        "parentId" : null,
+        "authorId" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "body" : "why is this differentiation needed? Won't the metadata columns be part of `output`?",
+        "createdAt" : "2020-10-27T01:34:24Z",
+        "updatedAt" : "2020-11-18T00:41:10Z",
+        "lastEditedBy" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c930ec58-5888-4cec-a5b2-926f03b69689",
+        "parentId" : "009f401e-dd74-41bb-a62b-fd060a58224e",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "They are _eventually_ part of the output, but they can't be at first because `*` expansion uses all of `output`. If we added them immediately, we would get metadata columns in a `select *`.\r\n\r\nInstead, we add the metadata columns to this and then update column resolution to look up columns here. The result is that we can resolve everything just like normal, including `*`, but the columns are missing from output. Then the new analyzer rule adds the columns to the output if they are resolved, but missing. Since the parent node is already resolved, we know that this is safe and happens after `*` expansion.",
+        "createdAt" : "2020-10-27T19:17:53Z",
+        "updatedAt" : "2020-11-18T00:41:10Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6e72f4d68e6935efba32ba7a5f8b48adb66fe145",
+    "line" : 8,
+    "diffHunk" : "@@ -1,1 +891,895 @@    val qualifierList = identifier.qualifier :+ alias\n    child.metadataOutput.map(_.withQualifier(qualifierList))\n  }\n\n  override def doCanonicalize(): LogicalPlan = child.canonicalized"
   }
 ]
