@@ -42,5 +42,148 @@
     "commit" : "9bebdd4f2846f12f8ab13279c8cece151e8edfd0",
     "line" : 21,
     "diffHunk" : "@@ -1,1 +973,977 @@    case ExecutorDecommission(reason, _) =>\n      // use logInfo instead of logError as the loss of decommissioned executor is what we expect\n      logInfo(s\"Decommissioned executor $executorId on $hostPort shutdown: $reason\")\n    case _ =>\n      logError(s\"Lost executor $executorId on $hostPort: $reason\")"
+  },
+  {
+    "id" : "adb7dc69-0088-4eb7-a1a7-adf54af1a388",
+    "prId" : 29468,
+    "prUrl" : "https://github.com/apache/spark/pull/29468#pullrequestreview-470161779",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b74e793e-5aa8-4cad-80a4-6589d0646706",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "I haven't looked at this code too deeply, but does it make sense it eagerly remove the decommissioned executor from hostToExecutors and recomputeLocality and thus rebuild hostsByRack etc ? \r\n\r\n\r\n",
+        "createdAt" : "2020-08-18T17:33:37Z",
+        "updatedAt" : "2020-08-20T06:22:17Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e89b694b-ede2-4078-870b-b63437f30b47",
+        "parentId" : "b74e793e-5aa8-4cad-80a4-6589d0646706",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "`hostToExecutors` will also be used to handle executor removal and blacklisting stuff. In other words, a decommissioned executor could also be removed or blacklisted at the same time. So, remove the executor from `hostToExecutors` might also affect other places. I don't want to mix them together to make things complex.\r\n\r\nBesides, similar to `executorIdToRunningTaskIds`, a decommissioned executor could also have running tasks on it. So we don't eagerly remove it from `executorIdToRunningTaskIds` too.",
+        "createdAt" : "2020-08-19T03:36:09Z",
+        "updatedAt" : "2020-08-20T06:22:17Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cb921947-4b86-46cb-b452-516b5e892344",
+        "parentId" : "b74e793e-5aa8-4cad-80a4-6589d0646706",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "Got it. Thanks for considering it.",
+        "createdAt" : "2020-08-19T06:35:05Z",
+        "updatedAt" : "2020-08-20T06:22:17Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "65f6e0525b2d1472c1e6956587253e5ae6263676",
+    "line" : 16,
+    "diffHunk" : "@@ -1,1 +1072,1076 @@\n  def hasHostAliveOnRack(rack: String): Boolean = synchronized {\n    hostsByRack.get(rack)\n      .exists(hosts => hosts.exists(h => !isHostDecommissioned(h)))\n  }"
+  },
+  {
+    "id" : "df9cf048-0b84-4508-88f8-c20b6f12ebc6",
+    "prId" : 29468,
+    "prUrl" : "https://github.com/apache/spark/pull/29468#pullrequestreview-470179946",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "688f9374-00bc-403c-a4e2-1e1c0c5469a0",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "I don't think this method needs to be changed: It only seems to be used when the HDFS split is cached in memory by Hadoop. Perhaps we should restrict to changing only the methods in the `computeValidLocalityLevels` call path ?",
+        "createdAt" : "2020-08-18T18:13:34Z",
+        "updatedAt" : "2020-08-20T06:22:17Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "831da774-dda0-4ddf-a6ea-ccb9aeef4873",
+        "parentId" : "688f9374-00bc-403c-a4e2-1e1c0c5469a0",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "hmm..I think this more like a problem of definition or something like that. In this PR, what I'm trying to do is to strengthen the definition of the active status for the executor or host. That is, for an active executor or host, it should not be decommissioned at the same time. This function is getting the active host, so we should filter out decommissioned ones. I think this's quite obvious. And this function is used by multiple tests.",
+        "createdAt" : "2020-08-19T03:46:17Z",
+        "updatedAt" : "2020-08-20T06:22:17Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1e78b6b1-b561-4d7d-a0c1-d764a9410280",
+        "parentId" : "688f9374-00bc-403c-a4e2-1e1c0c5469a0",
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "I am just a bit wary of regressions and I am not too sure about the unit test coverage here. So generally like the code changes to be minimal. But I am okay with this change if you think it is safe. ",
+        "createdAt" : "2020-08-19T06:36:59Z",
+        "updatedAt" : "2020-08-20T06:22:17Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3506c6f5-61c1-410e-83cd-c228991bd409",
+        "parentId" : "688f9374-00bc-403c-a4e2-1e1c0c5469a0",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "It's super weird if `getExecutorsAliveOnHost` and `hasExecutorsAliveOnHost` are not consistent.",
+        "createdAt" : "2020-08-19T07:08:39Z",
+        "updatedAt" : "2020-08-20T06:22:17Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "65f6e0525b2d1472c1e6956587253e5ae6263676",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +1063,1067 @@\n  def getExecutorsAliveOnHost(host: String): Option[Set[String]] = synchronized {\n    hostToExecutors.get(host).map(_.filterNot(isExecutorDecommissioned)).map(_.toSet)\n  }\n"
+  },
+  {
+    "id" : "b89b8f1b-6872-42bd-9b81-86962ec66f13",
+    "prId" : 29468,
+    "prUrl" : "https://github.com/apache/spark/pull/29468#pullrequestreview-470647653",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "44856237-8add-4219-bc0d-39f26c4e8106",
+        "parentId" : null,
+        "authorId" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "body" : "nit: Should these two methods be declared final : We don't really want to override them and instead want to override the helper methods it calls.",
+        "createdAt" : "2020-08-19T16:41:51Z",
+        "updatedAt" : "2020-08-20T06:22:17Z",
+        "lastEditedBy" : "711a9ca0-8b90-435a-bf87-eb621aa1db13",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "65f6e0525b2d1472c1e6956587253e5ae6263676",
+    "line" : 29,
+    "diffHunk" : "@@ -1,1 +1084,1088 @@  }\n\n  // exposed for test\n  protected final def isExecutorDecommissioned(execId: String): Boolean =\n    getExecutorDecommissionInfo(execId).nonEmpty"
+  },
+  {
+    "id" : "2314065b-6721-486d-8ef9-c7357f006a31",
+    "prId" : 29395,
+    "prUrl" : "https://github.com/apache/spark/pull/29395#pullrequestreview-464262549",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "51402bd9-fddb-45c5-a002-0d409f1454cb",
+        "parentId" : null,
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "it would be nice to add a comment (like master branch) that this is only used with barrier scheduling, availableSlots not used otherwise.",
+        "createdAt" : "2020-08-10T14:09:32Z",
+        "updatedAt" : "2020-08-18T01:49:27Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "daa205dc9f257f42b794767601fd844dd596e374",
+    "line" : 7,
+    "diffHunk" : "@@ -1,1 +449,453 @@      // we only need to calculate available slots if using barrier scheduling, otherwise the\n      // value is -1\n      val availableSlots = if (taskSet.isBarrier) {\n        val availableResourcesAmount = availableResources.map { resourceMap =>\n          // note that the addresses here have been expanded according to the numParts"
   }
 ]

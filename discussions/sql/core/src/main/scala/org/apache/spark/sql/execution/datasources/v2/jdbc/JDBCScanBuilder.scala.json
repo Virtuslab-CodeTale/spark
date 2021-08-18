@@ -31,5 +31,170 @@
     "commit" : "fae570a68cde1cc25ae60e7ba74651e7972578e3",
     "line" : 39,
     "diffHunk" : "@@ -1,1 +63,67 @@\n    val dialect = JdbcDialects.get(jdbcOptions.url)\n    val compiledAgg = JDBCRDD.compileAggregates(aggregation.aggregateExpressions, dialect)\n\n    var outputSchema = new StructType()"
+  },
+  {
+    "id" : "9e04748c-e9d4-4c3e-a902-132284ea69e0",
+    "prId" : 29396,
+    "prUrl" : "https://github.com/apache/spark/pull/29396#pullrequestreview-465930570",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d58fa7e2-c920-44d7-bad2-1fc1b2bb4faa",
+        "parentId" : null,
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "Do you compile filters twice? If so, is it possible to avoid that?",
+        "createdAt" : "2020-08-10T16:29:17Z",
+        "updatedAt" : "2020-08-31T23:28:03Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "098ef8c1-b9e8-4041-9b88-605ee6a15641",
+        "parentId" : "d58fa7e2-c920-44d7-bad2-1fc1b2bb4faa",
+        "authorId" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "body" : "Yes, `compilefilter` is called twice. First time is to check if each of the filter can be handled by the underlying database to decide whether to push it down or not. Second time to turn the filter into a SQL string representation. Both V1JDBC and V2 JDBC behave like this. I think we should be able to save the SQL string representation in the first call, so no need to call it second time. I will try to fix this. ",
+        "createdAt" : "2020-08-11T00:57:22Z",
+        "updatedAt" : "2020-08-31T23:28:03Z",
+        "lastEditedBy" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3e280ce6-98ae-48a1-87c6-3a989c25b652",
+        "parentId" : "d58fa7e2-c920-44d7-bad2-1fc1b2bb4faa",
+        "authorId" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "body" : "I looked the code, seems it doesn't have an easy way to only call `compilefilter` once. After calling `compilefilter` to decide which filters to push down, `buildScan` takes the pushed down filer as an array of source.Filter, which needs to be turned into SQL string filter format by calling `compilefilter` again. ",
+        "createdAt" : "2020-08-11T22:00:00Z",
+        "updatedAt" : "2020-08-31T23:28:04Z",
+        "lastEditedBy" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2b1f5381-91c5-411d-9430-d7ff86dda44d",
+        "parentId" : "d58fa7e2-c920-44d7-bad2-1fc1b2bb4faa",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "I see. Theoretically, we could add a cached/compiled filter into `Filter`. ok. Let's try it separately.  ",
+        "createdAt" : "2020-08-12T13:45:15Z",
+        "updatedAt" : "2020-08-31T23:28:04Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "df8ed5dc0e72cef1495acb0e603e149cf7dd353d",
+    "line" : 42,
+    "diffHunk" : "@@ -1,1 +40,44 @@    if (jdbcOptions.pushDownPredicate) {\n      val dialect = JdbcDialects.get(jdbcOptions.url)\n      val (pushed, unSupported) = filters.partition(JDBCRDD.compileFilter(_, dialect).isDefined)\n      this.pushedFilter = pushed\n      unSupported"
+  },
+  {
+    "id" : "cab99105-852c-4bd6-8a87-e7882684f788",
+    "prId" : 29396,
+    "prUrl" : "https://github.com/apache/spark/pull/29396#pullrequestreview-464680771",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "22a8b23f-4058-4c1c-a789-f4d854b49f07",
+        "parentId" : null,
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "Do we have a JIRA for this? If not, could you open it and add a TODO here, please.",
+        "createdAt" : "2020-08-10T16:41:36Z",
+        "updatedAt" : "2020-08-31T23:28:03Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1fc7f11c-74df-494c-a049-10a10e2a2df2",
+        "parentId" : "22a8b23f-4058-4c1c-a789-f4d854b49f07",
+        "authorId" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "body" : "Seems Spark JDBC doesn't support nested column. I am not sure how many databases support nested column. I will take a look and open a jira if needed.",
+        "createdAt" : "2020-08-11T00:58:01Z",
+        "updatedAt" : "2020-08-31T23:28:03Z",
+        "lastEditedBy" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "df8ed5dc0e72cef1495acb0e603e149cf7dd353d",
+    "line" : 53,
+    "diffHunk" : "@@ -1,1 +51,55 @@\n  override def pruneColumns(requiredSchema: StructType): Unit = {\n    // JDBC doesn't support nested column pruning.\n    // TODO (SPARK-32593): JDBC support nested column and nested column pruning.\n    val requiredCols = requiredSchema.fields.map(PartitioningUtils.getColName(_, isCaseSensitive))"
+  },
+  {
+    "id" : "92a5a6a0-a3c8-47ec-80d3-9a955f7fbbe3",
+    "prId" : 29396,
+    "prUrl" : "https://github.com/apache/spark/pull/29396#pullrequestreview-476484458",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "bd4764bd-a184-4a7d-8fc1-88f0739f1b8f",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "To be more safer, we should return original filter like ORC and Parquet datasource.",
+        "createdAt" : "2020-08-14T16:35:29Z",
+        "updatedAt" : "2020-08-31T23:28:04Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "be261743-c4c1-4d09-b32b-ba9c76985512",
+        "parentId" : "bd4764bd-a184-4a7d-8fc1-88f0739f1b8f",
+        "authorId" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "body" : "Thanks for your comment. I agree that it's safer to return the original filters, but it seems to me that we want to push down filters to the underlying datasource for better performance, so I guess we don't want to return the original filter to re-evaluate the filters that have already evaluated in the datasources. ",
+        "createdAt" : "2020-08-14T23:04:50Z",
+        "updatedAt" : "2020-08-31T23:28:04Z",
+        "lastEditedBy" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "574f5f9a-0702-4c4e-8ff9-8702e0ac1486",
+        "parentId" : "bd4764bd-a184-4a7d-8fc1-88f0739f1b8f",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "It's fine as long as it's also the behavior of jdbc v1",
+        "createdAt" : "2020-08-27T08:10:38Z",
+        "updatedAt" : "2020-08-31T23:28:04Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "df8ed5dc0e72cef1495acb0e603e149cf7dd353d",
+    "line" : 44,
+    "diffHunk" : "@@ -1,1 +42,46 @@      val (pushed, unSupported) = filters.partition(JDBCRDD.compileFilter(_, dialect).isDefined)\n      this.pushedFilter = pushed\n      unSupported\n    } else {\n      filters"
+  },
+  {
+    "id" : "3d360437-c045-4eb6-bb70-5a17a48419fd",
+    "prId" : 29396,
+    "prUrl" : "https://github.com/apache/spark/pull/29396#pullrequestreview-467915312",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "816ac7f5-4285-47a2-bcfb-5520e1eee823",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Does JDBC support nested column pruning? V2 interface supposes to support it. If it doesn't, maybe we need to filter out nested column predicates here? Does `JDBCRDD.compileFilter` filter them out?",
+        "createdAt" : "2020-08-14T16:37:29Z",
+        "updatedAt" : "2020-08-31T23:28:04Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3846e611-4049-4694-80cd-add2ea773a11",
+        "parentId" : "816ac7f5-4285-47a2-bcfb-5520e1eee823",
+        "authorId" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "body" : "Seems JDBC doesn't support nested columns yet. In JdbcUtils.getCatalystType, we map `java.sql.Types.ARRAY` to null and `java.sql.Types.STRUCT` to `StringType`. In `JdbcUtils.getJDBCType`, we don't have a mapping for `ArrayType` and `StructType`. I think we don't need to consider nested column pruning and nested column predicates for now. I have open jira SPARK-32593 for nested column support.",
+        "createdAt" : "2020-08-14T23:04:58Z",
+        "updatedAt" : "2020-08-31T23:28:04Z",
+        "lastEditedBy" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "df8ed5dc0e72cef1495acb0e603e149cf7dd353d",
+    "line" : 39,
+    "diffHunk" : "@@ -1,1 +37,41 @@  private var prunedSchema = schema\n\n  override def pushFilters(filters: Array[Filter]): Array[Filter] = {\n    if (jdbcOptions.pushDownPredicate) {\n      val dialect = JdbcDialects.get(jdbcOptions.url)"
   }
 ]

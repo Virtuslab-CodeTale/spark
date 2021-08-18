@@ -1,0 +1,46 @@
+[
+  {
+    "id" : "26a3f65b-e2bb-4411-acee-c1b4c57ed8d6",
+    "prId" : 29477,
+    "prUrl" : "https://github.com/apache/spark/pull/29477#pullrequestreview-501144400",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "12c01062-b126-4d35-985d-1a4d88f7bfbc",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Could you check the other resource manager (YARN/Mesos)? Do we request like this?",
+        "createdAt" : "2020-08-24T00:36:13Z",
+        "updatedAt" : "2020-08-24T09:10:06Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1b948790-0ca1-462f-9484-7f8a2279a0bb",
+        "parentId" : "12c01062-b126-4d35-985d-1a4d88f7bfbc",
+        "authorId" : "acf5aefc-4c46-451e-a28d-492ceaffd160",
+        "body" : "YARN:\r\nThe resource manager for YARN adds the offheap memory to the total memory request. Which is consistent with what one finds in the documentation, in particular the documentation for `spark.executor.memoryOverhead` states:\r\n\"The maximum memory size of container to running executor is determined by the sum of `spark.executor.memoryOverhead`, `spark.executor.memory`, `spark.memory.offHeap.size` and `spark.executor.pyspark.memory`. \"\r\n\r\nMesos:\r\nI don't work much with Mesos, but from what I can see:\r\n- the documentation for `spark.executor.memoryOverhead` states that \"This option is currently supported on YARN and Kubernetes.\"\r\n- From the code it looks like the memory overhead is implemeted, but just the \"standard part\", without the off-heap and pyspark memory parts. It should be easy to bring this up to speed with K8S and YARN, in case. Any thoughts on this?",
+        "createdAt" : "2020-08-24T08:49:49Z",
+        "updatedAt" : "2020-08-24T09:10:06Z",
+        "lastEditedBy" : "acf5aefc-4c46-451e-a28d-492ceaffd160",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6cfa0dce-8d21-4a4d-b9ce-d37d62d6ebda",
+        "parentId" : "12c01062-b126-4d35-985d-1a4d88f7bfbc",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "yarn does it similar to this. My only other comment might be to reorganize a little to get the pyspark memory before this and then have  executorMemoryWithOverhead = executorMemoryMiB + memoryOverheadMiB + memoryOffHeapMiB + memoryPysparkMiB just for readability. ",
+        "createdAt" : "2020-10-02T13:42:06Z",
+        "updatedAt" : "2020-10-02T13:42:31Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5600542d43bfd0221ba633b90226a15962ee92ce",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +61,65 @@      MEMORY_OVERHEAD_MIN_MIB))\n  private val memoryOffHeapMiB = KubernetesUtils.executorOffHeapMemorySizeAsMb(kubernetesConf)\n  private val executorMemoryWithOverhead = executorMemoryMiB + memoryOverheadMiB + memoryOffHeapMiB\n  private val executorMemoryTotal =\n    if (kubernetesConf.get(APP_RESOURCE_TYPE) == Some(APP_RESOURCE_TYPE_PYTHON)) {"
+  }
+]

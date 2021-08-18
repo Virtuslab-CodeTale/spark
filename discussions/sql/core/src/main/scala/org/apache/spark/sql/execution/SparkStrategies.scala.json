@@ -207,5 +207,93 @@
     "commit" : "f1e7ba082bfb557c67adad8f6c5c4ec7af622167",
     "line" : 62,
     "diffHunk" : "@@ -1,1 +199,203 @@      case j @ ExtractEquiJoinKeys(joinType, leftKeys, rightKeys, nonEquiCond, left, right, hint) =>\n        def createBroadcastHashJoin(onlyLookingAtHint: Boolean) = {\n          val buildSide = getBroadcastBuildSide(\n            left, right, joinType, hint, onlyLookingAtHint, conf)\n          checkHintBuildSide(onlyLookingAtHint, buildSide, joinType, hint, true)"
+  },
+  {
+    "id" : "6b11bf21-13ca-4586-816c-34c6b20da460",
+    "prId" : 29455,
+    "prUrl" : "https://github.com/apache/spark/pull/29455#pullrequestreview-470103334",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8c26c529-ad8d-473c-af82-4670b58e0ad9",
+        "parentId" : null,
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "Just a high level question - if we are worried about broadcast join OOM on driver side here, shouldn't we be also worried about shuffled hash join OOM on task side as well?",
+        "createdAt" : "2020-08-18T21:26:16Z",
+        "updatedAt" : "2020-09-04T08:12:16Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "09eb52b8-46f2-416b-8639-e26ea1fbf264",
+        "parentId" : "8c26c529-ad8d-473c-af82-4670b58e0ad9",
+        "authorId" : "cce1c782-0596-44b6-8b99-6b77d2cca53c",
+        "body" : "the HashedRelation built in ShuffledHashedJoinExec which was partitioned, it should be less data, so the driver OOM issue should be a major concern.",
+        "createdAt" : "2020-08-19T01:24:13Z",
+        "updatedAt" : "2020-09-04T08:12:16Z",
+        "lastEditedBy" : "cce1c782-0596-44b6-8b99-6b77d2cca53c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d5e769ab-b6b5-4dc0-ab08-2b69d02bb1df",
+        "parentId" : "8c26c529-ad8d-473c-af82-4670b58e0ad9",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "Sorry I don't get why we don't worry about shuffled hash join OOM if sub-query is way too big/skewed in certain keys. In general, shuffled hash join OOM is a normal issue if people choose shuffled hash join blindly. Could we add a check to make sure build size is not too big to be shuffled hash join?\r\n\r\ne.g.\r\n\r\n```\r\nif (!canBroadcastBySize(j.right, conf) && canBuildLocalHashMapBySize(j.right, conf) && conf.adaptiveExecutionEnabled) {\r\n  ...\r\n}\r\n```",
+        "createdAt" : "2020-08-19T01:31:00Z",
+        "updatedAt" : "2020-09-04T08:12:16Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "48361e6f-e180-40c3-89ae-e61de58f9b9a",
+        "parentId" : "8c26c529-ad8d-473c-af82-4670b58e0ad9",
+        "authorId" : "cce1c782-0596-44b6-8b99-6b77d2cca53c",
+        "body" : "> Sorry I don't get why we don't worry about shuffled hash join OOM if sub-query is way too big/skewed in certain keys. In general, shuffled hash join OOM is a normal issue if people choose shuffled hash join blindly. Could we add a check to make sure build size is not too big to be shuffled hash join?\r\n> \r\n> e.g.\r\n> \r\n> ```\r\n> if (!canBroadcastBySize(j.right, conf) && canBuildLocalHashMapBySize(j.right, conf) && conf.adaptiveExecutionEnabled) {\r\n>   ...\r\n> }\r\n> ```\r\n\r\nDo you have any contact that I can offline communicate with you maybe, maybe you can reach me with my WeChat \"18518298234\"",
+        "createdAt" : "2020-08-19T03:42:33Z",
+        "updatedAt" : "2020-09-04T08:12:16Z",
+        "lastEditedBy" : "cce1c782-0596-44b6-8b99-6b77d2cca53c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "51cec86843bc8088498df24601a1e4cc2fca86c1",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +236,240 @@\n      case j @ ExtractSingleColumnNullAwareAntiJoin(leftKeys, rightKeys) =>\n        if (!canBroadcastBySize(j.right, conf) && conf.adaptiveExecutionEnabled) {\n          Seq(joins.ShuffledHashJoinExec(leftKeys, rightKeys, LeftAnti, BuildRight,\n            None, planLater(j.left), planLater(j.right), isNullAwareAntiJoin = true))"
+  },
+  {
+    "id" : "ace92705-38f8-4ed4-8427-bdb5b37784bd",
+    "prId" : 29455,
+    "prUrl" : "https://github.com/apache/spark/pull/29455#pullrequestreview-471082594",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4a519089-b271-4f21-9a31-c17e3e59e675",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "We should also update the doc of `spark.sql.optimizeNullAwareAntiJoin`. It is not only `BroadcastHashJoinExec` now.",
+        "createdAt" : "2020-08-19T19:51:13Z",
+        "updatedAt" : "2020-09-04T08:12:16Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "41dd1e1f-e128-453a-9e47-f2c7c774edce",
+        "parentId" : "4a519089-b271-4f21-9a31-c17e3e59e675",
+        "authorId" : "cce1c782-0596-44b6-8b99-6b77d2cca53c",
+        "body" : "OK.",
+        "createdAt" : "2020-08-20T02:20:37Z",
+        "updatedAt" : "2020-09-04T08:12:16Z",
+        "lastEditedBy" : "cce1c782-0596-44b6-8b99-6b77d2cca53c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "51cec86843bc8088498df24601a1e4cc2fca86c1",
+    "line" : 3,
+    "diffHunk" : "@@ -1,1 +235,239 @@          .getOrElse(createJoinWithoutHint())\n\n      case j @ ExtractSingleColumnNullAwareAntiJoin(leftKeys, rightKeys) =>\n        if (!canBroadcastBySize(j.right, conf) && conf.adaptiveExecutionEnabled) {\n          Seq(joins.ShuffledHashJoinExec(leftKeys, rightKeys, LeftAnti, BuildRight,"
   }
 ]

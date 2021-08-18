@@ -1,0 +1,112 @@
+[
+  {
+    "id" : "ce224a24-d005-4e64-ac18-f33ad579a042",
+    "prId" : 29457,
+    "prUrl" : "https://github.com/apache/spark/pull/29457#pullrequestreview-471841353",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "adac74d5-11ab-4c1a-9bb3-24896e43d296",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "why do we need the `OrcPrimitiveField` if `fieldName` is always `orcField.fieldName` here?",
+        "createdAt" : "2020-08-20T09:32:52Z",
+        "updatedAt" : "2020-08-20T09:32:52Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6f7be014-1958-435a-a323-4f62c8117e20",
+        "parentId" : "adac74d5-11ab-4c1a-9bb3-24896e43d296",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Because we look up attribute name of pushed down predicates in the map `dataTypeMap(name)`, we need to easily retrieve the file schema's field name. If we simply use `Map[String, DataType]`, the matched attribute name under case-insensitive analysis could be possibly in different letter case to the file schema's field name.\r\n\r\nE,g, If ORC file has 'ABC` field, pushed down predicate is \"abc > 0\", `dataTypeMap.contain(\"abc\")` is true and we can get `dataTypeMap(\"abc\")` back. But we need file schema's field name \"ABC\".\r\n\r\nIt is similar to Parquet: https://github.com/apache/spark/blob/d6a68e0b67ff7de58073c176dd097070e88ac831/sql/core/src/main/scala/org/apache/spark/sql/execution/datasources/parquet/ParquetFilters.scala#L56-L76\r\n\r\n",
+        "createdAt" : "2020-08-20T17:37:55Z",
+        "updatedAt" : "2020-08-20T17:37:55Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "090747d4a9d1540c4b65e45f960c926a23d76b84",
+    "line" : 30,
+    "diffHunk" : "@@ -1,1 +66,70 @@            val fieldName = (parentFieldNames :+ f.name).quoted\n            val orcField = OrcPrimitiveField(fieldName, f.dataType)\n            Some((fieldName, orcField))\n          case _ => None\n        }"
+  },
+  {
+    "id" : "0406ec16-ee5d-409f-9278-c8327aee65f6",
+    "prId" : 29412,
+    "prUrl" : "https://github.com/apache/spark/pull/29412#pullrequestreview-467077988",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "aed511ab-bf6c-4153-b8f9-aa24d0820401",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Out of curiosity, do we have one test to verify the case sensitivity vs insensitivity? Other changes look good",
+        "createdAt" : "2020-08-12T03:51:21Z",
+        "updatedAt" : "2020-08-12T03:51:21Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bedbadc2-2da6-4070-9248-74d31664ed06",
+        "parentId" : "aed511ab-bf6c-4153-b8f9-aa24d0820401",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "We don't have case sensitivity test for ORC filter pushdown. Because the case-insensitive column resolution is done inside ORC library and this is not for a bug, I'm not able to add a regression test.",
+        "createdAt" : "2020-08-12T05:37:26Z",
+        "updatedAt" : "2020-08-12T05:37:26Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c6b8716e-1d51-4171-96e8-12a108d25e6f",
+        "parentId" : "aed511ab-bf6c-4153-b8f9-aa24d0820401",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Hm, but we could have one e2e test instead though. E.g. in `OrcQueryTest` by leveraging `stripSparkFilter`, having one table with column `A` and `a` and filters against `a`.",
+        "createdAt" : "2020-08-12T06:23:00Z",
+        "updatedAt" : "2020-08-12T06:23:01Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5e893094-2b22-4cb4-99b3-05eace6a27e9",
+        "parentId" : "aed511ab-bf6c-4153-b8f9-aa24d0820401",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Oh, that looks like Parquet ones. Ok, I think I can write a few test. Let me do it tomorrow. Thanks.",
+        "createdAt" : "2020-08-12T06:31:51Z",
+        "updatedAt" : "2020-08-12T06:31:51Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5d3ad974-7ff6-4d68-a3af-138565cf1d52",
+        "parentId" : "aed511ab-bf6c-4153-b8f9-aa24d0820401",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Yep. +1 for using `stripSparkFilter`.",
+        "createdAt" : "2020-08-12T16:11:47Z",
+        "updatedAt" : "2020-08-12T16:11:47Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "aacdbf9a-0fca-4cd0-82d5-d2d3c55a3084",
+        "parentId" : "aed511ab-bf6c-4153-b8f9-aa24d0820401",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "The test was added in #29427. Seems ORC library doesn't process pushed predicate in case-insensitive approach as expected.\r\n\r\nThat's said, even `OrcConf.IS_SCHEMA_EVOLUTION_CASE_SENSITIVE ` is set to false at Spark ORC datasource, the column names in pushed predicates are matched in case-sensitive way.\r\n\r\nThis is shown in the added test.\r\n\r\n",
+        "createdAt" : "2020-08-13T19:45:03Z",
+        "updatedAt" : "2020-08-13T19:45:03Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "962bcc69ab5727000c423e3504ed74f01b5fcd3e",
+    "line" : 29,
+    "diffHunk" : "@@ -1,1 +67,71 @@\n    // Different with Parquet case, for case insensitive analysis, we will set\n    // `OrcConf.IS_SCHEMA_EVOLUTION_CASE_SENSITIVE`. So we don't need to worry about\n    // mis-matching between pushed predicates and Orc fields.\n    // Don't consider ambiguity here, i.e. more than one field are matched in case insensitive"
+  }
+]

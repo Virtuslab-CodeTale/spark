@@ -1,0 +1,46 @@
+[
+  {
+    "id" : "f38f26a6-5313-4471-b251-1f617a65042e",
+    "prId" : 29434,
+    "prUrl" : "https://github.com/apache/spark/pull/29434#pullrequestreview-469550613",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c1e15826-c26d-4ff9-a55a-57a3f4669386",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Does this has to accept s.c.Seq?",
+        "createdAt" : "2020-08-17T15:53:23Z",
+        "updatedAt" : "2020-08-22T08:43:35Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "35c85fa4-82fc-4b6f-b482-04eddb861dee",
+        "parentId" : "c1e15826-c26d-4ff9-a55a-57a3f4669386",
+        "authorId" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "body" : "Yep, I think now it must be `s.c.Seq` unless we accept `case ArrayType(et, nullable)` branch  of `RowEncoder.deserializerFor` method has a 2.13-only branch to use `immutable.ArraySeq.unsafeMake` create a `immutable.Seq`. We can't use uniformly` immutable.ArraySeq ` because they are in different packages with different Scala version,  I haven't found a perfect replacement of `WrappedArray.make` method yet.\r\n\r\nNow `WrappedArray.make` create a `mutable.ArraySeq` instance in Scala 2.13 , so  the `toScalaMap` method input args are `mutable.ArraySeq` not `immutable.ArraySeq` and `Seq` alias representative  `immutable.Seq` in Scala 2.13,  this not match. On the other hand, `toScalaMap` method is called in reflection mode, inconvenient to add 'toSeq'.",
+        "createdAt" : "2020-08-18T03:52:52Z",
+        "updatedAt" : "2020-08-22T08:43:35Z",
+        "lastEditedBy" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "95aa68a7-0f2e-4260-b184-e0b3fd316536",
+        "parentId" : "c1e15826-c26d-4ff9-a55a-57a3f4669386",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "I see, this is called by things that need to pattern-match s.c.Seq.",
+        "createdAt" : "2020-08-18T15:07:20Z",
+        "updatedAt" : "2020-08-22T08:43:35Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "31cac45927d2c780e7522a88e30a2e667a178d6a",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +137,141 @@  }\n\n  def toScalaMap(keys: scala.collection.Seq[Any],\n      values: scala.collection.Seq[Any]): Map[Any, Any] = {\n    keys.zip(values).toMap"
+  }
+]

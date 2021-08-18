@@ -1,0 +1,68 @@
+[
+  {
+    "id" : "7b43ad1f-557c-4405-84db-fd358e6ded49",
+    "prId" : 29396,
+    "prUrl" : "https://github.com/apache/spark/pull/29396#pullrequestreview-467915357",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "176423ae-18b1-48e1-a854-e93fe1d1e099",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "`overwrite` should be true when `isTruncate` is true right? Can you add an assert here?",
+        "createdAt" : "2020-08-14T16:43:55Z",
+        "updatedAt" : "2020-08-31T23:28:04Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5ca7d1f8-6a0f-4fc2-815b-d75d837e9f2a",
+        "parentId" : "176423ae-18b1-48e1-a854-e93fe1d1e099",
+        "authorId" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "body" : "Seems `overwrite` can't be true according to the `V1WriteBuilder` doc.",
+        "createdAt" : "2020-08-14T23:05:07Z",
+        "updatedAt" : "2020-08-31T23:28:04Z",
+        "lastEditedBy" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "df8ed5dc0e72cef1495acb0e603e149cf7dd353d",
+    "line" : 37,
+    "diffHunk" : "@@ -1,1 +35,39 @@\n  override def buildForV1Write(): InsertableRelation = new InsertableRelation {\n    override def insert(data: DataFrame, overwrite: Boolean): Unit = {\n      // TODO (SPARK-32595): do truncate and append atomically.\n      if (isTruncate) {"
+  },
+  {
+    "id" : "69ece815-5a3b-41f3-94a1-2d6ece5bbe60",
+    "prId" : 29396,
+    "prUrl" : "https://github.com/apache/spark/pull/29396#pullrequestreview-481479636",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1b213a6a-bfe7-4d7a-960f-b8c45d262230",
+        "parentId" : null,
+        "authorId" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "body" : "@cloud-fan I have a question here: I think it makes sense to do truncate and append atomically. However, in `JDBCRelationProvider.createRelation`, it doesn't do `truncateTable` and `saveTable` atomically, or `dropTable`, `createTable`, and `saveTable` atomically. \r\n```\r\n          case SaveMode.Overwrite =>\r\n            if (options.isTruncate && isCascadingTruncateTable(options.url) == Some(false)) {\r\n              // In this case, we should truncate table and then load.\r\n              truncateTable(conn, options)\r\n              val tableSchema = JdbcUtils.getSchemaOption(conn, options)\r\n              saveTable(df, tableSchema, isCaseSensitive, conn, options)\r\n            } else {\r\n              // Otherwise, do not truncate the table, instead drop and recreate it\r\n              dropTable(conn, options.table, options)\r\n              createTable(conn, options.table, df.schema, isCaseSensitive, options)\r\n              saveTable(df, Some(df.schema), isCaseSensitive, conn, options)\r\n            }\r\n```\r\nDo we want to be consistent with the old behavior and don't consider atomic or we want to have atomic behavior for both v1 and v2?",
+        "createdAt" : "2020-09-02T23:26:51Z",
+        "updatedAt" : "2020-09-02T23:26:51Z",
+        "lastEditedBy" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7ec1faef-c480-4c9d-8b84-c1f34f6726b8",
+        "parentId" : "1b213a6a-bfe7-4d7a-960f-b8c45d262230",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Yea JDBC data source is not atomic, even for simple INSERT. But I don't have a good idea to make it atomic without too much perf overhead.",
+        "createdAt" : "2020-09-03T04:14:45Z",
+        "updatedAt" : "2020-09-03T04:14:45Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "df8ed5dc0e72cef1495acb0e603e149cf7dd353d",
+    "line" : 38,
+    "diffHunk" : "@@ -1,1 +36,40 @@  override def buildForV1Write(): InsertableRelation = new InsertableRelation {\n    override def insert(data: DataFrame, overwrite: Boolean): Unit = {\n      // TODO (SPARK-32595): do truncate and append atomically.\n      if (isTruncate) {\n        val conn = JdbcUtils.createConnectionFactory(options)()"
+  }
+]

@@ -1,0 +1,233 @@
+[
+  {
+    "id" : "6481edae-bc2e-4ca0-8fa2-f64ca8c52b5c",
+    "prId" : 29434,
+    "prUrl" : "https://github.com/apache/spark/pull/29434#pullrequestreview-472570976",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "cb970264-dc94-45cd-89ab-84d46126ba19",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Also CC @ioana-delaney as author of this test, on the off chance you have a comment on whether this test modification is valid. The last few comments above explain the issue a bit.",
+        "createdAt" : "2020-08-18T15:14:03Z",
+        "updatedAt" : "2020-08-22T08:43:35Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7d3dcaf2-2831-42fa-befb-6244da57c897",
+        "parentId" : "cb970264-dc94-45cd-89ab-84d46126ba19",
+        "authorId" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "body" : " @ioana-delaney Another infomation is Scala 2.13 tends to optimization results as \r\n\r\n```\r\nJoin Inner, (d1_pk#5 = f1_fk1#0)\r\n:- Join Inner, (f1_fk2#1 = d2_pk#8)\r\n:  :- Join Inner, (f1_fk3#2 = d3_pk#11)\r\n```\r\n\r\nand Scala 2.12 tends to  optimization results as \r\n\r\n```\r\nJoin Inner, (f1_fk2#1 = d2_pk#8)\r\n:- Join Inner, (d1_pk#5 = f1_fk1#0)\r\n:  :- Join Inner, (f1_fk3#2 = d3_pk#11)\r\n```\r\n\r\nIf the input is reordered to `d1.join(t3).join(d3).join(t5).join(t1).join(t2).join(d2).join(f1).join(t6).join(t4)` in Scala 2.12, the optimization results  will change to \r\n \r\n```\r\nJoin Inner, (d1_pk#5 = f1_fk1#0)\r\n:- Join Inner, (f1_fk2#1 = d2_pk#8)\r\n:  :- Join Inner, (f1_fk3#2 = d3_pk#11)\r\n```",
+        "createdAt" : "2020-08-18T15:37:43Z",
+        "updatedAt" : "2020-08-22T08:43:35Z",
+        "lastEditedBy" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4d1573f8-51c0-4bd6-9427-e2aa316b9cd0",
+        "parentId" : "cb970264-dc94-45cd-89ab-84d46126ba19",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "what? the scala version changes the result of the join reorder rule? This is very weird as the join reorder is data-dependent and should be deterministic. also cc @wzhfy ",
+        "createdAt" : "2020-08-19T08:21:48Z",
+        "updatedAt" : "2020-08-22T08:43:35Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b5747f6e-fab3-4dd6-aa91-ee36109f4468",
+        "parentId" : "cb970264-dc94-45cd-89ab-84d46126ba19",
+        "authorId" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "body" : "@cloud-fan Yep, in this case, exists 2 candidates plan in level 4 has same `Cost(200,9200)`, From the code, we can see which candidate is generated first and which one we will be choice. \r\n\r\nRelated codes as follow:\r\n\r\nhttps://github.com/apache/spark/blob/3092527f7557b64ff9a5bedadfac8bb2f189a9b4/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/optimizer/CostBasedJoinReorder.scala#L209-L231\r\n\r\nif `newJoinPlan` betterThan `existingPlan` will use `newJoinPlan` else use  `existingPlan` and same Cost candidate not trigger update.\r\n\r\nIn Scala 2.13 `HashMap` and `HashSet` has been rewritten,  and I found the iteration order of `oneSideCandidates` and `otherSideCandidates`  from `foundPlans` different form Scala 2.12  through debug this case.",
+        "createdAt" : "2020-08-19T08:39:37Z",
+        "updatedAt" : "2020-08-22T08:43:35Z",
+        "lastEditedBy" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e6cce36e-3b10-45b4-8d6f-e3e2397321d1",
+        "parentId" : "cb970264-dc94-45cd-89ab-84d46126ba19",
+        "authorId" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "body" : "@wzhfy If my analysis is not correct, please correct me, thx ~",
+        "createdAt" : "2020-08-19T08:41:36Z",
+        "updatedAt" : "2020-08-22T08:43:35Z",
+        "lastEditedBy" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "38a2bbe6-9c5e-4e5a-84c5-a45e88196251",
+        "parentId" : "cb970264-dc94-45cd-89ab-84d46126ba19",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Looks like it's due to the map entries order becomes different in scala 2.13. We should probably use a linked hash map to make the order deterministic. ",
+        "createdAt" : "2020-08-19T09:11:28Z",
+        "updatedAt" : "2020-08-22T08:43:35Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b8ddf8c0-c313-4ab6-89f0-b7548d18c894",
+        "parentId" : "cb970264-dc94-45cd-89ab-84d46126ba19",
+        "authorId" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "body" : "@cloud-fan I'll try this suggestion and give you a feedback",
+        "createdAt" : "2020-08-19T09:16:33Z",
+        "updatedAt" : "2020-08-22T08:43:35Z",
+        "lastEditedBy" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "be17ce99-ba10-496a-84d5-b8d82fc571d7",
+        "parentId" : "cb970264-dc94-45cd-89ab-84d46126ba19",
+        "authorId" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "body" : "@cloud-fan It seems that using \"LinkedHashMap\" does not make the results uniform, still two possibilities optimization results. The level 0 `foundPlans` is produced by `items.zipWithIndex`, the `items` produced by \r\n\r\nhttps://github.com/apache/spark/blob/3092527f7557b64ff9a5bedadfac8bb2f189a9b4/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/optimizer/CostBasedJoinReorder.scala#L78-L91\r\n\r\nIf `itemIndex` has different order with different input order, use `LinkedHashMap` should be possible to guarantee the same optimization result for the same input order with Scala 2.12 and Scala 2.13, unlikely to guarantee the same optimization results for different input order, If  the `items` is ordered, the output may be fully guaranteed, but I haven't verified it yet.\r\n\r\nNow I am counting the optimization results of full permutation of 10 tables involved this case as input, divided into\r\n\r\n- Scala 2.12 use HashMap\r\n- Scala 2.12 use LinkedHashMap\r\n- Scala 2.13 use HashMap\r\n- Scala 2.13 use LinkedHashMap\r\n\r\nThe distribution of optimization results will be fed back later.",
+        "createdAt" : "2020-08-20T04:21:00Z",
+        "updatedAt" : "2020-08-22T08:43:35Z",
+        "lastEditedBy" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7500c710-d974-41bd-8263-d7029952975d",
+        "parentId" : "cb970264-dc94-45cd-89ab-84d46126ba19",
+        "authorId" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "body" : "@cloud-fan @srowen  I verified the tests in the above description, the candidate input set is `Seq(d1, t3, t4, f1, d2, t5, t6, d3, t1, t2).permutations`, total of 3628000 input in different orders.\r\n\r\nWe define original expected optimization result **A** as\r\n\r\n```\r\n  f1.join(d3, Inner, Some(nameToAttr(\"f1_fk3\") === nameToAttr(\"d3_pk\")))\r\n   .join(d1, Inner, Some(nameToAttr(\"f1_fk1\") === nameToAttr(\"d1_pk\")))\r\n   .join(d2, Inner, Some(nameToAttr(\"f1_fk2\") === nameToAttr(\"d2_pk\")))\r\n   .join(t4.join(t3, Inner, Some(nameToAttr(\"t3_c2\") === nameToAttr(\"t4_c2\"))), Inner,\r\n     Some(nameToAttr(\"d1_c2\") === nameToAttr(\"t3_c1\")))\r\n   .join(t2.join(t1, Inner, Some(nameToAttr(\"t1_c2\") === nameToAttr(\"t2_c2\"))), Inner,\r\n     Some(nameToAttr(\"d3_c2\") === nameToAttr(\"t1_c1\")))\r\n   .join(t5.join(t6, Inner, Some(nameToAttr(\"t5_c2\") === nameToAttr(\"t6_c2\"))), Inner,\r\n     Some(nameToAttr(\"d2_c2\") === nameToAttr(\"t5_c1\")))\r\n```\r\n\r\nand define the other one optimization result **B** as\r\n\r\n```\r\n f1.join(d3, Inner, Some(nameToAttr(\"f1_fk3\") === nameToAttr(\"d3_pk\")))\r\n   .join(d2, Inner, Some(nameToAttr(\"f1_fk2\") === nameToAttr(\"d2_pk\")))\r\n   .join(d1, Inner, Some(nameToAttr(\"f1_fk1\") === nameToAttr(\"d1_pk\")))\r\n   .join(t4.join(t3, Inner, Some(nameToAttr(\"t3_c2\") === nameToAttr(\"t4_c2\"))), Inner,\r\n     Some(nameToAttr(\"d1_c2\") === nameToAttr(\"t3_c1\")))\r\n   .join(t2.join(t1, Inner, Some(nameToAttr(\"t1_c2\") === nameToAttr(\"t2_c2\"))), Inner,\r\n     Some(nameToAttr(\"d3_c2\") === nameToAttr(\"t1_c1\")))\r\n   .join(t5.join(t6, Inner, Some(nameToAttr(\"t5_c2\") === nameToAttr(\"t6_c2\"))), Inner,\r\n     Some(nameToAttr(\"d2_c2\") === nameToAttr(\"t5_c1\")))\r\n```\r\n\r\nSome test results are as follows:\r\n\r\n- Scala 2.12 use HashMap: 1813600 results were candidate **A**, 1814400 results were candidate **B**\r\n\r\n- Scala 2.12 use LinkedHashMap: 1814400 results were candidate **A**, 1813600 results were candidate **B**\r\n\r\nI will feedback on the test results in Scala 2.13 later.",
+        "createdAt" : "2020-08-20T15:28:34Z",
+        "updatedAt" : "2020-08-22T08:43:35Z",
+        "lastEditedBy" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "131e4214-6b44-40d6-a66c-b38762ae3599",
+        "parentId" : "cb970264-dc94-45cd-89ab-84d46126ba19",
+        "authorId" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "body" : "- Scala 2.13 use HashMap: 1813600 results were candidate **A**,  1814400 results were candidate **B**\r\n\r\n- Scala 2.13 use LinkedHashMap: 1813600 results were candidate **A**,  1814400 results were candidate **B**\r\n\r\n",
+        "createdAt" : "2020-08-21T15:06:56Z",
+        "updatedAt" : "2020-08-22T08:43:35Z",
+        "lastEditedBy" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "31cac45927d2c780e7522a88e30a2e667a178d6a",
+    "line" : 8,
+    "diffHunk" : "@@ -1,1 +332,336 @@    //  deterministic even if the input order is different.\n    val query =\n      d1.join(t3).join(t4).join(f1).join(d3).join(d2).join(t5).join(t6).join(t1).join(t2)\n        .where((nameToAttr(\"d1_c2\") === nameToAttr(\"t3_c1\")) &&\n          (nameToAttr(\"t3_c2\") === nameToAttr(\"t4_c2\")) &&"
+  },
+  {
+    "id" : "01b2c307-d461-4638-98fb-298dde58c03f",
+    "prId" : 29434,
+    "prUrl" : "https://github.com/apache/spark/pull/29434#pullrequestreview-472909051",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "21acfcd9-ee03-4b88-aec7-381846e363e2",
+        "parentId" : null,
+        "authorId" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "body" : "@srowen Sorry, I haven't found a way to make the test assertions deterministic with a sort today, but I found this case also un-deterministic in Scala 2.12, if we change the order in the input, the optimization results switch between the two known results:\r\n\r\n```\r\nJoin Inner, (d1_pk#5 = f1_fk1#0)\r\n:- Join Inner, (f1_fk2#1 = d2_pk#8)\r\n:  :- Join Inner, (f1_fk3#2 = d3_pk#11)\r\n```\r\nand \r\n\r\n```\r\nJoin Inner, (f1_fk2#1 = d2_pk#8)\r\n:- Join Inner, (d1_pk#5 = f1_fk1#0)\r\n:  :- Join Inner, (f1_fk3#2 = d3_pk#11)\r\n```\r\nThen I try to move `.join(d3)` from after `.join(t6)` to before `.join(d2)`  optimization results both same as before:\r\n\r\n```\r\nJoin Inner, (f1_fk2#1 = d2_pk#8)\r\n:- Join Inner, (d1_pk#5 = f1_fk1#0)\r\n:  :- Join Inner, (f1_fk3#2 = d3_pk#11)\r\n```",
+        "createdAt" : "2020-08-18T15:20:51Z",
+        "updatedAt" : "2020-08-22T08:43:35Z",
+        "lastEditedBy" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "caa80a64-5c3e-42fb-9661-ca738dae4ec8",
+        "parentId" : "21acfcd9-ee03-4b88-aec7-381846e363e2",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "That is a good solution - assuming that the test is still valid after that reordering, and that this doesn't defeat its purpose. That I don't know yet.",
+        "createdAt" : "2020-08-18T15:29:44Z",
+        "updatedAt" : "2020-08-22T08:43:35Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "38fdcef0-f703-41a4-ba34-e1602134c63c",
+        "parentId" : "21acfcd9-ee03-4b88-aec7-381846e363e2",
+        "authorId" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "body" : "OK ~ Wait for @ioana-delaney  @cloud-fan  @gatorsmile  to help check this problem ~",
+        "createdAt" : "2020-08-18T15:42:19Z",
+        "updatedAt" : "2020-08-22T08:43:35Z",
+        "lastEditedBy" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "66663173-0005-4b30-80ee-01c1c3527cdc",
+        "parentId" : "21acfcd9-ee03-4b88-aec7-381846e363e2",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "If the optimizer rule is already non-deterministic, I'm fine to update the test, and leave a TODO to make the rule deterministic later.",
+        "createdAt" : "2020-08-20T05:24:31Z",
+        "updatedAt" : "2020-08-22T08:43:35Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c1158230-c149-4d33-8bdd-8f65b4986332",
+        "parentId" : "21acfcd9-ee03-4b88-aec7-381846e363e2",
+        "authorId" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "body" : "@srowen @cloud-fan From the above test results, the result of this case is non-deterministic and using `LinkedHashMap` instead of `HashMap` has not achieved the expected effect. It may be necessary to further ensure the order of `itmes` used to generate \"foundPlans\".",
+        "createdAt" : "2020-08-20T15:35:12Z",
+        "updatedAt" : "2020-08-22T08:43:35Z",
+        "lastEditedBy" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5136ff5d-ab9b-4794-b654-068341fa551c",
+        "parentId" : "21acfcd9-ee03-4b88-aec7-381846e363e2",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "OK so we're saying the test is still valid with the modification, that both results are equally correct and so tweaking it to happen to come out the same in 2.12/2.13 is OK? If so I think we're good to go here.",
+        "createdAt" : "2020-08-20T16:18:16Z",
+        "updatedAt" : "2020-08-22T08:43:35Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4eadb0f5-13f6-4233-a013-162c48f87fbb",
+        "parentId" : "21acfcd9-ee03-4b88-aec7-381846e363e2",
+        "authorId" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "body" : "@srowen @cloud-fan From the test results above, the output of the current `CostBasedJoinReorder` rule is already non-deterministic when there are multiple candidate plans with the same cost and the input order is different, but I think both results are equally correct.\r\n\r\nIf you agree, I'll create a new JIRA to describe this problem and leave a TODO to make the rule deterministic later.",
+        "createdAt" : "2020-08-21T15:13:32Z",
+        "updatedAt" : "2020-08-22T08:43:35Z",
+        "lastEditedBy" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3fda7308-e215-497c-ba81-9dbd0c448918",
+        "parentId" : "21acfcd9-ee03-4b88-aec7-381846e363e2",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "I don't know if they have to be deterministic if they're all equally valid, but maybe that's good for other reasons. Yeah that would be a separate thing",
+        "createdAt" : "2020-08-21T15:55:40Z",
+        "updatedAt" : "2020-08-22T08:43:35Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f90f36b0-bef3-4952-a78b-6d7cf83d92b0",
+        "parentId" : "21acfcd9-ee03-4b88-aec7-381846e363e2",
+        "authorId" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "body" : "@srowen I create a new Jira [SPARK-32687](https://issues.apache.org/jira/browse/SPARK-32687) to describe this issue and add TODO([31cac45](https://github.com/apache/spark/pull/29434/commits/31cac45927d2c780e7522a88e30a2e667a178d6a)) about is issue. We can try to resolve it in another pr.\r\n",
+        "createdAt" : "2020-08-22T08:48:13Z",
+        "updatedAt" : "2020-08-22T08:49:15Z",
+        "lastEditedBy" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "31cac45927d2c780e7522a88e30a2e667a178d6a",
+    "line" : 17,
+    "diffHunk" : "@@ -1,1 +353,357 @@        .join(t5.join(t6, Inner, Some(nameToAttr(\"t5_c2\") === nameToAttr(\"t6_c2\"))), Inner,\n          Some(nameToAttr(\"d2_c2\") === nameToAttr(\"t5_c1\")))\n        .select(outputsOf(d1, t3, t4, f1, d3, d2, t5, t6, t1, t2): _*)\n\n    assertEqualPlans(query, expected)"
+  }
+]

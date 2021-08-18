@@ -97,5 +97,104 @@
     "commit" : "0d020120f216e7f382c83916ca828d2b4525a402",
     "line" : 63,
     "diffHunk" : "@@ -1,1 +300,304 @@        jsonEstimatorParamMaps = []\n        for paramMap in instance.getEstimatorParamMaps():\n            jsonParamMap = []\n            for p, v in paramMap.items():\n                jsonParam = {'parent': p.parent, 'name': p.name}"
+  },
+  {
+    "id" : "8aa66e9c-6297-41b4-a3e4-cd84238b266b",
+    "prId" : 29445,
+    "prUrl" : "https://github.com/apache/spark/pull/29445#pullrequestreview-472917648",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8b0ba18e-fbc8-4067-93c6-6cc94ae7ffd3",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Should we use `Params.copy` like `CrossValidator`?",
+        "createdAt" : "2020-08-17T01:28:08Z",
+        "updatedAt" : "2020-08-20T21:25:01Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8bbc85fd-b0a5-4167-963c-415b38e88341",
+        "parentId" : "8b0ba18e-fbc8-4067-93c6-6cc94ae7ffd3",
+        "authorId" : "b1a71b84-8c6a-423e-a7de-79d6f802bae6",
+        "body" : "We can. However I just found one potential issue with using `Params.copy` (not specific to `CrossValidator`). It creates a shallow copy of `self` (i.e. the models). Hence if we run the below snippet\r\n```python\r\ncvModelCopied = cvModel.copy()\r\ncvModel.avgMetrics[0] = 'foo'\r\nassert cvModelCopied.avgMetrics[0] != 'foo'  # This will fail\r\n```\r\nBased on the Scala equivalent I think `avgMetrics` should be shallow copied and `subModels` should be copied with the copying actions delegated to `copy()` of each model. I will push a change to this function.",
+        "createdAt" : "2020-08-17T19:36:50Z",
+        "updatedAt" : "2020-08-20T21:25:01Z",
+        "lastEditedBy" : "b1a71b84-8c6a-423e-a7de-79d6f802bae6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "edba0b6d-d29b-4545-be83-8481ba1b6953",
+        "parentId" : "8b0ba18e-fbc8-4067-93c6-6cc94ae7ffd3",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "You meant avgMetrics should be or should not be shallow copied?",
+        "createdAt" : "2020-08-20T23:22:15Z",
+        "updatedAt" : "2020-08-20T23:22:16Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e267cf84-4d21-4f12-9b35-aceab2d3c6f9",
+        "parentId" : "8b0ba18e-fbc8-4067-93c6-6cc94ae7ffd3",
+        "authorId" : "b1a71b84-8c6a-423e-a7de-79d6f802bae6",
+        "body" : "`avgMetrics` should be shallow copied, as tested in https://github.com/Louiszr/spark/blob/8ae74d000ac48d6e293feb4bc3dac31088bf6c6c/python/pyspark/ml/tests/test_tuning.py#L124-L129\r\nI think `Params.copy` will shallow copy the `CrossValidatorModel` object and thus only copy the reference to `avgMetrics`",
+        "createdAt" : "2020-08-21T00:17:42Z",
+        "updatedAt" : "2020-08-21T00:17:43Z",
+        "lastEditedBy" : "b1a71b84-8c6a-423e-a7de-79d6f802bae6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0ef2dc94-779f-447f-a5bb-94c94283a5b6",
+        "parentId" : "8b0ba18e-fbc8-4067-93c6-6cc94ae7ffd3",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Hm? I think the test makes sure it isn't shallow copy but deep copy, isn't?",
+        "createdAt" : "2020-08-21T00:20:13Z",
+        "updatedAt" : "2020-08-21T00:20:14Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f03eb745-2e77-4239-ac6b-662478854b5b",
+        "parentId" : "8b0ba18e-fbc8-4067-93c6-6cc94ae7ffd3",
+        "authorId" : "b1a71b84-8c6a-423e-a7de-79d6f802bae6",
+        "body" : "By shallow copy I mean `copy.copy()` in python, which makes re-assigning `cvModel.avgMetrics[0]` not being propagated to `cvModelCopied.avgMetrics[0]`.\r\nI am also using `copy.deepcopy()` as the reference for deep copy. If `cvModel.avgMetrics[0]` is an class instance, then shallow copy will point to the same instance, while deep copy will create a copy of the instance.\r\nI think here it doesn't make a difference because `avgMetrics` is a list of `float`, but in the future if it does become a list of objects then a shallow copy implementation will be sufficient to pass the test.",
+        "createdAt" : "2020-08-21T08:36:38Z",
+        "updatedAt" : "2020-08-21T08:36:38Z",
+        "lastEditedBy" : "b1a71b84-8c6a-423e-a7de-79d6f802bae6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "832eb106-79d1-4271-ab31-f48d2b796ab5",
+        "parentId" : "8b0ba18e-fbc8-4067-93c6-6cc94ae7ffd3",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "I think I get your point above. You meant if we just shallow copy the model itself, reassigning of element in `avgMetrics` will be propagated to the `avgMetrics` in copied model. Because two models use the same `avgMetrics` reference.\r\n\r\nYou want to shallow copy `avgMetrics` itself. So two models have difference `avgMetrics` references. Because `avgMetrics` is a list of float, it is no matter shallow copy or deep copy.\r\n\r\n> By shallow copy I mean copy.copy() in python, which makes re-assigning cvModel.avgMetrics[0] not being propagated to cvModelCopied.avgMetrics[0].\r\n\r\nNo matter deep copy or shallow copy, I think reassigning `avgMetrics[0]` won't propagate to the `avgMetrics[0]` of copied model. Shallow copy copies object references, reassigning changes references, so won't propagate. Deep copy copies object instance, reassigning changes references too, of course won't propagate either.\r\n\r\n",
+        "createdAt" : "2020-08-22T04:30:14Z",
+        "updatedAt" : "2020-08-22T04:30:14Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "452298ce-be22-4c74-9e28-001eee4d9007",
+        "parentId" : "8b0ba18e-fbc8-4067-93c6-6cc94ae7ffd3",
+        "authorId" : "b1a71b84-8c6a-423e-a7de-79d6f802bae6",
+        "body" : "Agreed with the above.",
+        "createdAt" : "2020-08-22T10:32:20Z",
+        "updatedAt" : "2020-08-22T10:32:20Z",
+        "lastEditedBy" : "b1a71b84-8c6a-423e-a7de-79d6f802bae6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8ae74d000ac48d6e293feb4bc3dac31088bf6c6c",
+    "line" : 9,
+    "diffHunk" : "@@ -1,1 +537,541 @@        avgMetrics = list(self.avgMetrics)\n        subModels = [model.copy() for model in self.subModels]\n        return self._copyValues(CrossValidatorModel(bestModel, avgMetrics, subModels), extra=extra)\n\n    @since(\"2.3.0\")"
   }
 ]

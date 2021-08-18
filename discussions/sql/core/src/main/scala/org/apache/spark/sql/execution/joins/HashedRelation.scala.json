@@ -75,5 +75,71 @@
     "commit" : "a4e13b2682b624d1d72f93d595a9faeca0b72315",
     "line" : 8,
     "diffHunk" : "@@ -1,1 +1137,1141 @@        HashedRelation(rows, key, numRows.toInt, isNullAware = isNullAware)\n      case None =>\n        HashedRelation(rows, key, isNullAware = isNullAware)\n    }\n  }"
+  },
+  {
+    "id" : "70e3007e-11be-4bff-af5a-637bc75eb420",
+    "prId" : 29389,
+    "prUrl" : "https://github.com/apache/spark/pull/29389#pullrequestreview-463961086",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c00ba45b-6f75-4903-9656-c95f590e8931",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "are you sure `UnsafeHashedRelation` returns null not `Iterator.empty`?",
+        "createdAt" : "2020-08-10T04:31:39Z",
+        "updatedAt" : "2020-08-10T23:45:57Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "385e4d1d-b68c-4bfc-8e2f-106408d184ed",
+        "parentId" : "c00ba45b-6f75-4903-9656-c95f590e8931",
+        "authorId" : "cce1c782-0596-44b6-8b99-6b77d2cca53c",
+        "body" : "```\r\noverride def get(key: InternalRow): Iterator[InternalRow] = {\r\n    val unsafeKey = key.asInstanceOf[UnsafeRow]\r\n    val map = binaryMap  // avoid the compiler error\r\n    val loc = new map.Location  // this could be allocated in stack\r\n    binaryMap.safeLookup(unsafeKey.getBaseObject, unsafeKey.getBaseOffset,\r\n      unsafeKey.getSizeInBytes, loc, unsafeKey.hashCode())\r\n    if (loc.isDefined) {\r\n      new Iterator[UnsafeRow] {\r\n        private var _hasNext = true\r\n        override def hasNext: Boolean = _hasNext\r\n        override def next(): UnsafeRow = {\r\n          resultRow.pointTo(loc.getValueBase, loc.getValueOffset, loc.getValueLength)\r\n          _hasNext = loc.nextValue()\r\n          resultRow\r\n        }\r\n      }\r\n    } else {\r\n      null // return null if not match\r\n    }\r\n  }\r\n\r\n  def getValue(key: InternalRow): InternalRow = {\r\n    val unsafeKey = key.asInstanceOf[UnsafeRow]\r\n    val map = binaryMap  // avoid the compiler error\r\n    val loc = new map.Location  // this could be allocated in stack\r\n    binaryMap.safeLookup(unsafeKey.getBaseObject, unsafeKey.getBaseOffset,\r\n      unsafeKey.getSizeInBytes, loc, unsafeKey.hashCode())\r\n    if (loc.isDefined) {\r\n      resultRow.pointTo(loc.getValueBase, loc.getValueOffset, loc.getValueLength)\r\n      resultRow\r\n    } else {\r\n      null // return null if not match\r\n    }\r\n  }\r\n```",
+        "createdAt" : "2020-08-10T05:14:45Z",
+        "updatedAt" : "2020-08-10T23:45:58Z",
+        "lastEditedBy" : "cce1c782-0596-44b6-8b99-6b77d2cca53c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5309b66b23af2ffe7999edbd8f0c11f26628805d",
+    "line" : 17,
+    "diffHunk" : "@@ -1,1 +955,959 @@ */\nobject EmptyHashedRelation extends NullAwareHashedRelation {\n  override def get(key: Long): Iterator[InternalRow] = null\n\n  override def get(key: InternalRow): Iterator[InternalRow] = null"
+  },
+  {
+    "id" : "4eed1d4d-6823-4e4f-b89c-7d33abe96f99",
+    "prId" : 29389,
+    "prUrl" : "https://github.com/apache/spark/pull/29389#pullrequestreview-463961433",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "26268abf-3e21-4907-a494-34740c8559fc",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "BTW where do we call these methods for `EmptyHashedRelation`?",
+        "createdAt" : "2020-08-10T04:32:35Z",
+        "updatedAt" : "2020-08-10T23:45:58Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6f74f0af-69d8-4dd4-be01-420d9c76ccc5",
+        "parentId" : "26268abf-3e21-4907-a494-34740c8559fc",
+        "authorId" : "cce1c782-0596-44b6-8b99-6b77d2cca53c",
+        "body" : "yes. It will be called. EmptyHashedRelation now is also applied at all joinType. I confirmed it while running UT.",
+        "createdAt" : "2020-08-10T05:16:23Z",
+        "updatedAt" : "2020-08-10T23:45:58Z",
+        "lastEditedBy" : "cce1c782-0596-44b6-8b99-6b77d2cca53c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5309b66b23af2ffe7999edbd8f0c11f26628805d",
+    "line" : 13,
+    "diffHunk" : "@@ -1,1 +951,955 @@/**\n * A special HashedRelation indicates it built from a empty input:Iterator[InternalRow].\n * get & getValue will return null just like\n * empty LongHashedRelation or empty UnsafeHashedRelation does.\n */"
   }
 ]

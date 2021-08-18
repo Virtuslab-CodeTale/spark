@@ -130,5 +130,137 @@
     "commit" : "3e4a6a5d9a8f4151735b67c9dc585201e8543ab5",
     "line" : 22,
     "diffHunk" : "@@ -1,1 +436,440 @@      driverMetrics(\"staticFilesSize\") = filesSize\n    }\n    if (relation.partitionSchemaOption.isDefined) {\n      driverMetrics(\"numPartitions\") = partitions.length\n    }"
+  },
+  {
+    "id" : "85155632-6d7e-4b18-be35-2444273c535c",
+    "prId" : 29473,
+    "prUrl" : "https://github.com/apache/spark/pull/29473#pullrequestreview-476951709",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5c5a5166-f26a-4d1d-badd-7a0160a656b7",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "I'm not sure about how much this columnar execution makes performance gains though, the proposed idea is to give up the gains then use bucket repartitioning instead?",
+        "createdAt" : "2020-08-24T13:08:58Z",
+        "updatedAt" : "2020-08-30T04:42:06Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "363d1301-688d-4c62-967c-1eb4add56642",
+        "parentId" : "5c5a5166-f26a-4d1d-badd-7a0160a656b7",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "Note that the datasource will still be read as batches in this case (if whole stage codegen is enabled).\r\n\r\nI see that physical plans operate on rows, so batches are converted to rows via `ColumnarToRow` anyway. So, I think perf impact would be minimal here; the difference could be the code-gen conversion from columnar to row vs. iterating `batch.rowIterator()` in `BucketRepartitioningRDD`.",
+        "createdAt" : "2020-08-27T17:51:21Z",
+        "updatedAt" : "2020-08-30T04:42:06Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "366c9c3b9a8872113d7ccf670b3e8bfbb53f892e",
+    "line" : 34,
+    "diffHunk" : "@@ -1,1 +177,181 @@    // row, thus columnar is not supported when `RepartitioningBucketRDD` is used to avoid\n    // conversions from batches to rows and back to batches.\n    relation.fileFormat.supportBatch(relation.sparkSession, schema) && !isRepartitioningBuckets\n  }\n"
+  },
+  {
+    "id" : "9dff00ff-0025-4669-9221-b0b963871ade",
+    "prId" : 29473,
+    "prUrl" : "https://github.com/apache/spark/pull/29473#pullrequestreview-477107419",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "865fd48f-b441-4c04-80bf-69cccf8554d2",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "nit: we don't need `: Boolean `?",
+        "createdAt" : "2020-08-24T13:09:26Z",
+        "updatedAt" : "2020-08-30T04:42:06Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "11f8062b-f526-4cac-acde-74c4f4e376f4",
+        "parentId" : "865fd48f-b441-4c04-80bf-69cccf8554d2",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "I followed the same style from `override lazy val supportsColumnar: Boolean`, etc. Is this still not needed?",
+        "createdAt" : "2020-08-27T21:47:34Z",
+        "updatedAt" : "2020-08-30T04:42:06Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "366c9c3b9a8872113d7ccf670b3e8bfbb53f892e",
+    "line" : 37,
+    "diffHunk" : "@@ -1,1 +180,184 @@  }\n\n  @transient private lazy val isRepartitioningBuckets: Boolean = {\n    bucketedScan && optionalNewNumBuckets.isDefined &&\n      optionalNewNumBuckets.get > relation.bucketSpec.get.numBuckets"
+  },
+  {
+    "id" : "417a81d6-1253-4398-b346-d1516ed30a40",
+    "prId" : 29473,
+    "prUrl" : "https://github.com/apache/spark/pull/29473#pullrequestreview-478170995",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5db13e40-1dfb-4c98-a069-2b87c2d2be01",
+        "parentId" : null,
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "we don't need `|| isRepartitioningBuckets` right? ",
+        "createdAt" : "2020-08-29T06:04:41Z",
+        "updatedAt" : "2020-08-30T04:42:06Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1f719506-9fee-415c-9e2c-b65016462136",
+        "parentId" : "5db13e40-1dfb-4c98-a069-2b87c2d2be01",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "Repartition can still maintain the sort order whereas coalescing cannot, thus this check is needed.",
+        "createdAt" : "2020-08-30T04:34:35Z",
+        "updatedAt" : "2020-08-30T04:42:16Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "366c9c3b9a8872113d7ccf670b3e8bfbb53f892e",
+    "line" : 57,
+    "diffHunk" : "@@ -1,1 +324,328 @@\n        // TODO SPARK-24528 Sort order is currently ignored if buckets are coalesced.\n        if (singleFilePartitions && (optionalNewNumBuckets.isEmpty || isRepartitioningBuckets)) {\n          // TODO Currently Spark does not support writing columns sorting in descending order\n          // so using Ascending order. This can be fixed in future"
+  },
+  {
+    "id" : "c1ac2703-571c-412a-b83f-6e6710da6966",
+    "prId" : 29473,
+    "prUrl" : "https://github.com/apache/spark/pull/29473#pullrequestreview-478170995",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c2f16647-ac8a-4e3c-8374-495467d9e3bd",
+        "parentId" : null,
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "per `setFilesNumAndSizeMetric`, should we set `staticFilesNum` here or `numFiles ` ?",
+        "createdAt" : "2020-08-29T06:20:31Z",
+        "updatedAt" : "2020-08-30T04:42:06Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ac3d51fc-1234-4463-b14b-9295f57bb63d",
+        "parentId" : "c2f16647-ac8a-4e3c-8374-495467d9e3bd",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "I think `staticFilesNum` is used only for dynamic partition pruning:\r\nhttps://github.com/apache/spark/blob/cfe012a4311a8fb1fc3a82390c3e68f6afcb1da6/sql/core/src/main/scala/org/apache/spark/sql/execution/DataSourceScanExec.scala#L421-L424",
+        "createdAt" : "2020-08-30T04:36:17Z",
+        "updatedAt" : "2020-08-30T04:42:16Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "366c9c3b9a8872113d7ccf670b3e8bfbb53f892e",
+    "line" : 117,
+    "diffHunk" : "@@ -1,1 +590,594 @@        val filesNum = filePartitions.map(_.files.size.toLong).sum\n        val filesSize = filePartitions.map(_.files.map(_.length).sum).sum\n        driverMetrics(\"numFiles\") = filesNum\n        driverMetrics(\"filesSize\") = filesSize\n        new BucketRepartitioningRDD("
   }
 ]
