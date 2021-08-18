@@ -1,0 +1,79 @@
+[
+  {
+    "id" : "54506aef-ba0f-4259-ab30-3d60e081cd51",
+    "prId" : 30312,
+    "prUrl" : "https://github.com/apache/spark/pull/30312#pullrequestreview-536004273",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ad688d4d-ee40-4001-9b4a-056585f5521a",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "This looks like a behavior change to me. Previously, the default timeout values is 120s but the current values is 30s. Why we change this?",
+        "createdAt" : "2020-11-13T02:39:31Z",
+        "updatedAt" : "2020-12-19T04:21:15Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9f5e6055-f751-4f2c-994a-6eef976e3f74",
+        "parentId" : "ad688d4d-ee40-4001-9b4a-056585f5521a",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "The `connectionTimeoutMs()` has been overloaded to serve as two different types of timeout:\r\n1. It's used as a connection idle timeout. My understanding is that the 120s default was chosen to satisfy this timeout because in some cases the shuffle server can take much longer to respond to a request than usual.\r\n2. It is also used as connection creation timeout. The timeout to create the connection should not be this high. This especially becomes a problem because the thread which is creating a connection is also blocked for this specified time when it tries to connect to a bad node [here](https://github.com/apache/spark/blob/0046222a758fda2aead4a77bd19b19b913276693/common/network-common/src/main/java/org/apache/spark/network/client/TransportClientFactory.java#L283). With push-based shuffle, an executor can be running a task that fetches shuffle data from the same shuffle service to which another task is trying to push the data. Since both push and fetch share the connections to the shuffle server, whichever succeeds to get the connection lock [here](https://github.com/apache/spark/blob/0046222a758fda2aead4a77bd19b19b913276693/common/network-common/src/main/java/org/apache/spark/network/client/TransportClientFactory.java#L198) will block the other one. Blocking for a short time is okay but the larger timeout causes the other to be blocked for a longer time. It makes these tasks fail very slow. Also fetches are retried even when connection fails to establish, so the higher timeout for creation increases the task duration. One of the intentions here is that we didn't want the push side to interfere in any way with the fetch side. When a task that pushes acquires the connection lock before a task that wants to fetch from the same shuffle server node, we want the push to relinquish the lock sooner. This is why the connection creation timeout was introduced and we change the default in the code to be smaller.",
+        "createdAt" : "2020-11-14T00:55:19Z",
+        "updatedAt" : "2020-12-19T04:21:15Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4711b006-56f9-484c-996a-4f9dc2531689",
+        "parentId" : "ad688d4d-ee40-4001-9b4a-056585f5521a",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "The purpose is mainly to separate these 2 timeouts into 2 separate configs so we can configure them independent of each other.\r\nIf you think it would be better to keep the default behavior, we can change the default value for this config back to 120s.\r\nHowever, as @otterc mentioned, having the default value for connection establishment timeout set to 120s is unnecessarily high.\r\nWe want to quickly identify a `bad` node but give sufficient time for a `busy` node to respond shuffle data.",
+        "createdAt" : "2020-11-14T21:09:25Z",
+        "updatedAt" : "2020-12-19T04:21:15Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "87c35654-4fea-4bae-b023-8c2edd62015a",
+        "parentId" : "ad688d4d-ee40-4001-9b4a-056585f5521a",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "I agree with @Ngone51, a behavior change should be avoided.\r\nWe can set the default value of `connectionCreationTimeoutMs` to be `connectionTimeoutMs` - so that users who want the fine grained control can override it as required.",
+        "createdAt" : "2020-11-20T20:56:07Z",
+        "updatedAt" : "2020-12-19T04:21:15Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cbdcc3ba-f18f-4d78-9c64-de97cc79f34f",
+        "parentId" : "ad688d4d-ee40-4001-9b4a-056585f5521a",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "Sure, I will change the default to be `connectionTimeoutMs`",
+        "createdAt" : "2020-11-20T22:03:29Z",
+        "updatedAt" : "2020-12-19T04:21:15Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a6a855a1-d824-4c24-8d70-e848492f1059",
+        "parentId" : "ad688d4d-ee40-4001-9b4a-056585f5521a",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "I have changed the default for `connectionCreationTimeout` to be `connectionTimeout`.",
+        "createdAt" : "2020-11-21T19:46:25Z",
+        "updatedAt" : "2020-12-19T04:21:15Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "21ea881f398a35038e2359ef0b4ed5cd15aab736",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +255,259 @@      .option(ChannelOption.TCP_NODELAY, true)\n      .option(ChannelOption.SO_KEEPALIVE, true)\n      .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, conf.connectionCreationTimeoutMs())\n      .option(ChannelOption.ALLOCATOR, pooledAllocator);\n"
+  }
+]

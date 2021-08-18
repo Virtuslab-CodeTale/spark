@@ -1,0 +1,178 @@
+[
+  {
+    "id" : "abc4be4e-2bfa-4849-adb2-cff4bf48f56f",
+    "prId" : 30312,
+    "prUrl" : "https://github.com/apache/spark/pull/30312#pullrequestreview-540640393",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "96f6c6e0-d7e4-4a14-a53f-ea60a8443acf",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Why we need `duplicate()` here? I thought we could apply the `slice()` to `inMemoryBuffer` directly.",
+        "createdAt" : "2020-11-25T08:06:21Z",
+        "updatedAt" : "2020-12-19T04:21:15Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fa62c56d-0f0f-4392-b754-a9b73b4788eb",
+        "parentId" : "96f6c6e0-d7e4-4a14-a53f-ea60a8443acf",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "Since `position` and `limit` will change the state of `inMemoryBuffer`, the `duplicate()` is to prevent that.",
+        "createdAt" : "2020-11-25T18:54:01Z",
+        "updatedAt" : "2020-12-19T04:21:15Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "24b60ad1-d3ef-4430-b07d-b7aed417deea",
+        "parentId" : "96f6c6e0-d7e4-4a14-a53f-ea60a8443acf",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "I thought `duplicate()` would duplicate the memory usage at the same time. But seems like they still share the same buffer. Looks fine.",
+        "createdAt" : "2020-11-30T07:05:50Z",
+        "updatedAt" : "2020-12-19T04:21:15Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "21ea881f398a35038e2359ef0b4ed5cd15aab736",
+    "line" : 257,
+    "diffHunk" : "@@ -1,1 +255,259 @@      blockOffsets.zip(blockSizes).map {\n        case (offset, size) =>\n          new NioManagedBuffer(inMemoryBuffer.duplicate()\n            .position(offset)\n            .limit(offset + size).asInstanceOf[ByteBuffer].slice())"
+  },
+  {
+    "id" : "7c0207c8-3c77-4c26-853c-f799c79eeccd",
+    "prId" : 30312,
+    "prUrl" : "https://github.com/apache/spark/pull/30312#pullrequestreview-544706803",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a31ea727-4e2c-4305-a9b7-d4069dd53137",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Check `stopPushing` at the beginning?",
+        "createdAt" : "2020-12-04T03:59:04Z",
+        "updatedAt" : "2020-12-19T04:21:15Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f6a4055c-61a0-402d-8368-60ea9d3d9d54",
+        "parentId" : "a31ea727-4e2c-4305-a9b7-d4069dd53137",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "If `stopPushing` is `false` this method will never be called. The first time this method is run is in `initiateBlockPush` and after that it is always submitted after a response from the server is received (line  204 - 206)\r\n```         \r\n if (updateStateAndCheckIfPushMore(\r\n            sizeMap(result.blockId), address, remainingBlocks, result)) {\r\n            pushUpToMax()\r\n          }\r\n```\r\nHere, `updateStateAndCheckIfPushMore` will return false when it has to stop pushing. \r\n",
+        "createdAt" : "2020-12-04T04:49:32Z",
+        "updatedAt" : "2020-12-19T04:21:15Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5a90af0d-79f3-4d6f-922c-58e06aa7005b",
+        "parentId" : "a31ea727-4e2c-4305-a9b7-d4069dd53137",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "The reason to check for `stopPushing` in the while loops here because it is possible that while the thread is processing these requests from the queue, there is an already  `Too Late` response received. Even though no more `pushUpToMax` tasks are submitted, these while loop will continue sending requests. I discovered this with the UT that I added `More blocks are not pushed when a block push fails with too late exception`",
+        "createdAt" : "2020-12-04T04:53:28Z",
+        "updatedAt" : "2020-12-19T04:21:15Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f2f8a5f9-cca2-4804-bc6e-eecd650cd597",
+        "parentId" : "a31ea727-4e2c-4305-a9b7-d4069dd53137",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "> The reason to check for stopPushing in the while loops here because it is possible that while the thread is processing these requests from the queue, there is an already Too Late response received.....\r\n\r\n`updateStateAndCheckIfPushMore()` and `pushUpToMax()` require the same lock. So they should be called synchronously. So I'm not sure how does the issue in UT you mentioned happens.\r\n\r\n",
+        "createdAt" : "2020-12-04T05:29:29Z",
+        "updatedAt" : "2020-12-19T04:21:15Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a2955ca6-e988-4f9c-b42a-d82a428534bd",
+        "parentId" : "a31ea727-4e2c-4305-a9b7-d4069dd53137",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "Yes, that's right. `pushUpToMax` will be completed before `updateStateAndCheckIfPushMore()` is called. So, this happens only in the unit test, because for testing `submitTask`  is made to run synchronously and response of a block push is also handled by the same thread in a sequence. I will remove this flag then and figure out a different way for the test. \r\n\r\n",
+        "createdAt" : "2020-12-04T05:52:23Z",
+        "updatedAt" : "2020-12-19T04:21:15Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9af9a7e6-7a4f-433b-bd81-762a5577ac6c",
+        "parentId" : "a31ea727-4e2c-4305-a9b7-d4069dd53137",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "What I meant is that in the unit tests `updateStateAndCheckIfPushMore` gets called before `pushUpToMax` is completed. The UT is using a single thread and in `pushUpToMax`, `sendRequest` will invoke `mockBlockStoreClient.pushBlocks` which in turn will call `handleResult` and so on. ",
+        "createdAt" : "2020-12-04T06:43:20Z",
+        "updatedAt" : "2020-12-19T04:21:15Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c501774c-4fcf-4e7b-9385-fb3d99b3a3fd",
+        "parentId" : "a31ea727-4e2c-4305-a9b7-d4069dd53137",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "I have removed the `stopPushing` flag which I just added for the UT and instead fixed the tests.",
+        "createdAt" : "2020-12-04T06:52:15Z",
+        "updatedAt" : "2020-12-19T04:21:15Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4b3fec91-0b37-4cd7-baff-561ffdd0a121",
+        "parentId" : "a31ea727-4e2c-4305-a9b7-d4069dd53137",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "I see. ",
+        "createdAt" : "2020-12-04T07:18:40Z",
+        "updatedAt" : "2020-12-19T04:21:15Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "21ea881f398a35038e2359ef0b4ed5cd15aab736",
+    "line" : 127,
+    "diffHunk" : "@@ -1,1 +125,129 @@   * the data transfer between shuffle client/server.\n   */\n  private def pushUpToMax(): Unit = synchronized {\n    // Process any outstanding deferred push requests if possible.\n    if (deferredPushRequests.nonEmpty) {"
+  },
+  {
+    "id" : "0889553d-19fe-4899-bee5-c5b9a7527fb3",
+    "prId" : 30312,
+    "prUrl" : "https://github.com/apache/spark/pull/30312#pullrequestreview-554085216",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "72c6a717-f74a-43ab-9ff8-b57de5354f4f",
+        "parentId" : null,
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "Can this be empty ? If not, make it a precondition instead ?",
+        "createdAt" : "2020-12-09T06:29:14Z",
+        "updatedAt" : "2020-12-19T04:21:15Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b1300195-18ae-473d-a37b-9bd775dbce88",
+        "parentId" : "72c6a717-f74a-43ab-9ff8-b57de5354f4f",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "Yes, it could be empty. It is the only condition in the while loop at line 145. So this method will return false if it is empty and the loop will finish. \r\n```\r\n    while (isRemoteBlockPushable(pushRequests)) {\r\n      val request = pushRequests.dequeue()\r\n      val remoteAddress = request.address\r\n      if (isRemoteAddressMaxedOut(remoteAddress, request)) {\r\n        logDebug(s\"Deferring push request for $remoteAddress with ${request.blocks.size} blocks\")\r\n        val defReqQueue = deferredPushRequests.getOrElse(remoteAddress, new Queue[PushRequest]())\r\n        defReqQueue.enqueue(request)\r\n        deferredPushRequests(remoteAddress) = defReqQueue\r\n      } else {\r\n        sendRequest(request)\r\n      }\r\n    }\r\n  ```\r\n  \r\n    \r\n",
+        "createdAt" : "2020-12-16T21:08:16Z",
+        "updatedAt" : "2020-12-19T04:21:15Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "21ea881f398a35038e2359ef0b4ed5cd15aab736",
+    "line" : 158,
+    "diffHunk" : "@@ -1,1 +156,160 @@\n    def isRemoteBlockPushable(pushReqQueue: Queue[PushRequest]): Boolean = {\n      pushReqQueue.nonEmpty &&\n        (bytesInFlight == 0 ||\n          (reqsInFlight + 1 <= maxReqsInFlight &&"
+  }
+]

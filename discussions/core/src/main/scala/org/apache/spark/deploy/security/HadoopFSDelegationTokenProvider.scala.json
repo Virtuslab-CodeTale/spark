@@ -119,5 +119,126 @@
     "commit" : "cf8da757045d23f5657ec1fb68e20f4ca0247772",
     "line" : 30,
     "diffHunk" : "@@ -1,1 +114,118 @@        fs.addDelegationTokens(\"\", creds)\n      } else {\n        logInfo(s\"getting token for: $fs with renewer $renewer\")\n        fs.addDelegationTokens(renewer, creds)\n      }"
+  },
+  {
+    "id" : "aaa021bc-c83c-47eb-95dc-31a386328a94",
+    "prId" : 30366,
+    "prUrl" : "https://github.com/apache/spark/pull/30366#pullrequestreview-534963746",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f90754b0-402f-4a71-b2e1-ebcf4e34d780",
+        "parentId" : null,
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "Since others asked for tests maybe we can make this package private and add positive and negative cases (hitting both side of the if condition). I personally don't insist to this.",
+        "createdAt" : "2020-11-19T10:51:50Z",
+        "updatedAt" : "2020-11-30T02:08:35Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "10377299-1cb9-435e-b2da-0106fec3ddec",
+        "parentId" : "f90754b0-402f-4a71-b2e1-ebcf4e34d780",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "The reason I was negative on adding test is, as we know how thing was broken, we basically expect the test to simulate it and verify it's no longer failing. e.g. testing `obtainDelegationTokens()`. `obtainDelegationTokens()` calls various private methods which call Hadoop API, hence requiring mocks for everything. This is actually an existing debt, and non-trivial to pay off, compared to what I did for the fix.\r\n\r\nI'm totally OK to add test verifying this method, as it only requires me to mock AbstractDelegationTokenIdentifier. I'm not sure this fits the needs of adding test, though.",
+        "createdAt" : "2020-11-19T11:55:44Z",
+        "updatedAt" : "2020-11-30T02:08:35Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "43932e46-89a1-43fb-8860-a4f5d11a5dd3",
+        "parentId" : "f90754b0-402f-4a71-b2e1-ebcf4e34d780",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "That said I don't insist on the test because I agree with you. Just wanted to come up with some coverage. Creating a normal test with security manager + KDC + providers + hadoop sever would require a brain surgery complicated code (I've tried it before in the Kafka area but it was not a success story).\r\n\r\n@dongjoon-hyun WDYT?\r\n",
+        "createdAt" : "2020-11-19T13:27:06Z",
+        "updatedAt" : "2020-11-30T02:08:35Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8f04f207-36f5-4965-a6ff-a4d5a39f11bc",
+        "parentId" : "f90754b0-402f-4a71-b2e1-ebcf4e34d780",
+        "authorId" : "224991ce-ad69-410b-8143-bf394b6b5c59",
+        "body" : "You don't need a security manager for fetching DTs of filesystems or renewing. Example: the S3A ones can be issued if you have AWS creds. It's just that all code written today assumes that filesystems & services only issue DTs if user is kerberized or was launched with an existing set of creds. Example: how to collect a DT to talk to the landsat bucket for the next 12 hours\r\n\r\n```\r\nbin/hdfs fetchdt -D fs.s3a.delegation.token.binding=org.apache.hadoop.fs.s3a.auth.delegation.SessionTokenBinding --webservice s3a://landsat-pds/ secrets.bin\r\n```\r\n\r\nRenewal is a different bit of work tho'. It would get complicated fast",
+        "createdAt" : "2020-11-19T15:11:32Z",
+        "updatedAt" : "2020-11-30T02:08:35Z",
+        "lastEditedBy" : "224991ce-ad69-410b-8143-bf394b6b5c59",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fc373114-ec81-4978-a954-06a54f38b335",
+        "parentId" : "f90754b0-402f-4a71-b2e1-ebcf4e34d780",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "What I've learned from past things is depending on external executables is not always a good decision. This tool must be available on all OS and must behave the exact same way otherwise the test will be pain in the ass.",
+        "createdAt" : "2020-11-19T15:21:21Z",
+        "updatedAt" : "2020-11-30T02:08:35Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9ea31a36-033e-4f5d-b054-8e9904498f8a",
+        "parentId" : "f90754b0-402f-4a71-b2e1-ebcf4e34d780",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "Maybe this is the case here but I'm always a little afraid when this pops up.",
+        "createdAt" : "2020-11-19T15:23:10Z",
+        "updatedAt" : "2020-11-30T02:08:35Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "768391d3-ca7d-4108-8ab6-a510a84db479",
+        "parentId" : "f90754b0-402f-4a71-b2e1-ebcf4e34d780",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "This discussion shows how hard to deal with test obtainDelegationTokens(). I hope any hero jumps in and deals with this.\r\n\r\nAnother approach would be changing all private methods to protected methods and fake via subclassing (say, not calling Hadoop API whenever possible), but we lose the ability to test the original methods we override, as well as we modify the code just because we need to add tests. A bit odd rationalization.",
+        "createdAt" : "2020-11-19T22:49:49Z",
+        "updatedAt" : "2020-11-30T02:08:35Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0012b582-83bb-419e-a780-bae159088efb",
+        "parentId" : "f90754b0-402f-4a71-b2e1-ebcf4e34d780",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "There is a pretty good reason behind why only sub-parts of token providers are tested, please see Kafka for example...\r\nI still say test getIssueDate.",
+        "createdAt" : "2020-11-19T23:05:43Z",
+        "updatedAt" : "2020-11-30T02:08:35Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9b8a56e8-1203-44b9-a739-f763a4f33bdf",
+        "parentId" : "f90754b0-402f-4a71-b2e1-ebcf4e34d780",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "If you still need the pain maybe you can instantiate the provider only and try to mock HadoopFSDelegationTokenProvider.hadoopFSsToAccess with powermock and generate a faulty token. That could lead far.",
+        "createdAt" : "2020-11-19T23:07:51Z",
+        "updatedAt" : "2020-11-30T02:08:35Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e10ab002-9d8b-4e98-b044-8df4f7bb2891",
+        "parentId" : "f90754b0-402f-4a71-b2e1-ebcf4e34d780",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "```\r\n  private def getIssueDate(kind: String, identifier: AbstractDelegationTokenIdentifier): Long = {\r\n    val issueDate = identifier.getIssueDate\r\n    if (issueDate > 0L) {\r\n      issueDate\r\n    } else {\r\n      val now = System.currentTimeMillis()\r\n      logWarning(s\"Token $kind has not set up issue date properly. (provided: $issueDate) \" +\r\n        s\"Using current timestamp ($now) as issue date instead. Consult token implementor to fix \" +\r\n        \"the behavior.\")\r\n      now\r\n    }\r\n  }\r\n```\r\n\r\nThis doesn't seem to be something we would really want to have tests. Unless we separate out the calculation logic and try to craft tests, I don't see any option to have tests for this class.",
+        "createdAt" : "2020-11-20T00:02:21Z",
+        "updatedAt" : "2020-11-30T02:08:35Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b749574fb2b3d11037c4ff48a80910d63aa01455",
+    "line" : 25,
+    "diffHunk" : "@@ -1,1 +137,141 @@  }\n\n  private def getIssueDate(kind: String, identifier: AbstractDelegationTokenIdentifier): Long = {\n    val now = System.currentTimeMillis()\n    val issueDate = identifier.getIssueDate"
   }
 ]

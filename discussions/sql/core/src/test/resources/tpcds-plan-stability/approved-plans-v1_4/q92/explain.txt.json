@@ -1,0 +1,68 @@
+[
+  {
+    "id" : "8d006877-c44d-42dc-8661-73c9c1a93b39",
+    "prId" : 30368,
+    "prUrl" : "https://github.com/apache/spark/pull/30368#pullrequestreview-530865670",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "622219c5-fed3-4e57-be65-d5e79ede0d14",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "It changes from `TakeOrderedAndProject` to `Sort` seems because `Limit` after `Sort` is removed?\r\n\r\nIt might have additional shuffle for global `Sort`.\r\n\r\n",
+        "createdAt" : "2020-11-14T18:20:15Z",
+        "updatedAt" : "2020-11-17T14:37:40Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "aea681da-8042-42fa-98cc-d0e22d096068",
+        "parentId" : "622219c5-fed3-4e57-be65-d5e79ede0d14",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "This q92 sql:\r\n```\r\nSELECT sum(ws_ext_discount_amt) AS `Excess Discount Amount `\r\nFROM web_sales, item, date_dim\r\nWHERE i_manufact_id = 350\r\n  AND i_item_sk = ws_item_sk\r\n  AND d_date BETWEEN '2000-01-27' AND (cast('2000-01-27' AS DATE) + INTERVAL 90 days)\r\n  AND d_date_sk = ws_sold_date_sk\r\n  AND ws_ext_discount_amt >\r\n  (\r\n    SELECT 1.3 * avg(ws_ext_discount_amt)\r\n    FROM web_sales, date_dim\r\n    WHERE ws_item_sk = i_item_sk\r\n      AND d_date BETWEEN '2000-01-27' AND (cast('2000-01-27' AS DATE) + INTERVAL 90 days)\r\n      AND d_date_sk = ws_sold_date_sk\r\n  )\r\nORDER BY sum(ws_ext_discount_amt)\r\nLIMIT 100\r\n```\r\n\r\nyes, `Limit` after `Sort` is a special case, we will convert to `TakeOrderedAndProject`, but it seems not necessary to do both `sort` and `limit` if child maxRow == 1. Maybe we can do an another check seems like `if sort.child.maxRow <= 1 then remove sort` ?",
+        "createdAt" : "2020-11-15T02:35:48Z",
+        "updatedAt" : "2020-11-17T14:37:40Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "88aceb4b-f4ab-4f2c-963c-9eb83a9645a4",
+        "parentId" : "622219c5-fed3-4e57-be65-d5e79ede0d14",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "Other thought, we can add this pattern\r\n```\r\ncase sort @ Sort(order, true, child)\r\n          if sort.maxRow < conf.topKSortFallbackThreshold =>\r\n        TakeOrderedAndProjectExec()\r\n```\r\n\r\nIn this way, we can infer the `TakeOrderedAndProjectExec` from `Sort` which has not `Limit` after.\r\n\r\nWhat do you think about this? @maropu @viirya @cloud-fan ",
+        "createdAt" : "2020-11-15T02:46:32Z",
+        "updatedAt" : "2020-11-17T14:37:40Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "580100cc-2195-4e94-a043-cc30f2fe457a",
+        "parentId" : "622219c5-fed3-4e57-be65-d5e79ede0d14",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Ah, @viirya , nice catch! Yea, how about simply excluding the case in the `EliminateLimits` rule? @ulysses-you \r\n",
+        "createdAt" : "2020-11-15T12:36:45Z",
+        "updatedAt" : "2020-11-17T14:37:40Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fe3bc28c-d0e5-4bc6-b6f3-8ac5338fc7aa",
+        "parentId" : "622219c5-fed3-4e57-be65-d5e79ede0d14",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "Updated.",
+        "createdAt" : "2020-11-16T01:24:05Z",
+        "updatedAt" : "2020-11-17T14:37:40Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2f55ec034ade0d430bd7ab179f68addf0d65f84a",
+    "line" : 3,
+    "diffHunk" : "@@ -1,1 +0,4 @@== Physical Plan ==\n* Sort (34)\n+- * HashAggregate (33)\n   +- Exchange (32)"
+  }
+]
