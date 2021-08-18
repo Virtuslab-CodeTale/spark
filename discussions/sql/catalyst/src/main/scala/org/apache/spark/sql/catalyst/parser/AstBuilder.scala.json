@@ -702,5 +702,82 @@
     "commit" : "bfc03afaf9fc0974cb218b3b3121829ae9e5c413",
     "line" : 81,
     "diffHunk" : "@@ -1,1 +970,974 @@      val (groupingSet, expressions) = groupByExpressions.partition(_.isInstanceOf[GroupingSet])\n      if (expressions.nonEmpty && groupingSet.nonEmpty) {\n        throw new ParseException(\"Partial CUBE/ROLLUP/GROUPING SETS like \" +\n          \"`GROUP BY a, b, CUBE(a, b)` is not supported.\",\n          ctx)"
+  },
+  {
+    "id" : "85efcc6d-95e8-4536-b802-360b3d92abc7",
+    "prId" : 29728,
+    "prUrl" : "https://github.com/apache/spark/pull/29728#pullrequestreview-487685289",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5c49af63-b030-472b-87b9-3f247b8de9d2",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "How about the case, `select * from t1 where (a > 3) = (b < 5) = (c > 3)` ?",
+        "createdAt" : "2020-09-14T12:06:10Z",
+        "updatedAt" : "2020-09-14T12:11:52Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d1c08607-4ff6-455b-a918-bb676789f5e8",
+        "parentId" : "5c49af63-b030-472b-87b9-3f247b8de9d2",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "btw, have you check if we could update the ANTLR parser rules to prevent this case?",
+        "createdAt" : "2020-09-14T12:08:19Z",
+        "updatedAt" : "2020-09-14T12:11:52Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "92f1272d16383046fdb260ca4fcafcbda104a6e0",
+    "line" : 4,
+    "diffHunk" : "@@ -1,1 +1328,1332 @@    val left = expression(ctx.left)\n    val right = expression(ctx.right)\n    val isUnsupportedComparison = (left, right) match {\n      case (_: Attribute, _: Predicate) => true\n      case (_: Predicate, _: Attribute) => true"
+  },
+  {
+    "id" : "6201ddd9-56d2-4040-abd7-9737e800c58a",
+    "prId" : 29728,
+    "prUrl" : "https://github.com/apache/spark/pull/29728#pullrequestreview-487685289",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e3c63eb9-ffba-4977-816d-064892c272b8",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Could we check this error case at the beginning of this function?\r\n```\r\n  override def visitComparison(ctx: ComparisonContext): Expression = withOrigin(ctx) {\r\n    val left = expression(ctx.left)\r\n    val right = expression(ctx.right)\r\n    if (<Error checks>) {\r\n      throw new ParseException(\"Syntax error at or near\", ctx)\r\n    }\r\n    val operator = ctx.comparisonOperator().getChild(0).asInstanceOf[TerminalNode]\r\n    operator.getSymbol.getType match {\r\n      case SqlBaseParser.EQ =>\r\n        EqualTo(left, right)\r\n      case SqlBaseParser.NSEQ =>\r\n        EqualNullSafe(left, right)\r\n      case SqlBaseParser.NEQ | SqlBaseParser.NEQJ =>\r\n        Not(EqualTo(left, right))\r\n        ...\r\n      case SqlBaseParser.GTE =>\r\n        GreaterThanOrEqual(left, right)\r\n    }\r\n```",
+        "createdAt" : "2020-09-14T12:11:16Z",
+        "updatedAt" : "2020-09-14T12:11:52Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "92f1272d16383046fdb260ca4fcafcbda104a6e0",
+    "line" : 33,
+    "diffHunk" : "@@ -1,1 +1350,1354 @@        GreaterThanOrEqual(left, right)\n      case _ =>\n        throw new ParseException(\"Syntax error at or near\", ctx)\n    }\n  }"
+  },
+  {
+    "id" : "02f7c95b-ea58-4de7-9473-07803a929453",
+    "prId" : 29728,
+    "prUrl" : "https://github.com/apache/spark/pull/29728#pullrequestreview-487776547",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "31a3a67f-ef75-4789-b762-855c6eef3caa",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Total nit, but isn't it clearer to write `isSupportedComparison` and avoid inverting the logic everywhere?",
+        "createdAt" : "2020-09-14T13:37:30Z",
+        "updatedAt" : "2020-09-14T13:37:30Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "92f1272d16383046fdb260ca4fcafcbda104a6e0",
+    "line" : 4,
+    "diffHunk" : "@@ -1,1 +1328,1332 @@    val left = expression(ctx.left)\n    val right = expression(ctx.right)\n    val isUnsupportedComparison = (left, right) match {\n      case (_: Attribute, _: Predicate) => true\n      case (_: Predicate, _: Attribute) => true"
   }
 ]

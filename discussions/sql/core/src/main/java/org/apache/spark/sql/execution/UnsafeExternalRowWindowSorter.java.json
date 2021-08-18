@@ -1,0 +1,288 @@
+[
+  {
+    "id" : "d0a71eeb-ff0d-46ed-9f1f-f002dc05945e",
+    "prId" : 29725,
+    "prUrl" : "https://github.com/apache/spark/pull/29725#pullrequestreview-532235130",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9499af1a-6f00-4893-ab85-fc01eb0a9101",
+        "parentId" : null,
+        "authorId" : "292816da-93a2-49cd-8c26-e65c8cb9eebf",
+        "body" : "why this page size is related to totalNumSorters?\r\nconsider the situation there are 100 different partition keys in one task. the pageSize will be 1/100 of the original pageSize which will lead to 100 times of page allocate.\r\nCould you please explain why you want to reduce the page size here?",
+        "createdAt" : "2020-11-17T10:44:00Z",
+        "updatedAt" : "2020-11-18T02:44:53Z",
+        "lastEditedBy" : "292816da-93a2-49cd-8c26-e65c8cb9eebf",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "32a6714bd31fb86e3a2d057943c13ba812b6e28e",
+    "line" : 74,
+    "diffHunk" : "@@ -1,1 +72,76 @@          prefixComparatorInWindow,\n          prefixComputerInWindow,\n          pageSizeBytes/totalNumSorters,\n          false);\n      } else {"
+  },
+  {
+    "id" : "05cfaf3b-9c29-48ea-9d1a-28bcd5a5073c",
+    "prId" : 29725,
+    "prUrl" : "https://github.com/apache/spark/pull/29725#pullrequestreview-534136249",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6550b531-6ec0-4f5a-b472-c9a6fd50ed97",
+        "parentId" : null,
+        "authorId" : "292816da-93a2-49cd-8c26-e65c8cb9eebf",
+        "body" : "why the windowSorterMapMaxSize is 1?\r\nso the windowSorterMap can only have 1 sorter?",
+        "createdAt" : "2020-11-17T10:45:08Z",
+        "updatedAt" : "2020-11-18T02:44:53Z",
+        "lastEditedBy" : "292816da-93a2-49cd-8c26-e65c8cb9eebf",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8f01bfd0-56e7-4fe2-8efb-c89d9f8dc4a6",
+        "parentId" : "6550b531-6ec0-4f5a-b472-c9a6fd50ed97",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "I have the same question. Could you parameterize it via `SQLConf`?",
+        "createdAt" : "2020-11-18T06:04:41Z",
+        "updatedAt" : "2020-11-18T06:21:24Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dcf4b745-c9f1-46b4-88b9-58abc280b6ce",
+        "parentId" : "6550b531-6ec0-4f5a-b472-c9a6fd50ed97",
+        "authorId" : "c9c61219-802f-49bf-82c3-2e4d14bf5f35",
+        "body" : "@maropu , @opensky142857, here are the reasons for why we set the windowSorterMapMaxSize to be 1 and why we reduce the page size of each sorter.\r\n\r\nEach UnsafeExternalRowSorter is using a different memory consumer. Whenever you insert the first row into an UnsafeExternalRowSorter, the memory consumer of this sorter will allocate a whole page to the sorter. In our perf run of TPCDS100TB, the default page size is 64MB. If we insert only a few rows into a sorter corresponding to a window, then a lot of memory resources are wasted and the non-necessary memory allocation also brings significant performance overhead. So that is why we do two things in this PR:\r\n1. Keep the number of window sorters small\r\n2. Decrease the page size of each window sorter.\r\n\r\nTo address this problem, actually we have two directions to go. \r\n\r\nOne direction is that we can let these window sorters share the same memory consumer. Thus we won't allocate many big pages to which very few rows are inserted. But this direction requires a lot of engineer effort to refactor the code of UnsafeExternalSorter.\r\n\r\nThe second direction is that we only keep one window sorter for each physical partition.\r\n\r\nHere is why we choose the second direction. When we run TPCDS100TB, we are not seeing Spark engine is slow in sorting many windows in a physical partition. We are seeing Spark engine is slow in sorting a single window in a single physical partition (q67 is the case), and the executor is doing a lot of unnecessary comparisons on the window partition key. To address the slowness that we observe, we follow the second direction to keep only one window sorter for each physical partition. And this single window sorter in each physical partition does not need to compare the window partition key and thus it runs almost 2 times faster.\r\n\r\nPerhaps I can rename these parameters to avoid confusion. How do you guys think?",
+        "createdAt" : "2020-11-18T07:23:15Z",
+        "updatedAt" : "2020-11-18T08:41:04Z",
+        "lastEditedBy" : "c9c61219-802f-49bf-82c3-2e4d14bf5f35",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f4b4ee06-f8d6-465f-8f84-ffb9acf363e8",
+        "parentId" : "6550b531-6ec0-4f5a-b472-c9a6fd50ed97",
+        "authorId" : "292816da-93a2-49cd-8c26-e65c8cb9eebf",
+        "body" : "did you consider to reduce the page size with a fixed ratio instead of choosing to only optimize for 1 partition in each task?\r\nIn my understanding, it is not a rare case that one task handles several partition keys. ",
+        "createdAt" : "2020-11-18T08:06:53Z",
+        "updatedAt" : "2020-11-18T08:11:23Z",
+        "lastEditedBy" : "292816da-93a2-49cd-8c26-e65c8cb9eebf",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "246e9715-6e09-40c2-b83c-c694a0bec2c7",
+        "parentId" : "6550b531-6ec0-4f5a-b472-c9a6fd50ed97",
+        "authorId" : "c9c61219-802f-49bf-82c3-2e4d14bf5f35",
+        "body" : "In our current setting, we have one main sorter and one window sorter. If there is only window partition key on a physical partition, then all the rows will go to the window sorter and the main sorter will be empty; if there are more than one window partition key in a physical partition, then one window partition key goes to the window sorter and remaining partition keys go to the main sorter. \r\n\r\nWe just reduce the original page size by half in these two sorters. We observe that halving the page size gives no performance difference in the overall TPCDS 100TB run. The advantage is that if there are very few rows inserted to the window sorter, then less memory will be wasted in the first page allocated for the window sorter and thus less overhead caused by the memory allocation of the first page.\r\n\r\n@opensky142857, You are right, it is not a rare case that one task handles several partition keys but reducing the page size by half wouldn't make much difference. The default page size is 64MB, and there is no performance difference between 64MB page size and 32 MB page size. We can also keep the page size of the main sorter unchanged.",
+        "createdAt" : "2020-11-18T08:34:21Z",
+        "updatedAt" : "2020-11-18T08:35:40Z",
+        "lastEditedBy" : "c9c61219-802f-49bf-82c3-2e4d14bf5f35",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "78324cec-6feb-4781-ae65-d3fb6a1d4dcb",
+        "parentId" : "6550b531-6ec0-4f5a-b472-c9a6fd50ed97",
+        "authorId" : "292816da-93a2-49cd-8c26-e65c8cb9eebf",
+        "body" : "this PR is kind of like a TPCDS specific optimization to me if we make windowSorterMapMaxSize=1 since it works the best when the number of partition keys is fewer than the task numbers. \r\n\r\nbut the code itself looks like a general optimization.\r\n\r\nhave you ever considered to set windowSorterMapMaxSize to 10 or 100 and reduce page size in the meantime?\r\nso we can accept some limited memory waste in exchange for the ability to handle more general cases.\r\n",
+        "createdAt" : "2020-11-18T09:32:00Z",
+        "updatedAt" : "2020-11-18T09:32:00Z",
+        "lastEditedBy" : "292816da-93a2-49cd-8c26-e65c8cb9eebf",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2c4362a0-62d7-4a10-8761-c3ecb7c6e0d9",
+        "parentId" : "6550b531-6ec0-4f5a-b472-c9a6fd50ed97",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "In my current impression, we need to try [the first direction](https://github.com/apache/spark/pull/29725#discussion_r525862140) for achieving this optimization w/o the high memory pressure as you pointed out above. Probably, we need to implement (or, extend?) `BytesToBytesMap`-like data structure (values in the map need to be sorted in an output iterator) instead of using `HashMap`.",
+        "createdAt" : "2020-11-19T07:18:06Z",
+        "updatedAt" : "2020-11-19T07:18:07Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "32a6714bd31fb86e3a2d057943c13ba812b6e28e",
+    "line" : 57,
+    "diffHunk" : "@@ -1,1 +55,59 @@  private final boolean canUseRadixSortInWindow;\n  private final long pageSizeBytes;\n  private static final int windowSorterMapMaxSize = 1;\n  private static final int totalNumSorters = windowSorterMapMaxSize + 1;\n  private final HashMap<UnsafeRow,AbstractUnsafeExternalRowSorter> windowSorterMap;"
+  },
+  {
+    "id" : "855abb5e-5e1f-417d-9bc7-105d5327689c",
+    "prId" : 29725,
+    "prUrl" : "https://github.com/apache/spark/pull/29725#pullrequestreview-533126853",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3b432274-b0d6-4f49-819c-27c01bfc5e38",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "nit: `HashMap<UnsafeRow, AbstractUnsafeExternalRowSorter>`",
+        "createdAt" : "2020-11-18T06:04:59Z",
+        "updatedAt" : "2020-11-18T06:21:23Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "32a6714bd31fb86e3a2d057943c13ba812b6e28e",
+    "line" : 59,
+    "diffHunk" : "@@ -1,1 +57,61 @@  private static final int windowSorterMapMaxSize = 1;\n  private static final int totalNumSorters = windowSorterMapMaxSize + 1;\n  private final HashMap<UnsafeRow,AbstractUnsafeExternalRowSorter> windowSorterMap;\n  private final UnsafeExternalRowSorter mainSorter;\n  private final RowComparator partitionKeyComparator;"
+  },
+  {
+    "id" : "699503f7-3079-452c-ab15-78c107047b43",
+    "prId" : 29725,
+    "prUrl" : "https://github.com/apache/spark/pull/29725#pullrequestreview-533126853",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8378514e-39ce-42d6-83de-63cef9358f5f",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "When `orderingInWindow == null`, we need `WindowSortExec`?",
+        "createdAt" : "2020-11-18T06:07:14Z",
+        "updatedAt" : "2020-11-18T06:21:23Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "32a6714bd31fb86e3a2d057943c13ba812b6e28e",
+    "line" : 68,
+    "diffHunk" : "@@ -1,1 +66,70 @@    UnsafeExternalRowSorter sorter = null;\n    try {\n      if (this.orderingInWindow == null) {\n        sorter = UnsafeExternalRowSorter.createWithRecordComparator(\n          this.schema,"
+  },
+  {
+    "id" : "bc4d0fd3-08d7-433a-9b14-79c6e8adcc2e",
+    "prId" : 29725,
+    "prUrl" : "https://github.com/apache/spark/pull/29725#pullrequestreview-533126853",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6bc1f8ee-2452-47e3-9d64-7512fe29be84",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "nit: `pageSizeBytes/totalNumSorters,` -> `pageSizeBytes / totalNumSorters,`",
+        "createdAt" : "2020-11-18T06:07:41Z",
+        "updatedAt" : "2020-11-18T06:21:23Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "32a6714bd31fb86e3a2d057943c13ba812b6e28e",
+    "line" : 75,
+    "diffHunk" : "@@ -1,1 +73,77 @@          prefixComputerInWindow,\n          pageSizeBytes/totalNumSorters,\n          false);\n      } else {\n        sorter = UnsafeExternalRowSorter.create("
+  },
+  {
+    "id" : "cb47f716-a737-4e13-91c8-2869d7cc9f33",
+    "prId" : 29725,
+    "prUrl" : "https://github.com/apache/spark/pull/29725#pullrequestreview-533126853",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d5556494-5bc1-4a3a-92db-4f57ebb77291",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "nit: wrong format.",
+        "createdAt" : "2020-11-18T06:08:07Z",
+        "updatedAt" : "2020-11-18T06:21:23Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "32a6714bd31fb86e3a2d057943c13ba812b6e28e",
+    "line" : 93,
+    "diffHunk" : "@@ -1,1 +91,95 @@\n  /**\n  * Returns an UnsafeExternalRowWindowSorter object.\n  * @param  schema  The schema of each input row\n  * @param  partitionSpecProjection an UnsafeProjection object created from"
+  },
+  {
+    "id" : "e98a95a3-e63a-4c43-92a0-cb7a81c81c4d",
+    "prId" : 29725,
+    "prUrl" : "https://github.com/apache/spark/pull/29725#pullrequestreview-533126853",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "57a0ab23-d7a2-4611-a695-4e401690fc16",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "nit: `mainSorter` -> `fallbackSorter`?",
+        "createdAt" : "2020-11-18T06:09:45Z",
+        "updatedAt" : "2020-11-18T06:21:24Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "32a6714bd31fb86e3a2d057943c13ba812b6e28e",
+    "line" : 194,
+    "diffHunk" : "@@ -1,1 +192,196 @@      windowSorter.insertRow(row);\n    } else if (this.windowSorterMap.size() == this.windowSorterMapMaxSize) {\n      this.mainSorter.insertRow(row);\n    } else {\n      AbstractUnsafeExternalRowSorter sorter = createUnsafeExternalRowSorterForWindow();"
+  },
+  {
+    "id" : "1d78b94c-189f-414f-8201-4a1772ba7c70",
+    "prId" : 29725,
+    "prUrl" : "https://github.com/apache/spark/pull/29725#pullrequestreview-533126853",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8a809876-73ab-42b8-b66a-e04eb7519907",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "`==` -> `>=`?",
+        "createdAt" : "2020-11-18T06:09:57Z",
+        "updatedAt" : "2020-11-18T06:21:24Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "32a6714bd31fb86e3a2d057943c13ba812b6e28e",
+    "line" : 193,
+    "diffHunk" : "@@ -1,1 +191,195 @@    if (windowSorter != null) {\n      windowSorter.insertRow(row);\n    } else if (this.windowSorterMap.size() == this.windowSorterMapMaxSize) {\n      this.mainSorter.insertRow(row);\n    } else {"
+  },
+  {
+    "id" : "73f3bdd9-a5a4-40b2-a530-6f7fa502f22a",
+    "prId" : 29725,
+    "prUrl" : "https://github.com/apache/spark/pull/29725#pullrequestreview-533126853",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f4265fd7-2346-4155-84f0-6ac908832626",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Could you leave some comments about what's a difference from `UnsafeExternalRowSorter`?",
+        "createdAt" : "2020-11-18T06:21:19Z",
+        "updatedAt" : "2020-11-18T06:21:24Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "32a6714bd31fb86e3a2d057943c13ba812b6e28e",
+    "line" : 44,
+    "diffHunk" : "@@ -1,1 +42,46 @@import org.apache.spark.util.collection.unsafe.sort.RecordComparator;\n\npublic final class UnsafeExternalRowWindowSorter extends AbstractUnsafeExternalRowSorter {\n\n  private static final Logger logger = LoggerFactory.getLogger(UnsafeExternalRowWindowSorter.class);"
+  },
+  {
+    "id" : "7d873fdf-0a83-4c63-8cf4-412270452c70",
+    "prId" : 29725,
+    "prUrl" : "https://github.com/apache/spark/pull/29725#pullrequestreview-533324947",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "70fa5672-dfdc-4e04-aee0-a68079639ef8",
+        "parentId" : null,
+        "authorId" : "292816da-93a2-49cd-8c26-e65c8cb9eebf",
+        "body" : "if we fail to create the new sorter, why we need to spill the main sorter?",
+        "createdAt" : "2020-11-18T10:54:24Z",
+        "updatedAt" : "2020-11-18T10:54:24Z",
+        "lastEditedBy" : "292816da-93a2-49cd-8c26-e65c8cb9eebf",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "32a6714bd31fb86e3a2d057943c13ba812b6e28e",
+    "line" : 199,
+    "diffHunk" : "@@ -1,1 +197,201 @@\n      if (sorter == null) {\n        this.mainSorter.spill();\n        this.mainSorter.insertRow(row);\n      } else {"
+  }
+]

@@ -108,5 +108,137 @@
     "commit" : "5c2b630a61d8ea9263116c37e154884a5cabd2ca",
     "line" : 142,
     "diffHunk" : "@@ -1,1 +147,151 @@                  var i = 0\n                  val aggOutput = output.drop(groupAttrs.length)\n                  plan.transformExpressions {\n                    case agg: AggregateExpression =>\n                      i += 1"
+  },
+  {
+    "id" : "1ed089a8-7ffd-4e02-b90b-d4550b406de7",
+    "prId" : 29695,
+    "prUrl" : "https://github.com/apache/spark/pull/29695#pullrequestreview-493980686",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "274490bb-1931-4fa8-885d-4bc3bb2873fd",
+        "parentId" : null,
+        "authorId" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "body" : "update optimized logical plan \r\nbefore update\r\n```\r\nAggregate [max(id#18) AS max(id)#21, min(id#18) AS min(id)#22]\r\n+- RelationV2[ID#18] test.people\r\n```\r\nafter update\r\n```\r\nAggregate [max(max(ID)#77) AS max(ID)#72, min(min(ID)#78) AS min(ID)#73]\r\n+- RelationV2[max(ID)#77, min(ID)#78] test.people\r\n```",
+        "createdAt" : "2020-09-23T02:11:01Z",
+        "updatedAt" : "2021-03-27T18:58:02Z",
+        "lastEditedBy" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "782a0a827fbb1e60b8673d533cbda618df65dc96",
+    "line" : 133,
+    "diffHunk" : "@@ -1,1 +132,136 @@                  }\n                  agg.copy(aggregateFunction = aggFunction, filter = None)\n              }\n            }\n          }"
+  },
+  {
+    "id" : "39f9a7bd-dfb5-4db1-ac12-95afd65693a9",
+    "prId" : 29695,
+    "prUrl" : "https://github.com/apache/spark/pull/29695#pullrequestreview-627388344",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3f754197-a6eb-4374-9854-11d6a74cd851",
+        "parentId" : null,
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "pattern matching?",
+        "createdAt" : "2021-04-02T22:51:55Z",
+        "updatedAt" : "2021-04-03T00:08:31Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "782a0a827fbb1e60b8673d533cbda618df65dc96",
+    "line" : 118,
+    "diffHunk" : "@@ -1,1 +117,121 @@                  i += 1\n                  val aggFunction: aggregate.AggregateFunction = {\n                    if (agg.aggregateFunction.isInstanceOf[aggregate.Max]) {\n                      aggregate.Max(aggOutput(i - 1))\n                    } else if (agg.aggregateFunction.isInstanceOf[aggregate.Min]) {"
+  },
+  {
+    "id" : "651dbd73-14f1-47af-a9f4-3dd5d819823f",
+    "prId" : 29695,
+    "prUrl" : "https://github.com/apache/spark/pull/29695#pullrequestreview-627388344",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "32a3777c-3db0-411a-b7f8-b968d87a5d95",
+        "parentId" : null,
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "perhaps we should return the original plan node rather than a new `Aggregate`?",
+        "createdAt" : "2021-04-02T23:44:01Z",
+        "updatedAt" : "2021-04-03T00:08:31Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "782a0a827fbb1e60b8673d533cbda618df65dc96",
+    "line" : 70,
+    "diffHunk" : "@@ -1,1 +69,73 @@          val (pushedFilters, postScanFilters) = pushDownFilter(scanBuilder, newFilters, relation)\n          if (postScanFilters.nonEmpty) {\n            Aggregate(groupingExpressions, resultExpressions, child)\n          } else { // only push down aggregate if all the filers can be push down\n            val aggregation = PushDownUtils.pushAggregates(scanBuilder, aggregates,"
+  },
+  {
+    "id" : "4f799e81-d125-4c7d-accd-db949ad1d270",
+    "prId" : 29695,
+    "prUrl" : "https://github.com/apache/spark/pull/29695#pullrequestreview-627388344",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "190ef2cd-0441-4351-908b-63237ab691f9",
+        "parentId" : null,
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "ditto",
+        "createdAt" : "2021-04-02T23:44:18Z",
+        "updatedAt" : "2021-04-03T00:08:31Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "782a0a827fbb1e60b8673d533cbda618df65dc96",
+    "line" : 96,
+    "diffHunk" : "@@ -1,1 +95,99 @@\n            if (aggregation.aggregateExpressions.isEmpty) {\n              Aggregate(groupingExpressions, resultExpressions, child)\n            } else {\n              val aggOutputBuilder = ArrayBuilder.make[AttributeReference]"
+  },
+  {
+    "id" : "2090b93d-d23f-4d02-8306-561083c964f6",
+    "prId" : 29695,
+    "prUrl" : "https://github.com/apache/spark/pull/29695#pullrequestreview-627388344",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3f38b41a-2b44-4032-a239-ca80f7c87a4a",
+        "parentId" : null,
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "hmm is this correct?",
+        "createdAt" : "2021-04-02T23:46:12Z",
+        "updatedAt" : "2021-04-03T00:08:31Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "782a0a827fbb1e60b8673d533cbda618df65dc96",
+    "line" : 101,
+    "diffHunk" : "@@ -1,1 +100,104 @@              for (i <- 0 until aggregates.length) {\n                aggOutputBuilder += AttributeReference(\n                  aggregation.aggregateExpressions(i).toString, aggregates(i).dataType)()\n              }\n              groupingExpressions.foreach{"
+  },
+  {
+    "id" : "468fd75d-3193-4bd7-b6c9-2ea9ec85efba",
+    "prId" : 29695,
+    "prUrl" : "https://github.com/apache/spark/pull/29695#pullrequestreview-627388344",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a5d81aa4-afed-4f95-9735-ca822d9b0b01",
+        "parentId" : null,
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "This is a little hard to read. Maybe we can better separate the logic for pushing down aggregate with pushing down filters. Also some comments can help.",
+        "createdAt" : "2021-04-03T00:08:06Z",
+        "updatedAt" : "2021-04-03T00:08:32Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "782a0a827fbb1e60b8673d533cbda618df65dc96",
+    "line" : 28,
+    "diffHunk" : "@@ -1,1 +36,40 @@\n  override def apply(plan: LogicalPlan): LogicalPlan = plan transformDown {\n    case Aggregate(groupingExpressions, resultExpressions, child) =>\n      child match {\n        case ScanOperation(project, filters, relation: DataSourceV2Relation) =>"
   }
 ]

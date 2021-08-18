@@ -20,5 +20,60 @@
     "commit" : "87124f2c7e7827a776a71c091d88ab1baa9d8d22",
     "line" : 13,
     "diffHunk" : "@@ -1,1 +85,89 @@  }\n\n  private def toCatalystSchema(schema: TypeDescription): StructType = {\n    // The Spark query engine has not completely supported CHAR/VARCHAR type yet, and here we\n    // replace the orc CHAR/VARCHAR with STRING type."
+  },
+  {
+    "id" : "f2754365-24f2-4b52-9568-db233010db1a",
+    "prId" : 29737,
+    "prUrl" : "https://github.com/apache/spark/pull/29737#pullrequestreview-491634936",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e942550f-86c5-4fbc-8383-5b6e6a9a1b73",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "this doesn't look like a reasonable config for a data source, but more like a config for the upper level that maps metastore schema with the ORC files.\r\n\r\nDo we have a good story for the schema evolution of spark file sources?",
+        "createdAt" : "2020-09-18T09:07:10Z",
+        "updatedAt" : "2021-01-14T16:45:49Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9013e1c2-6d03-4453-8ce4-2908464398c0",
+        "parentId" : "e942550f-86c5-4fbc-8383-5b6e6a9a1b73",
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "Sorry, I'm not sure I get your point.\r\nIn `requestedColumnIds()` we map `requiredSchema` to the schema in the ORC files (`orcFieldNames`) and actually Spark is prepared for that the schema in HMS and in the file doesn't always match: https://github.com/apache/spark/pull/29737/files#diff-3fb8426b690ab771c4f67f9cad336498L149 (the file is written by an old version of Hive).\r\nIt turned out that a schema mismatch can happen with newer version of Hive (columns in the file doesn't start with `_col`) too. Because simply setting `orc.force.positional.evolution=true` and then doing a column rename in Hive also results mismatch in Spark and in that case Spark returns `null`s now.\r\nIt seemed a good idea to add support for this setting to our data source but if that is not the good way to deal with the issue please let me know.\r\n(I've updated the PR description a bit to make it more clear what I'm trying to fix.)",
+        "createdAt" : "2020-09-18T11:49:24Z",
+        "updatedAt" : "2021-01-14T16:45:49Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bf3b53a6-c6e3-4f3a-b284-64d40fe55c48",
+        "parentId" : "e942550f-86c5-4fbc-8383-5b6e6a9a1b73",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I mean, this doesn't look like an ORC-specific thing. Does hive only do this for ORC tables but not Parquet tables?",
+        "createdAt" : "2020-09-18T12:09:01Z",
+        "updatedAt" : "2021-01-14T16:45:49Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "71cc9ebb-30c8-4926-a373-b67aa1aebf00",
+        "parentId" : "e942550f-86c5-4fbc-8383-5b6e6a9a1b73",
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "I see your point now, but this is an ORC specific setting in Hive. With parquet tables you get `NULL` on a renamed column:\r\n```\r\n> set orc.force.positional.evolution;\r\n+--------------------------------------+\r\n|                 set                  |\r\n+--------------------------------------+\r\n| orc.force.positional.evolution=true  |\r\n+--------------------------------------+\r\n> create external table t2 (c1 string, c2 string) stored as parquet;\r\n> insert into t2 values ('foo', 'bar');\r\n> alter table t2 change c1 c3 string;\r\n> select * from t2;\r\n+--------+--------+\r\n| t2.c3  | t2.c2  |\r\n+--------+--------+\r\n| NULL   | bar    |\r\n+--------+--------+\r\n```",
+        "createdAt" : "2020-09-18T16:59:26Z",
+        "updatedAt" : "2021-01-14T16:45:49Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "51f503c5738a714d6ea77467ac8f7dfba231d989",
+    "line" : 4,
+    "diffHunk" : "@@ -1,1 +143,147 @@      conf: Configuration): Option[(Array[Int], Boolean)] = {\n    val orcFieldNames = reader.getSchema.getFieldNames.asScala\n    val forcePositionalEvolution = OrcConf.FORCE_POSITIONAL_EVOLUTION.getBoolean(conf)\n    if (orcFieldNames.isEmpty) {\n      // SPARK-8501: Some old empty ORC files always have an empty schema stored in their footer."
   }
 ]

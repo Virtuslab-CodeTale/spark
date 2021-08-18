@@ -1,0 +1,68 @@
+[
+  {
+    "id" : "78a31509-fe2e-4ba6-b573-ef0c4104c503",
+    "prId" : 29762,
+    "prUrl" : "https://github.com/apache/spark/pull/29762#pullrequestreview-493010352",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6e92cb21-54bb-4684-85ff-68b0f11599d4",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "I am not sure how much difference it makes, but this condition is of course checked every time in the loop.\r\nIf one were willing to duplicate the loop, you could check it once at the outset. But unless there's evidence that is non-trivial overhead and that this is a very hot loop, probably the extra branch is negligible, esp. if it is smart enough to know it's always false/true.",
+        "createdAt" : "2020-09-16T21:11:37Z",
+        "updatedAt" : "2020-09-21T22:04:52Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b9e437b6-efd9-4a4c-93e4-58ea42f20150",
+        "parentId" : "6e92cb21-54bb-4684-85ff-68b0f11599d4",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "cc @rednaxelafx ",
+        "createdAt" : "2020-09-17T03:32:19Z",
+        "updatedAt" : "2020-09-21T22:04:52Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "22574867-c474-4fbb-a82e-66fee71447e1",
+        "parentId" : "6e92cb21-54bb-4684-85ff-68b0f11599d4",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "also @kiszk ",
+        "createdAt" : "2020-09-21T01:04:32Z",
+        "updatedAt" : "2020-09-21T22:04:52Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a290c082-e19f-4d1d-b2bf-3ff784b7d756",
+        "parentId" : "6e92cb21-54bb-4684-85ff-68b0f11599d4",
+        "authorId" : "99e31844-a5b3-48a2-af71-412edb607a13",
+        "body" : "I agree to move this condition out of the loop while the overhead of the condition itself may be small.   \r\nI expect that the HotSpot compiler would/could generate one native instruction `reverse load` with the adjacent getInt and reverseBytes.",
+        "createdAt" : "2020-09-21T15:41:41Z",
+        "updatedAt" : "2020-09-21T22:04:52Z",
+        "lastEditedBy" : "99e31844-a5b3-48a2-af71-412edb607a13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7b679402-5266-4be1-a066-3e9a9edb045c",
+        "parentId" : "6e92cb21-54bb-4684-85ff-68b0f11599d4",
+        "authorId" : "aab20068-362f-4797-b579-1c8e6e480ffb",
+        "body" : "I'm inclined to agree with @srowen that duplicating the loop is probably unnecessary. Hotspot will almost certainly be able to remove the branch and even if it doesn't this code isn't actually in the critical path for the hash function (the critical path is through mixH1) so the latency of the extra check can be hidden on an out of order processor. I'm happy to do it if the consensus is that it is warranted though.",
+        "createdAt" : "2020-09-21T22:00:36Z",
+        "updatedAt" : "2020-09-21T22:04:52Z",
+        "lastEditedBy" : "aab20068-362f-4797-b579-1c8e6e480ffb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "cbfa4d63efba01fd06747260e252bac466d99853",
+    "line" : 23,
+    "diffHunk" : "@@ -1,1 +97,101 @@    for (int i = 0; i < lengthInBytes; i += 4) {\n      int halfWord = Platform.getInt(base, offset + i);\n      if (isBigEndian) {\n        halfWord = Integer.reverseBytes(halfWord);\n      }"
+  }
+]

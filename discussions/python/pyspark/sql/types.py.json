@@ -130,5 +130,181 @@
     "commit" : "69438b418aafa76d6d23f6ffbb146ac2b6e10019",
     "line" : 20,
     "diffHunk" : "@@ -1,1 +203,207 @@        raise NotImplementedError(\n            \"Conversion from external Python types to interval not supported\"\n        )\n\n    def fromInternal(self, v):"
+  },
+  {
+    "id" : "ebfca0e8-37d7-487c-bccd-b790576d8167",
+    "prId" : 29720,
+    "prUrl" : "https://github.com/apache/spark/pull/29720#pullrequestreview-490238723",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "87cd68e7-39b2-4af0-8dca-3061b96584df",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Just to clarify, does this cause any user-facing error? As long as we can roundtrip jsonValue and fromJson, I think we're good.",
+        "createdAt" : "2020-09-11T06:11:06Z",
+        "updatedAt" : "2020-09-15T01:23:51Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "812f2b24-3894-461f-9063-325c18e9db97",
+        "parentId" : "87cd68e7-39b2-4af0-8dca-3061b96584df",
+        "authorId" : "0213eea8-0d0a-480f-86a0-f61d2266e109",
+        "body" : "Nope it won't cause any user-facing error. By doing:\r\n```python\r\njson.get(\"containsNull\", True)\r\n```\r\nThe code is getting the value of the `containsNull` key from the JSON if it exists. If the key does not, it will be `True`. This matches the constructor of `ArrayType` which has `True` as the default argument for `containsNull`. With this approach, the `fromJson` call to the constructors of the changes classes emulates the default arguments so the `jsonValue` function will behave in the same way when called upon.\r\n\r\nI'm happy to add some tests if you believe it is needed but this is be a no-op change.",
+        "createdAt" : "2020-09-11T16:14:20Z",
+        "updatedAt" : "2020-09-15T01:23:51Z",
+        "lastEditedBy" : "0213eea8-0d0a-480f-86a0-f61d2266e109",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c9590a8e-0cbf-4643-abac-19b28d549cd9",
+        "parentId" : "87cd68e7-39b2-4af0-8dca-3061b96584df",
+        "authorId" : "0213eea8-0d0a-480f-86a0-f61d2266e109",
+        "body" : "@HyukjinKwon I refactored the test to include a roundtrip test for `jsonValue()` 👍 ",
+        "createdAt" : "2020-09-11T23:37:16Z",
+        "updatedAt" : "2020-09-15T01:23:51Z",
+        "lastEditedBy" : "0213eea8-0d0a-480f-86a0-f61d2266e109",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a07ee569-d531-4100-8afe-d6c76838cdce",
+        "parentId" : "87cd68e7-39b2-4af0-8dca-3061b96584df",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "In which case `containsNull` does not exist?",
+        "createdAt" : "2020-09-14T02:25:10Z",
+        "updatedAt" : "2020-09-15T01:23:51Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "39389c44-da70-47cd-9721-c84a263f5858",
+        "parentId" : "87cd68e7-39b2-4af0-8dca-3061b96584df",
+        "authorId" : "0213eea8-0d0a-480f-86a0-f61d2266e109",
+        "body" : "The first test case:\r\n```python\r\n(\r\n  \"ArrayType with default values\", ArrayType,\r\n  {\"elementType\": \"string\"},\r\n  ArrayType(StringType())\r\n ),\r\n```\r\nShows that is `containsNull` is not populated in the incoming JSON it will behave the same as if the argument is not given to the `ArrayType` constructor.",
+        "createdAt" : "2020-09-15T01:07:03Z",
+        "updatedAt" : "2020-09-15T01:23:51Z",
+        "lastEditedBy" : "0213eea8-0d0a-480f-86a0-f61d2266e109",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e031e8e6-032c-4d8a-b8ca-df2f4d40ccdf",
+        "parentId" : "87cd68e7-39b2-4af0-8dca-3061b96584df",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "It has:\r\n\r\n```python\r\n>>> ArrayType(StringType()).jsonValue()\r\n{'type': 'array', 'elementType': 'string', 'containsNull': True}\r\n```",
+        "createdAt" : "2020-09-15T01:12:09Z",
+        "updatedAt" : "2020-09-15T01:23:51Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bfbfde07-d674-4830-b2b2-2a8fe14cd8b6",
+        "parentId" : "87cd68e7-39b2-4af0-8dca-3061b96584df",
+        "authorId" : "0213eea8-0d0a-480f-86a0-f61d2266e109",
+        "body" : "Right so the default value for `containsNull` for `ArrayType` is `True` so this test shows that without supplying it in the JSON or Constructor you get the same result. I will add another `assert` for the resulting JSON.",
+        "createdAt" : "2020-09-15T01:19:01Z",
+        "updatedAt" : "2020-09-15T01:23:51Z",
+        "lastEditedBy" : "0213eea8-0d0a-480f-86a0-f61d2266e109",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c4e3968f-4dfa-4614-bb21-c2ddd243cdf5",
+        "parentId" : "87cd68e7-39b2-4af0-8dca-3061b96584df",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "I mean I am trying to understand why you want this change. For example, does it affect anything in the roundtrip between `jsonValue` and `fromJson`, or are you trying to build up the JSON by yourself somewhere?",
+        "createdAt" : "2020-09-15T01:22:41Z",
+        "updatedAt" : "2020-09-15T01:23:51Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "330a3506-9763-4ecf-a5cb-ef4275df60a5",
+        "parentId" : "87cd68e7-39b2-4af0-8dca-3061b96584df",
+        "authorId" : "0213eea8-0d0a-480f-86a0-f61d2266e109",
+        "body" : "Added!",
+        "createdAt" : "2020-09-15T01:23:03Z",
+        "updatedAt" : "2020-09-15T01:23:51Z",
+        "lastEditedBy" : "0213eea8-0d0a-480f-86a0-f61d2266e109",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "564ecd61-77b1-4c40-aea2-be5f41242d2c",
+        "parentId" : "87cd68e7-39b2-4af0-8dca-3061b96584df",
+        "authorId" : "0213eea8-0d0a-480f-86a0-f61d2266e109",
+        "body" : "Correct we have a use case where we build up the JSON elsewhere and we don't want to have to require the default keys. It drives down complexity when defining schemas in external JSON files",
+        "createdAt" : "2020-09-15T01:27:30Z",
+        "updatedAt" : "2020-09-15T01:27:56Z",
+        "lastEditedBy" : "0213eea8-0d0a-480f-86a0-f61d2266e109",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c16845dc-22e0-4a7b-a1c7-9b1c3fc89bac",
+        "parentId" : "87cd68e7-39b2-4af0-8dca-3061b96584df",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "I don't think the format is meant to be exposed from end users. It's just for internal ser/de purpose that is supposed to be roundtrip between `jsonValue` and `fromJson` to workaround Py4J limitation.\r\n\r\nBTW, here isn't only place where you should handle JSON ser/de. For example, you should also change Scala side at `DataType.parseDataType`. ",
+        "createdAt" : "2020-09-15T01:51:14Z",
+        "updatedAt" : "2020-09-15T01:51:14Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "24cdee63-f4ae-406c-a554-bf04835645b2",
+        "parentId" : "87cd68e7-39b2-4af0-8dca-3061b96584df",
+        "authorId" : "0213eea8-0d0a-480f-86a0-f61d2266e109",
+        "body" : "@HyukjinKwon I think going down the rabbit hole of use case is a bad approach. Taking a step back from the use case, the motivation behind this change is for a **consistent API when creating DataTypes** (namely `StructField`, `ArrayType`, & `MapType`). It seems a bit inconsistent that I can do:\r\n```python\r\n>> MapType(StringType(), StringType()) # notice I omit the valueContainsNull argument\r\nMapType(StringType,StringType,true) # valueContainsNull has a default value of True\r\n```\r\nBut when using `.fromJson` which is essentially a constructor for `MapType`, with an equivalent JSON:\r\n```python\r\n>> MapType.fromJson({\"keyType\": \"string\", \"valueType\": \"string\"}) # No valueContainsNull key\r\nKeyError: 'valueContainsNull' # Error thrown tell me I need valueContainsNull in my JSON\r\n```\r\nThe same inconsistencies hold true for `StructField` keys `metadata` & `nullable` **_AND_** `ArrayType` key `containsNull`.\r\n\r\n_On the flip side_, lets say I omit the required parameter `valueType`:\r\n```python\r\n>> MapType(StringType()) # notice I omit the valueType argument\r\nTypeError: __init__() missing 1 required positional argument: 'valueType' # Error throw telling me I need valueType\r\n```\r\nAnd when I do the same using a JSON constructing:\r\n```python\r\n>> MapType({\"keyType\": \"string\"}) # omit the valueType key\r\nKeyError: 'valueType' # Error throw telling me I need it in my JSON\r\n```\r\n\r\nThis change proposes making the constructors, both the Python class constructor and the classMethod `.fromJson`, consistent on what they expect for input.",
+        "createdAt" : "2020-09-15T15:10:06Z",
+        "updatedAt" : "2020-09-15T16:22:23Z",
+        "lastEditedBy" : "0213eea8-0d0a-480f-86a0-f61d2266e109",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f274c16a-498a-4aa4-90ff-ae9a60c07c66",
+        "parentId" : "87cd68e7-39b2-4af0-8dca-3061b96584df",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "The JSON format itself isn't supposed to be manually constructed. I think it doesn't necessarily have to be consistent with the constructor.",
+        "createdAt" : "2020-09-16T01:29:47Z",
+        "updatedAt" : "2020-09-16T01:29:48Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "558d9c44-8c2f-41be-965f-2e50f2854935",
+        "parentId" : "87cd68e7-39b2-4af0-8dca-3061b96584df",
+        "authorId" : "0213eea8-0d0a-480f-86a0-f61d2266e109",
+        "body" : "> The JSON format itself isn't supposed to be manually constructed\r\n\r\nI see where you're coming from here but the function `.fromJson` for for `ArrayType`, `MapType`, `StructField`, and `StructType` is exposed to developers so it _can_ be used. I have a strong hunch people do use it as it is an easy way to generate and store schemas. I'm curious what it would take to get this through? It's _seems_ like a fairly logical change to make the interface for these types more flexible. There is no user facing changes as it only creates a default value when the key does not exist.",
+        "createdAt" : "2020-09-16T15:57:18Z",
+        "updatedAt" : "2020-09-17T00:12:45Z",
+        "lastEditedBy" : "0213eea8-0d0a-480f-86a0-f61d2266e109",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d7e74acc-05e8-44eb-98cd-2eaf95fa73ab",
+        "parentId" : "87cd68e7-39b2-4af0-8dca-3061b96584df",
+        "authorId" : "46a9e4e8-1a07-4207-8752-959ac7b91f82",
+        "body" : "Unless there are plans to remove `.fromJson`, it is a publicly exposed interface and, I dare say, a rather useful one.\r\n\r\nJSON is currently the only schema definition structure that is a) human readable, b) machine readable without `exec`, and c) easy to generate with anything other than Python / Java.\r\n\r\nAs far as I can tell, this PR:\r\n- Adds additional test coverage for an existing component\r\n- Makes an existing component more flexible for some use cases\r\n- Does not reduce any existing functionality\r\n\r\nGetting to use cases, I have frequently found value in providing a machine readable schema that can be validated with JSON schema and used as a unit and integration tests to verify expected schema against a SQL file.",
+        "createdAt" : "2020-09-17T04:43:40Z",
+        "updatedAt" : "2020-09-17T04:43:41Z",
+        "lastEditedBy" : "46a9e4e8-1a07-4207-8752-959ac7b91f82",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7f939f117455d29f58518f0ee0087e646e777b62",
+    "line" : 2,
+    "diffHunk" : "@@ -1,1 +304,308 @@\n    @classmethod\n    def fromJson(cls, json):\n        return ArrayType(_parse_datatype_json_value(json[\"elementType\"]),\n                         json.get(\"containsNull\", True))"
   }
 ]
