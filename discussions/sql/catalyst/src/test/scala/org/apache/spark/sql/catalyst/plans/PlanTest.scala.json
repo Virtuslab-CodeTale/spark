@@ -1,0 +1,211 @@
+[
+  {
+    "id" : "bf69b0ad-8db9-4f3e-8a3e-f4a7f2de0b30",
+    "prId" : 31766,
+    "prUrl" : "https://github.com/apache/spark/pull/31766#pullrequestreview-609026797",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b9954771-e4b8-4b23-aad2-bed1604a7b24",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Hmm. After fixing this correctly, I'm observing some failures like the following. It seems that I need to revisit all the existing test cases.\r\n```\r\n[info] - encode/decode for NestedArray: NestedArray([[I@7488b296) (codegen path) (34 milliseconds)\r\n[info] - encode/decode for NestedArray: NestedArray([[I@7488b296) (interpreted path) *** FAILED *** (6 milliseconds)\r\n```",
+        "createdAt" : "2021-03-10T18:09:07Z",
+        "updatedAt" : "2021-03-10T19:10:43Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1bc4ea25-4070-4ab3-a002-1893370ac6b6",
+        "parentId" : "b9954771-e4b8-4b23-aad2-bed1604a7b24",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Let me review all of them.",
+        "createdAt" : "2021-03-10T18:09:29Z",
+        "updatedAt" : "2021-03-10T19:10:43Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b0c7981f-7532-44f4-b232-38c5e9496c30",
+        "parentId" : "b9954771-e4b8-4b23-aad2-bed1604a7b24",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Ah, good catch! I was bitten by this before in other place. This was added more longer before. Thanks for catching and fixing it.",
+        "createdAt" : "2021-03-10T18:19:18Z",
+        "updatedAt" : "2021-03-10T19:10:43Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "54636fce7de8368d23f7133d862ea737845954b1",
+    "line" : 13,
+    "diffHunk" : "@@ -1,1 +48,52 @@      withSQLConf(SQLConf.CODEGEN_FACTORY_MODE.key -> codegenMode) { testFun })(pos)\n    super.test(testName + \" (interpreted path)\", testTags: _*)(\n      withSQLConf(SQLConf.CODEGEN_FACTORY_MODE.key -> interpretedMode) { testFun })(pos)\n  }\n"
+  },
+  {
+    "id" : "812d3c42-2304-42c3-9963-cfed113cf7cd",
+    "prId" : 31764,
+    "prUrl" : "https://github.com/apache/spark/pull/31764#pullrequestreview-605980364",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "aef0a77a-3bb3-4b31-8604-3a2add15101e",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Maybe we should run twice, one for `FALLBACK` and one for `NO_CODEGEN`.\r\n\r\n`FALLBACK` will run codegen path first and fallback to interpreted mode if codegen fails. So interpreted mode may not run if codegen mode successes.",
+        "createdAt" : "2021-03-06T20:36:05Z",
+        "updatedAt" : "2021-03-06T20:36:05Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ed74ff3e-33b6-4100-86b5-1194b062cefd",
+        "parentId" : "aef0a77a-3bb3-4b31-8604-3a2add15101e",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "That sounds like another use case. Technically, this `testFallback` is designed to the **default** mode of this configuration (which is the default of Apache Spark runtime in non-testing mode) instead of a specific mode `interpreted mode` or `codeine`.",
+        "createdAt" : "2021-03-06T20:46:30Z",
+        "updatedAt" : "2021-03-06T20:46:30Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fcf32874-78a1-4739-bd3b-a8701449c625",
+        "parentId" : "aef0a77a-3bb3-4b31-8604-3a2add15101e",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Maybe, do you want to add `testCodegenFail`?",
+        "createdAt" : "2021-03-06T21:05:23Z",
+        "updatedAt" : "2021-03-06T21:05:24Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0620b382-551a-4bdd-a73a-9219342f33b4",
+        "parentId" : "aef0a77a-3bb3-4b31-8604-3a2add15101e",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Hmm. At the second thought, I understand what was your suggestion. So, your suggestion is to check the occurrence of `fallback`, right? Then, it makes sense.",
+        "createdAt" : "2021-03-06T21:07:37Z",
+        "updatedAt" : "2021-03-06T21:07:37Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e5c32528-20b3-47c0-84ca-4830fc662ab0",
+        "parentId" : "aef0a77a-3bb3-4b31-8604-3a2add15101e",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "I'll update my PR in this afternoon~",
+        "createdAt" : "2021-03-06T21:24:09Z",
+        "updatedAt" : "2021-03-06T21:24:09Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a129dac2-95e3-440f-8458-c7c02e558f17",
+        "parentId" : "aef0a77a-3bb3-4b31-8604-3a2add15101e",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "`test` runs the test code twice, one for codegen and one for interpreted. It is for test coverage.\r\n\r\nIf `testFallback` only runs for fallback mode, then it might only runs codegen and skips interpreted mode if codegen successes. So the test coverage is less, I think.\r\n",
+        "createdAt" : "2021-03-06T21:26:24Z",
+        "updatedAt" : "2021-03-06T21:26:24Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c830d014-7ca2-4066-8132-35e3ea7e1175",
+        "parentId" : "aef0a77a-3bb3-4b31-8604-3a2add15101e",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Hi, @viirya . I tried to revise, but it seems strange to me.\r\n\r\n> test runs the test code twice, one for codegen and one for interpreted. It is for test coverage.\r\n> If testFallback only runs for fallback mode, then it might only runs codegen and skips interpreted mode if codegen successes. So the test coverage is less, I think.\r\n\r\n`testFallback` is not aiming to replace `test` in [line 41](https://github.com/apache/spark/pull/31764/files#diff-803f946128579a789870dc0bc6f58602db77476f8c04968a72c56efa783c12a1R41). Instead, `testFallback` is added because `PlanTest` bans all derived classes from testing `FALLBACK` mode. Before this PR, there is no way to test `FALLBACK` mode.\r\n\r\nAs we know, `CODEGEN_FACTORY_MODE` has three modes: `FALLBACK`, `CODEGEN_ONLY`, `NO_CODEGEN`.\r\nAs we guess in the name, `testFallback`, this test is specifically for `FALLBACK` mode and is added for some test cases which works only at `FALLBACK` mode as @rednaxelafx described.\r\n\r\nSo, `testFallback` doesn't aim to mean (1) `CODEGEN_ONLY` should fails and (2) `NO_CODEGEN` should passed. If you want to test this (both (1) and (2)), we should make another test function like `testCodegenFailNoCodegenPass`.\r\n\r\n",
+        "createdAt" : "2021-03-07T20:44:11Z",
+        "updatedAt" : "2021-03-07T20:44:34Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "654877d8-e1bc-4bfb-8f9f-ba1627fd7b9a",
+        "parentId" : "aef0a77a-3bb3-4b31-8604-3a2add15101e",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "`FALLBACK` mode is not a special path other than codegen and interpreted path. Under `FALLBACK` mode, Spark runs first codegen path and then interpreted path if codegen fails.\r\n\r\nSo it sounds weird that some test cases works only at `FALLBACK` mode, so we only need to run it with `FALLBACK` mode. Doesn't it just mean the test cases may fail under codegen but can success under interpreted?\r\n\r\nWrapping the test function with `FALLBACK` config, means we may only run the test in codegen path, if codegen path successes. It skips interpreted path in the case.\r\n\r\nSo, it may unintentionally avoid the test coverage of interpreted path. That means, if we use `testFallback`, it might only test codegen path if codegen path successes. Interpreted path will not be tested for the case.\r\n\r\nThe current `testFallback` only makes sense if we only want to make sure the test case works, no matter it is codegen or interpreted mode. If this is the purpose, then it is fine.\r\n",
+        "createdAt" : "2021-03-07T21:36:42Z",
+        "updatedAt" : "2021-03-07T21:53:06Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b7052622-8ac8-4bca-b135-1013befd0e9d",
+        "parentId" : "aef0a77a-3bb3-4b31-8604-3a2add15101e",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Hi, @viirya . It seems that you missed @rednaxelafx 's comment, https://github.com/apache/spark/pull/31709#issuecomment-791275810 .\r\n> So it sounds weird that some test cases works only at FALLBACK mode, so we only need to run it with FALLBACK mode. Doesn't it just mean the test cases may fail under codegen but can success under interpreted?\r\n",
+        "createdAt" : "2021-03-08T05:49:36Z",
+        "updatedAt" : "2021-03-08T05:49:36Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ed5c3c0aa37f2e660ec7fafe8ee014716f6ddacc",
+    "line" : 11,
+    "diffHunk" : "@@ -1,1 +59,63 @@    withSQLConf(SQLConf.CODEGEN_FACTORY_MODE.key -> codegenMode) {\n      super.test(testName, testTags: _*)(testFun)(pos)\n    }\n  }\n}"
+  },
+  {
+    "id" : "377f692c-e054-4a6c-b5b9-8d3848e7196a",
+    "prId" : 31764,
+    "prUrl" : "https://github.com/apache/spark/pull/31764#pullrequestreview-605975611",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f53b70c2-29bb-4f6f-9c29-85e967341a06",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "The current test framework assumes that codegen and non-codegen should have consistent behaviors, while this codegen bug breaks the assumption. The test case fails with codegen but passes with non-codegen.\r\n\r\n+1 to add this for such test cases. One thing I'm curious about is why this test works in master...",
+        "createdAt" : "2021-03-08T04:58:40Z",
+        "updatedAt" : "2021-03-08T04:58:40Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "41965a61-1737-44e8-8467-7a3aa6f8e427",
+        "parentId" : "f53b70c2-29bb-4f6f-9c29-85e967341a06",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "+1 to add it, too.",
+        "createdAt" : "2021-03-08T05:34:56Z",
+        "updatedAt" : "2021-03-08T05:34:57Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ed5c3c0aa37f2e660ec7fafe8ee014716f6ddacc",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +53,57 @@  }\n\n  protected def testFallback(\n      testName: String,\n      testTags: Tag*)(testFun: => Any)(implicit pos: source.Position): Unit = {"
+  },
+  {
+    "id" : "6fb5b091-1629-4c2e-a314-cbc53e7a81ff",
+    "prId" : 31764,
+    "prUrl" : "https://github.com/apache/spark/pull/31764#pullrequestreview-605975960",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4dbd1a4a-17a0-4bce-8b3a-1f251b6c58aa",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "nit: How about adding an additional message here, e.g., `testName +\" (codegen fallback mode)\"`?",
+        "createdAt" : "2021-03-08T05:36:01Z",
+        "updatedAt" : "2021-03-08T05:36:01Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ed5c3c0aa37f2e660ec7fafe8ee014716f6ddacc",
+    "line" : 10,
+    "diffHunk" : "@@ -1,1 +58,62 @@    val codegenMode = CodegenObjectFactoryMode.FALLBACK.toString\n    withSQLConf(SQLConf.CODEGEN_FACTORY_MODE.key -> codegenMode) {\n      super.test(testName, testTags: _*)(testFun)(pos)\n    }\n  }"
+  }
+]

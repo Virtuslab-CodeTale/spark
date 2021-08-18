@@ -328,5 +328,159 @@
     "commit" : "60c6643f0bfda390baa32273f7ca1371a44d5771",
     "line" : 24,
     "diffHunk" : "@@ -1,1 +1002,1006 @@\n    case w1 @ Window(_, _, _, Project(pl, w2 @ Window(_, _, _, grandChild)))\n      if windowsCompatible(w1, w2) && w1.references.subsetOf(grandChild.outputSet) =>\n      Project(\n        pl ++ w1.windowOutputSet,"
+  },
+  {
+    "id" : "3b40baba-cc77-4b7f-8585-d5654dd8de8d",
+    "prId" : 31740,
+    "prUrl" : "https://github.com/apache/spark/pull/31740#pullrequestreview-605758877",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5793afbb-e9f3-4f15-b942-78a29e37fa2e",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Looks like this is the case that the logic of sub common exprs should handle? cc: @viirya @cloud-fan ",
+        "createdAt" : "2021-03-04T23:50:29Z",
+        "updatedAt" : "2021-03-06T14:34:25Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a51e488b-1414-4b85-80c4-48c2f4897b1f",
+        "parentId" : "5793afbb-e9f3-4f15-b942-78a29e37fa2e",
+        "authorId" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "body" : "Isn't the subexpression elimination wholestage codegen specific?",
+        "createdAt" : "2021-03-05T21:00:30Z",
+        "updatedAt" : "2021-03-06T14:34:25Z",
+        "lastEditedBy" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "be0dbd41-cb3e-4237-a333-35af3f8b03e6",
+        "parentId" : "5793afbb-e9f3-4f15-b942-78a29e37fa2e",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "The interpreted mode has the optimization, too, e.g., `SubExprEvaluationRuntime`.",
+        "createdAt" : "2021-03-06T11:56:18Z",
+        "updatedAt" : "2021-03-06T14:34:25Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "11e482fc-f5d6-4384-8191-b7b71bc1e663",
+        "parentId" : "5793afbb-e9f3-4f15-b942-78a29e37fa2e",
+        "authorId" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "body" : "I see, thanks for the reference.\r\nIndeed, the common subexpression elimination seems to eliminate these duplicates (if I did follow the code correctly).\r\nI would argue, that there still is benefit in removing these duplicates in the optimizer. If nothing else, then it at least would clean up the plan - when I saw the duplicates in the plan, then it prompted me to try to rewrite the query in such way that it would avoid them.\r\nAlso the subexpression cache has a limited size (although configurable) and this would reduce the runtime overhead of cache lookups.\r\n\r\n ",
+        "createdAt" : "2021-03-06T14:01:13Z",
+        "updatedAt" : "2021-03-06T14:34:25Z",
+        "lastEditedBy" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "624a41dd5e0232c746c62629bbb4983259ea9b0c",
+    "line" : 13,
+    "diffHunk" : "@@ -1,1 +949,953 @@\n/**\n * Replaces duplicate window expressions with an alias in a Project above the Window node.\n */\nobject RemoveDuplicateWindowExprs extends Rule[LogicalPlan] {"
+  },
+  {
+    "id" : "bb41c349-5166-48b0-b718-1c49c514a933",
+    "prId" : 31740,
+    "prUrl" : "https://github.com/apache/spark/pull/31740#pullrequestreview-606091871",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d9a66b1f-9f4c-4505-a1ca-ba14df935760",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Shall we do the same thing for project and aggregate? Another big idea is to re-implement subexpression elimination in the plan level.",
+        "createdAt" : "2021-03-08T09:16:12Z",
+        "updatedAt" : "2021-03-08T09:16:12Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "624a41dd5e0232c746c62629bbb4983259ea9b0c",
+    "line" : 15,
+    "diffHunk" : "@@ -1,1 +951,955 @@ * Replaces duplicate window expressions with an alias in a Project above the Window node.\n */\nobject RemoveDuplicateWindowExprs extends Rule[LogicalPlan] {\n  def apply(plan: LogicalPlan): LogicalPlan = plan transform {\n    case w @ Window(wes, _, _, _) if wes.length > 1 =>"
+  },
+  {
+    "id" : "6e5d187d-dcda-48d6-8b95-bd1eaa239463",
+    "prId" : 31739,
+    "prUrl" : "https://github.com/apache/spark/pull/31739#pullrequestreview-618928946",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9eafbf53-27fb-4a17-9d7f-a194bbf8d8c5",
+        "parentId" : null,
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "Thanks @wangyum for adding this. I think there might be a list of operators safe to push through besides `Project` - e.g. `Sort`, `RepartitionByExpression`, `ScriptTransformation`, etc.\r\n\r\nShall we add push down through `Project` separately? It should not be only restricted to `Project(Join)` right? It can be `Project(OtherOperator)` as well?\r\n\r\n```\r\ncase LocalLimit(exp, p: Project) =>\r\n  LocalLimit(exp, p.copy(maybePushLocalLimit(exp, _)))\r\n```",
+        "createdAt" : "2021-03-04T21:38:33Z",
+        "updatedAt" : "2021-03-29T13:38:22Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6e3f2501-3eb4-45eb-9c1b-e03f4b414d3b",
+        "parentId" : "9eafbf53-27fb-4a17-9d7f-a194bbf8d8c5",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "I change it to `case LocalLimit(exp, project @ Project(_, child)) if !child.isInstanceOf[LeafNode] =>` to avoid do some useless work if direct pushdown limit through Project:\r\n```\r\n=== Applying Rule org.apache.spark.sql.catalyst.optimizer.LimitPushDown ===\r\n GlobalLimit 5                                                GlobalLimit 5\r\n +- LocalLimit 5                                              +- LocalLimit 5\r\n    +- Project [a#0]                                             +- Project [a#0]\r\n!      +- Join LeftOuter, ((a#0 = x#3) AND (b#1 = y#4))             +- LocalLimit 5\r\n!         :- LocalLimit 5                                              +- Join LeftOuter, ((a#0 = x#3) AND (b#1 = y#4))\r\n!         :  +- Project [a#0, b#1]                                        :- LocalLimit 5\r\n!         :     +- Relation default.t1[a#0,b#1,c#2] parquet               :  +- Project [a#0, b#1]\r\n!         +- Project [x#3, y#4]                                           :     +- LocalLimit 5\r\n!            +- Filter (isnotnull(x#3) AND isnotnull(y#4))                :        +- Relation default.t1[a#0,b#1,c#2] parquet\r\n!               +- Relation default.t2[x#3,y#4,z#5] parquet               +- Project [x#3, y#4]\r\n!                                                                            +- Filter (isnotnull(x#3) AND isnotnull(y#4))\r\n!                                                                               +- Relation default.t2[x#3,y#4,z#5] parquet\r\n\r\n\r\n=== Applying Rule org.apache.spark.sql.catalyst.optimizer.CollapseProject ===\r\n GlobalLimit 5                                                            GlobalLimit 5\r\n +- LocalLimit 5                                                          +- LocalLimit 5\r\n!   +- Project [a#0]                                                         +- LocalLimit 5\r\n!      +- LocalLimit 5                                                          +- Project [a#0]\r\n!         +- Project [a#0]                                                         +- Join LeftOuter, ((a#0 = x#3) AND (b#1 = y#4))\r\n!            +- Join LeftOuter, ((a#0 = x#3) AND (b#1 = y#4))                         :- LocalLimit 5\r\n!               :- LocalLimit 5                                                       :  +- LocalLimit 5\r\n!               :  +- Project [a#0, b#1]                                              :     +- Project [a#0, b#1]\r\n!               :     +- LocalLimit 5                                                 :        +- Relation default.t1[a#0,b#1,c#2] parquet\r\n!               :        +- Project [a#0, b#1]                                        +- Project [x#3, y#4]\r\n!               :           +- Relation default.t1[a#0,b#1,c#2] parquet                  +- Filter (isnotnull(x#3) AND isnotnull(y#4))\r\n!               +- Project [x#3, y#4]                                                       +- Relation default.t2[x#3,y#4,z#5] parquet\r\n!                  +- Filter (isnotnull(x#3) AND isnotnull(y#4))          \r\n!                     +- Relation default.t2[x#3,y#4,z#5] parquet         \r\n           \r\n=== Applying Rule org.apache.spark.sql.catalyst.optimizer.EliminateLimits ===\r\n GlobalLimit 5                                                      GlobalLimit 5\r\n!+- LocalLimit 5                                                    +- LocalLimit least(5, 5)\r\n!   +- LocalLimit 5                                                    +- Project [a#0]\r\n!      +- Project [a#0]                                                   +- Join LeftOuter, ((a#0 = x#3) AND (b#1 = y#4))\r\n!         +- Join LeftOuter, ((a#0 = x#3) AND (b#1 = y#4))                   :- LocalLimit least(5, 5)\r\n!            :- LocalLimit 5                                                 :  +- Project [a#0, b#1]\r\n!            :  +- LocalLimit 5                                              :     +- Relation default.t1[a#0,b#1,c#2] parquet\r\n!            :     +- Project [a#0, b#1]                                     +- Project [x#3, y#4]\r\n!            :        +- Relation default.t1[a#0,b#1,c#2] parquet               +- Filter (isnotnull(x#3) AND isnotnull(y#4))\r\n!            +- Project [x#3, y#4]                                                 +- Relation default.t2[x#3,y#4,z#5] parquet\r\n!               +- Filter (isnotnull(x#3) AND isnotnull(y#4))       \r\n!                  +- Relation default.t2[x#3,y#4,z#5] parquet      \r\n \r\n```",
+        "createdAt" : "2021-03-05T00:52:58Z",
+        "updatedAt" : "2021-03-29T13:38:22Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a06e76c3-e24f-4559-9a93-1f37f051ed06",
+        "parentId" : "9eafbf53-27fb-4a17-9d7f-a194bbf8d8c5",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Sounds like a good idea. We can have an allowlist of unary operators.",
+        "createdAt" : "2021-03-22T15:47:44Z",
+        "updatedAt" : "2021-03-29T13:38:22Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1e7d73ff-c0ec-4ba9-adb3-65c93af7b3de",
+        "parentId" : "9eafbf53-27fb-4a17-9d7f-a194bbf8d8c5",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "It will introduce useless pushdown even only allow `Join`.\r\n```scala\r\n    case LocalLimit(exp, p: Project) if p.child.isInstanceOf[Join] =>\r\n      LocalLimit(exp, p.copy(child = maybePushLocalLimit(exp, p.child)))\r\n```\r\nFor example:\r\n```scala\r\nspark.range(200L).selectExpr(\"id AS a\", \"id AS b\").write.saveAsTable(\"t1\")\r\nspark.range(300L).selectExpr(\"id AS x\", \"id AS y\").write.saveAsTable(\"t2\")\r\nspark.sql(\"SELECT 1 FROM t1 INNER JOIN t2 ON a = x limit 10\").explain(true)\r\n```\r\n\r\n```\r\n== Optimized Logical Plan ==\r\nGlobalLimit 10\r\n+- LocalLimit 10\r\n   +- Project [1 AS 1#20]\r\n      +- LocalLimit 10\r\n         +- Project\r\n            +- Join Inner, (a#16L = x#18L)\r\n               :- Project [a#16L]\r\n               :  +- Filter isnotnull(a#16L)\r\n               :     +- Relation default.t1[a#16L,b#17L] parquet\r\n               +- Project [x#18L]\r\n                  +- Filter isnotnull(x#18L)\r\n                     +- Relation default.t2[x#18L,y#19L] parquet\r\n\r\n== Physical Plan ==\r\nAdaptiveSparkPlan isFinalPlan=false\r\n+- CollectLimit 10\r\n   +- Project [1 AS 1#20]\r\n      +- LocalLimit 10\r\n         +- Project\r\n            +- BroadcastHashJoin [a#16L], [x#18L], Inner, BuildLeft, false\r\n               :- BroadcastExchange HashedRelationBroadcastMode(List(input[0, bigint, false]),false), [id=#68]\r\n               :  +- Filter isnotnull(a#16L)\r\n               :     +- FileScan parquet default.t1[a#16L] \r\n               +- Filter isnotnull(x#18L)\r\n                  +- FileScan parquet default.t2[x#18L]\r\n\r\n```\r\n\r\nAnother example is TPC-DS q32:\r\nhttps://github.com/apache/spark/blob/66f5a42ca5d259038f0749ae2b9a04cc2f658880/sql/core/src/test/resources/tpcds/q32.sql#L1-L15\r\n",
+        "createdAt" : "2021-03-22T23:59:31Z",
+        "updatedAt" : "2021-03-29T13:38:22Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dd5fbc66-05e0-46ec-b03c-cdabe748b348",
+        "parentId" : "9eafbf53-27fb-4a17-9d7f-a194bbf8d8c5",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "@c21 @maropu @cloud-fan \r\nI think `Project` is the most used, and this will not introduce useless `LocalLimit`.",
+        "createdAt" : "2021-03-23T07:53:58Z",
+        "updatedAt" : "2021-03-29T13:38:22Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a95fa0e8-3ce3-48f1-b22b-d493e8a3ffe3",
+        "parentId" : "9eafbf53-27fb-4a17-9d7f-a194bbf8d8c5",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@wangyum and @cloud-fan - I think one followup can be to pass `LocalLimit` through eligible operators. We don't add more `LocalLimit` operators, but push the existing `LocalLimit` further down in query plan.",
+        "createdAt" : "2021-03-23T18:20:35Z",
+        "updatedAt" : "2021-03-29T13:38:22Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4c7bc54c69ca347c01d84ac8d2ab54033d96aadf",
+    "line" : 49,
+    "diffHunk" : "@@ -1,1 +674,678 @@      LocalLimit(exp, pushLocalLimitThroughJoin(exp, join))\n    // There is a Project between LocalLimit and Join if they do not have the same output.\n    case LocalLimit(exp, project @ Project(_, join: Join)) =>\n      LocalLimit(exp, project.copy(child = pushLocalLimitThroughJoin(exp, join)))\n  }"
   }
 ]

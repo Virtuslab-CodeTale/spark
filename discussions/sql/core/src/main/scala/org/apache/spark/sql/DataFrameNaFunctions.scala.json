@@ -1,0 +1,90 @@
+[
+  {
+    "id" : "85fbecbd-47bb-4b2c-872a-9610e271a4cd",
+    "prId" : 31769,
+    "prUrl" : "https://github.com/apache/spark/pull/31769#pullrequestreview-606279683",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "af6e9cc7-31a3-4c9a-8f97-4aaf31582f6f",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "The current behaviour just ignores input if given columns do not exist?\r\n```\r\nscala> df.na.replace(\"xxx\", Map(\"n/a\" -> \"Unknown\")).show()\r\n+---+---+\r\n| c0| c1|\r\n+---+---+\r\n|abc| 23|\r\n|def| 44|\r\n|n/a|  0|\r\n+---+---+\r\n```",
+        "createdAt" : "2021-03-08T06:56:49Z",
+        "updatedAt" : "2021-03-09T05:46:30Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e7ce59cb-a645-4f93-8f4c-54a02ff0822a",
+        "parentId" : "af6e9cc7-31a3-4c9a-8f97-4aaf31582f6f",
+        "authorId" : "2aac12c0-5b21-45d8-99f0-6e7832629f6d",
+        "body" : "`df.resolve` throws `org.apache.spark.sql.AnalysisException` with error message `Cannot resolve column name \"xxx\" among (c0, c1)`, if any of the given columns do not exist.",
+        "createdAt" : "2021-03-08T07:33:42Z",
+        "updatedAt" : "2021-03-09T05:46:30Z",
+        "lastEditedBy" : "2aac12c0-5b21-45d8-99f0-6e7832629f6d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3d45cfb0-927a-46e1-acef-79ea2ee62231",
+        "parentId" : "af6e9cc7-31a3-4c9a-8f97-4aaf31582f6f",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Could you add tests for these exceptions? I think they are new behaviours for `replace`.",
+        "createdAt" : "2021-03-08T11:38:02Z",
+        "updatedAt" : "2021-03-09T05:46:30Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "85b9142a-fd65-4def-830a-e10acdc0b0cd",
+        "parentId" : "af6e9cc7-31a3-4c9a-8f97-4aaf31582f6f",
+        "authorId" : "2aac12c0-5b21-45d8-99f0-6e7832629f6d",
+        "body" : "Added.",
+        "createdAt" : "2021-03-08T13:22:45Z",
+        "updatedAt" : "2021-03-09T05:46:30Z",
+        "lastEditedBy" : "2aac12c0-5b21-45d8-99f0-6e7832629f6d",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "58679bd9e27bb376fd9e6ea2baa780fe3454f23a",
+    "line" : 23,
+    "diffHunk" : "@@ -1,1 +359,363 @@        case a: Attribute => a\n        case _ => throw new UnsupportedOperationException(\n          s\"Nested field ${colName} is not supported.\")\n      }\n      attr"
+  },
+  {
+    "id" : "4d441f7b-537c-4697-b970-c31012cb2462",
+    "prId" : 31769,
+    "prUrl" : "https://github.com/apache/spark/pull/31769#pullrequestreview-606872033",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "40e8aac7-865d-4a2f-ae9d-1faae869b0f0",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "`AnalysisException` instead? How about following the behaivour of the other functions in this class? e.g.,\r\n```\r\nscala> df.show()\r\n+----+---------+\r\n|   a|        b|\r\n+----+---------+\r\n|null|{1, null}|\r\n+----+---------+\r\n\r\n\r\nscala> df.printSchema()\r\nroot\r\n |-- a: integer (nullable = true)\r\n |-- b: struct (nullable = false)\r\n |    |-- c0: integer (nullable = false)\r\n |    |-- c1: integer (nullable = true)\r\n\r\n\r\nscala> df.na.fill(3, Seq(\"a\")).show()\r\n+---+---------+\r\n|  a|        b|\r\n+---+---------+\r\n|  3|{1, null}|\r\n+---+---------+\r\n\r\n\r\nscala> df.na.fill(3, Seq(\"b\")).show()\r\n+----+---------+\r\n|   a|        b|\r\n+----+---------+\r\n|null|{1, null}|\r\n+----+---------+\r\n\r\n\r\nscala> df.na.fill(3, Seq(\"b.c2\")).show()\r\norg.apache.spark.sql.AnalysisException: No such struct field c2 in c0, c1\r\n  at org.apache.spark.sql.catalyst.expressions.ExtractValue$.findField(complexTypeExtractors.scala:82)\r\n  at org.apache.spark.sql.catalyst.expressions.ExtractValue$.apply(complexTypeExtractors.scala:55)\r\n  at org.apache.spark.sql.catalyst.expressions.package$AttributeSeq.$anonfun$resolve$1(package.scala:348)\r\n  at scala.collection.IndexedSeqOptimized.foldLeft(IndexedSeqOptimized.scala:60)\r\n  at scala.collection.IndexedSeqOptimized.foldLeft$(IndexedSeqOptimized.scala:68)\r\n  at scala.collection.mutable.ArrayBuffer.foldLeft(ArrayBuffer.scala:49)\r\n  at org.apache.spark.sql.catalyst.expressions.package$AttributeSeq.resolve(package.scala:347)\r\n  at org.apache.spark.sql.catalyst.plans.logical.LogicalPlan.resolve(LogicalPlan.scala:119)\r\n  at org.apache.spark.sql.catalyst.plans.logical.LogicalPlan.resolveQuoted(LogicalPlan.scala:130)\r\n  at org.apache.spark.sql.Dataset.resolve(Dataset.scala:262)\r\n  at org.apache.spark.sql.Dataset.col(Dataset.scala:1361)\r\n  at org.apache.spark.sql.DataFrameNaFunctions.$anonfun$toAttributes$1(DataFrameNaFunctions.scala:475)\r\n  at scala.collection.TraversableLike.$anonfun$map$1(TraversableLike.scala:238)\r\n  at scala.collection.immutable.List.foreach(List.scala:392)\r\n  at scala.collection.TraversableLike.map(TraversableLike.scala:238)\r\n  at scala.collection.TraversableLike.map$(TraversableLike.scala:231)\r\n  at scala.collection.immutable.List.map(List.scala:298)\r\n  at org.apache.spark.sql.DataFrameNaFunctions.toAttributes(DataFrameNaFunctions.scala:475)\r\n  at org.apache.spark.sql.DataFrameNaFunctions.fill(DataFrameNaFunctions.scala:163)\r\n  ... 47 elided\r\n\r\nscala> df.na.fill(3, Seq(\"c\")).show()\r\norg.apache.spark.sql.AnalysisException: Cannot resolve column name \"c\" among (a, b)\r\n  at org.apache.spark.sql.Dataset.org$apache$spark$sql$Dataset$$resolveException(Dataset.scala:272)\r\n  at org.apache.spark.sql.Dataset.$anonfun$resolve$1(Dataset.scala:263)\r\n  at scala.Option.getOrElse(Option.scala:189)\r\n  at org.apache.spark.sql.Dataset.resolve(Dataset.scala:263)\r\n  at org.apache.spark.sql.Dataset.col(Dataset.scala:1361)\r\n  at org.apache.spark.sql.DataFrameNaFunctions.$anonfun$toAttributes$1(DataFrameNaFunctions.scala:475)\r\n  at scala.collection.TraversableLike.$anonfun$map$1(TraversableLike.scala:238)\r\n  at scala.collection.immutable.List.foreach(List.scala:392)\r\n  at scala.collection.TraversableLike.map(TraversableLike.scala:238)\r\n  at scala.collection.TraversableLike.map$(TraversableLike.scala:231)\r\n  at scala.collection.immutable.List.map(List.scala:298)\r\n  at org.apache.spark.sql.DataFrameNaFunctions.toAttributes(DataFrameNaFunctions.scala:475)\r\n  at org.apache.spark.sql.DataFrameNaFunctions.fill(DataFrameNaFunctions.scala:163)\r\n  ... 47 elided\r\n```",
+        "createdAt" : "2021-03-08T23:48:20Z",
+        "updatedAt" : "2021-03-09T05:46:30Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7e887e9e-6ffa-4182-81ed-1aae8c027a77",
+        "parentId" : "40e8aac7-865d-4a2f-ae9d-1faae869b0f0",
+        "authorId" : "2aac12c0-5b21-45d8-99f0-6e7832629f6d",
+        "body" : "`Dataset.resolve` throws `AnalysisException` for the listed behavior of the other functions in this class. Same is used for resolving input column name here as well.\r\n`UnsupportedOperationException` is thrown when column is resolved but it is nested since replacing in nested column is not supported.",
+        "createdAt" : "2021-03-09T02:08:21Z",
+        "updatedAt" : "2021-03-09T05:46:30Z",
+        "lastEditedBy" : "2aac12c0-5b21-45d8-99f0-6e7832629f6d",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "58679bd9e27bb376fd9e6ea2baa780fe3454f23a",
+    "line" : 22,
+    "diffHunk" : "@@ -1,1 +358,362 @@      val attr = df.resolve(colName) match {\n        case a: Attribute => a\n        case _ => throw new UnsupportedOperationException(\n          s\"Nested field ${colName} is not supported.\")\n      }"
+  }
+]

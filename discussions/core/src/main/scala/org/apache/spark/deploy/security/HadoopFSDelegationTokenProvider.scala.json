@@ -1,0 +1,123 @@
+[
+  {
+    "id" : "40f63446-5f6a-4ef4-9fd1-88b1b951d580",
+    "prId" : 31761,
+    "prUrl" : "https://github.com/apache/spark/pull/31761#pullrequestreview-605807459",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c88ce54d-b01a-4107-bc90-578f26ed63e0",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Since this excludes all file systems on that host, shall we revise the description in line 107?",
+        "createdAt" : "2021-03-06T15:48:26Z",
+        "updatedAt" : "2021-03-22T18:58:50Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e91f5a2b-2f92-4519-b061-4278faeae37d",
+        "parentId" : "c88ce54d-b01a-4107-bc90-578f26ed63e0",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "`The hosts on which the file systems to be excluded from token renewal`?",
+        "createdAt" : "2021-03-06T18:03:48Z",
+        "updatedAt" : "2021-03-22T18:58:50Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "69c375dc-9838-4d8f-8446-5d61c2354e95",
+        "parentId" : "c88ce54d-b01a-4107-bc90-578f26ed63e0",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Ya. Maybe. \r\nBTW, we are accept `hadoopFileSystems` via 'spark.kerberos.renewal.exclude.hadoopFileSystem' and convert it to hosts?\r\nCould you describe some examples where we cannot accept `hosts` directly?",
+        "createdAt" : "2021-03-07T01:05:09Z",
+        "updatedAt" : "2021-03-22T18:58:50Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3a91f17a-cb9d-4071-bb41-9f5f2e82e32c",
+        "parentId" : "c88ce54d-b01a-4107-bc90-578f26ed63e0",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "I'm also wondering why unlike the MR config we don't use hosts directly but rather URLs.",
+        "createdAt" : "2021-03-07T01:26:37Z",
+        "updatedAt" : "2021-03-22T18:58:50Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3ca7ef09-df28-426e-96b1-85446fcc3c93",
+        "parentId" : "c88ce54d-b01a-4107-bc90-578f26ed63e0",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "No, we can accept hosts directly. It doesn't matter here. Either URL or host can achieve the same result we want.\r\n\r\nIt takes file system URLs because I let it to be consistent with other configs like `KERBEROS_FILESYSTEMS_TO_ACCESS`.\r\n\r\n",
+        "createdAt" : "2021-03-07T04:09:36Z",
+        "updatedAt" : "2021-03-22T18:58:50Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "cf8da757045d23f5657ec1fb68e20f4ca0247772",
+    "line" : 25,
+    "diffHunk" : "@@ -1,1 +109,113 @@\n    filesystems.foreach { fs =>\n      if (fsToExclude.contains(fs.getUri.getHost)) {\n        // YARN RM skips renewing token with empty renewer\n        logInfo(s\"getting token for: $fs with empty renewer to skip renewal\")"
+  },
+  {
+    "id" : "cd4a1877-3a28-42e2-856a-64f0db3c81c0",
+    "prId" : 31761,
+    "prUrl" : "https://github.com/apache/spark/pull/31761#pullrequestreview-606050250",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "22c97c8c-24f7-4ebf-8f8c-2e692973f29a",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Just curious, suppose we have a fs which we exclude the renewal, then my understanding on behavior is it fetches the delegation token but won't renew. Do I understand correctly? Just curious about how these credentials will be handled from here, like whether they're not `AbstractDelegationTokenIdentifier`, or `token.renew` fails but Try will swallow.\r\n",
+        "createdAt" : "2021-03-07T22:45:17Z",
+        "updatedAt" : "2021-03-22T18:58:50Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c1170126-28eb-40ae-bc4e-3c488f2f4c6f",
+        "parentId" : "22c97c8c-24f7-4ebf-8f8c-2e692973f29a",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "The customer uses spark-submit to submit Spark job to YARN, I think the customer already obtains delegation token for the remote HDFS. YARN will try to renew the delegation token when we submit job to it, but the YARN cluster is not able to renew it and fails.",
+        "createdAt" : "2021-03-08T08:19:55Z",
+        "updatedAt" : "2021-03-22T18:58:50Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "cf8da757045d23f5657ec1fb68e20f4ca0247772",
+    "line" : 43,
+    "diffHunk" : "@@ -1,1 +134,138 @@    fetchDelegationTokens(renewer, filesystems, creds, Set.empty)\n\n    val renewIntervals = creds.getAllTokens.asScala.filter {\n      _.decodeIdentifier().isInstanceOf[AbstractDelegationTokenIdentifier]\n    }.flatMap { token =>"
+  },
+  {
+    "id" : "d791500a-21dd-4285-9586-ea9e53d738fc",
+    "prId" : 31761,
+    "prUrl" : "https://github.com/apache/spark/pull/31761#pullrequestreview-608582347",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "35036145-2abe-46a0-aea9-eeea19318249",
+        "parentId" : null,
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "This is not required here but lately I've seen that `$fs` produces a really cryptic out (which was 0 help in debugging) and maybe we can print out the `Uri` or something more meaningful. But again, this is a nice to have separately.",
+        "createdAt" : "2021-03-10T10:59:06Z",
+        "updatedAt" : "2021-03-22T18:58:50Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "cf8da757045d23f5657ec1fb68e20f4ca0247772",
+    "line" : 30,
+    "diffHunk" : "@@ -1,1 +114,118 @@        fs.addDelegationTokens(\"\", creds)\n      } else {\n        logInfo(s\"getting token for: $fs with renewer $renewer\")\n        fs.addDelegationTokens(renewer, creds)\n      }"
+  }
+]

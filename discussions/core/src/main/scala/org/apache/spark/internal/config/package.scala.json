@@ -141,5 +141,313 @@
     "commit" : "4af6ee73221a55e3cd7239f151ec33d5e802cbe4",
     "line" : 11,
     "diffHunk" : "@@ -1,1 +1201,1205 @@      .internal()\n      .intConf\n      .createWithDefault(10)\n\n  private[spark] val REDUCER_MAX_BLOCKS_IN_FLIGHT_PER_ADDRESS ="
+  },
+  {
+    "id" : "c4300ac3-1ee2-4706-9529-df5804b8d89d",
+    "prId" : 31761,
+    "prUrl" : "https://github.com/apache/spark/pull/31761#pullrequestreview-611033475",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e569a052-57ce-455e-851d-c2c07de35c3c",
+        "parentId" : null,
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Is this only restricted to HDFS URLs? can \"hosts\" either be nameservice name or namenode name? some examples might help.",
+        "createdAt" : "2021-03-07T01:36:53Z",
+        "updatedAt" : "2021-03-22T18:58:50Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4a07beb4-0a19-4462-89ec-9a244ef7b125",
+        "parentId" : "e569a052-57ce-455e-851d-c2c07de35c3c",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Because the configuration value will be parsed as file system URLs to get file system. A simple host name doesn't work here.\r\n\r\ne.g.\r\n\r\n```scala\r\nscala> new Path(\"hdfs.namenode.net\").getFileSystem(new Configuration()).getUri.getHost\r\nres9: String = null\r\n```",
+        "createdAt" : "2021-03-07T04:15:35Z",
+        "updatedAt" : "2021-03-22T18:58:50Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "72b014c9-f5c5-48d8-b72b-2d3d3d48ae9a",
+        "parentId" : "e569a052-57ce-455e-851d-c2c07de35c3c",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "It makes sense for `spark.kerberos.access.hadoopFileSystems` to be URLs since Spark needs to instantiate `FileSystem`s from them. But for this case I'm not sure if it's necessary: we can just parse the config into a set of host names and check whether the file systems above contain them:\r\n```scala\r\nval hostsToExclude = sparkConf.get(KERBEROS_FILESYSTEM_RENEWAL_EXCLUDE).toSet\r\nfilesystems.filter(fs => !hostsToExclude.contains(fs.getUri.getHost).foreach { fs =>\r\n ...\r\n}\r\n```\r\n\r\nI'm fine either way though since it also makes sense to keep it consistent with `spark.kerberos.access.hadoopFileSystems`. BTW I think we'll need to update security.md for the new config.",
+        "createdAt" : "2021-03-07T04:50:39Z",
+        "updatedAt" : "2021-03-22T18:58:50Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "96954ac1-4c6d-4481-bcf5-a2c524aecc31",
+        "parentId" : "e569a052-57ce-455e-851d-c2c07de35c3c",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Thanks. Let me update security.md.",
+        "createdAt" : "2021-03-07T04:56:45Z",
+        "updatedAt" : "2021-03-22T18:58:50Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "232245ab-3ae5-4035-80f5-7d4abd22d76e",
+        "parentId" : "e569a052-57ce-455e-851d-c2c07de35c3c",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "so just to be clear, these fileystems are ones the user specified in spark.kerberos.access.hadoopFileSystems so it wants to get initial tokens for them but then later we don't want to renew, correct?  We should perhaps update doc to mention that.  \r\nIt would be nice to know if this works with other cluster managers like k8s - @ifilonenko @mccheah  maybe?",
+        "createdAt" : "2021-03-08T14:34:36Z",
+        "updatedAt" : "2021-03-22T18:58:50Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b8929d1f-2fbe-4461-9ec8-3b212eba9048",
+        "parentId" : "e569a052-57ce-455e-851d-c2c07de35c3c",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "I guess it could be the staging or default Filesystem as well.",
+        "createdAt" : "2021-03-08T14:36:09Z",
+        "updatedAt" : "2021-03-22T18:58:50Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "aa66fdcd-4c24-4fe4-a03f-81299e364c24",
+        "parentId" : "e569a052-57ce-455e-851d-c2c07de35c3c",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "@tgravescs with the actual code Spark doesn't obtain the initial tokens when an FS is listed in \"spark.kerberos.renewal.exclude.hadoopFileSystems\". Please see my comment below...",
+        "createdAt" : "2021-03-08T15:18:02Z",
+        "updatedAt" : "2021-03-22T18:58:50Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a1ffedf5-ff22-4265-9c48-f14bda29a247",
+        "parentId" : "e569a052-57ce-455e-851d-c2c07de35c3c",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Hm? @gaborgsomogyi I think this config doesn't affect Spark obtain the initial tokens?",
+        "createdAt" : "2021-03-08T18:07:45Z",
+        "updatedAt" : "2021-03-22T18:58:50Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0906aa91-df70-494f-a93e-3d0fc5eafa2a",
+        "parentId" : "e569a052-57ce-455e-851d-c2c07de35c3c",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "Right, the point I was getting at is that we only renew the ones in spark.kerberos.access.hadoopFileSystems + defaultFs + staging fs.  So I assume its basically defaultFs then? I was kind of wanting to make sure it wasn't something silly that they specified in both.  It seems odd for the defaultFs since this is the Hadoop filesystem which supports renewal.  I can obviously see this if its a separate name node but it would require you to specify it in the config for us to try to renew. So I'm assuming this is perhaps an odd config that you can't renew on the current default fs.  Just seems a bit odd case so wanted to make sure I wasn't missing something.\r\n",
+        "createdAt" : "2021-03-08T18:39:17Z",
+        "updatedAt" : "2021-03-22T18:58:50Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ebe12a35-1f2a-4144-9dfe-0e1ebe0f43d4",
+        "parentId" : "e569a052-57ce-455e-851d-c2c07de35c3c",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "Note I'm not against it just making sure the problem is understood and we document it appropriately. I guess it could be stage FS as well, which perhaps might make more sense if on a separate namenoxde",
+        "createdAt" : "2021-03-08T18:47:34Z",
+        "updatedAt" : "2021-03-22T18:58:50Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "eae852e1-361e-4319-8c76-502840e32af4",
+        "parentId" : "e569a052-57ce-455e-851d-c2c07de35c3c",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "It's hard to imagine that this applies to defaultFS/stagingDir since it means the YARN cluster (or other types of clusters) is not configured to be in the same Kerberos realm as these which could cause other more serious issues. But, just as `spark.kerberos.access.hadoopFileSystems`, I guess nothing stops users from putting in the host for defaultFS/stagingDir in the config as well, and Spark will just do what it's told to do.",
+        "createdAt" : "2021-03-09T01:55:47Z",
+        "updatedAt" : "2021-03-22T18:58:50Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d3ef676c-fb84-4830-9c24-0fbc7e1769b3",
+        "parentId" : "e569a052-57ce-455e-851d-c2c07de35c3c",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "From the user perspective, I think it is still possible they want to avoid renewal for defaultFs. If the defaultFs is just a remote HDFS that whose tokens cannot be renew from YARN?",
+        "createdAt" : "2021-03-10T01:12:36Z",
+        "updatedAt" : "2021-03-22T18:58:50Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9b236bff-77f4-4661-91d2-9783e997d31b",
+        "parentId" : "e569a052-57ce-455e-851d-c2c07de35c3c",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "yes its true like I mentioned above. I'm not against it just want to understand and make sure this config makes sense. For instance instead of having this config we could have one that says don't include defaultFs or stageFs or both in renewal.   I think those are really the only 2 filesystems that make sense to put into this config. Anything else doesn't get renewed unless its in spark.kerberos.access.hadoopFileSystems and in that case just don't include it in spark.kerberos.access.hadoopFileSystems.  The nice things about this approach is its generic if things change in the future. The downside is I have to know namenode path for the defaultFs and staging fs to add to this config. ",
+        "createdAt" : "2021-03-10T01:33:48Z",
+        "updatedAt" : "2021-03-22T18:58:50Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6bf04d7b-eafb-4f47-be94-7714c517fb9c",
+        "parentId" : "e569a052-57ce-455e-851d-c2c07de35c3c",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "I'm not sure I understand correctly so just consider it as ignorant question.\r\n\r\n> Anything else doesn't get renewed unless its in spark.kerberos.access.hadoopFileSystems and in that case just don't include it in spark.kerberos.access.hadoopFileSystems.\r\n\r\nIs it possible if someone wants to get initial delegation token for them but doesn't renew them, and does this change make difference from here?",
+        "createdAt" : "2021-03-10T02:42:55Z",
+        "updatedAt" : "2021-03-22T18:58:50Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5c79e985-b189-4962-963c-c2cfbe537e12",
+        "parentId" : "e569a052-57ce-455e-851d-c2c07de35c3c",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "If I understand correctly, it is the same code path for obtaining delegation token and renewing. Actually the so called renew is that Spark periodically obtain delegation token.\r\n\r\nSo I guess it doesn't make sense for a case to get delegation token but not renew it. At least in Spark I don't see such case is possible. I may wrong here.\r\n",
+        "createdAt" : "2021-03-10T05:26:32Z",
+        "updatedAt" : "2021-03-22T18:58:50Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "46d35e8c-aecf-4bd1-b428-8669ae3caf97",
+        "parentId" : "e569a052-57ce-455e-851d-c2c07de35c3c",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "@HeartSaVioR Spark actually behaves this way (w/o this change): if one DT is created then it's renewed all the time except in the following cases:\r\n* `keytab` used but no `principal` provided\r\n* `ccache` used but it has no kerberos credentials\r\n\r\nPlease see the code here: https://github.com/apache/spark/blob/a916690dd9aac40df38922dbea233785354a2f2a/core/src/main/scala/org/apache/spark/deploy/security/HadoopDelegationTokenManager.scala#L83-L88\r\n",
+        "createdAt" : "2021-03-10T10:51:35Z",
+        "updatedAt" : "2021-03-22T18:58:50Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ac8b2856-cf46-4ddb-b3db-d3f4b2ee4f3a",
+        "parentId" : "e569a052-57ce-455e-851d-c2c07de35c3c",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Ah OK I think I missed some part of @tgravescs 's comment. My bad.\r\n\r\nHis point wasn't that the new config is not necessary at all. His point was that the problem will occur from only defaultFs and/or stageFs, so the new config could be simplified instead of being general but a bit verbose.",
+        "createdAt" : "2021-03-12T03:41:34Z",
+        "updatedAt" : "2021-03-22T18:58:50Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "34b076b6-69a3-42a7-9378-81675181d0d9",
+        "parentId" : "e569a052-57ce-455e-851d-c2c07de35c3c",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "> so just to be clear, these fileystems are ones the user specified in spark.kerberos.access.hadoopFileSystems so it wants to get initial tokens for them but then later we don't want to renew, correct? We should perhaps update doc to mention that.\r\n> It would be nice to know if this works with other cluster managers like k8s - @ifilonenko @mccheah maybe?\r\n\r\nHmm, for the customer case, the requirement is to prevent YARN from renewing the delegation token obtained. It doesn't matter if the file system is defaultFs/stageFs or the ones specified in `spark.kerberos.access.hadoopFileSystems`. That said, Spark still can obtain the token for the ones in `spark.kerberos.access.hadoopFileSystems`, but we don't want YARN to renew it.",
+        "createdAt" : "2021-03-12T04:10:02Z",
+        "updatedAt" : "2021-03-22T18:58:50Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5cbfe720-ffd7-410f-b31e-d538419c7f2e",
+        "parentId" : "e569a052-57ce-455e-851d-c2c07de35c3c",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "I was simply trying to clarify the exact case being hit here and make sure there wasn't an alternate solution and make sure the docs are clear.   The specific case being hit could affect the solution.\r\n\r\nI think there are comments on this review that are very confusing, thus why I wanted to clarification. Some indicate that Spark doesn't get initial tokens, others saying in this case the tokens were already acquired, etc.\r\n\r\nIn the end my comment ends up being I think we should update the security.md doc to mention renewal in the kerberos section for Hadoop filesystems to help explain to users.\r\n",
+        "createdAt" : "2021-03-12T15:28:23Z",
+        "updatedAt" : "2021-03-22T18:58:50Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c1978145-73a2-416e-bdac-331948d75ddf",
+        "parentId" : "e569a052-57ce-455e-851d-c2c07de35c3c",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Okay, thanks @tgravescs. I think in short this config doesn't affect Spark token handling, but only prevent YARN from renewing tokens, no matter the tokens are obtained in advance or by Spark. Let me update security.md and try to explain it.",
+        "createdAt" : "2021-03-12T18:03:08Z",
+        "updatedAt" : "2021-03-22T18:58:50Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "cf8da757045d23f5657ec1fb68e20f4ca0247772",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +694,698 @@  private[spark] val YARN_KERBEROS_FILESYSTEM_RENEWAL_EXCLUDE =\n    ConfigBuilder(\"spark.yarn.kerberos.renewal.excludeHadoopFileSystems\")\n      .doc(\"The list of Hadoop filesystem URLs whose hosts will be excluded from \" +\n        \"delegation token renewal at resource scheduler. Currently this is known to \" +\n        \"work under YARN, so YARN Resource Manager won't renew tokens for the application. \" +"
+  },
+  {
+    "id" : "fb366351-fa9c-4baa-8012-7c1d8f85231e",
+    "prId" : 31715,
+    "prUrl" : "https://github.com/apache/spark/pull/31715#pullrequestreview-605557087",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "896d1f09-aeff-4099-88e4-32dc5cd16f02",
+        "parentId" : null,
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "I am having similar concern with @viirya and @attilapiros . I think we should not make it as a user-facing config. If we would like introducing a config for this anyway, it'd better to start with `internal()` config, but not user-facing.\r\n\r\nThough `spark.shuffle.manager` can be arbitrary class, but in practice, they are just a handful of implementation in one company's environment, and ideally the infra developers should control which implementation to use, instead of user to control this. Similarly for whether to mark shuffle file lost should be controlled by developers team but not users.\r\n\r\nJust share some context, in FB, we (spark developer) control these kinds of behavior transparently and make this invisible to spark user. This also helps us to migrate to newer implementation easier without worrying about users setting wrong config. The mixed case (query uses customized shuffle service and default shuffle service) can happen quite a bit in production, as we have rate limit for traffic on customized service, and need fallback.",
+        "createdAt" : "2021-03-04T02:11:59Z",
+        "updatedAt" : "2021-03-04T02:12:04Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0e5e2c14-c5dc-4de2-8279-aa66831e3187",
+        "parentId" : "896d1f09-aeff-4099-88e4-32dc5cd16f02",
+        "authorId" : "c52c39ef-2b7f-4855-a2f1-2a2e50a719ae",
+        "body" : "Hi @c21 , thanks for the comment, and known you from FB! We previously discussed with people from FB about Cosco, but not for this specific issue. Just curious, do you guys modify your internal Spark distribution to make executor lost event not trigger driver to delete map output?",
+        "createdAt" : "2021-03-04T06:31:01Z",
+        "updatedAt" : "2021-03-04T06:31:18Z",
+        "lastEditedBy" : "c52c39ef-2b7f-4855-a2f1-2a2e50a719ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0a3d9375-faf2-4840-a66d-d8d2c28e2765",
+        "parentId" : "896d1f09-aeff-4099-88e4-32dc5cd16f02",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "> do you guys modify your internal Spark distribution to make executor lost event not trigger driver to delete map output?\r\n\r\nYeah I think so, I can do a double check with cosco folks as well tomorrow. btw nice to know you as well!",
+        "createdAt" : "2021-03-04T06:43:13Z",
+        "updatedAt" : "2021-03-04T06:43:13Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ba9bfe2c-5545-4858-8431-c2497b152e9a",
+        "parentId" : "896d1f09-aeff-4099-88e4-32dc5cd16f02",
+        "authorId" : "c52c39ef-2b7f-4855-a2f1-2a2e50a719ae",
+        "body" : "Cool, that will be interested to know, thanks!",
+        "createdAt" : "2021-03-04T18:34:05Z",
+        "updatedAt" : "2021-03-04T18:34:05Z",
+        "lastEditedBy" : "c52c39ef-2b7f-4855-a2f1-2a2e50a719ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5c1d5b8e-463b-4230-905d-87265eb5e1fc",
+        "parentId" : "896d1f09-aeff-4099-88e4-32dc5cd16f02",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "@c21 May I ask what is the status of open sourcing Cosco? \r\nI just think it might help us to make better decisions about the Shuffle plugin API of Spark if we could look into that one too.\r\n",
+        "createdAt" : "2021-03-05T17:01:31Z",
+        "updatedAt" : "2021-03-05T17:01:31Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4e4f863e-1ac0-4860-bccf-7af919f0faf1",
+        "parentId" : "896d1f09-aeff-4099-88e4-32dc5cd16f02",
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "@attilapiros - unfortunately there's no specific ETA now, but the team is working on it.",
+        "createdAt" : "2021-03-05T19:59:44Z",
+        "updatedAt" : "2021-03-05T19:59:44Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "1418e8f9507375f4fec025d8df357a86cb99ee45",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +2120,2124 @@\n  private[spark] val MARK_FILE_LOST_ON_EXECUTOR_LOST =\n    ConfigBuilder(\"spark.shuffle.markFileLostOnExecutorLost\")\n      .doc(\"Mark shuffle files as lost when an executor is lost. If you set \" +\n       \"spark.shuffle.manager with a customized class to use a different shuffle \" +"
   }
 ]

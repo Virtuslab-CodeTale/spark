@@ -75,5 +75,115 @@
     "commit" : "32ba29227f6361706e8e2572c2c26a9a8b3b2647",
     "line" : 21,
     "diffHunk" : "@@ -1,1 +596,600 @@        case (b1: Array[Int], b2: Array[Int]) => Arrays.equals(b1, b2)\n        case (b1: Array[_], b2: Array[_]) =>\n          Arrays.deepEquals(b1.asInstanceOf[Array[AnyRef]], b2.asInstanceOf[Array[AnyRef]])\n        case (left: Comparable[_], right: Comparable[_]) =>\n          left.asInstanceOf[Comparable[Any]].compareTo(right) == 0"
+  },
+  {
+    "id" : "59bfaa51-0708-48af-b64c-f97253e3984d",
+    "prId" : 31766,
+    "prUrl" : "https://github.com/apache/spark/pull/31766#pullrequestreview-609433220",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "382f40f7-5c79-4fa5-b4ed-aaef59e0da60",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "do we know why this simply test has to use fallback test?",
+        "createdAt" : "2021-03-11T05:56:00Z",
+        "updatedAt" : "2021-03-11T05:56:01Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7fbc3861-5d18-4cb1-b6fa-26feb53a76a7",
+        "parentId" : "382f40f7-5c79-4fa5-b4ed-aaef59e0da60",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "I also was surprised that we have several cases instead of the new two tests.\r\nIt seems to be broken at some commits during the time because we didn't notice it due to this `CodegenInterpretedPlanTest` test framework bug.\r\nActually, I decided to focus on the test suite first and makes the recovery the beyond of the scope of this PR.\r\n\r\nWe may had better file a new JIRA aiming the recovery of those test cases one by one if possible.\r\n\r\nBTW, for this specific instance, the following was the error.\r\n```\r\n[info] - encode/decode for array of int: [I@74655d03 (interpreted path) *** FAILED *** (14 milliseconds)\r\n[info]   Exception thrown while decoding\r\n[info]   Converted: [0,1000000020,3,0,ffffff850000001f,4]\r\n[info]   Schema: value#680\r\n[info]   root\r\n[info]   -- value: array (nullable = true)\r\n[info]       |-- element: integer (containsNull = false)\r\n[info]   \r\n[info]   \r\n[info]   Encoder:\r\n[info]   class[value[0]: array<int>] (ExpressionEncoderSuite.scala:578)\r\n[info]   org.scalatest.exceptions.TestFailedException:\r\n[info]   at org.scalatest.Assertions.newAssertionFailedException(Assertions.scala:472)\r\n[info]   at org.scalatest.Assertions.newAssertionFailedException$(Assertions.scala:471)\r\n[info]   at org.scalatest.funsuite.AnyFunSuite.newAssertionFailedException(AnyFunSuite.scala:1563)\r\n[info]   at org.scalatest.Assertions.fail(Assertions.scala:949)\r\n[info]   at org.scalatest.Assertions.fail$(Assertions.scala:945)\r\n[info]   at org.scalatest.funsuite.AnyFunSuite.fail(AnyFunSuite.scala:1563)\r\n[info]   at org.apache.spark.sql.catalyst.encoders.ExpressionEncoderSuite.$anonfun$encodeDecodeTest$1(ExpressionEncoderSuite.scala:578)\r\n[info]   at org.apache.spark.sql.catalyst.encoders.ExpressionEncoderSuite.verifyNotLeakingReflectionObjects(ExpressionEncoderSuite.scala:656)\r\n[info]   at org.apache.spark.sql.catalyst.encoders.ExpressionEncoderSuite.$anonfun$testAndVerifyNotLeakingReflectionObjects$2(ExpressionEncoderSuite.scala:669)\r\n[info]   at org.apache.spark.sql.catalyst.plans.CodegenInterpretedPlanTest.$anonfun$test$4(PlanTest.scala:50)\r\n[info]   at org.apache.spark.sql.catalyst.plans.SQLHelper.withSQLConf(SQLHelper.scala:54)\r\n[info]   at org.apache.spark.sql.catalyst.plans.SQLHelper.withSQLConf$(SQLHelper.scala:38)\r\n[info]   at org.apache.spark.sql.catalyst.encoders.ExpressionEncoderSuite.withSQLConf(ExpressionEncoderSuite.scala:118)\r\n[info]   at org.apache.spark.sql.catalyst.plans.CodegenInterpretedPlanTest.$anonfun$test$3(PlanTest.scala:50)\r\n[info]   at scala.runtime.java8.JFunction0$mcV$sp.apply(JFunction0$mcV$sp.java:23)\r\n[info]   at org.scalatest.OutcomeOf.outcomeOf(OutcomeOf.scala:85)\r\n[info]   at org.scalatest.OutcomeOf.outcomeOf$(OutcomeOf.scala:83)\r\n[info]   at org.scalatest.OutcomeOf$.outcomeOf(OutcomeOf.scala:104)\r\n[info]   at org.scalatest.Transformer.apply(Transformer.scala:22)\r\n[info]   at org.scalatest.Transformer.apply(Transformer.scala:20)\r\n[info]   at org.scalatest.funsuite.AnyFunSuiteLike$$anon$1.apply(AnyFunSuiteLike.scala:190)\r\n[info]   at org.apache.spark.SparkFunSuite.withFixture(SparkFunSuite.scala:178)\r\n[info]   at org.scalatest.funsuite.AnyFunSuiteLike.invokeWithFixture$1(AnyFunSuiteLike.scala:188)\r\n[info]   at org.scalatest.funsuite.AnyFunSuiteLike.$anonfun$runTest$1(AnyFunSuiteLike.scala:200)\r\n[info]   at org.scalatest.SuperEngine.runTestImpl(Engine.scala:306)\r\n[info]   at org.scalatest.funsuite.AnyFunSuiteLike.runTest(AnyFunSuiteLike.scala:200)\r\n[info]   at org.scalatest.funsuite.AnyFunSuiteLike.runTest$(AnyFunSuiteLike.scala:182)\r\n[info]   at org.apache.spark.SparkFunSuite.org$scalatest$BeforeAndAfterEach$$super$runTest(SparkFunSuite.scala:61)\r\n[info]   at org.scalatest.BeforeAndAfterEach.runTest(BeforeAndAfterEach.scala:234)\r\n[info]   at org.scalatest.BeforeAndAfterEach.runTest$(BeforeAndAfterEach.scala:227)\r\n[info]   at org.apache.spark.SparkFunSuite.runTest(SparkFunSuite.scala:61)\r\n[info]   at org.scalatest.funsuite.AnyFunSuiteLike.$anonfun$runTests$1(AnyFunSuiteLike.scala:233)\r\n[info]   at org.scalatest.SuperEngine.$anonfun$runTestsInBranch$1(Engine.scala:413)\r\n[info]   at scala.collection.immutable.List.foreach(List.scala:392)\r\n[info]   at org.scalatest.SuperEngine.traverseSubNodes$1(Engine.scala:401)\r\n[info]   at org.scalatest.SuperEngine.runTestsInBranch(Engine.scala:396)\r\n[info]   at org.scalatest.SuperEngine.runTestsImpl(Engine.scala:475)\r\n[info]   at org.scalatest.funsuite.AnyFunSuiteLike.runTests(AnyFunSuiteLike.scala:233)\r\n[info]   at org.scalatest.funsuite.AnyFunSuiteLike.runTests$(AnyFunSuiteLike.scala:232)\r\n[info]   at org.scalatest.funsuite.AnyFunSuite.runTests(AnyFunSuite.scala:1563)\r\n[info]   at org.scalatest.Suite.run(Suite.scala:1112)\r\n[info]   at org.scalatest.Suite.run$(Suite.scala:1094)\r\n[info]   at org.scalatest.funsuite.AnyFunSuite.org$scalatest$funsuite$AnyFunSuiteLike$$super$run(AnyFunSuite.scala:1563)\r\n[info]   at org.scalatest.funsuite.AnyFunSuiteLike.$anonfun$run$1(AnyFunSuiteLike.scala:237)\r\n[info]   at org.scalatest.SuperEngine.runImpl(Engine.scala:535)\r\n[info]   at org.scalatest.funsuite.AnyFunSuiteLike.run(AnyFunSuiteLike.scala:237)\r\n[info]   at org.scalatest.funsuite.AnyFunSuiteLike.run$(AnyFunSuiteLike.scala:236)\r\n[info]   at org.apache.spark.SparkFunSuite.org$scalatest$BeforeAndAfterAll$$super$run(SparkFunSuite.scala:61)\r\n[info]   at org.scalatest.BeforeAndAfterAll.liftedTree1$1(BeforeAndAfterAll.scala:213)\r\n[info]   at org.scalatest.BeforeAndAfterAll.run(BeforeAndAfterAll.scala:210)\r\n[info]   at org.scalatest.BeforeAndAfterAll.run$(BeforeAndAfterAll.scala:208)\r\n[info]   at org.apache.spark.SparkFunSuite.run(SparkFunSuite.scala:61)\r\n[info]   at org.scalatest.tools.Framework.org$scalatest$tools$Framework$$runSuite(Framework.scala:318)\r\n[info]   at org.scalatest.tools.Framework$ScalaTestTask.execute(Framework.scala:513)\r\n[info]   at sbt.ForkMain$Run.lambda$runTest$1(ForkMain.java:413)\r\n[info]   at java.util.concurrent.FutureTask.run(FutureTask.java:266)\r\n[info]   at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\r\n[info]   at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\r\n[info]   at java.lang.Thread.run(Thread.java:748)\r\n[info]   Cause: java.lang.RuntimeException: Error while decoding: java.lang.NoSuchMethodException: org.apache.spark.sql.catalyst.util.GenericArrayData.toIntArray()\r\n[info] mapobjects(lambdavariable(MapObject, IntegerType, false, -1), assertnotnull(lambdavariable(MapObject, IntegerType, false, -1)), input[0, array<int>, true], None).toIntArray\r\n[info]   at org.apache.spark.sql.catalyst.encoders.ExpressionEncoder$Deserializer.apply(ExpressionEncoder.scala:186)\r\n[info]   at org.apache.spark.sql.catalyst.encoders.ExpressionEncoderSuite.$anonfun$encodeDecodeTest$1(ExpressionEncoderSuite.scala:576)\r\n[info]   at org.apache.spark.sql.catalyst.encoders.ExpressionEncoderSuite.verifyNotLeakingReflectionObjects(ExpressionEncoderSuite.scala:656)\r\n[info]   at org.apache.spark.sql.catalyst.encoders.ExpressionEncoderSuite.$anonfun$testAndVerifyNotLeakingReflectionObjects$2(ExpressionEncoderSuite.scala:669)\r\n```",
+        "createdAt" : "2021-03-11T06:20:39Z",
+        "updatedAt" : "2021-03-11T06:22:16Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6becc553-a781-4b60-b383-4516c5a9f410",
+        "parentId" : "382f40f7-5c79-4fa5-b4ed-aaef59e0da60",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "This test suite fix aims to land to `master/3.1/3.0/2.4`.",
+        "createdAt" : "2021-03-11T06:24:25Z",
+        "updatedAt" : "2021-03-11T06:24:25Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fa2fa0bb-f06c-4121-a954-ffc3b052595b",
+        "parentId" : "382f40f7-5c79-4fa5-b4ed-aaef59e0da60",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "sounds good, let's fix these bugs one by one later.",
+        "createdAt" : "2021-03-11T06:39:25Z",
+        "updatedAt" : "2021-03-11T06:39:25Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "54636fce7de8368d23f7133d862ea737845954b1",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +162,166 @@    \"seq of seq of string\")\n\n  encodeDecodeTest(Array(31, -123, 4), \"array of int\", useFallback = true)\n  encodeDecodeTest(Array(\"abc\", \"xyz\"), \"array of string\")\n  encodeDecodeTest(Array(\"a\", null, \"x\"), \"array of string with null\")"
+  },
+  {
+    "id" : "d75777e3-8500-4dbc-9084-d230c91d8b9e",
+    "prId" : 31764,
+    "prUrl" : "https://github.com/apache/spark/pull/31764#pullrequestreview-605979213",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3c867b6f-e8ad-4ff2-b8ce-bdaa337dd52f",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "How about leaving some comments here about why we need the fallback based on the Kris investigation? https://github.com/apache/spark/pull/31709#issuecomment-791275810",
+        "createdAt" : "2021-03-08T05:46:15Z",
+        "updatedAt" : "2021-03-08T05:46:15Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ed5c3c0aa37f2e660ec7fafe8ee014716f6ddacc",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +216,220 @@      MalformedClassObject.MalformedNameExample(42),\n      \"nested Scala class should work\",\n      useFallback = true)\n  }\n"
+  },
+  {
+    "id" : "40f6d1a7-ec2b-4d95-acfc-8f7bf39b1178",
+    "prId" : 31733,
+    "prUrl" : "https://github.com/apache/spark/pull/31733#pullrequestreview-604512114",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6b6ee927-4bd7-4f4b-8e4a-5ba2134f5388",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "@rednaxelafx  Ah, I've checked the minimum number of the inner classes so as to reproduce this issue, then I found that the current number is minimum; if one of the inner classes is removed, the error goes away. So, I kept the test classes as they are.",
+        "createdAt" : "2021-03-04T12:32:08Z",
+        "updatedAt" : "2021-03-04T14:11:47Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a79c1d90-2326-427b-a12f-7692e1f34d1c",
+        "parentId" : "6b6ee927-4bd7-4f4b-8e4a-5ba2134f5388",
+        "authorId" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "body" : "Thank you very much! Interesting... when I was trying to repro, I kept adding nesting levels that I vaguely remember that I might have added more than necessary, but it looks like that's it already",
+        "createdAt" : "2021-03-04T20:04:14Z",
+        "updatedAt" : "2021-03-04T20:04:14Z",
+        "lastEditedBy" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b342610cc53b888a62c0520c635a8f523271c2d4",
+    "line" : 23,
+    "diffHunk" : "@@ -1,1 +237,241 @@                                    object OuterLevelWithVeryVeryVeryLongClassName18 {\n                                      object OuterLevelWithVeryVeryVeryLongClassName19 {\n                                        object OuterLevelWithVeryVeryVeryLongClassName20 {\n                                          case class MalformedNameExample(x: Int)\n                                        }}}}}}}}}}}}}}}}}}}}"
   }
 ]
