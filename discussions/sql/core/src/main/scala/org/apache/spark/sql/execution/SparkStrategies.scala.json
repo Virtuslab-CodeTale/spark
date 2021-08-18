@@ -108,5 +108,104 @@
     "commit" : "bbade3501f16e9437ba9af4feca3e2029785d273",
     "line" : 35,
     "diffHunk" : "@@ -1,1 +352,356 @@\n          case None =>\n            val stateVersion = conf.getConf(SQLConf.STREAMING_AGGREGATION_STATE_FORMAT_VERSION)\n\n            AggUtils.planStreamingAggregation("
+  },
+  {
+    "id" : "90e7c893-633d-4fb0-9487-917cbac796d2",
+    "prId" : 32355,
+    "prUrl" : "https://github.com/apache/spark/pull/32355#pullrequestreview-656210701",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "46c515d7-f5dd-4bcf-bf85-fc4571d82398",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "can we check this in `ResolveJoinStrategyHints`?",
+        "createdAt" : "2021-04-27T06:16:45Z",
+        "updatedAt" : "2021-04-27T06:16:45Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f6de0eb1-961d-483d-9732-b0a90538d2b9",
+        "parentId" : "46c515d7-f5dd-4bcf-bf85-fc4571d82398",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "I thought about it but seems we need to do this check in physical side.\r\n\r\nWe don't konw the join strategy at analysis or optimizer (`EliminateResolvedHint`). For example, if user specify `boradcast`, we need to check if it's a equijoin first then check the build side, since this join could be bhj or bnlj.",
+        "createdAt" : "2021-04-27T06:51:59Z",
+        "updatedAt" : "2021-04-27T06:51:59Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6c3cf8b3-fdb3-4f19-8265-c0ea65eaaf56",
+        "parentId" : "46c515d7-f5dd-4bcf-bf85-fc4571d82398",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "maybe we can move `ExtractEquiJoinKeys` to catalyst?",
+        "createdAt" : "2021-04-27T06:58:42Z",
+        "updatedAt" : "2021-04-27T06:58:42Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b3d39983-345e-46df-8d48-4b37e237c6d0",
+        "parentId" : "46c515d7-f5dd-4bcf-bf85-fc4571d82398",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "It's a point. How about make a new rule at Optimizer `Finish Analysis` batch to check if join is illegal. Move to Optimizer is to avoid effect like `EliminateOuterJoin`.",
+        "createdAt" : "2021-04-27T07:35:00Z",
+        "updatedAt" : "2021-04-27T07:35:00Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1a0c57f8-6e4c-491b-9796-93feb1464cd5",
+        "parentId" : "46c515d7-f5dd-4bcf-bf85-fc4571d82398",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "`EliminateOuterJoin` is a good point, so we can only know if the hint is valid or not at the planner.\r\n\r\nIt's a bit unfortunate to see the hint code being widespread, @maryannxue do you have any thoughts?",
+        "createdAt" : "2021-04-27T08:10:15Z",
+        "updatedAt" : "2021-04-27T08:10:15Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6ec8330d-53bc-45c3-9340-0e4dd75028b2",
+        "parentId" : "46c515d7-f5dd-4bcf-bf85-fc4571d82398",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "How about move `EliminateResolvedHint` from optimizer to physical side ? then we can add the check in one rule.",
+        "createdAt" : "2021-05-11T01:30:29Z",
+        "updatedAt" : "2021-05-11T01:30:29Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f1e7ba082bfb557c67adad8f6c5c4ec7af622167",
+    "line" : 21,
+    "diffHunk" : "@@ -1,1 +142,146 @@    with PredicateHelper\n    with JoinSelectionHelper {\n    private val hintErrorHandler = conf.hintErrorHandler\n\n    private def checkHintBuildSide("
+  },
+  {
+    "id" : "600c991a-e429-413b-adeb-09a0f3d3212d",
+    "prId" : 32355,
+    "prUrl" : "https://github.com/apache/spark/pull/32355#pullrequestreview-720407628",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "39a5bd40-8bfc-4e66-a161-4df7c5aa967b",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "can we make it more general? I think we can also give a warning if SMJ/SHJ hint is specified but the join has no join keys.",
+        "createdAt" : "2021-08-02T16:50:46Z",
+        "updatedAt" : "2021-08-02T16:50:46Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f1e7ba082bfb557c67adad8f6c5c4ec7af622167",
+    "line" : 62,
+    "diffHunk" : "@@ -1,1 +199,203 @@      case j @ ExtractEquiJoinKeys(joinType, leftKeys, rightKeys, nonEquiCond, left, right, hint) =>\n        def createBroadcastHashJoin(onlyLookingAtHint: Boolean) = {\n          val buildSide = getBroadcastBuildSide(\n            left, right, joinType, hint, onlyLookingAtHint, conf)\n          checkHintBuildSide(onlyLookingAtHint, buildSide, joinType, hint, true)"
   }
 ]

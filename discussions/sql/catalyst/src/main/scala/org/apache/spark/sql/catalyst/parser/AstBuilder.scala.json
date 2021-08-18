@@ -119,5 +119,71 @@
     "commit" : "eef88fcbe7770d942fd8cf1177791eebf0ad79e7",
     "line" : 4,
     "diffHunk" : "@@ -1,1 +2358,2362 @@      } else {\n        assert(calendarInterval.months == 0)\n        val strToFieldIndex = DayTimeIntervalType.dayTimeFields.map(i =>\n          DayTimeIntervalType.fieldToString(i) -> i).toMap\n        val fromUnit ="
+  },
+  {
+    "id" : "56c537db-a6f2-437e-af38-1775c313f062",
+    "prId" : 32303,
+    "prUrl" : "https://github.com/apache/spark/pull/32303#pullrequestreview-678799840",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9c2dfc3e-ea7e-4ea1-a831-a69fb571012d",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "We do not handle join hints for the lateral case?",
+        "createdAt" : "2021-06-08T04:00:20Z",
+        "updatedAt" : "2021-06-08T04:39:01Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "85153080-1127-4185-b343-2a7c40486203",
+        "parentId" : "9c2dfc3e-ea7e-4ea1-a831-a69fb571012d",
+        "authorId" : "b3ba992a-312c-46eb-b3c3-8d861d15ac40",
+        "body" : "Good point. I will add it.",
+        "createdAt" : "2021-06-08T05:06:02Z",
+        "updatedAt" : "2021-06-08T05:06:02Z",
+        "lastEditedBy" : "b3ba992a-312c-46eb-b3c3-8d861d15ac40",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "16732917-5652-4fa6-91e2-4f56916e8d11",
+        "parentId" : "9c2dfc3e-ea7e-4ea1-a831-a69fb571012d",
+        "authorId" : "b3ba992a-312c-46eb-b3c3-8d861d15ac40",
+        "body" : "Actually, does it make sense to have join hints for lateral joins? A lateral join is essentially a nested loop join. Ideally, the evaluation logic should be for each row in the left, plug the outer query attribute values into the outer references and evaluate the subquery. So it should only be planned as a (correlated) nested loop join. But since Spark doesn't support such execution, it first decorrelates the subquery and then rewrites the lateral join as a normal join. This seems to be an implementation detail and it doesn't make sense to add join hints here.",
+        "createdAt" : "2021-06-08T06:18:37Z",
+        "updatedAt" : "2021-06-08T06:18:37Z",
+        "lastEditedBy" : "b3ba992a-312c-46eb-b3c3-8d861d15ac40",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ecef3641-218e-4406-8b0e-664fee6df5bc",
+        "parentId" : "9c2dfc3e-ea7e-4ea1-a831-a69fb571012d",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Hints exist for the physical planner and the planner does not tell a difference between normal joins and lateral joins (cuz the optimizer rewrites lateral join into normal ones), so adding hints for this case makes sense to me. In fact, I think users will eventually want to control physical joins types for lateral joins, too, to tune user's queries for their workloads.　Anyway, since this is an improvement, I think it is okay to fix it in follow-up.",
+        "createdAt" : "2021-06-08T08:28:07Z",
+        "updatedAt" : "2021-06-08T08:28:07Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1bd22cb9-034a-4e01-b593-7249b9b90222",
+        "parentId" : "9c2dfc3e-ea7e-4ea1-a831-a69fb571012d",
+        "authorId" : "b3ba992a-312c-46eb-b3c3-8d861d15ac40",
+        "body" : "Sounds good.",
+        "createdAt" : "2021-06-08T17:29:46Z",
+        "updatedAt" : "2021-06-08T17:29:46Z",
+        "lastEditedBy" : "b3ba992a-312c-46eb-b3c3-8d861d15ac40",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "01fa70ec156ad5540b862c4b13dd1257062f31fb",
+    "line" : 7,
+    "diffHunk" : "@@ -1,1 +874,878 @@      val join = right.optionalMap(left) { (left, right) =>\n        if (relation.LATERAL != null) {\n          LateralJoin(left, LateralSubquery(right), Inner, None)\n        } else {\n          Join(left, right, Inner, None, JoinHint.NONE)"
   }
 ]

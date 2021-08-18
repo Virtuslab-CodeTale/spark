@@ -53,5 +53,115 @@
     "commit" : "0346d3b7c0cbbe3edf88a1451da9bf53726a458d",
     "line" : 8,
     "diffHunk" : "@@ -1,1 +14,18 @@SELECT * FROM t1, LATERAL (SELECT * FROM t2);\nSELECT * FROM t1, LATERAL (SELECT t1.*);\nSELECT * FROM t1, LATERAL (SELECT t1.*, t2.* FROM t2);\nSELECT * FROM t1, LATERAL (SELECT t1.* FROM t2 AS t1);\n-- expect error: cannot resolve 't1.*'"
+  },
+  {
+    "id" : "d2481727-b223-4e61-bcd8-2ef4f912aa6c",
+    "prId" : 32303,
+    "prUrl" : "https://github.com/apache/spark/pull/32303#pullrequestreview-643363690",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "14815865-64ed-4edd-a5b6-a878fddfc33a",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Could you activate some tests in `postgreSQL/join.sql`?;\r\nhttps://github.com/apache/spark/blob/e503b9c462676c381ba51ad48edd968d6e184fc2/sql/core/src/test/resources/sql-tests/inputs/postgreSQL/join.sql#L1278",
+        "createdAt" : "2021-04-23T14:41:12Z",
+        "updatedAt" : "2021-05-11T00:54:58Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "01fa70ec156ad5540b862c4b13dd1257062f31fb",
+    "line" : 1,
+    "diffHunk" : "@@ -1,1 +-1,3 @@-- Test cases for lateral join\n\nCREATE VIEW t1(c1, c2) AS VALUES (0, 1), (1, 2);"
+  },
+  {
+    "id" : "e56ec2a9-c344-49d7-a82a-38fd44cfbaf7",
+    "prId" : 32303,
+    "prUrl" : "https://github.com/apache/spark/pull/32303#pullrequestreview-643710216",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "83dd5aa5-5fc1-4483-a1e0-cf7b7f67f851",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Is this compiled into a join query? We cannot compile it into a simple scan query like PostgreSQL?\r\n```\r\npostgres=# explain SELECT * FROM t1, LATERAL (SELECT c1) t2;\r\n                          QUERY PLAN                          \r\n--------------------------------------------------------------\r\n Values Scan on \"*VALUES*\"  (cost=0.00..0.03 rows=2 width=12)\r\n(1 row)\r\n```",
+        "createdAt" : "2021-04-23T14:42:50Z",
+        "updatedAt" : "2021-05-11T00:54:58Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c5c320cf-eb0e-41c1-b6ba-693ecd85ea6b",
+        "parentId" : "83dd5aa5-5fc1-4483-a1e0-cf7b7f67f851",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Btw, in PostgreSQL, it seems a table alias must be needed for this literal query;\r\n```\r\npostgres=# SELECT * FROM t1, LATERAL (SELECT c1);\r\n2021-04-23 23:43:11.763 JST [43125] ERROR:  subquery in FROM must have an alias at character 27\r\n2021-04-23 23:43:11.763 JST [43125] HINT:  For example, FROM (SELECT ...) [AS] foo.\r\n2021-04-23 23:43:11.763 JST [43125] STATEMENT:  SELECT * FROM t1, LATERAL (SELECT c1);\r\nERROR:  subquery in FROM must have an alias\r\nLINE 1: SELECT * FROM t1, LATERAL (SELECT c1);\r\n                                  ^\r\nHINT:  For example, FROM (SELECT ...) [AS] foo.\r\n```\r\nCould you check the ANSI/SQL definition or the other database behaviours?",
+        "createdAt" : "2021-04-23T14:45:11Z",
+        "updatedAt" : "2021-05-11T00:54:58Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b599df37-05d1-4771-a33b-a8975432134f",
+        "parentId" : "83dd5aa5-5fc1-4483-a1e0-cf7b7f67f851",
+        "authorId" : "b3ba992a-312c-46eb-b3c3-8d861d15ac40",
+        "body" : "> Is this compiled into a join query? We cannot compile it into a simple scan query like PostgreSQL?\r\n> \r\n> ```\r\n> postgres=# explain SELECT * FROM t1, LATERAL (SELECT c1) t2;\r\n>                           QUERY PLAN                          \r\n> --------------------------------------------------------------\r\n>  Values Scan on \"*VALUES*\"  (cost=0.00..0.03 rows=2 width=12)\r\n> (1 row)\r\n> ```\r\n\r\nYes it should be rewritten as a simple scan query`SELECT c1 FROM t1` instead of a join query. I am thinking about adding an optimizer rule for OneRowRelation. This can be applied to correlated subqueries as well.",
+        "createdAt" : "2021-04-23T18:19:09Z",
+        "updatedAt" : "2021-05-11T00:54:58Z",
+        "lastEditedBy" : "b3ba992a-312c-46eb-b3c3-8d861d15ac40",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9c4ddd47-e5fe-4c74-bbd9-c17bae0b008b",
+        "parentId" : "83dd5aa5-5fc1-4483-a1e0-cf7b7f67f851",
+        "authorId" : "b3ba992a-312c-46eb-b3c3-8d861d15ac40",
+        "body" : "Postgres requires all subqueries in the FROM clause to have aliases, not just lateral, but aliases are not required for subqueries in Spark.\r\n```\r\nselect * from (select * from t1);\r\n\r\nsubquery in FROM must have an alias\r\n```",
+        "createdAt" : "2021-04-23T22:57:28Z",
+        "updatedAt" : "2021-05-11T00:54:58Z",
+        "lastEditedBy" : "b3ba992a-312c-46eb-b3c3-8d861d15ac40",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "01fa70ec156ad5540b862c4b13dd1257062f31fb",
+    "line" : 7,
+    "diffHunk" : "@@ -1,1 +5,9 @@\n-- lateral join with single column select\nSELECT * FROM t1, LATERAL (SELECT c1);\nSELECT * FROM t1, LATERAL (SELECT c1 FROM t2);\nSELECT * FROM t1, LATERAL (SELECT t1.c1 FROM t2);"
+  },
+  {
+    "id" : "8117f5b8-22d3-4ede-bbd9-1642b8513c42",
+    "prId" : 32303,
+    "prUrl" : "https://github.com/apache/spark/pull/32303#pullrequestreview-674782060",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "65f19979-b685-4619-9a15-510412d27733",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Could you add tests for `quotedRegexColumnNames`, too?",
+        "createdAt" : "2021-05-24T01:20:14Z",
+        "updatedAt" : "2021-05-24T01:53:20Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5115d2f7-51b4-4fd6-aaa4-cbd3e3506d24",
+        "parentId" : "65f19979-b685-4619-9a15-510412d27733",
+        "authorId" : "b3ba992a-312c-46eb-b3c3-8d861d15ac40",
+        "body" : "All star expressions will be handled in a separate PR: SPARK-35618",
+        "createdAt" : "2021-06-03T00:34:50Z",
+        "updatedAt" : "2021-06-03T00:34:50Z",
+        "lastEditedBy" : "b3ba992a-312c-46eb-b3c3-8d861d15ac40",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "01fa70ec156ad5540b862c4b13dd1257062f31fb",
+    "line" : 12,
+    "diffHunk" : "@@ -1,1 +10,14 @@SELECT * FROM t1, LATERAL (SELECT t1.c1 + t2.c1 FROM t2);\n\n-- lateral join with star expansion\nSELECT * FROM t1, LATERAL (SELECT *);\nSELECT * FROM t1, LATERAL (SELECT * FROM t2);"
   }
 ]

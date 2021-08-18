@@ -75,5 +75,60 @@
     "commit" : "47c603d7718bde49729d5b501d75c1b55138a58d",
     "line" : 16,
     "diffHunk" : "@@ -1,1 +29,33 @@ */\ncase class ReferenceEqualPlanWrapper(plan: LogicalPlan) {\n  private val _hashCode = System.identityHashCode(plan)\n  override def hashCode(): Int = _hashCode\n  override def equals(obj: Any): Boolean = obj match {"
+  },
+  {
+    "id" : "57bdbcc6-d36f-458d-b52c-6707af9256ac",
+    "prId" : 32303,
+    "prUrl" : "https://github.com/apache/spark/pull/32303#pullrequestreview-644998293",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e94bdb5d-e478-44d4-9ca0-5cfb15c95e67",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Could outer reference be inside an expression tree?",
+        "createdAt" : "2021-04-24T03:07:16Z",
+        "updatedAt" : "2021-05-11T00:54:58Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3299ccea-7cb9-4a2e-8721-39b1846af54b",
+        "parentId" : "e94bdb5d-e478-44d4-9ca0-5cfb15c95e67",
+        "authorId" : "b3ba992a-312c-46eb-b3c3-8d861d15ac40",
+        "body" : "Outer references can be inside an expression tree, which can be handled by the deduplicating aliases case, for example `outer(a) AS a`. Here the dedup logic is trying to handle this case:\r\n```\r\nJoin LatealJoin(Inner)\r\n:- Project [c1#0, c2#0]\r\n:-  ...\r\n+- Project [outer(c1#0)]\r\n   +- ...\r\n```\r\nSince an outer reference is also a named expression, it can appear in the project list without an alias. Then `c1#0` and  `outer(c1#0)` will conflict with each other. (`outer(c1#0).toAttribute => c1#0`)",
+        "createdAt" : "2021-04-26T18:38:19Z",
+        "updatedAt" : "2021-05-11T00:54:58Z",
+        "lastEditedBy" : "b3ba992a-312c-46eb-b3c3-8d861d15ac40",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "01fa70ec156ad5540b862c4b13dd1257062f31fb",
+    "line" : 36,
+    "diffHunk" : "@@ -1,1 +193,197 @@          case o @ OuterReference(a) if conflictingAttributes.contains(a) => Alias(o, a.name)()\n          case other => other\n        }\n        Seq((oldVersion, oldVersion.copy(projectList = aliasedProjectList)))\n"
+  },
+  {
+    "id" : "4a65b23c-bbc6-4900-a34e-265928ce0b15",
+    "prId" : 32303,
+    "prUrl" : "https://github.com/apache/spark/pull/32303#pullrequestreview-666322715",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "48648870-3d45-464a-8d1c-16734ca117e4",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "cc: @Ngone51 ",
+        "createdAt" : "2021-05-24T01:26:49Z",
+        "updatedAt" : "2021-05-24T01:53:20Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "01fa70ec156ad5540b862c4b13dd1257062f31fb",
+    "line" : 30,
+    "diffHunk" : "@@ -1,1 +187,191 @@\n      // Handle projects that create conflicting outer references.\n      case oldVersion @ Project(projectList, _)\n          if findOuterReferences(projectList).intersect(conflictingAttributes).nonEmpty =>\n        // Add alias to conflicting outer references."
   }
 ]

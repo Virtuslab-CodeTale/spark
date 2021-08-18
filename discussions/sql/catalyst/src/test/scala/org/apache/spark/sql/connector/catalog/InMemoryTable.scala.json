@@ -130,5 +130,49 @@
     "commit" : "881d2b2b7246d9453bfa7e074ab19334bf8d9876",
     "line" : 34,
     "diffHunk" : "@@ -1,1 +264,268 @@      val inputPartitions = data.map(_.asInstanceOf[BufferedRows])\n      val numRows = inputPartitions.map(_.rows.size).sum\n      // we assume an average object header is 12 bytes\n      val objectHeaderSizeInBytes = 12L\n      val rowSizeInBytes = objectHeaderSizeInBytes + schema.defaultSize"
+  },
+  {
+    "id" : "5455cce8-8382-4348-af18-5d5f6f0b2a86",
+    "prId" : 32354,
+    "prUrl" : "https://github.com/apache/spark/pull/32354#pullrequestreview-651518900",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "93def622-6711-4254-a37b-d848ef11dfd2",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Is case-sensitivity a problem here?",
+        "createdAt" : "2021-05-04T06:19:13Z",
+        "updatedAt" : "2021-05-04T18:00:49Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3beaeb4a-d179-427b-8970-cc7d94be7b6a",
+        "parentId" : "93def622-6711-4254-a37b-d848ef11dfd2",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Good question. Looking at `PushdownUtils.pruneColumns`, I see that we apply `SQLConf.resolver` when nested column pruning is enabled, but seems not so when it is disabled. IMO perhaps we should have better contract between Spark and data source implementors w.r.t `SupportsPushDownRequiredColumns.pruneColumns`, and Spark should guarantee that the `requiredSchema` passed in to the method should be a \"subset\" of the relation's schema (e.g., table schema).",
+        "createdAt" : "2021-05-04T17:38:50Z",
+        "updatedAt" : "2021-05-04T18:00:49Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "110f62f0-2b0f-48cb-af52-ecfa422cc54d",
+        "parentId" : "93def622-6711-4254-a37b-d848ef11dfd2",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Oh actually, in both cases the `requiredSchema` are normalized according to case-sensitivity. This is done in `V2ScanRelationPushDown` (see `normalizedProjects` there.) ",
+        "createdAt" : "2021-05-04T18:00:20Z",
+        "updatedAt" : "2021-05-04T18:00:49Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a67dde0b2ddea64bf1eb5bb67e0b1cd938146ee6",
+    "line" : 88,
+    "diffHunk" : "@@ -1,1 +524,528 @@      schema: StructType,\n      row: InternalRow): Any = {\n    val index = schema.fieldIndex(field.name)\n    field.dataType match {\n      case StructType(fields) =>"
   }
 ]

@@ -152,5 +152,291 @@
     "commit" : "359195f53fe1ef4184c687cbb25b69235db1ebb6",
     "line" : 22,
     "diffHunk" : "@@ -1,1 +387,391 @@    val (remoteBlockBytes, numRemoteBlocks) =\n      collectedRemoteRequests.foldLeft((0L, 0))((x, y) => (x._1 + y.size, x._2 + y.blocks.size))\n    val totalBytes = localBlockBytes + remoteBlockBytes + hostLocalBlockBytes\n    assert(numBlocksToFetch == localBlocks.size + hostLocalBlocks.size + numRemoteBlocks,\n      s\"The number of non-empty blocks $numBlocksToFetch doesn't equal to the number of local \" +"
+  },
+  {
+    "id" : "f084fcab-1df2-4b7d-84c3-13ee22742d24",
+    "prId" : 32287,
+    "prUrl" : "https://github.com/apache/spark/pull/32287#pullrequestreview-653632119",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "46691b38-ba46-47c0-90a5-bc30f9c7f422",
+        "parentId" : null,
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "Was thinking more about this solution and there is a potential problem I see. Once a netty OOM is encountered for some responses, the corresponding requests are deferred and no more remote requests are sent. Now this helps to recover. But we don't change any in-flight remote requests limits. So after the  `isNettyOOMOnShuffle` is reset with a successful remote response, the next burst of remote requests will be sent out at the same rate. This means again there are chances to see netty OOMs and again some of the blocks will be deferred. This introduces more delay and increases the load on shuffle server.\r\n\r\nI think solving this maybe more complex and right now this is just a workaround. But maybe we can do something simpler to reduce the number of requests made after a netty OOM is encountered?\r\n",
+        "createdAt" : "2021-04-29T21:48:34Z",
+        "updatedAt" : "2021-05-10T10:25:15Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a26a807d-9509-4065-8bf6-96327fc34143",
+        "parentId" : "46691b38-ba46-47c0-90a5-bc30f9c7f422",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Yes, that's true. I also considered another way previously, which is to adjust the threshold of in-flight requests dynamically. For example, when OOM throws, the threshold would be reduced to the max number of in-flight requests before OOM. And if OOM happens again, we continue to reduce the threshold. Then, it comes to a question: when do we increase the threshold? When the backlogged requests are too much and OOM has been disappeared for a while? If we go this way, we should be very careful about the adjustment algorithm as it's directly related to the performance.\r\n\r\nLet me think more about it. Thanks!",
+        "createdAt" : "2021-04-30T01:55:36Z",
+        "updatedAt" : "2021-05-10T10:25:15Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "41fe47a2-ab9d-4e0a-9719-b4ed62754c35",
+        "parentId" : "46691b38-ba46-47c0-90a5-bc30f9c7f422",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "So I have limited the reset condition to whether the Netty free memory is larger than `maxReqSizeShuffleToMem` (default 200M), which is more strict than the `averageBlockSize`. I think this would mitigate the issue you mentioned here. WDYT?",
+        "createdAt" : "2021-04-30T07:53:30Z",
+        "updatedAt" : "2021-05-10T10:25:15Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "20403b26-8ca9-4175-99ed-a759e138bd1a",
+        "parentId" : "46691b38-ba46-47c0-90a5-bc30f9c7f422",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "Should it again check at line 805 that `freeDirectMemory` > maxReqSizeShuffleToMem?\r\nOtherwise it immediately unsets the flag and sends more requests.",
+        "createdAt" : "2021-05-03T06:49:59Z",
+        "updatedAt" : "2021-05-10T10:25:15Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "df73ce07-2c51-440f-8662-b5ac5b9b5c86",
+        "parentId" : "46691b38-ba46-47c0-90a5-bc30f9c7f422",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "> Should it again check at line 805 that freeDirectMemory > maxReqSizeShuffleToMem?\r\n\r\nNo. Otherwise, for the first invocation of `fetchUpToMaxBytes`, the fetching can hang if `isNettyOOMOnShuffle=true.` Because if no requests were sent in the first invocation, there would be no callback on `fetchUpToMaxBytes` later.\r\n",
+        "createdAt" : "2021-05-03T15:21:54Z",
+        "updatedAt" : "2021-05-10T10:25:15Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6ecc5106-a648-418a-98df-0d01357b5d85",
+        "parentId" : "46691b38-ba46-47c0-90a5-bc30f9c7f422",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "> Because if no requests were sent in the first invocation, there would be no callback on fetchUpToMaxBytes later.\r\n\r\nFor the first invocation `fetchUpToMaxBytes` if  `isNettyOOMOnShuffle=true` then that means another iterator saw the NettyOOM as set it to true. This will just unset it.\r\n\r\nAlso how will it hang? let's just say if they are only remote blocks to be fetched and none of the requests are sent initially, `iterator.next()` will keep calling `fetchUpToMaxBytes` as I see it. Eventually when enough freeDirectMemory is available, it will send remote requests.",
+        "createdAt" : "2021-05-03T17:49:22Z",
+        "updatedAt" : "2021-05-10T10:25:15Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "65a53900-8dd8-4836-b68b-451c7b18a798",
+        "parentId" : "46691b38-ba46-47c0-90a5-bc30f9c7f422",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "IIUC, it will block at https://github.com/apache/spark/blob/2cb962b132af2683a1a445365636e572c557ac5b/core/src/main/scala/org/apache/spark/storage/ShuffleBlockFetcherIterator.scala#L594",
+        "createdAt" : "2021-05-04T13:18:51Z",
+        "updatedAt" : "2021-05-10T10:25:15Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "28f3551f-df31-40bb-bfda-f3a9bfa357c9",
+        "parentId" : "46691b38-ba46-47c0-90a5-bc30f9c7f422",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "Oh I see. It just waits indefinitely here. Can we not change this to `poll(time)` ? If there is nothing,  result will be null and it will call `fetchUpToMaxBytes` again.\r\nWDYT?",
+        "createdAt" : "2021-05-04T16:24:32Z",
+        "updatedAt" : "2021-05-10T10:25:15Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "37f47698-81c7-4cba-b0a4-747aa05d53d6",
+        "parentId" : "46691b38-ba46-47c0-90a5-bc30f9c7f422",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "`poll(time)` may work but I think it breaks the existing design. After the change, we would introduce the overhead due to call `fetchUpToMaxBytes` many times while it's not necessary. \r\n",
+        "createdAt" : "2021-05-06T16:04:14Z",
+        "updatedAt" : "2021-05-10T10:25:15Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4af6ee73221a55e3cd7239f151ec33d5e802cbe4",
+    "line" : 194,
+    "diffHunk" : "@@ -1,1 +800,804 @@      }\n    }\n\n    // Send fetch requests up to maxBytesInFlight. If you cannot fetch from a remote host\n    // immediately, defer the request until the next time it can be processed."
+  },
+  {
+    "id" : "13845e79-7cc0-4c4b-b77a-2dca1687e914",
+    "prId" : 32287,
+    "prUrl" : "https://github.com/apache/spark/pull/32287#pullrequestreview-653556695",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "74b80e45-2a85-4d51-bdf9-7ab3df1efd0c",
+        "parentId" : null,
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "I will let @otterc elaborate more; we had discussed whether we can minimize direct memory load in `fetchUpToMaxBytes` due to all 'expensive' deferred blocks being sent out (mostly) together (modulo constraints on `maxBlocksInFlightPerAddress`/`maxBytesInFlight`).\r\n",
+        "createdAt" : "2021-05-03T07:50:33Z",
+        "updatedAt" : "2021-05-10T10:25:15Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "daa5c801-c03a-4490-afee-c2d60200e4f3",
+        "parentId" : "74b80e45-2a85-4d51-bdf9-7ab3df1efd0c",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "I'm not sure about the \"direct memory load\" you mean here. I'll wait for @otterc's explanation.",
+        "createdAt" : "2021-05-03T15:23:57Z",
+        "updatedAt" : "2021-05-10T10:25:15Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "02a45c7f-05a3-49e6-a72f-51e1103216ef",
+        "parentId" : "74b80e45-2a85-4d51-bdf9-7ab3df1efd0c",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "This is related to the conversation here:\r\nhttps://github.com/apache/spark/pull/32287#discussion_r623425119\r\nWe were discussing simple ways to reduce the number of remote fetch requests after the OOM. One such thing could be that after the OOM, we just sent the out the requests that were deferred due to the OOM and not send any additional requests. \r\nI am not sure how effective is this going to be though. Since the in-flight limit remains the same, the next call to `fetchUpToMaxBytes` when it sends out non-deferred requests can cause new blocks to OOM.\r\n\r\nAnother simple way could be to modify `isRemoteBlockFetchable` such that after this iterator has seen an OOM, it will also check `bytesInFlight + fetchReqQueue.front.size` < freeDirectorMemory?",
+        "createdAt" : "2021-05-03T18:42:14Z",
+        "updatedAt" : "2021-05-10T10:25:15Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "620b7ed6-0657-4683-8817-0a893115c680",
+        "parentId" : "74b80e45-2a85-4d51-bdf9-7ab3df1efd0c",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "So after #32287 (comment), I have changed the unset condition to `freeDirectorMemory > maxReqSizeShuffleToMem (200M by default)`, which I think is already very strict. So, it should avoid the issue you mentioned in  #32287 (comment).\r\n\r\n> Another simple way could be to modify isRemoteBlockFetchable such that after this iterator has seen an OOM, it will also check bytesInFlight + fetchReqQueue.front.size < freeDirectorMemory?\r\n\r\nDo you mean check bytesInFlight + fetchReqQueue.front.size < freeDirectorMemory for all the cases or only when `isNettyOOMOnShuffle=true`?  If you also want to check when `isNettyOOMOnShuffle=false`, I'd like to mention that block size is not equal to the consumed memory size of Netty. As you know,  blocks that bigger than  `maxReqSizeShuffleToMem` would be stored on disk.\r\n",
+        "createdAt" : "2021-05-04T13:29:17Z",
+        "updatedAt" : "2021-05-10T10:25:15Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "67f82414-ae7d-40d4-984d-46ef3a43b352",
+        "parentId" : "74b80e45-2a85-4d51-bdf9-7ab3df1efd0c",
+        "authorId" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "body" : "> I have changed the unset condition to freeDirectorMemory > maxReqSizeShuffleToMem (200M by default), which I think is already very strict. So, it should avoid the issue you mentioned in #32287 (comment).\r\n\r\nI don't think it will avoid the issue. This adds more time when the next set of requests are going to be set. However, the next set of requests (including the deferred ones) will still be sent at same frequency, so some of them would again see OOMs. \r\n\r\n> Do you mean check bytesInFlight + fetchReqQueue.front.size < freeDirectorMemory for all the cases or only when isNettyOOMOnShuffle=true? \r\n\r\nI meant that if once this OOM is encountered, after that the iterator checks against freeDirectorMemory as well. If a request.size > `maxReqSizeShuffleToMem` then we can skip the check on it as that is stored on disk.\r\n",
+        "createdAt" : "2021-05-04T16:16:44Z",
+        "updatedAt" : "2021-05-10T10:25:15Z",
+        "lastEditedBy" : "9953a478-bdd8-4f15-be59-f6f654ff85ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8253b603-97ea-4e5d-8c40-650c99c50ef3",
+        "parentId" : "74b80e45-2a85-4d51-bdf9-7ab3df1efd0c",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "I think there are two different cases here. For example, assuming there're 100 requests.\r\n\r\nFor case a), the OOM threshold might be 80 requests. In this case, after OOMed, the deferred 20 requests shouldn't hit the OOM again. \r\n\r\nFor case b), the OOM threshold might be 20 requests. In this case, there're still 80 deferred requests, which would hit the OOM soon as you mentioned. That being said, I think the current fix would work around the issue in the end. Note that the application would fail before the fix.\r\n\r\nTo improve the current fix further, I think we can do it in a separate PR as I think it's not an easy thing[1] to do (or do you have any other ideas?) and must require more discussion. WDTY?\r\n\r\n1. Even if we skip the case of request > maxReqSizeShuffleToMem, note that the in-memory request size is not strictly equal to the consumed memory size in Netty due to Netty's memory management mechanism (https://www.facebook.com/notes/facebook-engineering/scalable-memory-allocation-using-jemalloc/480222803919). For example, Netty may allocate 16MB for a 9MB block.\r\nAnd there could be multiple tasks fetching concurrently. So we may need to track the total `bytesInFlight` of all tasks rather than the single task itself. And it would require more synchronization among tasks and make the thing more complex.\r\n\r\n\r\n\r\n",
+        "createdAt" : "2021-05-06T09:40:09Z",
+        "updatedAt" : "2021-05-10T10:25:15Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "451afa08-16c1-4795-b513-88501a75577e",
+        "parentId" : "74b80e45-2a85-4d51-bdf9-7ab3df1efd0c",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "It sounds like a good idea to dynamically tune the request frequency, but this doesn't seem like trivial work. I'd vote for doing it in a follow-up with more discussions.",
+        "createdAt" : "2021-05-06T13:37:19Z",
+        "updatedAt" : "2021-05-10T10:25:15Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2c9dc99f-6dc1-4e0b-8da7-b6c0b12245eb",
+        "parentId" : "74b80e45-2a85-4d51-bdf9-7ab3df1efd0c",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "If nontrivial, we can definitely push it to a later effort - can you file a jira for it @Ngone51 so that we can track it (and perhaps someone can pick it up later ?).\r\nThis PR is already a marked improvement over what we currently have w.r.t OOM at executor - as long as ESS load does not go up :-)",
+        "createdAt" : "2021-05-06T14:25:06Z",
+        "updatedAt" : "2021-05-10T10:25:15Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b2a6c8b2-f118-4903-984f-ef9074614b95",
+        "parentId" : "74b80e45-2a85-4d51-bdf9-7ab3df1efd0c",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Filed the JIRA ticket: https://issues.apache.org/jira/browse/SPARK-35330",
+        "createdAt" : "2021-05-06T15:22:17Z",
+        "updatedAt" : "2021-05-10T10:25:15Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4af6ee73221a55e3cd7239f151ec33d5e802cbe4",
+    "line" : 72,
+    "diffHunk" : "@@ -1,1 +270,274 @@        deferredBlocks.clear()\n      }\n    }\n\n    val blockFetchingListener = new BlockFetchingListener {"
+  },
+  {
+    "id" : "09a87b3c-85de-41ee-b893-15c6dfc02a35",
+    "prId" : 32287,
+    "prUrl" : "https://github.com/apache/spark/pull/32287#pullrequestreview-655486341",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "dd58166e-fed6-4eb7-b4de-e9cc8a0e5cbd",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Shall we add a debug message with `else` statement because this code path is changed after this PR? Previously, we do `results.put` always.",
+        "createdAt" : "2021-05-08T22:42:23Z",
+        "updatedAt" : "2021-05-10T10:25:15Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2ff84d55-6156-4fb3-bd81-37e5abbcc35e",
+        "parentId" : "dd58166e-fed6-4eb7-b4de-e9cc8a0e5cbd",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "I'm not sure which case the `else` statement you want to match here. Do you want:\r\n\r\n```scala\r\nif (!isZombie) {\r\n\r\n} else {\r\n ...\r\n}\r\n```\r\n\r\n? \r\n\r\n(Note that in `onBlockFetchSuccess` we also don't have such `else` statement for zombie case.)\r\n\r\nOr you actually want the else case of not putting results? If so, I think we already have the log info as\r\n```scala\r\nlogInfo(s\"Block $blockId has failed $failureTimes times \" +\r\n                    s\"due to Netty OOM, will retry\")\r\n```",
+        "createdAt" : "2021-05-10T10:24:33Z",
+        "updatedAt" : "2021-05-10T10:25:15Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4af6ee73221a55e3cd7239f151ec33d5e802cbe4",
+    "line" : 128,
+    "diffHunk" : "@@ -1,1 +327,331 @@                deferredBlocks += blockId\n                enqueueDeferredFetchRequestIfNecessary()\n              }\n\n            case _ =>"
+  },
+  {
+    "id" : "765d3e37-1a99-4bc2-b7a7-28a8b1219ad9",
+    "prId" : 32287,
+    "prUrl" : "https://github.com/apache/spark/pull/32287#pullrequestreview-655028514",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d715c120-b118-4343-ab2a-e9b911ddc63c",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "~`final` is required to use `@inline` properly.~",
+        "createdAt" : "2021-05-08T23:24:56Z",
+        "updatedAt" : "2021-05-10T10:25:15Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bc2e38df-f123-4da4-83ba-cbfb54312735",
+        "parentId" : "d715c120-b118-4343-ab2a-e9b911ddc63c",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Oh, got it. It's not a member function. So. you didn't use it.",
+        "createdAt" : "2021-05-08T23:35:43Z",
+        "updatedAt" : "2021-05-10T10:25:15Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4af6ee73221a55e3cd7239f151ec33d5e802cbe4",
+    "line" : 63,
+    "diffHunk" : "@@ -1,1 +261,265 @@    val address = req.address\n\n    @inline def enqueueDeferredFetchRequestIfNecessary(): Unit = {\n      if (remainingBlocks.isEmpty && deferredBlocks.nonEmpty) {\n        val blocks = deferredBlocks.map { blockId =>"
   }
 ]
