@@ -229,5 +229,181 @@
     "commit" : "16db32f50449bb4bb721101c709ea56cc305d324",
     "line" : 41,
     "diffHunk" : "@@ -1,1 +258,262 @@                // So, we just convert it to Int.\n                try {\n                  parser.getText.toInt\n                } catch {\n                  case _: NumberFormatException => throw e"
+  },
+  {
+    "id" : "c8c9cb05-6344-48af-89db-c710385500b8",
+    "prId" : 27366,
+    "prUrl" : "https://github.com/apache/spark/pull/27366#pullrequestreview-351499867",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "238209f9-a7a2-4a70-8cd1-d7f3de515063",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Hm, if I didn't misread, this wouldn't work properly (with https://github.com/apache/spark/pull/27366/files#diff-635e02b2d1ce4ad1675b0350ccac0c10R266) if we happen to push down predicates that refer nested columns. \r\n\r\nSeems a bit odd because the previous code didn't have such assumption before and all codes were valid for both root and nested rows. Now this method works differently for root row and nested row. I wonder if we can decouple the filtering logic out of this method ...",
+        "createdAt" : "2020-01-31T12:55:23Z",
+        "updatedAt" : "2020-07-15T20:10:16Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4e7cf428-f20a-410c-895c-aac4eff4f224",
+        "parentId" : "238209f9-a7a2-4a70-8cd1-d7f3de515063",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "> if we happen to push down predicates that refer nested columns.\r\n\r\nI did some experiments, and found out that filters with nested attributes are not pushed down.",
+        "createdAt" : "2020-01-31T13:13:25Z",
+        "updatedAt" : "2020-07-15T20:10:16Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a217aef3-ce5c-4d6c-84dd-b8df10dc0646",
+        "parentId" : "238209f9-a7a2-4a70-8cd1-d7f3de515063",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "@dbtsai is trying to support them https://github.com/dbtsai/spark/pull/10",
+        "createdAt" : "2020-01-31T13:16:32Z",
+        "updatedAt" : "2020-07-15T20:10:16Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "06d31cc8-f4b8-4413-8a4b-2aadf4864617",
+        "parentId" : "238209f9-a7a2-4a70-8cd1-d7f3de515063",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "> Now this method works differently for root row and nested row. I wonder if we can decouple the filtering logic out of this method ...\r\n\r\nInitially, I just duplicate the code but in the commit collapsed it to one method: https://github.com/apache/spark/pull/27366/commits/94a22e1cbbc3fc5ca5d87f6b08c8b5adc121a7b8",
+        "createdAt" : "2020-01-31T13:22:07Z",
+        "updatedAt" : "2020-07-15T20:10:16Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "57524d615680ac6126495ea8fc2e51000156f8ff",
+    "line" : 71,
+    "diffHunk" : "@@ -1,1 +391,395 @@          try {\n            row.update(index, fieldConverters(index).apply(parser))\n            skipRow = structFilters.skipRow(row, index)\n          } catch {\n            case e: SparkUpgradeException => throw e"
+  },
+  {
+    "id" : "03a10782-3b3d-40e9-860e-1a4cc2a9818d",
+    "prId" : 27366,
+    "prUrl" : "https://github.com/apache/spark/pull/27366#pullrequestreview-351847540",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5e39367d-64a3-47ac-94d7-dfa7f196e7e7",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Is it safe to use simply `get`? Sometime, this can cause `java.util.NoSuchElementException: None.get` situation.",
+        "createdAt" : "2020-01-31T20:53:46Z",
+        "updatedAt" : "2020-07-15T20:10:16Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c5580b59-3a5d-4e8f-a303-319f5fc21130",
+        "parentId" : "5e39367d-64a3-47ac-94d7-dfa7f196e7e7",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "`None` can be returned when a row is skipped while applying filters. That could happen for root struct only which is not the case here.",
+        "createdAt" : "2020-01-31T20:59:35Z",
+        "updatedAt" : "2020-07-15T20:10:16Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e1f9c71a-3740-41a3-a719-bb96be1de41f",
+        "parentId" : "5e39367d-64a3-47ac-94d7-dfa7f196e7e7",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Got it.",
+        "createdAt" : "2020-02-01T00:36:12Z",
+        "updatedAt" : "2020-07-15T20:10:16Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "57524d615680ac6126495ea8fc2e51000156f8ff",
+    "line" : 49,
+    "diffHunk" : "@@ -1,1 +295,299 @@      val fieldConverters = st.map(_.dataType).map(makeConverter).toArray\n      (parser: JsonParser) => parseJsonToken[InternalRow](parser, dataType) {\n        case START_OBJECT => convertObject(parser, st, fieldConverters).get\n      }\n"
+  },
+  {
+    "id" : "46c6d741-c592-42f5-8bf4-f17a40f4a069",
+    "prId" : 27366,
+    "prUrl" : "https://github.com/apache/spark/pull/27366#pullrequestreview-435064879",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1aff467f-886f-4f70-af39-157fdd3e8725",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "If any badRecordException is happened, `structFilters.skipRow` is not ran for that index and some predicates might not be with all references set in the row. That's said we could fail to filter out some rows in the case. I guess that it is fine because we should have Filter on top of Json scan operator to catch them. <del>Seems we can skip `structFilters.skipRow` once any badRecordException is happened?</del> Nvm, we still need to evaluate predicates on other indexes.",
+        "createdAt" : "2020-06-22T15:43:49Z",
+        "updatedAt" : "2020-07-15T20:10:16Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2a230637-de20-4a12-b87e-fd7559468180",
+        "parentId" : "1aff467f-886f-4f70-af39-157fdd3e8725",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "> Do we always have Filter on top of Json scan operator to catch them?\r\n\r\nAs far as I know yes, we do.",
+        "createdAt" : "2020-06-22T15:59:34Z",
+        "updatedAt" : "2020-07-15T20:10:16Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "57524d615680ac6126495ea8fc2e51000156f8ff",
+    "line" : 74,
+    "diffHunk" : "@@ -1,1 +394,398 @@          } catch {\n            case e: SparkUpgradeException => throw e\n            case NonFatal(e) =>\n              badRecordException = badRecordException.orElse(Some(e))\n              parser.skipChildren()"
+  },
+  {
+    "id" : "06762c81-f32b-4772-b6ec-09112bd3440f",
+    "prId" : 27366,
+    "prUrl" : "https://github.com/apache/spark/pull/27366#pullrequestreview-448816877",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2eb7634b-a488-4dbb-9798-8c133d936892",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "No big deal but wouldn't it better to just use `NoopFilters` when the switch is off? For example,\r\n\r\n```scala\r\nval jsonFilters = if (SQLConf.get.jsonFilterPushDown) {\r\n  new JsonFilters(filters, st)\r\n} else {\r\n  new NoopFilters()\r\n}\r\n```",
+        "createdAt" : "2020-07-15T09:45:26Z",
+        "updatedAt" : "2020-07-15T20:10:16Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "30c89e99-e169-4369-b79c-b7189186b0fe",
+        "parentId" : "2eb7634b-a488-4dbb-9798-8c133d936892",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "I believe the flag check should be incapsulated in JsonFilters, and not visible at the caller side.",
+        "createdAt" : "2020-07-15T09:53:39Z",
+        "updatedAt" : "2020-07-15T20:10:16Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7be9ede1-b4e9-4284-9784-8b9982a2d2f3",
+        "parentId" : "2eb7634b-a488-4dbb-9798-8c133d936892",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "👌  that's fine",
+        "createdAt" : "2020-07-15T10:13:31Z",
+        "updatedAt" : "2020-07-15T20:10:16Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "57524d615680ac6126495ea8fc2e51000156f8ff",
+    "line" : 28,
+    "diffHunk" : "@@ -1,1 +88,92 @@    val elementConverter = makeConverter(st)\n    val fieldConverters = st.map(_.dataType).map(makeConverter).toArray\n    val jsonFilters = new JsonFilters(filters, st)\n    (parser: JsonParser) => parseJsonToken[Iterable[InternalRow]](parser, st) {\n      case START_OBJECT => convertObject(parser, st, fieldConverters, jsonFilters)"
   }
 ]

@@ -295,5 +295,137 @@
     "commit" : "6a8fda8f814da4e6f9788e6eaff2e4d34edbe161",
     "line" : 12,
     "diffHunk" : "@@ -1,1 +61,65 @@    val patternStr = input2.asInstanceOf[UTF8String].toString\n    val regex = if (cache == null) {\n      if (!(patternStr).equals(lastPatternStr)) {\n        compiledPattern = compile(patternStr)\n        lastPatternStr = patternStr"
+  },
+  {
+    "id" : "e6cb8a45-d7da-43c4-b9eb-004090db2742",
+    "prId" : 27355,
+    "prUrl" : "https://github.com/apache/spark/pull/27355#pullrequestreview-348642700",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1973b61b-a8bd-45de-8edf-c00a437b6557",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "We need `lazy` here? I personally think its better to check error conditions as soon as possible.",
+        "createdAt" : "2020-01-26T12:01:59Z",
+        "updatedAt" : "2020-01-26T16:58:01Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e8942105-dfe0-4970-b8be-15eef22d93eb",
+        "parentId" : "1973b61b-a8bd-45de-8edf-c00a437b6557",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "When I remove `lazy`, I get the exception:\r\n```\r\nmakeCopy, tree: str#13580 LIKE pattern#13581 ESCAPE '@'\r\norg.apache.spark.sql.catalyst.errors.package$TreeNodeException: makeCopy, tree: str#13580 LIKE pattern#13581 ESCAPE '@'\r\n\tat org.apache.spark.sql.catalyst.errors.package$.attachTree(package.scala:56)\r\n\tat org.apache.spark.sql.catalyst.trees.TreeNode.makeCopy(TreeNode.scala:435)\r\n\tat org.apache.spark.sql.catalyst.trees.TreeNode.mapChildren(TreeNode.scala:408)\r\n...\r\nCaused by: org.apache.spark.sql.AnalysisException: The 'escape' parameter must be a string literal.;\r\n\tat org.apache.spark.sql.catalyst.expressions.Like.<init>(regexpExpressions.scala:135)\r\n```\r\nSee `escape` is `PrettyAttribute`:\r\n<img width=\"721\" alt=\"Screen Shot 2020-01-26 at 19 51 34\" src=\"https://user-images.githubusercontent.com/1580697/73138597-8716ef80-4075-11ea-9cb5-b92baef6d4c5.png\">\r\n",
+        "createdAt" : "2020-01-26T16:53:52Z",
+        "updatedAt" : "2020-01-26T16:58:01Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1240fd9f-1d3a-457f-bdc0-c133f458774d",
+        "parentId" : "1973b61b-a8bd-45de-8edf-c00a437b6557",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "I got the error when I run new test in `DataFrameFunctionsSuite`, and I remember I got the error on other tests as well.  PrettyAttribute is not foldable.",
+        "createdAt" : "2020-01-26T17:09:23Z",
+        "updatedAt" : "2020-01-26T17:10:04Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6dac0ed8-a176-4a26-8a88-73419a11a20d",
+        "parentId" : "1973b61b-a8bd-45de-8edf-c00a437b6557",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Ur, ok. Thanks for the check. The current one looks ok to me.",
+        "createdAt" : "2020-01-27T12:59:11Z",
+        "updatedAt" : "2020-01-27T12:59:11Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "39e4bd264b26c7840d7f1815b926c28837a50889",
+    "line" : 79,
+    "diffHunk" : "@@ -1,1 +126,130 @@  override def children: Seq[Expression] = Seq(str, pattern, escape)\n\n  private lazy val escapeChar: Char = if (escape.foldable) {\n    escape.eval() match {\n      case s: UTF8String if s != null && s.numChars() == 1 => s.toString.charAt(0)"
+  },
+  {
+    "id" : "c668ea86-ba83-4868-ad15-66927823e929",
+    "prId" : 27355,
+    "prUrl" : "https://github.com/apache/spark/pull/27355#pullrequestreview-348392267",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1317dc67-fb1c-4a2d-8205-a83ef638eb49",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Can you add tests for this path and line 131 (error cases)?",
+        "createdAt" : "2020-01-26T12:02:47Z",
+        "updatedAt" : "2020-01-26T16:58:01Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a1fbdc2b-689e-4ec0-979a-08973babb478",
+        "parentId" : "1317dc67-fb1c-4a2d-8205-a83ef638eb49",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "Added",
+        "createdAt" : "2020-01-26T16:58:19Z",
+        "updatedAt" : "2020-01-26T16:58:20Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "39e4bd264b26c7840d7f1815b926c28837a50889",
+    "line" : 86,
+    "diffHunk" : "@@ -1,1 +133,137 @@    }\n  } else {\n    throw new AnalysisException(\"The 'escape' parameter must be a string literal.\")\n  }\n"
+  },
+  {
+    "id" : "b536223f-3746-4857-a12e-ea5686ae0bc6",
+    "prId" : 27355,
+    "prUrl" : "https://github.com/apache/spark/pull/27355#pullrequestreview-356405689",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9fb5c884-5965-4f8c-93b3-6572e914724e",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "This kind of thing should be done in `checkInputDataTypes`.",
+        "createdAt" : "2020-02-11T03:46:56Z",
+        "updatedAt" : "2020-02-11T03:46:56Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "39e4bd264b26c7840d7f1815b926c28837a50889",
+    "line" : 86,
+    "diffHunk" : "@@ -1,1 +133,137 @@    }\n  } else {\n    throw new AnalysisException(\"The 'escape' parameter must be a string literal.\")\n  }\n"
+  },
+  {
+    "id" : "4c238554-3e8c-4a2a-84fd-f112ac5e43ff",
+    "prId" : 27323,
+    "prUrl" : "https://github.com/apache/spark/pull/27323#pullrequestreview-346975678",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b2feded1-a90a-4703-847b-35ff25e399dd",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Thank you for adding this test coverage. I noticed that the other test cases are handled by different parser code path.",
+        "createdAt" : "2020-01-22T23:28:28Z",
+        "updatedAt" : "2020-01-22T23:30:30Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6d935edd4ac90ad431a52008f2e34c644b27d3d2",
+    "line" : 4,
+    "diffHunk" : "@@ -1,1 +96,100 @@  examples = \"\"\"\n    Examples:\n      > SELECT _FUNC_('Spark', '_park');\n      true\n      > SET spark.sql.parser.escapedStringLiterals=true;"
   }
 ]

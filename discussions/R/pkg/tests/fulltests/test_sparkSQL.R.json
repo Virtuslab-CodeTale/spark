@@ -53,5 +53,27 @@
     "commit" : "a613fb4e40e764595f182939709bcf41f0090b15",
     "line" : 10,
     "diffHunk" : "@@ -1,1 +497,501 @@  expect_equal(DF$date[1], as.Date(\"2016-10-01\"))\n  expect_true(is.na(DF$time[2]))\n  expect_equal(DF$time[1], as.POSIXlt(\"2016-01-10\"))\n})\n"
+  },
+  {
+    "id" : "da798064-854c-46d2-8c17-3da7fc5be7d0",
+    "prId" : 27328,
+    "prUrl" : "https://github.com/apache/spark/pull/27328#pullrequestreview-348181559",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "85fb4038-60cf-4698-a888-369470ddbaee",
+        "parentId" : null,
+        "authorId" : "981b170c-729a-429c-b115-0350ea50b32b",
+        "body" : "The alternative seems to be to be explicit. Not sure if that's preferred here or not.\r\n\r\n```\r\ntest_that(\"collect() support Unicode characters\", {\r\n\r\n  lines <- markUtf8(c(\r\n    '{\"name\": \"안녕하세요\"}',\r\n    '{\"name\": \"您好\", \"age\": 30}',\r\n    '{\"name\": \"こんにちは\", \"age\": 19}',\r\n    '{\"name\": \"Xin ch\\xc3\\xa0o\"}'\r\n  ))\r\n\r\n  jsonPath <- tempfile(pattern = \"sparkr-test\", fileext = \".tmp\")\r\n  writeLines(lines, jsonPath, useBytes = TRUE)\r\n\r\n  expected <- regmatches(lines, regexec('(?<=\"name\": \").*?(?=\")', lines, perl = TRUE))\r\n\r\n  df <- read.df(jsonPath, \"json\")\r\n  rdf <- collect(df)\r\n  expect_true(is.data.frame(rdf))\r\n\r\n  rdf$name <- markUtf8(rdf$name)\r\n  expect_equal(rdf$name[1], expected[[1]])\r\n  expect_equal(rdf$name[2], expected[[2]])\r\n  expect_equal(rdf$name[3], expected[[3]])\r\n  expect_equal(rdf$name[4], expected[[4]])\r\n\r\n  df1 <- createDataFrame(rdf)\r\n  expect_equal(\r\n    collect(\r\n      where(df1, df1$name == expected[[2]])\r\n    )$name,\r\n    expected[[2]]\r\n  )\r\n})\r\n```",
+        "createdAt" : "2020-01-24T19:40:40Z",
+        "updatedAt" : "2020-01-24T22:24:44Z",
+        "lastEditedBy" : "981b170c-729a-429c-b115-0350ea50b32b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "684831b48ed4036f12008f5385c8060cd3a5eb8d",
+    "line" : 8,
+    "diffHunk" : "@@ -1,1 +849,853 @@\ntest_that(\"collect() support Unicode characters\", {\n  jsonPath <- file.path(\n    Sys.getenv(\"SPARK_HOME\"),\n    \"R\", \"pkg\", \"tests\", \"fulltests\", \"data\","
   }
 ]

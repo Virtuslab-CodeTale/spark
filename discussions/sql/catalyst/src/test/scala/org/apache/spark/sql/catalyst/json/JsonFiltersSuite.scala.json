@@ -1,0 +1,79 @@
+[
+  {
+    "id" : "a4e57e28-30e7-4a20-bdd5-f1d3713cdfc7",
+    "prId" : 27366,
+    "prUrl" : "https://github.com/apache/spark/pull/27366#pullrequestreview-434804535",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7389f23d-d7b4-48d3-ab52-ab0d113e6fbe",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Could you add tests for nested-column cases when `spark.sql.optimizer.nestedPredicatePushdown.supportedFileSources=json`? Also, if we could support the nested case, I think we need to update the description of the config: https://github.com/apache/spark/blob/master/sql/catalyst/src/main/scala/org/apache/spark/sql/internal/SQLConf.scala#L2112-L2117 cc: @viirya ",
+        "createdAt" : "2020-06-21T04:51:45Z",
+        "updatedAt" : "2020-07-15T20:10:16Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "10f5249c-4fd1-45a7-be6f-e225f2e20ebd",
+        "parentId" : "7389f23d-d7b4-48d3-ab52-ab0d113e6fbe",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "The tests will not check anything affected by this PR because filters w/ nested attrs are not pushed down to JSON datasource.",
+        "createdAt" : "2020-06-21T09:57:49Z",
+        "updatedAt" : "2020-07-15T20:10:16Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f0a19322-6505-4c4d-bd45-8b032b5a5c42",
+        "parentId" : "7389f23d-d7b4-48d3-ab52-ab0d113e6fbe",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Ah, I see. I noticed now that nested filtered are filtered out in advance.",
+        "createdAt" : "2020-06-21T10:13:14Z",
+        "updatedAt" : "2020-07-15T20:10:16Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9a165a28-e2fb-4722-9c29-177abb4a648c",
+        "parentId" : "7389f23d-d7b4-48d3-ab52-ab0d113e6fbe",
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "Do you think it's possible to extend to nested cases? Although JSON is not columnar format, but if we are able to push down nested predicate, we will be able to avoid de-serialize unnecessary data.",
+        "createdAt" : "2020-06-22T04:54:51Z",
+        "updatedAt" : "2020-07-15T20:10:16Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2aac69ae-a796-49cb-8fd7-cd60a04d0d6f",
+        "parentId" : "7389f23d-d7b4-48d3-ab52-ab0d113e6fbe",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "> Do you think it's possible to extend to nested cases?\r\n\r\nI think it is possible. I see just a few difficulties that should be solved:\r\n1. `JacksonParser`.`convertObject` sees the current row only. Need to pass all parent rows, set current one at right position at the parent row to apply filters.\r\n2. Currently, JacksonParser doesn't allow to stop parsing inside of **nested** objects and skip the rest. I mean normally skip without throwing exceptions like `PartialResultException`. \r\n3. Need to more effectively restrict the number of filters that are applied while digging into nested objects. \r\n4. Rewrite JsonFilters and replace arrays by hash maps, probably or maybe not. That's need to try. Current implementation is based indexes bound to schema.\r\n5. This method `def skipRow(row: InternalRow, index: Int): Boolean` should be changed. `row` should point out to the top row. And `index` should be replaced to \"full\" path to attr.",
+        "createdAt" : "2020-06-22T06:27:31Z",
+        "updatedAt" : "2020-07-15T20:10:16Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4cbb5ec3-1dc6-40e0-9959-b0b1ae74730d",
+        "parentId" : "7389f23d-d7b4-48d3-ab52-ab0d113e6fbe",
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "Get you. Seems it's non-trivial. Let's iterate it once this is merged. Thank you very much!",
+        "createdAt" : "2020-06-22T10:39:43Z",
+        "updatedAt" : "2020-07-15T20:10:16Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "57524d615680ac6126495ea8fc2e51000156f8ff",
+    "line" : 27,
+    "diffHunk" : "@@ -1,1 +25,29 @@  override def createFilters(filters: Seq[sources.Filter], schema: StructType): StructFilters = {\n    new JsonFilters(filters, schema)\n  }\n}"
+  }
+]

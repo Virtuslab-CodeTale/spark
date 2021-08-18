@@ -1,0 +1,244 @@
+[
+  {
+    "id" : "21b9f271-a2d3-464d-aa39-a512673f2232",
+    "prId" : 27366,
+    "prUrl" : "https://github.com/apache/spark/pull/27366#pullrequestreview-448891218",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2c64271b-6b78-42d4-8901-38a739b68502",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Reseting the state inside `skipRow` looks enough though, we need the `reset()` interface in the base class? \r\n```\r\n  def skipRow(row: InternalRow, index: Int): Boolean = {\r\n    var skip = false\r\n    predicates.foreach(_.foreach(_.reset)) <--- reset the state.\r\n    predicates(index).foreach { pred =>\r\n      pred.refCount -= 1\r\n      if (!skip && pred.refCount == 0) {\r\n        skip = !pred.predicate.eval(row)\r\n      }\r\n    }\r\n    skip\r\n  }\r\n```",
+        "createdAt" : "2020-06-21T04:47:40Z",
+        "updatedAt" : "2020-07-15T20:10:16Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2f07de56-f873-4ff5-88ce-510f369d2029",
+        "parentId" : "2c64271b-6b78-42d4-8901-38a739b68502",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Actually, we cannot avoid having the state in the json filters? Is that technically difficult?",
+        "createdAt" : "2020-06-21T05:05:57Z",
+        "updatedAt" : "2020-07-15T20:10:16Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7d85c5e3-2994-4973-98bb-b953859f031c",
+        "parentId" : "2c64271b-6b78-42d4-8901-38a739b68502",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "I do believe it is impossible to avoid a state because JSON fields can appear in any order. So, to know when a filter can be applied, we need to keep a state w/ reference counter.",
+        "createdAt" : "2020-06-21T08:46:11Z",
+        "updatedAt" : "2020-07-15T20:10:16Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4782f2d4-6a49-49b0-bf56-8f2c8f142e01",
+        "parentId" : "2c64271b-6b78-42d4-8901-38a739b68502",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "I have an idea. I will maybe try it in a followup and see if it looks good all of you.",
+        "createdAt" : "2020-07-15T12:11:25Z",
+        "updatedAt" : "2020-07-15T20:10:16Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "57524d615680ac6126495ea8fc2e51000156f8ff",
+    "line" : 155,
+    "diffHunk" : "@@ -1,1 +153,157 @@   * Reset states of all predicates by re-initializing reference counters.\n   */\n  override def reset(): Unit = predicates.foreach(_.foreach(_.reset))\n}"
+  },
+  {
+    "id" : "4e759d8c-db72-4096-848f-95711b16cf88",
+    "prId" : 27366,
+    "prUrl" : "https://github.com/apache/spark/pull/27366#pullrequestreview-434486634",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ac5433a1-27e4-4767-9eaf-cc920cc3b38d",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "To catch logic bugs, could we put `assert(pred.reCount >= 0)` here?",
+        "createdAt" : "2020-06-21T04:54:36Z",
+        "updatedAt" : "2020-07-15T20:10:16Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e7950a38-1ee3-4819-9cb6-9628f3424380",
+        "parentId" : "ac5433a1-27e4-4767-9eaf-cc920cc3b38d",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "Added",
+        "createdAt" : "2020-06-21T09:50:00Z",
+        "updatedAt" : "2020-07-15T20:10:16Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "57524d615680ac6126495ea8fc2e51000156f8ff",
+    "line" : 144,
+    "diffHunk" : "@@ -1,1 +142,146 @@    var skip = false\n    for (pred <- predicates(index) if !skip) {\n      pred.refCount -= 1\n      assert(pred.refCount >= 0,\n        s\"Predicate reference counter cannot be negative but got ${pred.refCount}.\")"
+  },
+  {
+    "id" : "26e23199-2377-4f26-af9f-8630c423e875",
+    "prId" : 27366,
+    "prUrl" : "https://github.com/apache/spark/pull/27366#pullrequestreview-434877150",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "74751d49-b407-4058-8872-dc26d0515d57",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Could we log compiled predicates here via `logInfo` (or logging with lower levels) for easy-to-check?",
+        "createdAt" : "2020-06-21T04:57:06Z",
+        "updatedAt" : "2020-07-15T20:10:16Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c4cda5e3-634a-4848-bd04-9b64ab8040cf",
+        "parentId" : "74751d49-b407-4058-8872-dc26d0515d57",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "> compiled predicates\r\n\r\nDo you mean Java byte code? I think it makes sense to log pushed down filters but somewhere earlier, and such logging is not JSON datasource specific.",
+        "createdAt" : "2020-06-21T09:53:49Z",
+        "updatedAt" : "2020-07-15T20:10:16Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ebf5c0fc-100c-4ad9-920c-536bf0fc71b3",
+        "parentId" : "74751d49-b407-4058-8872-dc26d0515d57",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Ah, I didn't mean so. I just want to know which filters are pushed down into Json datasources. So, how about adding logging code in `StructFilters.toFilters`? https://github.com/apache/spark/pull/27366/files#diff-2e3ca97141aa3554960dacea3d58c606R59 \r\n```\r\n  def toPredicate(filters: Seq[sources.Filter]): BasePredicate = {\r\n    logInfo(s\"Pushed down filters: ${filters.mkString(\",\")}\") <-- This one?\r\n    val reducedExpr = filters\r\n      .sortBy(_.references.length)\r\n      .flatMap(filterToExpression(_, toRef))\r\n      .reduce(And)\r\n    Predicate.create(reducedExpr)\r\n  }\r\n```",
+        "createdAt" : "2020-06-21T10:08:52Z",
+        "updatedAt" : "2020-07-15T20:10:16Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c7f12333-67e2-4b03-b5ba-390ef417c201",
+        "parentId" : "74751d49-b407-4058-8872-dc26d0515d57",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "At this place, we will not know to where filters were pushed down either CSV or JSON.\r\n\r\nBy the way, I feel the pushed down filters should be logged somewhere else - on higher level which pushes the filters.",
+        "createdAt" : "2020-06-22T12:32:42Z",
+        "updatedAt" : "2020-07-15T20:10:16Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "57524d615680ac6126495ea8fc2e51000156f8ff",
+    "line" : 90,
+    "diffHunk" : "@@ -1,1 +88,92 @@  //     0: Array(IsNotNull(\"i\"), AlwaysTrue, Or(EqualTo(\"i\", 0), StringStartsWith(\"s\", \"abc\")))\n  //     1: Array(AlwaysTrue, Or(EqualTo(\"i\", 0), StringStartsWith(\"s\", \"abc\")))\n  private val predicates: Array[Array[JsonPredicate]] = {\n    val groupedPredicates = Array.fill(schema.length)(Array.empty[JsonPredicate])\n    if (SQLConf.get.jsonFilterPushDown) {"
+  },
+  {
+    "id" : "e772d92b-8a6d-4e84-8b41-4edc6bd36d79",
+    "prId" : 27366,
+    "prUrl" : "https://github.com/apache/spark/pull/27366#pullrequestreview-445728549",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "509c126f-643d-4a4c-b238-c5b540614a41",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "can we have a big picture to explain how it works? e.g.\r\n1. the json parser reads out one entire json record\r\n2. iterate the json fields, and run the corresponding predicate for each field\r\n3. if the json record can't be skipped, convert to internal row.\r\n\r\nAnd also explain how to define the predicate for each field. IIUC:\r\n1. for the first field, run the predicate that only refer to the first field\r\n2. for the second field, run the predicate that refers to both the first and second field\r\n3. ....",
+        "createdAt" : "2020-07-06T12:35:26Z",
+        "updatedAt" : "2020-07-15T20:10:16Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b7eb1abd-a1a8-4f7a-909b-534e21d1ad07",
+        "parentId" : "509c126f-643d-4a4c-b238-c5b540614a41",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "> 1. the json parser reads out one entire json record\r\n\r\nNo-no, Jackson parser shouldn't read entire record. Of course, it does buffering and looks ahead but it reads JSON fields in stream fashion while we pull JSON fields via iterator-like API. \r\n\r\n> 2. iterate the json fields, and run the corresponding predicate for each field\r\n> 3. if the json record can't be skipped, convert to internal row.\r\n\r\nActually, we convert a value first of all and set it to the internal row. After that, we invoke predicates for partially initialized internal row. \r\n\r\nok. Let me write the high level view somewhere. Don't think `JsonFilters` is the right place, probably `StructFilters`, because the logic is applicable to `CSVFilters` as well.\r\n\r\n> And also explain how to define the predicate for each field. IIUC:\r\n\r\nAre the comments with examples https://github.com/apache/spark/pull/27366/files#diff-467cfe570f88d176aed53f30c3766356R57-R104 not enough?",
+        "createdAt" : "2020-07-07T11:39:48Z",
+        "updatedAt" : "2020-07-15T20:10:16Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ae9545ac-8369-495b-9ae1-758800f03275",
+        "parentId" : "509c126f-643d-4a4c-b238-c5b540614a41",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "I added a comment for JsonFilters",
+        "createdAt" : "2020-07-09T15:28:01Z",
+        "updatedAt" : "2020-07-15T20:10:16Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "57524d615680ac6126495ea8fc2e51000156f8ff",
+    "line" : 60,
+    "diffHunk" : "@@ -1,1 +58,62 @@ * @param schema The required schema of records from datasource files.\n */\nclass JsonFilters(pushedFilters: Seq[sources.Filter], schema: StructType)\n  extends StructFilters(pushedFilters, schema) {\n"
+  },
+  {
+    "id" : "8e4ea0b0-9773-4981-b3e4-c6a171883203",
+    "prId" : 27366,
+    "prUrl" : "https://github.com/apache/spark/pull/27366#pullrequestreview-449175777",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b2921a63-72c9-4a2f-ba94-4f07f50596d6",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "The above three assumption (line 50~55) looks like a global assumption for all `StructFilters`. Also, some of them is already described in `StructFilters` function description. If we have multiple places, it becomes outdated easily. Shall we remove here and mention the global rule in `StructFilters` class description?",
+        "createdAt" : "2020-07-15T15:57:39Z",
+        "updatedAt" : "2020-07-15T20:10:16Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c3946425-5230-4c34-8c78-14c00f7dfb63",
+        "parentId" : "b2921a63-72c9-4a2f-ba94-4f07f50596d6",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Or, if this is written here by some reviewers's requests, you may ignore the above my comment.",
+        "createdAt" : "2020-07-15T15:58:57Z",
+        "updatedAt" : "2020-07-15T20:10:16Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "edc6bc7a-35b6-41e9-88e9-1b223497d55a",
+        "parentId" : "b2921a63-72c9-4a2f-ba94-4f07f50596d6",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "Actually, only the first one is applicable to `StructFilters` in general. Two other assumptions are `JsonFilters` specific.",
+        "createdAt" : "2020-07-15T17:18:02Z",
+        "updatedAt" : "2020-07-15T20:10:16Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f0a0eff0-4d0c-4f72-b38b-4d8c33b0ae13",
+        "parentId" : "b2921a63-72c9-4a2f-ba94-4f07f50596d6",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "I moved the first assumption from `JsonFilters` to `StructFilters`.",
+        "createdAt" : "2020-07-15T17:26:01Z",
+        "updatedAt" : "2020-07-15T20:10:16Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "57524d615680ac6126495ea8fc2e51000156f8ff",
+    "line" : 54,
+    "diffHunk" : "@@ -1,1 +52,56 @@ *      and in any order.\n *   - After `skipRow()` returns `true`, the internal state of `JsonFilters` can be inconsistent,\n *     so, `skipRow()` must not be called for the current row anymore without `reset()`.\n *\n * @param pushedFilters The pushed down source filters. The filters should refer to"
+  }
+]

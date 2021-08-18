@@ -20,5 +20,181 @@
     "commit" : "b362a098978be65ab1fc033fe0213a78a467b6ae",
     "line" : 27,
     "diffHunk" : "@@ -1,1 +188,192 @@Functions [1]: [max(val#x)]\nAggregate Attributes [1]: [max(val#x)#x]\nResults [2]: [key#x, max(val#x)#x AS max(val)#x]\n\n(7) Filter [codegen id : 2]"
+  },
+  {
+    "id" : "1976a0ee-ca49-4dac-8bb0-a8e18321ebb4",
+    "prId" : 27368,
+    "prUrl" : "https://github.com/apache/spark/pull/27368#pullrequestreview-354445745",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f2b31467-a5c1-407f-accf-8a9d213dae7a",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "This is hard to read because `max` is a buffer attribute. I think we should also print all the buffer attributes.\r\n\r\nWe can get it by `HashAggregateExec.aggregateBufferAttributes`\r\n\r\nLet's also test `avg` which has 2 buffer attributes.",
+        "createdAt" : "2020-02-06T08:54:22Z",
+        "updatedAt" : "2020-02-10T11:17:14Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "272ab395-ad18-407a-b87e-41f88e7e5c12",
+        "parentId" : "f2b31467-a5c1-407f-accf-8a9d213dae7a",
+        "authorId" : "c48b13f0-9ce5-4910-a8eb-aee1ac73ffcb",
+        "body" : "Yeah, add `FuncBufferAttrs` to show the buffer attributes. And modified `Subqueries nested` testcase with `avg` function. \r\n3614ab2e04b91d96e720e1f77a75ca867a217945",
+        "createdAt" : "2020-02-06T13:26:16Z",
+        "updatedAt" : "2020-02-10T11:17:14Z",
+        "lastEditedBy" : "c48b13f0-9ce5-4910-a8eb-aee1ac73ffcb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dd0988adfaf6b9fc09283ec8cfa1c14bc3f71f8e",
+    "line" : 152,
+    "diffHunk" : "@@ -1,1 +575,579 @@Functions: [partial_max(key#x)]\nAggregate Attributes: [max#x]\nResults: [max#x]\n     \n(9) Exchange "
+  },
+  {
+    "id" : "2ba5bf23-61e7-4fef-9f17-d6f8c36ac2fd",
+    "prId" : 27368,
+    "prUrl" : "https://github.com/apache/spark/pull/27368#pullrequestreview-354479973",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e7793ff8-29b3-4f4f-aa9a-fe0a6f6e5ccc",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Sorry I was wrong. I checked the source code again. The result expressions depend on `HashAggregate.aggregateAttributes`. For partial aggregate, it's the buffer attributes, but for final aggregate, it's not.\r\n\r\nLet's show `Aggregate Attributes` instead of `FuncBufferAttrs`.",
+        "createdAt" : "2020-02-06T13:34:51Z",
+        "updatedAt" : "2020-02-10T11:17:14Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8d99dba6-b0b1-409b-ad4d-11bef9b78eb9",
+        "parentId" : "e7793ff8-29b3-4f4f-aa9a-fe0a6f6e5ccc",
+        "authorId" : "c48b13f0-9ce5-4910-a8eb-aee1ac73ffcb",
+        "body" : "Never mind, I just learnt a lot from it :-) \r\nReplaced with `Aggregate Attributes` in 9aecfaff68aeaad4b17da2fe9e640d4c76d177a8. I leave `HashAggregateExec.aggregateBufferAttributes` at the original place in this PR, although it can be abstract to base class.",
+        "createdAt" : "2020-02-06T14:15:37Z",
+        "updatedAt" : "2020-02-10T11:17:14Z",
+        "lastEditedBy" : "c48b13f0-9ce5-4910-a8eb-aee1ac73ffcb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dd0988adfaf6b9fc09283ec8cfa1c14bc3f71f8e",
+    "line" : 39,
+    "diffHunk" : "@@ -1,1 +98,102 @@Functions: [max(val#x)]\nAggregate Attributes: [max(val#x)#x]\nResults: [key#x, max(val#x)#x AS max(val)#x]\n     \n(8) Exchange "
+  },
+  {
+    "id" : "31ce099e-7baf-4e6a-9817-ffaacd18d8f6",
+    "prId" : 27368,
+    "prUrl" : "https://github.com/apache/spark/pull/27368#pullrequestreview-355605894",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "01d949a1-754b-4068-8438-676742c027a8",
+        "parentId" : null,
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "Since the attribute names are automatically generated, it is hard to tell it is a name or an expression. A few observations:\r\n- Using comma as the separator is not clear, especially commas are used inside the expressions too. \r\n- Show the column counts first? For example, `Results [4]: ... `",
+        "createdAt" : "2020-02-08T07:37:17Z",
+        "updatedAt" : "2020-02-10T11:17:14Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9fda129a-8d10-4e21-b73a-8473b5289a0a",
+        "parentId" : "01d949a1-754b-4068-8438-676742c027a8",
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "This can be a separate PR if this is a general issue for all the other operator. We should make all of them consistent. ",
+        "createdAt" : "2020-02-08T07:47:43Z",
+        "updatedAt" : "2020-02-10T11:17:14Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "038e6217-5bef-4ce4-a344-465a07d01ba6",
+        "parentId" : "01d949a1-754b-4068-8438-676742c027a8",
+        "authorId" : "c48b13f0-9ce5-4910-a8eb-aee1ac73ffcb",
+        "body" : "Thanks for review! I'll follow up with another PR for these observations. ",
+        "createdAt" : "2020-02-08T07:52:43Z",
+        "updatedAt" : "2020-02-10T11:17:14Z",
+        "lastEditedBy" : "c48b13f0-9ce5-4910-a8eb-aee1ac73ffcb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b90c3994-fd69-47b7-8839-6b9a47c155f7",
+        "parentId" : "01d949a1-754b-4068-8438-676742c027a8",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Ah, the idea to show column counts first looks nice.",
+        "createdAt" : "2020-02-08T09:14:00Z",
+        "updatedAt" : "2020-02-10T11:17:14Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ded2da7d-58bf-4c59-924f-7c22c1013fe6",
+        "parentId" : "01d949a1-754b-4068-8438-676742c027a8",
+        "authorId" : "c48b13f0-9ce5-4910-a8eb-aee1ac73ffcb",
+        "body" : "PR https://github.com/apache/spark/pull/27509 has opened to address these potential readability improvements.",
+        "createdAt" : "2020-02-09T13:04:20Z",
+        "updatedAt" : "2020-02-10T11:17:14Z",
+        "lastEditedBy" : "c48b13f0-9ce5-4910-a8eb-aee1ac73ffcb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dd0988adfaf6b9fc09283ec8cfa1c14bc3f71f8e",
+    "line" : 329,
+    "diffHunk" : "@@ -1,1 +955,959 @@Functions: [collect_set(val#x, 0, 0)]\nAggregate Attributes: [collect_set(val#x, 0, 0)#x]\nResults: [key#x, sort_array(collect_set(val#x, 0, 0)#x, true)[0] AS sort_array(collect_set(val), true)[0]#x]\n\n"
+  },
+  {
+    "id" : "156c002d-286b-42f4-a74b-3845d533304e",
+    "prId" : 27368,
+    "prUrl" : "https://github.com/apache/spark/pull/27368#pullrequestreview-356584897",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2a99337d-249b-4471-b569-07300f3d2cfb",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Another improvement we can do is: the generated alias shouldn't include attribute id. `collect_set(val, 0, 0)#123` looks clearer than `collect_set(val#456, 0, 0)#123`",
+        "createdAt" : "2020-02-10T08:47:47Z",
+        "updatedAt" : "2020-02-10T11:17:14Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b361941b-3e95-41d9-b8e0-b634849a5c05",
+        "parentId" : "2a99337d-249b-4471-b569-07300f3d2cfb",
+        "authorId" : "c48b13f0-9ce5-4910-a8eb-aee1ac73ffcb",
+        "body" : "I just gave a try with this idea, the attribute format is controlled by `AttributeReferences.toString = s\"$name#${exprId.id}$typeSuffix$delaySuffix\"`. After removed `#${exprId.id}` part, the output looks like:\r\n```\r\nInput: [key, buf]\r\nKeys: [key]\r\nFunctions: [collect_set(val, 0, 0)]\r\nAggregate Attributes: [collect_set(val, 0, 0)]\r\nResults: [key, sort_array(collect_set(val, 0, 0), true)[0] AS sort_array(collect_set(val), true)[0]#x]\r\n```\r\nSome follow-up questions:\r\n1. Of course the change affected too much, all `expr.id` was removed. We need to try other ways to eliminate the affect, right?\r\n2. The remaining `#x` is printed by class `Alias`, do we need that?\r\n3. Take the expression `sort_array(collect_set(val, 0, 0), true)[0]` as example, I think ` 0, 0), true)[0]` part is hard to understand to me, do we need to format those attributes to filedName->value pair ?\r\n\r\n@cloud-fan @gatorsmile  Please help feedback :-) \r\nMaybe we can move this improvement together with the follow-up PR https://github.com/apache/spark/pull/27509?",
+        "createdAt" : "2020-02-10T15:45:56Z",
+        "updatedAt" : "2020-02-10T15:46:28Z",
+        "lastEditedBy" : "c48b13f0-9ce5-4910-a8eb-aee1ac73ffcb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1771f402-2183-465f-8e7b-e128f6b7b5cf",
+        "parentId" : "2a99337d-249b-4471-b569-07300f3d2cfb",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Yea let's do it in followup",
+        "createdAt" : "2020-02-11T11:30:56Z",
+        "updatedAt" : "2020-02-11T11:30:56Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dd0988adfaf6b9fc09283ec8cfa1c14bc3f71f8e",
+    "line" : 328,
+    "diffHunk" : "@@ -1,1 +954,958 @@Keys: [key#x]\nFunctions: [collect_set(val#x, 0, 0)]\nAggregate Attributes: [collect_set(val#x, 0, 0)#x]\nResults: [key#x, sort_array(collect_set(val#x, 0, 0)#x, true)[0] AS sort_array(collect_set(val), true)[0]#x]\n"
   }
 ]

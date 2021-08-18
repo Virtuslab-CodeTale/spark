@@ -20,5 +20,71 @@
     "commit" : "49141bbb178ac28af3263efa31299f8eb835830b",
     "line" : 63,
     "diffHunk" : "@@ -1,1 +260,264 @@    //          sum += localCoefficients(index) *\n    //            (value - localFeaturesAvg(index)) / localFeaturesStd(index)\n    //        }\n    //      }\n    //      if (fitIntercept) sum += localCoefficients(numFeaturesPlusIntercept - 1)"
+  },
+  {
+    "id" : "61aff50e-47d0-4f46-9c73-04bfbdd53e8c",
+    "prId" : 27374,
+    "prUrl" : "https://github.com/apache/spark/pull/27374#pullrequestreview-349402220",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4d94d356-900d-4664-9634-e1b61b466621",
+        "parentId" : null,
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "Since `gradientSumArray` is for Matrix of shape CXFPI, and `BLAS.gemm` requires the output matrix is not transposed. So only if F(numFeature) == FPI(numFeaturesPlusIntercept) and input block is dense, can I use `BLAS.gemm` to directly update `gradientSumArray`.\r\nOtherwise, I need to output the result to a temp matrix `multinomialLinearGradSumMat`, and then add elements to `gradientSumArray`",
+        "createdAt" : "2020-01-28T14:11:43Z",
+        "updatedAt" : "2020-01-30T03:59:49Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c49b379fe697ffb69bb8565eea6644528992f572",
+    "line" : 290,
+    "diffHunk" : "@@ -1,1 +491,495 @@        // GEMM requires block.matrix is dense\n        val gradSumMat = new DenseMatrix(numClasses, numFeatures, localGradientSumArray)\n        BLAS.gemm(1.0, mat.transpose, dm, 1.0, gradSumMat)\n\n      case _ =>"
+  },
+  {
+    "id" : "f51be23d-5a1d-4cf0-a283-3d43542e489d",
+    "prId" : 27374,
+    "prUrl" : "https://github.com/apache/spark/pull/27374#pullrequestreview-350151006",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a3faa5b7-a316-488d-89fb-c5375ee4bbb4",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "So, are these lazy just to deal with recreating them after deserialization? they don't seem big, so can they just be non-transient, non-lazy? unless it's a material problem, might be simpler and faster.\r\nOr how much do you need to hold on to scratch vectors like auxiliaryVec vs just locals?",
+        "createdAt" : "2020-01-28T14:45:35Z",
+        "updatedAt" : "2020-01-30T03:59:49Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d7da90bd-c7d0-464b-8797-a0f4f57a68fd",
+        "parentId" : "a3faa5b7-a316-488d-89fb-c5375ee4bbb4",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "`binaryLinear`, `binaryIntercept`, `multinomialLinear`, `multinomialIntercept` are the linear and bias part of coefficients, repectively.\r\n\r\n`binaryLinearGradSumVec` (numFeatures) and `multinomialLinearGradSumMat` (numClassXnumFeatures) are used to store result of `gemv`/`gemm` if `fitIntercept==True`, since `gradientSumArray` contains gradient sums of intercepts and can not be used directly in `gemv`/`gemm`.\r\n\r\n`auxiliaryVec` (blockSize) and `multinomialAuxiliaryMat` (blockSizeXnumClasses) are used to store the intermediate multiplication(margins) and multipliers.\r\n\r\nthey can be used among blocks, and if they are used multi-times in one call we can assign them to local variables.\r\nHowever I am OK to make them local variables, since I guess they are not the bottleneck.\r\n",
+        "createdAt" : "2020-01-28T15:17:16Z",
+        "updatedAt" : "2020-01-30T03:59:49Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b02985e4-bf1a-4670-9273-63d57faef311",
+        "parentId" : "a3faa5b7-a316-488d-89fb-c5375ee4bbb4",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "OK up to your judgment. It'd be simpler to not even make them members, if it's not much difference to performance",
+        "createdAt" : "2020-01-29T14:35:47Z",
+        "updatedAt" : "2020-01-30T03:59:49Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c49b379fe697ffb69bb8565eea6644528992f572",
+    "line" : 39,
+    "diffHunk" : "@@ -1,1 +208,212 @@  }\n\n  @transient private lazy val binaryLinear = {\n    if (!multinomial) {\n      if (fitIntercept) {"
   }
 ]
