@@ -196,5 +196,137 @@
     "commit" : "fc6bc62356ef1a4bd23a69d5a73a5c7c78995c03",
     "line" : 19,
     "diffHunk" : "@@ -1,1 +991,995 @@        // We expect two SortExec nodes on each side of join.\n        val sorts = planned.collect { case s: SortExec => s }\n        assert(sorts.size == 4)\n      }\n    }"
+  },
+  {
+    "id" : "0655ca3a-b6e2-4794-bdf3-1fba70e11506",
+    "prId" : 26946,
+    "prUrl" : "https://github.com/apache/spark/pull/26946#pullrequestreview-336127632",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c70663ad-312d-4a2d-80e8-9d2b56a91ad3",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I'm not very sure about this. `df.repartition` is a low-level API that allows users to hash-partition the data. There is also a `df.repartitionByRange` to do range partitioning. We shouldn't break users' expectations.",
+        "createdAt" : "2019-12-24T07:52:17Z",
+        "updatedAt" : "2019-12-24T08:48:46Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5093247d-dec9-4d01-bcac-aa74baa48fe4",
+        "parentId" : "c70663ad-312d-4a2d-80e8-9d2b56a91ad3",
+        "authorId" : "0f4ef4e8-09be-436f-b743-bf8fbc343490",
+        "body" : "HashPartitioning or RangePartitioning won't take effect if it is followed by OrderedDistribution. If user really want hashPartitioning, they should use sortWithinPartitions.",
+        "createdAt" : "2019-12-24T08:29:09Z",
+        "updatedAt" : "2019-12-24T08:48:46Z",
+        "lastEditedBy" : "0f4ef4e8-09be-436f-b743-bf8fbc343490",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "91390031-ac00-409e-93ba-3b29ad922a49",
+        "parentId" : "c70663ad-312d-4a2d-80e8-9d2b56a91ad3",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "makes sense",
+        "createdAt" : "2019-12-24T08:35:54Z",
+        "updatedAt" : "2019-12-24T08:48:46Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d2615b61a6e5f7ed849f826d25d45315953386c9",
+    "line" : 45,
+    "diffHunk" : "@@ -1,1 +463,467 @@      \"HashPartitioning should be changed to RangePartitioning\")\n\n    val query = testData.select('key, 'value).repartition(5, 'key).sort('key.asc)\n    assert(query.rdd.getNumPartitions == 5)\n    assert(query.rdd.collectPartitions()(0).map(_.get(0)).toSeq == (1 to 20))"
+  },
+  {
+    "id" : "88128854-d002-4db1-acd7-fe99bfa1e90f",
+    "prId" : 26943,
+    "prUrl" : "https://github.com/apache/spark/pull/26943#pullrequestreview-346338651",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c8e2496d-5f96-4912-b403-1708a382bb47",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "For better test coverage, can you add tests for sort-aggregates and object-aggregates?",
+        "createdAt" : "2020-01-08T11:47:37Z",
+        "updatedAt" : "2020-01-23T18:57:53Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4d64d588-04be-4dc1-b183-a34619ee7faa",
+        "parentId" : "c8e2496d-5f96-4912-b403-1708a382bb47",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "Thanks, added.",
+        "createdAt" : "2020-01-22T04:21:55Z",
+        "updatedAt" : "2020-01-23T18:57:53Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "fbafedf8793554366135b4d41189e06feb6f875e",
+    "line" : 58,
+    "diffHunk" : "@@ -1,1 +985,989 @@  }\n\n  test(\"aliases in the aggregate expressions should not introduce extra shuffle\") {\n    withSQLConf(SQLConf.AUTO_BROADCASTJOIN_THRESHOLD.key -> \"-1\") {\n      val t1 = spark.range(10).selectExpr(\"floor(id/4) as k1\")"
+  },
+  {
+    "id" : "e29d8574-2db8-44ff-808d-901054b5cb30",
+    "prId" : 26943,
+    "prUrl" : "https://github.com/apache/spark/pull/26943#pullrequestreview-347542228",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "611b075c-1e3a-4cfa-ac2f-e60ebbb46179",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I was confused about why only one shuffle, then realized it's exchange reuse.\r\n\r\nCan we join different data frames? e.g. `spark.range(10)` and `spark.range(20)`.",
+        "createdAt" : "2020-01-23T08:17:37Z",
+        "updatedAt" : "2020-01-23T18:57:53Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9c159070-859f-4744-9cb6-3bbde58e1c61",
+        "parentId" : "611b075c-1e3a-4cfa-ac2f-e60ebbb46179",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "Thanks for pointing that out. I updated it and it now generates two `ShuffleExchangeExec` instead of four.",
+        "createdAt" : "2020-01-23T19:13:30Z",
+        "updatedAt" : "2020-01-23T19:13:30Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "fbafedf8793554366135b4d41189e06feb6f875e",
+    "line" : 26,
+    "diffHunk" : "@@ -1,1 +953,957 @@            |ON t1.k = t2.k\n          \"\"\".stripMargin).queryExecution.executedPlan\n        val exchanges = planned.collect { case s: ShuffleExchangeExec => s }\n        assert(exchanges.size == 2)\n      }"
+  },
+  {
+    "id" : "15a055c9-7d87-4873-a40d-2e3a70ef602a",
+    "prId" : 26943,
+    "prUrl" : "https://github.com/apache/spark/pull/26943#pullrequestreview-347118259",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "205c94ab-4f9e-4863-8487-9bef6fffaea3",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "ditto",
+        "createdAt" : "2020-01-23T08:17:56Z",
+        "updatedAt" : "2020-01-23T18:57:53Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "fbafedf8793554366135b4d41189e06feb6f875e",
+    "line" : 45,
+    "diffHunk" : "@@ -1,1 +972,976 @@            |ON t1.k1 = t2.k2\n            |\"\"\".stripMargin).queryExecution.executedPlan\n        val exchanges = planned.collect { case s: ShuffleExchangeExec => s }\n\n        // Make sure aliases to an expression (key + 1) are not replaced."
   }
 ]

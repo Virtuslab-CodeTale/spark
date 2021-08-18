@@ -152,5 +152,71 @@
     "commit" : "5f2f86ae4d1f44a12088f7f7a4cb43e9a1189837",
     "line" : 23,
     "diffHunk" : "@@ -1,1 +209,213 @@            // so do not simply call `sc.killExecutor` here (SPARK-8119)\n            sc.killAndReplaceExecutor(executorId)\n            // SPARK-27348: in case of the executors which are not gracefully shut down,\n            // we should remove lost executors from CoarseGrainedSchedulerBackend manually\n            // here to guarantee two things:"
+  },
+  {
+    "id" : "e032ee76-a7f3-4472-9e7d-8e45b10ee6fb",
+    "prId" : 26938,
+    "prUrl" : "https://github.com/apache/spark/pull/26938#pullrequestreview-335819376",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "97a9154f-6d8b-4fed-a254-c48fcc416ac7",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "I think this does not resolve the issue completely. Because when you look into `sc.killAndReplaceExecutor` below, you can see that we've already try to mark it as \"pending to remove\". Though it happens in another separate thread, but I don't see big difference according to this issue. WDYT?",
+        "createdAt" : "2019-12-20T13:32:43Z",
+        "updatedAt" : "2019-12-20T13:33:39Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "af6de75b-63b3-477b-8b84-f341e1b2fef6",
+        "parentId" : "97a9154f-6d8b-4fed-a254-c48fcc416ac7",
+        "authorId" : "78c98141-e5a6-4d72-a74b-e121b62fdbf4",
+        "body" : "> `sc.killAndReplaceExecutor` already try to mark it as \"pending to remove\" this is right, but the task has rescheduled at this executor agait at this time, the executor must be removed from the ExecutorBackend to avoid. \r\nFor example, it will `disableExecutor` in `CoarseGrainedSchedulerBackend` if the driver lost connection from executor, `disableExecutor` mark the executor dead, and then to reschedule the task on the lost connection executors.",
+        "createdAt" : "2019-12-21T03:12:47Z",
+        "updatedAt" : "2019-12-21T03:39:59Z",
+        "lastEditedBy" : "78c98141-e5a6-4d72-a74b-e121b62fdbf4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "491644de-ae4a-43e7-b81d-e6317f5f8fb5",
+        "parentId" : "97a9154f-6d8b-4fed-a254-c48fcc416ac7",
+        "authorId" : "78c98141-e5a6-4d72-a74b-e121b62fdbf4",
+        "body" : "The task can reschedule at this executor before mark it as \"pending to remove\".",
+        "createdAt" : "2019-12-21T03:14:26Z",
+        "updatedAt" : "2019-12-21T03:14:26Z",
+        "lastEditedBy" : "78c98141-e5a6-4d72-a74b-e121b62fdbf4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ebe51c5f-c1f3-4a01-93af-f99d318f08cc",
+        "parentId" : "97a9154f-6d8b-4fed-a254-c48fcc416ac7",
+        "authorId" : "78c98141-e5a6-4d72-a74b-e121b62fdbf4",
+        "body" : "We add the executor before rescheduler can avoid the tasks to rescheduler the bad executors",
+        "createdAt" : "2019-12-21T09:59:34Z",
+        "updatedAt" : "2019-12-21T09:59:35Z",
+        "lastEditedBy" : "78c98141-e5a6-4d72-a74b-e121b62fdbf4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e5d14c69-8c2c-4eac-902f-3871e1b726c0",
+        "parentId" : "97a9154f-6d8b-4fed-a254-c48fcc416ac7",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Hi, @seayoun. After a second think, I think this fix can really avoid app hang, though it can not clean up dead records in `CoarseGrainedSchedulerBackend`. \r\n\r\nAs you may have realized that a same issue has been posted in SPARK-27348 and its author(@xuanyuanking) has assigned to me recently. And it's really coincidental. And I really appreciate that you would like my proposal. Actually, the main idea is still base on original author's contribution.\r\n\r\nAlso, thanks for review.\r\n",
+        "createdAt" : "2019-12-23T11:19:10Z",
+        "updatedAt" : "2019-12-23T11:19:11Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "036dcc2aafb51862feae95c5502279ef29a7ee41",
+    "line" : 18,
+    "diffHunk" : "@@ -1,1 +207,211 @@              // to avoid reschedule task on this executor again\n              if (!backend.executorsPendingToRemove.contains(executorId)) {\n                backend.executorsPendingToRemove(executorId) = false\n              }\n            }"
   }
 ]

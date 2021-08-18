@@ -218,5 +218,236 @@
     "commit" : "880b1dec95595b58688a3d5f7a2e0637a090cb47",
     "line" : 57,
     "diffHunk" : "@@ -1,1 +58,62 @@        val sessionWithJava8DatetimeEnabled = {\n          val cloned = ds.sparkSession.cloneSession()\n          cloned.conf.set(SQLConf.DATETIME_JAVA8API_ENABLED.key, true)\n          cloned\n        }"
+  },
+  {
+    "id" : "0d5e5001-f54f-47b7-9853-2753d245f845",
+    "prId" : 26942,
+    "prUrl" : "https://github.com/apache/spark/pull/26942#pullrequestreview-334467364",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b6a82254-faca-4265-8b6f-dd1be825a82c",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "not related to this PR, but we should also simplify it. We can output SQL standard format if ansi mode is enabled, and output multi-unit format otherwise.",
+        "createdAt" : "2019-12-19T08:18:25Z",
+        "updatedAt" : "2019-12-20T02:07:57Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "66017ded-9074-40ab-b256-34b480464dc4",
+        "parentId" : "b6a82254-faca-4265-8b6f-dd1be825a82c",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "cc @gengliangwang @xuanyuanking ",
+        "createdAt" : "2019-12-19T08:18:40Z",
+        "updatedAt" : "2019-12-20T02:07:57Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dc15e01f-d5c8-4c6d-8613-f954ef98cafe",
+        "parentId" : "b6a82254-faca-4265-8b6f-dd1be825a82c",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "If we are doing so, I suggest we support SQL standard input first",
+        "createdAt" : "2019-12-19T08:20:44Z",
+        "updatedAt" : "2019-12-20T02:07:57Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8310be0a9a13313e2ee1db828879847e68c44e38",
+    "line" : 77,
+    "diffHunk" : "@@ -1,1 +77,81 @@    case (s: String, StringType) => if (nested) \"\\\"\" + s + \"\\\"\" else s\n    case (interval: CalendarInterval, CalendarIntervalType) =>\n      SQLConf.get.intervalOutputStyle match {\n        case SQL_STANDARD => toSqlStandardString(interval)\n        case ISO_8601 => toIso8601String(interval)"
+  },
+  {
+    "id" : "0bbe00cc-dece-4e82-b95c-e536dbfd18a3",
+    "prId" : 26942,
+    "prUrl" : "https://github.com/apache/spark/pull/26942#pullrequestreview-335154418",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4d0b8334-b8d0-430a-b16b-b21597e30e42",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "is this weird behavior inherited from Hive?",
+        "createdAt" : "2019-12-20T09:33:55Z",
+        "updatedAt" : "2019-12-20T09:33:56Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "390744e9-c397-497f-aff8-243969b4ab67",
+        "parentId" : "4d0b8334-b8d0-430a-b16b-b21597e30e42",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "yes, there are many hive compatibility unit tests there ",
+        "createdAt" : "2019-12-20T09:40:29Z",
+        "updatedAt" : "2019-12-20T09:40:29Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8310be0a9a13313e2ee1db828879847e68c44e38",
+    "line" : 66,
+    "diffHunk" : "@@ -1,1 +67,71 @@  /** Formats a datum (based on the given data type) and returns the string representation. */\n  def toHiveString(a: (Any, DataType), nested: Boolean = false): String = a match {\n    case (null, _) => if (nested) \"null\" else \"NULL\"\n    case (b, BooleanType) => b.toString\n    case (d: Date, DateType) => dateFormatter.format(DateTimeUtils.fromJavaDate(d))"
+  },
+  {
+    "id" : "5dad3288-9187-41c7-b38f-22373b6a674a",
+    "prId" : 26942,
+    "prUrl" : "https://github.com/apache/spark/pull/26942#pullrequestreview-380987891",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6393fb5f-9762-4c37-b761-b6b3f44efcc4",
+        "parentId" : null,
+        "authorId" : "e5beb795-ac0e-4bd6-ad66-708215b8ae58",
+        "body" : "On the other hand, if the nested-struct result is to be parsed back e.g. as json, the arbitrary bytes from the String created from binary may mess it up...\r\nMaybe returning `if (nested) \"<BINARY_BLOB>\" else new String(bin, StandardCharsets.UTF_8)` would make sense here?",
+        "createdAt" : "2020-03-24T20:20:10Z",
+        "updatedAt" : "2020-03-24T20:20:10Z",
+        "lastEditedBy" : "e5beb795-ac0e-4bd6-ad66-708215b8ae58",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8f5a0e33-5794-4147-9940-dbbe7c19aed1",
+        "parentId" : "6393fb5f-9762-4c37-b761-b6b3f44efcc4",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "This is a good point. Maybe we can follow `df.show`\r\n```\r\ncase binary: Array[Byte] => binary.map(\"%02X\".format(_)).mkString(\"[\", \" \", \"]\")\r\n```\r\nThe binary will be displayed like `[a0b87...]`, which will not conflict with json strings.",
+        "createdAt" : "2020-03-25T03:36:54Z",
+        "updatedAt" : "2020-03-25T03:36:54Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a2fe5600-149d-42d4-9245-ca3d3118eb20",
+        "parentId" : "6393fb5f-9762-4c37-b761-b6b3f44efcc4",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Hm, but IIRC Hive results string from binary, and this is `toHiveString`.  Does Hive return `<BINARY_BLOB>`?",
+        "createdAt" : "2020-03-25T04:32:32Z",
+        "updatedAt" : "2020-03-25T04:32:33Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ead9fce2-80c3-4541-a7fb-49e983bc713d",
+        "parentId" : "6393fb5f-9762-4c37-b761-b6b3f44efcc4",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "It reminds me of https://github.com/apache/spark/pull/25480 and https://github.com/apache/spark/pull/25379",
+        "createdAt" : "2020-03-25T04:34:52Z",
+        "updatedAt" : "2020-03-25T04:34:52Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e9ce64b2-630f-4f68-b1c9-fc0703b4e3fb",
+        "parentId" : "6393fb5f-9762-4c37-b761-b6b3f44efcc4",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "```sql\r\nhive> create table bt(k binary);\r\nOK\r\nTime taken: 0.637 seconds\r\nhive> insert into bt values (\"spark\"), (\"hello\"), (\"3\"), (\".\"), (\"0\");\r\nQuery ID = root_20200325055555_1c227d63-47dd-4899-a879-0b6a98269908\r\nTotal jobs = 3\r\nLaunching Job 1 out of 3\r\nNumber of reduce tasks is set to 0 since there's no reduce operator\r\nStarting Job = job_1585115622286_0001, Tracking URL = http://quickstart.cloudera:8088/proxy/application_1585115622286_0001/\r\nKill Command = /usr/lib/hadoop/bin/hadoop job  -kill job_1585115622286_0001\r\nHadoop job information for Stage-1: number of mappers: 1; number of reducers: 0\r\n2020-03-25 05:57:03,557 Stage-1 map = 0%,  reduce = 0%\r\n2020-03-25 05:57:09,766 Stage-1 map = 100%,  reduce = 0%, Cumulative CPU 1.86 sec\r\nMapReduce Total cumulative CPU time: 1 seconds 860 msec\r\nEnded Job = job_1585115622286_0001\r\nStage-4 is selected by condition resolver.\r\nStage-3 is filtered out by condition resolver.\r\nStage-5 is filtered out by condition resolver.\r\nMoving data to: hdfs://quickstart.cloudera:8020/user/hive/warehouse/bt/.hive-staging_hive_2020-03-25_05-56-54_007_226069574359185383-1/-ext-10000\r\nLoading data to table default.bt\r\nTable default.bt stats: [numFiles=1, numRows=5, totalSize=33, rawDataSize=28]\r\nMapReduce Jobs Launched:\r\nStage-Stage-1: Map: 1   Cumulative CPU: 1.86 sec   HDFS Read: 3080 HDFS Write: 99 SUCCESS\r\nTotal MapReduce CPU Time Spent: 1 seconds 860 msec\r\nOK\r\nTime taken: 17.185 seconds\r\nhive> select k, array(k) from bt;\r\nOK\r\nspark\t[spark]\r\nhello\t[hello]\r\n3\t[3]\r\n.\t[.]\r\n0\t[0]\r\n```",
+        "createdAt" : "2020-03-25T05:58:40Z",
+        "updatedAt" : "2020-03-25T05:58:41Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "306edbe7-5feb-4c1b-be2e-b973febce1c0",
+        "parentId" : "6393fb5f-9762-4c37-b761-b6b3f44efcc4",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "\r\n```sql\r\n[root@quickstart /]# beeline -u 'jdbc:hive2://localhost:10000'\r\n2020-03-25 06:02:31,786 WARN  [main] mapreduce.TableMapReduceUtil: The hbase-prefix-tree module jar containing PrefixTreeCodec is not present.  Continuing without it.\r\nscan complete in 4ms\r\nConnecting to jdbc:hive2://localhost:10000\r\nConnected to: Apache Hive (version 1.1.0-cdh5.7.0)\r\nDriver: Hive JDBC (version 1.1.0-cdh5.7.0)\r\nTransaction isolation: TRANSACTION_REPEATABLE_READ\r\nBeeline version 1.1.0-cdh5.7.0 by Apache Hive\r\n0: jdbc:hive2://localhost:10000> select k, array(k) from bt;\r\nINFO  : Compiling command(queryId=hive_20200325060202_e14c040e-6556-4eb3-98c8-295e929d1a65): select k, array(k) from bt\r\nINFO  : Semantic Analysis Completed\r\nINFO  : Returning Hive schema: Schema(fieldSchemas:[FieldSchema(name:k, type:binary, comment:null), FieldSchema(name:_c1, type:array<binary>, comment:null)], properties:null)\r\nINFO  : Completed compiling command(queryId=hive_20200325060202_e14c040e-6556-4eb3-98c8-295e929d1a65); Time taken: 1.108 seconds\r\nINFO  : Concurrency mode is disabled, not creating a lock manager\r\nINFO  : Executing command(queryId=hive_20200325060202_e14c040e-6556-4eb3-98c8-295e929d1a65): select k, array(k) from bt\r\nINFO  : Completed executing command(queryId=hive_20200325060202_e14c040e-6556-4eb3-98c8-295e929d1a65); Time taken: 0.005 seconds\r\nINFO  : OK\r\n+--------+----------+--+\r\n|   k    |   _c1    |\r\n+--------+----------+--+\r\n| spark  | [spark]  |\r\n| hello  | [hello]  |\r\n| 3      | [3]      |\r\n| .      | [.]      |\r\n| 0      | [0]      |\r\n+--------+----------+--+\r\n```",
+        "createdAt" : "2020-03-25T06:03:28Z",
+        "updatedAt" : "2020-03-25T06:03:28Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "72477751-2dca-477c-b58f-f1af8765425c",
+        "parentId" : "6393fb5f-9762-4c37-b761-b6b3f44efcc4",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "OK so `new String(bin, StandardCharsets.UTF_8)` follows the hive behavior.",
+        "createdAt" : "2020-03-25T06:03:31Z",
+        "updatedAt" : "2020-03-25T06:03:31Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d0ed0b47-145b-45d5-a3c2-8644f35deab9",
+        "parentId" : "6393fb5f-9762-4c37-b761-b6b3f44efcc4",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "what about `array<binary>`?",
+        "createdAt" : "2020-03-25T06:03:47Z",
+        "updatedAt" : "2020-03-25T06:03:48Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "860fbccd-602f-4cc4-8cf4-e43e3eded740",
+        "parentId" : "6393fb5f-9762-4c37-b761-b6b3f44efcc4",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "Anything I am missing here?",
+        "createdAt" : "2020-03-25T06:04:01Z",
+        "updatedAt" : "2020-03-25T06:04:01Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ec941b24-f6c7-400b-938c-96f5ca56b8ba",
+        "parentId" : "6393fb5f-9762-4c37-b761-b6b3f44efcc4",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "`array(k)` seems the array type of byte",
+        "createdAt" : "2020-03-25T06:09:50Z",
+        "updatedAt" : "2020-03-25T06:09:51Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f77ccf5f-15c0-4e43-9050-6a51a8b8d893",
+        "parentId" : "6393fb5f-9762-4c37-b761-b6b3f44efcc4",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "ah i see. Then seems nothing needs to be changed. cc @juliuszsompolski ",
+        "createdAt" : "2020-03-25T06:18:00Z",
+        "updatedAt" : "2020-03-25T06:18:00Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1ec326df-dc66-4695-9aa9-e373ad41193e",
+        "parentId" : "6393fb5f-9762-4c37-b761-b6b3f44efcc4",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "```sql\r\n0: jdbc:hive2://localhost:10000> desc bt_arr;\r\nINFO  : Compiling command(queryId=hive_20200325062323_10f71e38-fe8d-4094-aa87-5361df066edb): desc bt_arr\r\nINFO  : Semantic Analysis Completed\r\nINFO  : Returning Hive schema: Schema(fieldSchemas:[FieldSchema(name:col_name, type:string, comment:from deserializer), FieldSchema(name:data_type, type:string, comment:from deserializer), FieldSchema(name:comment, type:string, comment:from deserializer)], properties:null)\r\nINFO  : Completed compiling command(queryId=hive_20200325062323_10f71e38-fe8d-4094-aa87-5361df066edb); Time taken: 0.056 seconds\r\nINFO  : Concurrency mode is disabled, not creating a lock manager\r\nINFO  : Executing command(queryId=hive_20200325062323_10f71e38-fe8d-4094-aa87-5361df066edb): desc bt_arr\r\nINFO  : Starting task [Stage-0:DDL] in serial mode\r\nINFO  : Completed executing command(queryId=hive_20200325062323_10f71e38-fe8d-4094-aa87-5361df066edb); Time taken: 0.02 seconds\r\nINFO  : OK\r\n+-----------+----------------+----------+--+\r\n| col_name  |   data_type    | comment  |\r\n+-----------+----------------+----------+--+\r\n| _c0       | array<binary>  |          |\r\n+-----------+----------------+----------+--+\r\n1 row selected (0.158 seconds)\r\n0: jdbc:hive2://localhost:10000> select * from bt_arr;\r\nINFO  : Compiling command(queryId=hive_20200325062323_edfa2e37-a8da-481b-97e9-f4ed9a37b9a4): select * from bt_arr\r\nINFO  : Semantic Analysis Completed\r\nINFO  : Returning Hive schema: Schema(fieldSchemas:[FieldSchema(name:bt_arr._c0, type:array<binary>, comment:null)], properties:null)\r\nINFO  : Completed compiling command(queryId=hive_20200325062323_edfa2e37-a8da-481b-97e9-f4ed9a37b9a4); Time taken: 0.053 seconds\r\nINFO  : Concurrency mode is disabled, not creating a lock manager\r\nINFO  : Executing command(queryId=hive_20200325062323_edfa2e37-a8da-481b-97e9-f4ed9a37b9a4): select * from bt_arr\r\nINFO  : Completed executing command(queryId=hive_20200325062323_edfa2e37-a8da-481b-97e9-f4ed9a37b9a4); Time taken: 0.001 seconds\r\nINFO  : OK\r\n+-------------+--+\r\n| bt_arr._c0  |\r\n+-------------+--+\r\n| [spark]     |\r\n| [hello]     |\r\n| [3]         |\r\n| [.]         |\r\n| [0]         |\r\n+-------------+--+\r\n```",
+        "createdAt" : "2020-03-25T06:24:04Z",
+        "updatedAt" : "2020-03-25T06:24:35Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5a3cbb6a-ca00-4f2a-bc71-4de81d5b3c93",
+        "parentId" : "6393fb5f-9762-4c37-b761-b6b3f44efcc4",
+        "authorId" : "e5beb795-ac0e-4bd6-ad66-708215b8ae58",
+        "body" : "I believe the new behaviour is more sensible than the previous - returning just [B@ba4f370 was useless; returning the String made from Binary blob at least returns some content... I know some systems try to parse back these results as JSON to be able to explore the nested data - e.g. I think PowerBI does that with what thriftserver returns... I fear that if the binary has some strange contents, and is unquoted, it will break that JSON parsing... But I haven't tested it.\r\nI don't expect anyone using this kind of type combination and running into issues in practice...",
+        "createdAt" : "2020-03-25T09:41:30Z",
+        "updatedAt" : "2020-03-25T09:41:30Z",
+        "lastEditedBy" : "e5beb795-ac0e-4bd6-ad66-708215b8ae58",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8310be0a9a13313e2ee1db828879847e68c44e38",
+    "line" : 72,
+    "diffHunk" : "@@ -1,1 +72,76 @@    case (t: Timestamp, TimestampType) =>\n      timestampFormatter.format(DateTimeUtils.fromJavaTimestamp(t))\n    case (bin: Array[Byte], BinaryType) => new String(bin, StandardCharsets.UTF_8)\n    case (decimal: java.math.BigDecimal, DecimalType()) => decimal.toPlainString\n    case (n, _: NumericType) => n.toString"
   }
 ]

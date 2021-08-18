@@ -42,5 +42,126 @@
     "commit" : "586d94760217bdb83fb00d27b03d087c333d4311",
     "line" : 55,
     "diffHunk" : "@@ -1,1 +166,170 @@        modelDatasetWithDist\n      } else {\n        val hashThreshold = summary.query(approxQuantile).get\n        // Filter the dataset where the hash value is less than the threshold.\n        modelDatasetWithDist.filter(hashDistCol <= hashThreshold)"
+  },
+  {
+    "id" : "2a09456c-94e7-4d6d-89e1-75d0d03d059b",
+    "prId" : 26948,
+    "prUrl" : "https://github.com/apache/spark/pull/26948#pullrequestreview-336044286",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2a1719af-4641-4276-a43e-e6f42c68e19f",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Hm, why would we predicate this on numNearestNeighbors? I'm not clear why a priority queue helps particularly when this is small, vs a quantile; both are doing something kinda similar. I'd expect one or the other to be consistently faster or slower. I also generally imagine this argument will be smallish, so, if this approach is good for < 1000, and not bad for 10000 or something, just use the queue?\r\n\r\nI understood when the idea was to collect() small data sets and just pick directly the top k.",
+        "createdAt" : "2019-12-20T14:45:32Z",
+        "updatedAt" : "2019-12-23T04:49:06Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "84b778d2-ee7c-4257-a1af-2bec006c15a7",
+        "parentId" : "2a1719af-4641-4276-a43e-e6f42c68e19f",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "I set a threshold=1,000 here, just to avoid OOM. maybe 10,000 also works.\r\nThe aggregation cost of both `BoundedPriorityQueue` and `approxNearestNeighbors` should be quite similar.\r\n\r\nBut `BoundedPriorityQueue` do not need an extra pass to get `count` for `val approxQuantile = numNearestNeighbors.toDouble / count + relativeError`\r\n",
+        "createdAt" : "2019-12-23T02:25:46Z",
+        "updatedAt" : "2019-12-23T04:49:06Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2e31e0e4-6b53-4dda-ad24-3264de402ca0",
+        "parentId" : "2a1719af-4641-4276-a43e-e6f42c68e19f",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "I think I have the same question as in the other PR: if this is faster than quantiles for small neighbors, then I'd expect it's faster for everything. I don't know if it is though? my guess is that it wouldn't be. You save the count() but the count() isn't particularly expensive. The question might be how much that saves and at what scale.",
+        "createdAt" : "2019-12-23T14:24:30Z",
+        "updatedAt" : "2019-12-23T14:24:31Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "15b1cf85-ef0e-472d-9205-421a65f918f1",
+        "parentId" : "2a1719af-4641-4276-a43e-e6f42c68e19f",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "> You save the count() but the count() isn't particularly expensive.\r\n\r\nBut I test the performance but it seem that `count` can not be ignored, since the following computation of threshold has similar cost.\r\n\r\nBut I think we do not need top-K any more, since:\r\n1, the quantile and count can be accumulated together, I will send a PR for it;\r\n2, exact NN candidates is not a good choice as a `recall` step;\r\n",
+        "createdAt" : "2019-12-24T00:16:29Z",
+        "updatedAt" : "2019-12-24T00:16:29Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "59fc68b545a75eac405d0ced7514187f16114cff",
+    "line" : 40,
+    "diffHunk" : "@@ -1,1 +144,148 @@      import spark.implicits._\n\n      if (numNearestNeighbors < 1000) {\n        val r = Random.nextInt\n        val distColIdx = modelDatasetWithDist.schema.fieldNames.indexOf(distCol)"
+  },
+  {
+    "id" : "9166511d-623b-4ed1-bbe7-fa1312f5854a",
+    "prId" : 26948,
+    "prUrl" : "https://github.com/apache/spark/pull/26948#pullrequestreview-335713416",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e8004097-1b11-46e1-9b9f-bd9a617648d1",
+        "parentId" : null,
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "This method extract numNearestNeighbors rows, however, it fails in `BucketedRandomProjectionLSHSuite`.\r\n\r\nI checked the datasets, and found that existing method based on `approxQuantile`/`QuantileSummaries` will generate much more candidate items in the step:\r\nnumNearestNeighbors=100, modelSubset.size=231.\r\n\r\nMethod in current commit will only extract 100 candidates even if there are repeated values, while existing method in master will extract 231 candidates. Then the new method will fail in testsuite because its final precision is not good.\r\n\r\nI wonder that may be we need more candidates here to generate more accuracy final result?\r\nShould I just remove the method base on Top-K, or use a scaled threshold (numNearestNeighbors*3 or numNearestNeighbors*3) here?",
+        "createdAt" : "2019-12-23T04:29:26Z",
+        "updatedAt" : "2019-12-23T04:49:06Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b86224fd-07c5-4f9e-b53a-6db83c573521",
+        "parentId" : "e8004097-1b11-46e1-9b9f-bd9a617648d1",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "The log of both methods in testsuites:\r\n`approxQuantile/QuantileSummaries`:\r\nnumNearestNeighbors=100, modelSubset.size=231, threshold=0.0\r\n\r\ntopK\r\nnumNearestNeighbors=100, modelSubset.size=100, threshold=0.0",
+        "createdAt" : "2019-12-23T04:54:43Z",
+        "updatedAt" : "2019-12-23T04:54:43Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b34ece2f-a994-4f40-9a0c-090b40c46dff",
+        "parentId" : "e8004097-1b11-46e1-9b9f-bd9a617648d1",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "There is only one test for singleProbe=false:\r\nnumNearestNeighbors=100,\r\nthe threshold computed by previous `sort` or current `approxQuantile` is 0.0,\r\nfiltered with threshold=0.0, there are 231 items.\r\n",
+        "createdAt" : "2019-12-23T05:14:06Z",
+        "updatedAt" : "2019-12-23T05:14:07Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "59fc68b545a75eac405d0ced7514187f16114cff",
+    "line" : 53,
+    "diffHunk" : "@@ -1,1 +157,161 @@            combOp = (c1, c2) => c1 ++= c2\n          ).flatMap { case (_, c) => c.iterator.map(_._2) }\n        spark.createDataFrame(rows, modelDatasetWithDist.schema)\n\n      } else {"
+  },
+  {
+    "id" : "5ee59b97-6a65-4a11-9c35-36c05914c99c",
+    "prId" : 26948,
+    "prUrl" : "https://github.com/apache/spark/pull/26948#pullrequestreview-335708094",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6220c629-5db9-4473-bd4c-cd2f7e870bfb",
+        "parentId" : null,
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "Here we compute QuantileSummaries & count together, it should be faster than existing impl.",
+        "createdAt" : "2019-12-23T04:33:28Z",
+        "updatedAt" : "2019-12-23T04:49:06Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "59fc68b545a75eac405d0ced7514187f16114cff",
+    "line" : 61,
+    "diffHunk" : "@@ -1,1 +161,165 @@      } else {\n        val relativeError = 0.05\n        val (summaries, count) = modelDatasetWithDist\n          .select(distCol)\n          .as[Double]"
   }
 ]

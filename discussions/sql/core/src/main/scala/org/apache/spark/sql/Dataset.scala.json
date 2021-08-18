@@ -1549,5 +1549,214 @@
     "commit" : "2878cdb5f546367e8a86429c847a8649849c53c7",
     "line" : 28,
     "diffHunk" : "@@ -1,1 +1913,1917 @@  * }}}\n  *\n  * @group typedrel\n  * @since 3.0.0\n  */"
+  },
+  {
+    "id" : "03158c55-8168-41b9-8f2b-afc0434ef24e",
+    "prId" : 26969,
+    "prUrl" : "https://github.com/apache/spark/pull/26969#pullrequestreview-484199330",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "673b4d2d-c614-4832-8e79-a294b93220d6",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "After a second thought, I don't think it's possible to do it, as the encoder is a black box here. We can't just assume the encoder expression is simply selecting columns, it's not even true for case class, as case class encoder does `Upcast` to input columns.\r\n\r\nAs I said before, `as[U].map(identity)` should be good enough, and the performance is as good as this one if there are other typed operations before `as[U]` and the `identity` function will be merged into the previous typed operations and has nearly no overhead.",
+        "createdAt" : "2020-08-18T09:29:25Z",
+        "updatedAt" : "2020-12-18T07:50:20Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "60c358f1-cecc-4518-a867-1419a79eac97",
+        "parentId" : "673b4d2d-c614-4832-8e79-a294b93220d6",
+        "authorId" : "c4ecf4e4-1fda-4fed-9980-aed6c3b3e8e4",
+        "body" : "I don't see why encoders that perform `UpCast` would not work here. The above line still does apply the encoder via `.as[U]`, and `UpCast` does not involve column names in any way, i.e. the projection. Can you given a code example showing why this should not work?\r\n\r\nWith `map(identity)` we perform an encoder round-trip encoding the given columns into the black-box representation, and decoding with the same encoder to some columns again. The decoded representation (columns) must work as input to encode again, hence column names on both sides are identical. I would argue if column names exist it can be inferred that they can be projected. I'd be happy to see some example code that show this assumption is wrong.\r\n\r\nIt is a common use-case to use `Dataset[T]` to create typed user code. Defining a function `def compute(data: DataFrame): DataFrame` would allow to call it with arbitrary `DataFrame`s and the function would have to assert the schema on every call. Defining the function typed instead like `def compute(data: Dataset[Raw]): Dataset[Compute]` removes those assertions from your code and makes your code not compile when your try to use the wrong kind of `DataFrame`. In that scenario, you are using `.as[T]` but might never call any method that actually uses the encoder (like `map` or `collect`). Thus, you never materialize that hidden schema.\r\n\r\nI think adding `.map(identity)` to `.as[T]` in user code looks redundant and meaningless from a user point of view and should be moved behind the Spark API.",
+        "createdAt" : "2020-08-18T10:53:42Z",
+        "updatedAt" : "2020-12-18T07:50:20Z",
+        "lastEditedBy" : "c4ecf4e4-1fda-4fed-9980-aed6c3b3e8e4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9f7c0e7e-b262-4ce1-804c-4fd9f533020e",
+        "parentId" : "673b4d2d-c614-4832-8e79-a294b93220d6",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "For example, the df schema is `<a: int, b: int>` while `U` is `case class U(a: long, b: String)`. The final schema of `toDS[U]` should be `<a: long, b: string>`.\r\n\r\n`Upcast` is just one example, `toDS[U]` can't be implemented as simply selecting columns, because we must understand what the encoder expression is.",
+        "createdAt" : "2020-08-18T13:45:18Z",
+        "updatedAt" : "2020-12-18T07:50:20Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "69976686-7684-495c-92f2-4cf37a14e739",
+        "parentId" : "673b4d2d-c614-4832-8e79-a294b93220d6",
+        "authorId" : "c4ecf4e4-1fda-4fed-9980-aed6c3b3e8e4",
+        "body" : "And if we define the `toDS[U]` operation as applying the schema of `U` only and not any other semantics of the encoder. The encoder has an output schema, and this is the output schema of `toDS[U]`. I think that is a sensible scope and a common use case.",
+        "createdAt" : "2020-09-08T14:29:49Z",
+        "updatedAt" : "2020-12-18T07:50:20Z",
+        "lastEditedBy" : "c4ecf4e4-1fda-4fed-9980-aed6c3b3e8e4",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4b45f296a60992ae56925aa004bcc0d8bf0f0faf",
+    "line" : 70,
+    "diffHunk" : "@@ -1,1 +563,567 @@    }\n\n    this.select(projectedColumns.map(c => col(c.name)): _*).as[U]\n  }\n"
+  },
+  {
+    "id" : "c5f97803-9257-4c8c-b6e0-b7a73543023c",
+    "prId" : 26922,
+    "prUrl" : "https://github.com/apache/spark/pull/26922#pullrequestreview-333631077",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "163a3c9e-8d8a-4682-b651-506b876f7de7",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Nit: close `<li>` tag",
+        "createdAt" : "2019-12-17T16:31:44Z",
+        "updatedAt" : "2019-12-18T01:53:10Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1e9da92a-295d-4710-8f71-266acce36e51",
+        "parentId" : "163a3c9e-8d8a-4682-b651-506b876f7de7",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "BTW... doesn't scaladoc interpret markdown tags? Is it just that these didn't have a blank line above or something? I don't know it well.",
+        "createdAt" : "2019-12-17T16:32:50Z",
+        "updatedAt" : "2019-12-18T01:53:10Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e25cc581-e7d9-4ee0-9e6e-4b8bf4a26f4c",
+        "parentId" : "163a3c9e-8d8a-4682-b651-506b876f7de7",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "nice catch!thanks! the scaladoc supports wiki-style syntax and HTML, not markdown.",
+        "createdAt" : "2019-12-17T16:52:43Z",
+        "updatedAt" : "2019-12-18T01:53:10Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "da42f648-86ea-465b-bbb6-ecb0e27e8a90",
+        "parentId" : "163a3c9e-8d8a-4682-b651-506b876f7de7",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Oh OK. Maybe I'm crazy but I thought `- foo` style lists work, but remember that sometimes they don't unless there's a blank line above it. I'm just wondering if that's the issue here. Or if it's not -- there are many more instances like this in the code, no? let's fix more of them if it's necessary",
+        "createdAt" : "2019-12-17T22:45:02Z",
+        "updatedAt" : "2019-12-18T01:53:10Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2c1b3e273c7028ec1f0cdc041a5ab54c7f76d048",
+    "line" : 11,
+    "diffHunk" : "@@ -1,1 +452,456 @@   * method used to map columns depend on the type of `U`:\n   * <ul>\n   *   <li>When `U` is a class, fields for the class will be mapped to columns of the same name\n   *   (case sensitivity is determined by `spark.sql.caseSensitive`).</li>\n   *   <li>When `U` is a tuple, the columns will be mapped by ordinal (i.e. the first column will"
+  },
+  {
+    "id" : "2bac4969-f7fd-4e01-9a6c-f664d38ac1c1",
+    "prId" : 26903,
+    "prUrl" : "https://github.com/apache/spark/pull/26903#pullrequestreview-332361859",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "09db29b7-056b-4c52-afbc-022ae5dc8bea",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "This is matched to Python side doc added FYI.",
+        "createdAt" : "2019-12-16T06:36:57Z",
+        "updatedAt" : "2019-12-16T06:36:58Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f47a2559424c8e6c724f2036af7e0c4615a7ec0d",
+    "line" : 13,
+    "diffHunk" : "@@ -1,1 +534,538 @@   *               <li>`formatted`: Split explain output into two sections: a physical plan outline\n   *                 and node details.</li>\n   *             </ul>\n   * @group basic\n   * @since 3.0.0"
+  },
+  {
+    "id" : "bf5d12fb-9f98-46e3-8219-1733710b1a4a",
+    "prId" : 26898,
+    "prUrl" : "https://github.com/apache/spark/pull/26898#pullrequestreview-332331274",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f99d3d0c-bb5e-4f9a-b9f6-d11491afde17",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "~I'm a little confused. This seems to be different from the original logic `ExplainCommandUtil.explainedQueryExecution(sparkSession, logicalPlan, queryExecution)` in case of  `logicalPlan.isStreaming == true`? Did I miss something?~\r\nOh, sorry. I found the new logic.",
+        "createdAt" : "2019-12-16T04:01:26Z",
+        "updatedAt" : "2019-12-16T04:02:05Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "48789561900c7124a7ac5485f946aeae7e224fc9",
+    "line" : 65,
+    "diffHunk" : "@@ -1,1 +535,539 @@\n    // scalastyle:off println\n    println(queryExecution.explainString(ExplainMode.fromString(mode)))\n    // scalastyle:on println\n  }"
+  },
+  {
+    "id" : "9ea565ed-e181-4ad6-9062-738c0f8ea467",
+    "prId" : 26898,
+    "prUrl" : "https://github.com/apache/spark/pull/26898#pullrequestreview-332355123",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5bf8ebf3-d99b-4633-b5b3-c6649a91e411",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Shall we at least document the acceptable explain mode string here?",
+        "createdAt" : "2019-12-16T05:59:23Z",
+        "updatedAt" : "2019-12-16T05:59:23Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "78963b21-2e27-46d9-a9e9-3dee3f0cacec",
+        "parentId" : "5bf8ebf3-d99b-4633-b5b3-c6649a91e411",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Sure.",
+        "createdAt" : "2019-12-16T06:09:59Z",
+        "updatedAt" : "2019-12-16T06:09:59Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "48789561900c7124a7ac5485f946aeae7e224fc9",
+    "line" : 51,
+    "diffHunk" : "@@ -1,1 +523,527 @@\n  /**\n   * Prints the plans (logical and physical) with a format specified by a given explain mode.\n   *\n   * @group basic"
+  },
+  {
+    "id" : "e30612f0-e83a-4119-b8bd-57aac56832b7",
+    "prId" : 26886,
+    "prUrl" : "https://github.com/apache/spark/pull/26886#pullrequestreview-332176727",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6e684cb9-a189-48aa-bcbe-2b29bfd5bfb5",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "https://github.com/apache/spark/pull/26861#discussion_r357727679",
+        "createdAt" : "2019-12-14T00:20:20Z",
+        "updatedAt" : "2019-12-14T11:36:44Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d98e261c36d5418c85b4b3618f740e0260c000ed",
+    "line" : 4,
+    "diffHunk" : "@@ -1,1 +548,552 @@  }\n\n  // This method intends to be called from PySpark DataFrame\n  private[sql] def toExplainString(mode: String): String = {\n    mode.toLowerCase(Locale.ROOT) match {"
   }
 ]

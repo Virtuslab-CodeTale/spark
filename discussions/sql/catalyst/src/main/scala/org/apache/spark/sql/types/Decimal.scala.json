@@ -75,5 +75,126 @@
     "commit" : "93f3ae1c32f893cc3cc22ae075753098440e76b5",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +542,546 @@  val MAX_LONG_DIGITS = 18\n\n  val POW_10 = Array.tabulate[Long](MAX_LONG_DIGITS + 1)(i => math.pow(10, i).toLong)\n\n  private val BIG_DEC_ZERO = BigDecimal(0)"
+  },
+  {
+    "id" : "60adff97-aeb2-4592-ab5e-914bf3f0c9e4",
+    "prId" : 26881,
+    "prUrl" : "https://github.com/apache/spark/pull/26881#pullrequestreview-341635737",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "eef1c3f8-fbb5-402f-bfa1-1df254cf6ddb",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Do you mean allowing negative scale here?",
+        "createdAt" : "2020-01-11T01:01:01Z",
+        "updatedAt" : "2020-01-17T14:23:59Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9f5c9597-fb31-4328-90b9-92554bb096b9",
+        "parentId" : "eef1c3f8-fbb5-402f-bfa1-1df254cf6ddb",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Yeah. But the negative scale is not from end-user, but from java BigDecimal(e.g. `1E10` will has precision=2 and scale=-9 using java BigDecimal).",
+        "createdAt" : "2020-01-13T03:44:19Z",
+        "updatedAt" : "2020-01-17T14:23:59Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c6b51da1-8718-4f72-98b0-f48458a3e568",
+        "parentId" : "eef1c3f8-fbb5-402f-bfa1-1df254cf6ddb",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Oh I see. Thanks.",
+        "createdAt" : "2020-01-13T04:27:10Z",
+        "updatedAt" : "2020-01-17T14:23:59Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "563853b4d7b9a460c44b3a3de6552335d59fb3c0",
+    "line" : 31,
+    "diffHunk" : "@@ -1,1 +143,147 @@    } else if (decimal.scale < 0 && !SQLConf.get.allowNegativeScaleOfDecimalEnabled) {\n      this._precision = decimal.precision - decimal.scale\n      this._scale = 0\n      // set scale to 0 to correct unscaled value\n      this.decimalVal = decimal.setScale(0)"
+  },
+  {
+    "id" : "3db8a88e-5206-4225-a943-e88c0331246a",
+    "prId" : 26881,
+    "prUrl" : "https://github.com/apache/spark/pull/26881#pullrequestreview-343002798",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8c00238c-3dda-4879-9388-b8c92b66b191",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "No chance that this `_precision` goes over the max precision?",
+        "createdAt" : "2020-01-14T00:16:15Z",
+        "updatedAt" : "2020-01-17T14:23:59Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3aeaf9f8-95cd-4118-ad9b-6c8697cacd8d",
+        "parentId" : "8c00238c-3dda-4879-9388-b8c92b66b191",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "It's possible. But we have `DecimalType` aside to do the check and fail if we goes over the max precision.",
+        "createdAt" : "2020-01-14T01:11:23Z",
+        "updatedAt" : "2020-01-17T14:23:59Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "34fdb129-8bea-4ad0-ada0-0e4d09201ded",
+        "parentId" : "8c00238c-3dda-4879-9388-b8c92b66b191",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Yea, but I personally think it'd be better to check the max precision in the setter of a `Decimal` side, too, for safeguards. It seems the other setter has the check: https://github.com/apache/spark/blob/1846b0261b84ce1bca079bc59fb4518bff910c18/sql/catalyst/src/main/scala/org/apache/spark/sql/types/Decimal.scala#L117.",
+        "createdAt" : "2020-01-14T04:00:36Z",
+        "updatedAt" : "2020-01-17T14:23:59Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "04388c28-1852-486f-8f38-7bc68a50145a",
+        "parentId" : "8c00238c-3dda-4879-9388-b8c92b66b191",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "if we add check for this, do we also have to add check for https://github.com/apache/spark/blob/1846b0261b84ce1bca079bc59fb4518bff910c18/sql/catalyst/src/main/scala/org/apache/spark/sql/types/Decimal.scala#L138 ?",
+        "createdAt" : "2020-01-14T09:35:07Z",
+        "updatedAt" : "2020-01-17T14:23:59Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a637c60b-de0f-43c7-a0e5-5bb66f803574",
+        "parentId" : "8c00238c-3dda-4879-9388-b8c92b66b191",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "+1",
+        "createdAt" : "2020-01-14T09:36:49Z",
+        "updatedAt" : "2020-01-17T14:23:59Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "590699b3-de01-4a67-9b70-7a8401e2373c",
+        "parentId" : "8c00238c-3dda-4879-9388-b8c92b66b191",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "yea, I think so.",
+        "createdAt" : "2020-01-15T06:04:11Z",
+        "updatedAt" : "2020-01-17T14:23:59Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "563853b4d7b9a460c44b3a3de6552335d59fb3c0",
+    "line" : 30,
+    "diffHunk" : "@@ -1,1 +142,146 @@      this._scale = decimal.scale\n    } else if (decimal.scale < 0 && !SQLConf.get.allowNegativeScaleOfDecimalEnabled) {\n      this._precision = decimal.precision - decimal.scale\n      this._scale = 0\n      // set scale to 0 to correct unscaled value"
   }
 ]

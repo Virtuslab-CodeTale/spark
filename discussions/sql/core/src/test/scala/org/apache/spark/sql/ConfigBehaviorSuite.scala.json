@@ -1,0 +1,123 @@
+[
+  {
+    "id" : "19bfbb95-6a7b-489d-bfb9-a05cb414bb02",
+    "prId" : 26946,
+    "prUrl" : "https://github.com/apache/spark/pull/26946#pullrequestreview-335737960",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e3fe8ee8-a281-41d1-a6ad-fb81e3b40630",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "why this change?",
+        "createdAt" : "2019-12-20T09:29:21Z",
+        "updatedAt" : "2019-12-24T08:48:46Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fd018e5a-a1d9-4ed0-8238-b4c9c0a82ece",
+        "parentId" : "e3fe8ee8-a281-41d1-a6ad-fb81e3b40630",
+        "authorId" : "0f4ef4e8-09be-436f-b743-bf8fbc343490",
+        "body" : "This test is failed because of pruning repartition, the partition number is not right in this case. ",
+        "createdAt" : "2019-12-20T13:52:09Z",
+        "updatedAt" : "2019-12-24T08:48:46Z",
+        "lastEditedBy" : "0f4ef4e8-09be-436f-b743-bf8fbc343490",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "83ec8f56-5b05-4f73-9cce-f5498c5fa6bc",
+        "parentId" : "e3fe8ee8-a281-41d1-a6ad-fb81e3b40630",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "The test wants to test a sort with shuffle. Do we still have shuffle in this query?",
+        "createdAt" : "2019-12-20T14:57:00Z",
+        "updatedAt" : "2019-12-24T08:48:46Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d8e05503-4773-4422-b573-66fd231e1aa5",
+        "parentId" : "e3fe8ee8-a281-41d1-a6ad-fb81e3b40630",
+        "authorId" : "0f4ef4e8-09be-436f-b743-bf8fbc343490",
+        "body" : "Yes",
+        "createdAt" : "2019-12-21T11:39:22Z",
+        "updatedAt" : "2019-12-24T08:48:46Z",
+        "lastEditedBy" : "0f4ef4e8-09be-436f-b743-bf8fbc343490",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "099ae0f0-082f-45cf-99bb-3c76266b9c91",
+        "parentId" : "e3fe8ee8-a281-41d1-a6ad-fb81e3b40630",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I'm a bit confused. `spark.range` reports `RangePartitioning`, so there shouldn't be any shuffles. What gets changed?",
+        "createdAt" : "2019-12-23T05:32:23Z",
+        "updatedAt" : "2019-12-24T08:48:46Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "978d4fa2-8974-4540-8132-da469d22595c",
+        "parentId" : "e3fe8ee8-a281-41d1-a6ad-fb81e3b40630",
+        "authorId" : "0f4ef4e8-09be-436f-b743-bf8fbc343490",
+        "body" : "```\r\n== Optimized Logical Plan ==\r\nSort [id#8L DESC NULLS LAST], true\r\n+- Range (0, 100, step=1, splits=Some(10))\r\n\r\n== Physical Plan ==\r\n*(2) Sort [id#8L DESC NULLS LAST], true, 0\r\n+- Exchange rangepartitioning(id#8L DESC NULLS LAST, 4), true, [id=#33]\r\n   +- *(1) Range (0, 100, step=1, splits=10)\r\n```\r\nThe sort api will add global=true in SortExec, similar with orderby, which will cause SortExec's requiredChildDistribution to be parsed into OrderedDistribution.\r\nEnsureRequirements will add a ShuffleExchangeExec with rangePartitioning after OrderedDistribution.",
+        "createdAt" : "2019-12-23T07:18:57Z",
+        "updatedAt" : "2019-12-24T08:48:46Z",
+        "lastEditedBy" : "0f4ef4e8-09be-436f-b743-bf8fbc343490",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d2615b61a6e5f7ed849f826d25d45315953386c9",
+    "line" : 7,
+    "diffHunk" : "@@ -1,1 +40,44 @@      val n = 10000\n      // Trigger a sort\n      val data = spark.range(0, n, 1, 10).sort($\"id\".desc)\n        .selectExpr(\"SPARK_PARTITION_ID() pid\", \"id\").as[(Int, Long)].collect()\n"
+  },
+  {
+    "id" : "0781cc6d-fcfb-4d77-9736-254e07a88032",
+    "prId" : 26946,
+    "prUrl" : "https://github.com/apache/spark/pull/26946#pullrequestreview-335991732",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "08654df9-b33a-4a5d-8a65-7060d5d86bb1",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "the physical plan is same as before, what caused this change?",
+        "createdAt" : "2019-12-23T07:52:26Z",
+        "updatedAt" : "2019-12-24T08:48:46Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "78fe8cc7-6294-4904-a0c7-f3651980ee89",
+        "parentId" : "08654df9-b33a-4a5d-8a65-7060d5d86bb1",
+        "authorId" : "0f4ef4e8-09be-436f-b743-bf8fbc343490",
+        "body" : "They are not same, we had two shuffles before, one was RoundRobinPartitioning, the other was RangePartitioning.",
+        "createdAt" : "2019-12-23T15:40:47Z",
+        "updatedAt" : "2019-12-24T08:48:46Z",
+        "lastEditedBy" : "0f4ef4e8-09be-436f-b743-bf8fbc343490",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8076cec4-416a-48f9-aa7f-59856e34699b",
+        "parentId" : "08654df9-b33a-4a5d-8a65-7060d5d86bb1",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "ah i see",
+        "createdAt" : "2019-12-23T19:52:15Z",
+        "updatedAt" : "2019-12-24T08:48:46Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d2615b61a6e5f7ed849f826d25d45315953386c9",
+    "line" : 16,
+    "diffHunk" : "@@ -1,1 +54,58 @@    withSQLConf(SQLConf.SHUFFLE_PARTITIONS.key -> numPartitions.toString) {\n      // The default chi-sq value should be low\n      assert(computeChiSquareTest() < 10)\n\n      withSQLConf(SQLConf.RANGE_EXCHANGE_SAMPLE_SIZE_PER_PARTITION.key -> \"1\") {"
+  }
+]

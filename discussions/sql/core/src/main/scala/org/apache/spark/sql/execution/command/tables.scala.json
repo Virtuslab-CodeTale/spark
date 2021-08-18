@@ -1076,5 +1076,192 @@
     "commit" : "e5f496e0303e07785e006f5231bbe40b2dfa8ae5",
     "line" : 7,
     "diffHunk" : "@@ -1,1 +1079,1083 @@              tableMetadata.unsupportedFeatures.map(\" - \" + _).mkString(\"\\n\") + \". \" +\n              s\"Please use `SHOW CREATE TABLE ${tableMetadata.identifier} AS SERDE` \" +\n              \"to show Hive DDL instead.\"\n          )\n        }"
+  },
+  {
+    "id" : "a21d7c2f-fad2-4d9a-aeae-877e841aef72",
+    "prId" : 26956,
+    "prUrl" : "https://github.com/apache/spark/pull/26956#pullrequestreview-337952317",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "53cbc3fa-0c8b-45d6-b0df-49e0bc749aae",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "not familiar with Hadoop FS APIs, but do we have something like `rm -rf tablePath/*`?. My point is, if we don't delete the parent folder, then we don't have this problem at all.",
+        "createdAt" : "2020-01-02T07:59:46Z",
+        "updatedAt" : "2020-01-10T01:19:12Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f52f4e4f-af34-47a2-8970-74b7fe45cdd7",
+        "parentId" : "53cbc3fa-0c8b-45d6-b0df-49e0bc749aae",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "In the [FileSystem API](https://hadoop.apache.org/docs/current/api/org/apache/hadoop/fs/FileSystem.html), I didn't find one like that. \r\n\r\nBut I just search again, there is [FileUtil API ](https://hadoop.apache.org/docs/current/api/org/apache/hadoop/fs/FileUtil.html#fullyDeleteContents-java.io.File-) that seems working like that.\r\n\r\nI will test tomorrow to see if it work well to keep permission/acl in a Spark cluster like current approach.",
+        "createdAt" : "2020-01-02T08:14:37Z",
+        "updatedAt" : "2020-01-10T01:19:12Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b6e1f00e-b091-4742-878d-1be4882471ec",
+        "parentId" : "53cbc3fa-0c8b-45d6-b0df-49e0bc749aae",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "oh, I think `FileUtil.fullyDeleteContents` only works on local file (java.io.File), not for files on distributed file system like HDFS.\r\n\r\n",
+        "createdAt" : "2020-01-02T08:45:54Z",
+        "updatedAt" : "2020-01-10T01:19:12Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "79effc63-ed4f-4eb6-9594-9464d1af9802",
+        "parentId" : "53cbc3fa-0c8b-45d6-b0df-49e0bc749aae",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "So I think there is no single API to do `rm -rf tablePath/*` in Hadoop FS, if I haven't missed anything.\r\n\r\nWe can do `listStatus` and delete all contents in the given directory. But it is inefficient for DFS and is easier to have error.",
+        "createdAt" : "2020-01-02T16:49:27Z",
+        "updatedAt" : "2020-01-10T01:19:12Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b504291a-5587-46d0-96b7-416f0041b48d",
+        "parentId" : "53cbc3fa-0c8b-45d6-b0df-49e0bc749aae",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Do you know how Hive/Presto implement TRUNCATE TABLE? Are there other file attributes we need to retain?",
+        "createdAt" : "2020-01-02T18:23:02Z",
+        "updatedAt" : "2020-01-10T01:19:12Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d07bae15-d47a-42b2-bb35-09d631cc5be0",
+        "parentId" : "53cbc3fa-0c8b-45d6-b0df-49e0bc749aae",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "For Hive, I try to trace the code path for TRUNCATE TABLE:\r\n\r\n1. HiveMetaStore. truncateTableInternal:\r\n\r\nGet the locations of table/partitions and call Warehouse.deleteDir for each.\r\n\r\nhttps://github.com/apache/hive/blob/master/standalone-metastore/metastore-server/src/main/java/org/apache/hadoop/hive/metastore/HiveMetaStore.java#L3109\r\n\r\n2. Warehouse.deleteDir delegates to MetaStoreFS.deleteDir.\r\n3. HiveMetaStoreFsImpl (implements MetaStoreFS) delegates to FileUtils.moveToTrash which calls `FileSystem.delete(f, true)`. \r\n\r\nIn `HiveMetaStore.truncateTableInternal`, after the location is deleted, new directory is created and previous file status including permissions, group, and ACLs are set to new directory: \r\n\r\nhttps://github.com/apache/hive/blob/35f86c749cefc2a9972a991deed78a1c3719093d/standalone-metastore/metastore-common/src/main/java/org/apache/hadoop/hive/metastore/utils/HdfsUtils.java#L288\r\n\r\n\r\n\r\n\r\n\r\n",
+        "createdAt" : "2020-01-02T20:53:08Z",
+        "updatedAt" : "2020-01-10T01:19:12Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "77b4e90d-3e64-4de7-a96a-e4001aa3c7fc",
+        "parentId" : "53cbc3fa-0c8b-45d6-b0df-49e0bc749aae",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Now I retain permission and ACLs. I was doing `fs.setOwner` in first commit for retaining path owner and group. But `fs.setOwner` throws exception because it is only doable by super user.\r\n\r\nIn Hive code, since it is code running the metastore server, I think it is running with enough permission to set owner/group. For Spark, we may not running it with super user.",
+        "createdAt" : "2020-01-02T22:26:40Z",
+        "updatedAt" : "2020-01-10T01:19:12Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "07bbf7df-a02f-4563-abd4-1434baf95cba",
+        "parentId" : "53cbc3fa-0c8b-45d6-b0df-49e0bc749aae",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "In Presto, looks like it takes the approach by listing all files/directories under the path to delete (i.e., `rm -rf tablePath/*`), and recursively deleting them:\r\n\r\nhttps://github.com/prestodb/presto/blob/9c21aaa659f9d4927fe12bec4b8015c8cbf4722e/presto-hive-metastore/src/main/java/com/facebook/presto/hive/metastore/SemiTransactionalHiveMetastore.java#L485\r\n\r\nhttps://github.com/prestodb/presto/blob/9c21aaa659f9d4927fe12bec4b8015c8cbf4722e/presto-hive-metastore/src/main/java/com/facebook/presto/hive/metastore/SemiTransactionalHiveMetastore.java#L1796",
+        "createdAt" : "2020-01-03T00:12:14Z",
+        "updatedAt" : "2020-01-10T01:19:12Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6572263a-d45b-4607-8963-d891334e0862",
+        "parentId" : "53cbc3fa-0c8b-45d6-b0df-49e0bc749aae",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "the presto way seems safer to me. ",
+        "createdAt" : "2020-01-03T03:54:31Z",
+        "updatedAt" : "2020-01-10T01:19:12Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2d975afd-5527-41c4-9ed3-cf6d4d9df844",
+        "parentId" : "53cbc3fa-0c8b-45d6-b0df-49e0bc749aae",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "I was concerned with the presto way on performance regression. For a table which has many files/directories, deleting them one by one could be a bottleneck.\r\n\r\nIf we add a config for retaining permission/ACLs when truncating table? Users can choose to disable it and directly delete top directory (current behavior) without retaining permission/ACLs.",
+        "createdAt" : "2020-01-03T05:29:20Z",
+        "updatedAt" : "2020-01-10T01:19:12Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8e429a364fc76573b7ee3637ccaaeef8269700d0",
+    "line" : 37,
+    "diffHunk" : "@@ -1,1 +521,525 @@          }\n\n          fs.delete(path, true)\n\n          // We should keep original permission/acl of the path."
+  },
+  {
+    "id" : "e3c3e5f5-be09-4b1d-9bd6-bb7d01a2f178",
+    "prId" : 26944,
+    "prUrl" : "https://github.com/apache/spark/pull/26944#pullrequestreview-335033189",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7bf7f3e9-529e-408a-9f18-92d7e8ef4185",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Can you add tests for quoted text cases?",
+        "createdAt" : "2019-12-20T00:50:40Z",
+        "updatedAt" : "2020-01-03T09:38:20Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "498a608c-5e5f-4585-973d-200ea26351cf",
+        "parentId" : "7bf7f3e9-529e-408a-9f18-92d7e8ef4185",
+        "authorId" : "78cb7df6-a1c6-4bcb-99c1-16fd18fb32f7",
+        "body" : "test added, thanks",
+        "createdAt" : "2019-12-20T01:51:02Z",
+        "updatedAt" : "2020-01-03T09:38:20Z",
+        "lastEditedBy" : "78cb7df6-a1c6-4bcb-99c1-16fd18fb32f7",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c054672979e524330050d4389cc9da10371044de",
+    "line" : 27,
+    "diffHunk" : "@@ -1,1 +1035,1039 @@      val viewColumns = metadata.schema.map { f =>\n        val comment = f.getComment()\n          .map(escapeSingleQuotedString)\n          .map(\" COMMENT '\" + _ + \"'\")\n"
+  },
+  {
+    "id" : "42ba5b75-f4e7-4510-8264-7d53cd640031",
+    "prId" : 26927,
+    "prUrl" : "https://github.com/apache/spark/pull/26927#pullrequestreview-335054427",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c025f23c-d151-45a2-ad6f-964f0c046f02",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "How about just simply writing it like this?\r\n```\r\n\r\n    val catalogStats = catalog.getTempViewOrPermanentTableMetadata(table).stats\r\n    val cs = if (conf.caseSensitiveAnalysis) {\r\n      catalogStats.flatMap { cs => cs.colStats.get(field.name) }\r\n    } else {\r\n      catalogStats.flatMap { cs =>\r\n        cs.colStats.map { case (k, v) => (k.toLowerCase(Locale.ROOT), v) }\r\n          .get(field.name.toLowerCase(Locale.ROOT))\r\n      }\r\n    }\r\n```",
+        "createdAt" : "2019-12-20T02:16:11Z",
+        "updatedAt" : "2019-12-24T12:28:22Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3ea2584a-4125-4f8b-81cc-537fe1ee2170",
+        "parentId" : "c025f23c-d151-45a2-ad6f-964f0c046f02",
+        "authorId" : "8e72afd5-de89-4212-aae0-4b1455275a3f",
+        "body" : "I have reworked on the change suggested. Could you review?",
+        "createdAt" : "2019-12-20T03:35:05Z",
+        "updatedAt" : "2019-12-24T12:28:22Z",
+        "lastEditedBy" : "8e72afd5-de89-4212-aae0-4b1455275a3f",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5ff17aee94575b08c59dc149891b334560f718da",
+    "line" : 17,
+    "diffHunk" : "@@ -1,1 +724,728 @@    val colStats = if (conf.caseSensitiveAnalysis) colStatsMap else CaseInsensitiveMap(colStatsMap)\n    val cs = colStats.get(field.name)\n\n    val comment = if (field.metadata.contains(\"comment\")) {\n      Option(field.metadata.getString(\"comment\"))"
   }
 ]

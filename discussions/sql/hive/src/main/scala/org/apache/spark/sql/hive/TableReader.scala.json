@@ -174,5 +174,115 @@
     "commit" : "d170e2463cc7865f2907a861f6d77bbd3e92ca23",
     "line" : 6,
     "diffHunk" : "@@ -1,1 +301,305 @@    val inputFormatClazz = localTableDesc.getInputFileFormatClass\n    if (!inputFormatClazz.getName.\n      equalsIgnoreCase(\"org.apache.hadoop.hive.hbase.HiveHBaseTableInputFormat\")\n      && classOf[newInputClass[_, _]].isAssignableFrom(inputFormatClazz)) {\n      createNewHadoopRDD(localTableDesc, inputPathStr)"
+  },
+  {
+    "id" : "2b93f0c0-09b1-4033-a841-21e88e3ac738",
+    "prId" : 26895,
+    "prUrl" : "https://github.com/apache/spark/pull/26895#pullrequestreview-332285870",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a20b068e-70a2-449c-b22d-584082659e42",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Is there any other way to guard against this besides a global lock? that could introduce contention. `deserializer` is a local object here; it accesses some non-thread-safe shared state?",
+        "createdAt" : "2019-12-15T14:02:39Z",
+        "updatedAt" : "2019-12-18T19:32:29Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c4aa2fbc-5dad-4984-bd46-63e8ae85d893",
+        "parentId" : "a20b068e-70a2-449c-b22d-584082659e42",
+        "authorId" : "119f7711-a251-4127-b455-51a922a097f1",
+        "body" : "I don't think there will be a lot of contention. We call `deserializer.initialize` once for each partition.\r\nThe race is actually in `HCatRecordObjectInspectorFactory.getHCatRecordObjectInspector` which is called by `JsonSerDe#initialize` (the factory uses a `HashMap` instead of , e.g., a `ConcurrentHashMap` to maintain a cache). We want the same `ObjectInspector` to be returned by the factory cache and set in each `JsonSerDe` instance as its `ObjectInspector`.\r\nOur objective is that there not be more than one task from each executor calling `JsonSerDe#initialize` at the same time.",
+        "createdAt" : "2019-12-15T19:43:50Z",
+        "updatedAt" : "2019-12-18T19:32:29Z",
+        "lastEditedBy" : "119f7711-a251-4127-b455-51a922a097f1",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e5c2cb28-56e4-496d-a464-6cec6af9e635",
+        "parentId" : "a20b068e-70a2-449c-b22d-584082659e42",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Fair enough. Is there any way to fix this in the Hadoop implementation? or is it already fixed but we have to deal with it here? \r\nCan we push the global lock down further rather than making callers know to use it?",
+        "createdAt" : "2019-12-15T19:50:51Z",
+        "updatedAt" : "2019-12-18T19:32:29Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e733ed1d-b290-4ce6-8f01-9640c0ec92ee",
+        "parentId" : "a20b068e-70a2-449c-b22d-584082659e42",
+        "authorId" : "119f7711-a251-4127-b455-51a922a097f1",
+        "body" : "HIVE-15773 and HIVE-21752 offer two different fixes for the `HCatRecordObjectInspectorFactory` bug. HIVE-21752 has been merged in Hive 4.0.0, which is not released yet. Even when it is, not many users will be on Hive 4.0.0 for some time, so I think we need to deal with it here.",
+        "createdAt" : "2019-12-15T20:08:09Z",
+        "updatedAt" : "2019-12-18T19:32:29Z",
+        "lastEditedBy" : "119f7711-a251-4127-b455-51a922a097f1",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6c47ffa3-0190-431a-ad9d-efd4d8a948f2",
+        "parentId" : "a20b068e-70a2-449c-b22d-584082659e42",
+        "authorId" : "119f7711-a251-4127-b455-51a922a097f1",
+        "body" : "On the question of other callers needing to use this global lock:\r\nAFAIK, the only reported problem in Spark with the `HCatRecordObjectInspectorFactory` bug is in reading partitioned `JsonSerDe` tables. In `HadoopTableReader#makeRDDForTable`, we can even do without using the lock; we only really need to use the lock in `HadoopTableReader#makeRDDForPartitionedTable`.\r\nFrom my search, there are two other places in Spark where we call `Deserializer#initialize`:\r\n1. `HiveTableScanExec`, in initializing a `HadoopTableReader` instance, before `HadoopTableReader#makeRDDForTable` or `HadoopTableReader#makeRDDForPartitionedTable` even get called in `doExec`.\r\n2. `HiveScriptIOSchema`.\r\n\r\nI don't think we need to use the lock for 1.\r\nI don't know about 2., but if no problem has been reported due to the race, we can also leave it alone.\r\nIn other words, I'm not proposing we guard against the race in the Hive bug everywhere, just in this known case.",
+        "createdAt" : "2019-12-15T20:39:08Z",
+        "updatedAt" : "2019-12-18T19:32:29Z",
+        "lastEditedBy" : "119f7711-a251-4127-b455-51a922a097f1",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2d23e43ac823ce0562c480071a656d099b2c32b9",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +133,137 @@      val hconf = broadcastedHadoopConf.value.value\n      val deserializer = deserializerClass.getConstructor().newInstance()\n      DeserializerLock.synchronized {\n        deserializer.initialize(hconf, localTableDesc.getProperties)\n      }"
+  },
+  {
+    "id" : "001a7cfa-3caa-4197-871e-7b16af8e0dc0",
+    "prId" : 26895,
+    "prUrl" : "https://github.com/apache/spark/pull/26895#pullrequestreview-333465630",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ca75ac3b-0bd4-4bf9-9e71-eede71298e40",
+        "parentId" : null,
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "What you have is ok but you can completely avoid this second serde instance; in the common case both `localDeserializer` and `localTableDesc.getDeserializerClass` will be the same.",
+        "createdAt" : "2019-12-17T00:09:21Z",
+        "updatedAt" : "2019-12-18T19:32:29Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "aef23e67-d132-4121-87be-fcdd483b1fd8",
+        "parentId" : "ca75ac3b-0bd4-4bf9-9e71-eede71298e40",
+        "authorId" : "119f7711-a251-4127-b455-51a922a097f1",
+        "body" : "Yes, I did find that to be the case in my repro, that the two were the same class (JsonSerDe). However, the initialize calls on deserializer and on tableSerDe are with potentially different properties (props and tableProperties could differ), so I think I should initialize tableSerDe even if it has the same class as deserializer.",
+        "createdAt" : "2019-12-17T07:02:43Z",
+        "updatedAt" : "2019-12-18T19:32:29Z",
+        "lastEditedBy" : "119f7711-a251-4127-b455-51a922a097f1",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7c92ed46-1998-466f-9da7-8c933750911d",
+        "parentId" : "ca75ac3b-0bd4-4bf9-9e71-eede71298e40",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Ah, ok, missed that when reading the code.",
+        "createdAt" : "2019-12-17T17:53:03Z",
+        "updatedAt" : "2019-12-18T19:32:29Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2d23e43ac823ce0562c480071a656d099b2c32b9",
+    "line" : 23,
+    "diffHunk" : "@@ -1,1 +261,265 @@        val tableSerDe = localTableDesc.getDeserializerClass.getConstructor().newInstance()\n        DeserializerLock.synchronized {\n          tableSerDe.initialize(hconf, tableProperties)\n        }\n"
   }
 ]

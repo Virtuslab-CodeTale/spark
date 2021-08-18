@@ -20,5 +20,225 @@
     "commit" : "3dd75b138eb7d43e196162178ecd9cabdfc5460e",
     "line" : 12,
     "diffHunk" : "@@ -1,1 +44,48 @@    new SerializableConfiguration(sessionState.newHadoopConf()))\n\n  lazy private val executorMap: mutable.HashMap[String, Int] = {\n    val map = mutable.HashMap.empty[String, Int]\n    context.getExecutorIds().map(map(_) = 0)"
+  },
+  {
+    "id" : "1f98c8f9-4b0e-45c5-a5db-f55465624a90",
+    "prId" : 26935,
+    "prUrl" : "https://github.com/apache/spark/pull/26935#pullrequestreview-501082829",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b7b45c82-cf46-4b3e-955b-bdd89346749e",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Is this only difference from `StateStoreRDD`? Looks they are almost duplicate.",
+        "createdAt" : "2020-09-20T22:57:02Z",
+        "updatedAt" : "2020-10-29T23:31:56Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e382e9f7-1a06-429d-83e7-3cecc6e1145e",
+        "parentId" : "b7b45c82-cf46-4b3e-955b-bdd89346749e",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "The returning type is different between twos and the type of state function is also different. That's the main intention of the new changes - stateReadFunction never be able to do modification of the state as it will get ReadOnlyStateStore, whereas stateUpdateFunction can.\r\n\r\nI agree lots of code are duplicated - that's why I extracted abstract class, and as you saw, MiMa complained. I don't know why MiMa complained as I don't see any weird in previous code but I might be missing so I had to make MiMa happy for now.",
+        "createdAt" : "2020-09-20T23:32:41Z",
+        "updatedAt" : "2020-10-29T23:31:56Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c85dab56-08e7-4e9f-a5cb-4a9a7f0b7c5e",
+        "parentId" : "b7b45c82-cf46-4b3e-955b-bdd89346749e",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Just dealt it with 5c70db0 .\r\n\r\n `close` method throws UnsupportedException by default, and callers are catching it. The change considers backward compatibility like below:\r\n\r\n1. \r\nIf the implementation of StateStore isn't aware of `close` method, they should have implemented the resource cleanup in `commit` and `abort`, and Spark will call it to clean up resource. Spark will also call `close` which will be no-op. \r\n\r\nFor read-only state store instance, they would use WrappedReadStateStore which calls both `abort` and `close` in `close` method, and `abort` should handle the resource cleanup.\r\n\r\n2. \r\nIf the implementation of StateStore is aware of `close` method and implements the method correctly, they should have migrated the resource cleanup to `close` method, and Spark will call it to clean up resource. \r\n\r\nFor read-only state store instance, they may override `StateStoreProvider.getReadOnlyStore` (as HDFSBackedStateStoreProvider does) to provide its own ReadOnlyStore implementation. Or, they may still use WrappedReadStateStore which calls both `abort` and `close` in `close` method. `abort` would have probably no-op after migrating resource cleanup to `close`, and `close` should handle the resource cleanup.\r\n\r\nIf this sounds too complicated, let's revert 5c70db0 and live with `abort` method.",
+        "createdAt" : "2020-09-23T06:49:07Z",
+        "updatedAt" : "2020-10-29T23:31:56Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2e31340a-5df8-4215-a173-54de03692144",
+        "parentId" : "b7b45c82-cf46-4b3e-955b-bdd89346749e",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Sounds too complicated, and it's also a bit weird and read-only store calls both abort and close. Let's keep with original abort and commit for now.",
+        "createdAt" : "2020-10-02T05:59:57Z",
+        "updatedAt" : "2020-10-29T23:31:56Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cd80bec3-0d00-4411-872d-7d993bc9172f",
+        "parentId" : "b7b45c82-cf46-4b3e-955b-bdd89346749e",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "OK just reverted 5c70db0.",
+        "createdAt" : "2020-10-02T12:15:26Z",
+        "updatedAt" : "2020-10-29T23:31:56Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a58e9e1914d7a97a83e121d2ed10fa56e1d9445d",
+    "line" : 86,
+    "diffHunk" : "@@ -1,1 +97,101 @@\n    val store = StateStore.getReadOnly(\n      storeProviderId, keySchema, valueSchema, indexOrdinal, storeVersion,\n      storeConf, hadoopConfBroadcast.value.value)\n    val inputIter = dataRDD.iterator(partition, ctxt)"
+  },
+  {
+    "id" : "c3f4c30a-54e6-439f-a43f-1b4d5892265e",
+    "prId" : 26935,
+    "prUrl" : "https://github.com/apache/spark/pull/26935#pullrequestreview-520346363",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c9d36c09-8f98-4f01-919d-aa51a75536da",
+        "parentId" : null,
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "Not yet see why don't we just provide a default implementation. Could you elaborate?",
+        "createdAt" : "2020-10-26T14:00:23Z",
+        "updatedAt" : "2020-10-29T23:31:56Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2acf1224-df11-47d7-8c98-5d3515fab119",
+        "parentId" : "c9d36c09-8f98-4f01-919d-aa51a75536da",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "As I commented in the class doc - MiMa somehow complained it. Not 100% sure why.",
+        "createdAt" : "2020-10-26T23:31:34Z",
+        "updatedAt" : "2020-10-29T23:31:56Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e873c840-3fe0-43bf-b826-1a983b1622f8",
+        "parentId" : "c9d36c09-8f98-4f01-919d-aa51a75536da",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "Just seen the MiMa comment at the top of the class. Spent some time to find out the cause but as I see it would lead far and don't really see the return of the investment. I'm fine with this.",
+        "createdAt" : "2020-10-27T09:45:16Z",
+        "updatedAt" : "2020-10-29T23:31:56Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c38a7e0b-1bbc-462b-9fed-db5271ce99a9",
+        "parentId" : "c9d36c09-8f98-4f01-919d-aa51a75536da",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "Does mima complaining refers to this error?\r\n```\r\n[error]  * abstract method getPartitions()Array[org.apache.spark.Partition] in class org.apache.spark.rdd.RDD does not have a correspondent in current version\r\n[error]    filter with: ProblemFilters.exclude[DirectAbstractMethodProblem](\"org.apache.spark.rdd.RDD.getPartitions\")\r\n```\r\nMaybe we can add a filter since it's not a public API change. I'll also take a further look at this error message.",
+        "createdAt" : "2020-10-29T14:30:39Z",
+        "updatedAt" : "2020-10-29T23:31:56Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "89c0a928-5efa-4bb7-ac00-b97784372366",
+        "parentId" : "c9d36c09-8f98-4f01-919d-aa51a75536da",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "Filter to what exactly? Can you give an example?",
+        "createdAt" : "2020-10-29T14:52:11Z",
+        "updatedAt" : "2020-10-29T23:31:56Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1a88e1cc-af3d-4cd8-8fdf-fa35ace5ad21",
+        "parentId" : "c9d36c09-8f98-4f01-919d-aa51a75536da",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "I wouldn't want to touch RDD side just because of this change, which may bring unnecessary additional discussion. I don't see this as a kind of blocker for this PR. Anyone can deal with this as a follow-up, with possibility of discussion.",
+        "createdAt" : "2020-10-29T22:08:41Z",
+        "updatedAt" : "2020-10-29T23:31:57Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "32eab0ed-edcd-4aca-b199-a8e4afb3a4b0",
+        "parentId" : "c9d36c09-8f98-4f01-919d-aa51a75536da",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "```\r\nFilter to what exactly? Can you give an example?\r\n```\r\nSorry for the unclear, I mean add a filter in `./project/MimaExcludes.scala`\r\n\r\n```\r\nI wouldn't want to touch RDD side just because of this change\r\n```\r\nYeah, of cause we don't want to touch RDD",
+        "createdAt" : "2020-10-30T01:53:29Z",
+        "updatedAt" : "2020-10-30T01:53:29Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b06a209f-abcc-4baf-873f-c14cb2208538",
+        "parentId" : "c9d36c09-8f98-4f01-919d-aa51a75536da",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "That was what I understand and I wouldn’t do it in this PR. What we need to add based on the error message is to exclude the some pattern against RDD, which I’m not 100% sure everyone would agree with. That’s what I said “additional discussion”.",
+        "createdAt" : "2020-10-30T01:58:42Z",
+        "updatedAt" : "2020-10-30T01:58:42Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3655f9de-ddec-41d2-923b-c57b6ec36c55",
+        "parentId" : "c9d36c09-8f98-4f01-919d-aa51a75536da",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "I don’t mean I don’t like to change, I mean this shouldn’t be blocked any longer by something which can be done as a follow-up. If you’d like to volunteer to look into the issue I’m happy to, “as a follow-up PR”.",
+        "createdAt" : "2020-10-30T02:02:33Z",
+        "updatedAt" : "2020-10-30T02:02:33Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "37c7f395-556b-440d-a3db-e3d7fec4929d",
+        "parentId" : "c9d36c09-8f98-4f01-919d-aa51a75536da",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "Thanks for the further explanation, agree to do it in a follow-up. ",
+        "createdAt" : "2020-10-30T02:58:10Z",
+        "updatedAt" : "2020-10-30T02:58:10Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a58e9e1914d7a97a83e121d2ed10fa56e1d9445d",
+    "line" : 21,
+    "diffHunk" : "@@ -1,1 +47,51 @@\n  /** Implementations can simply call this method in getPreferredLocations. */\n  protected def _getPartitions: Array[Partition] = dataRDD.partitions\n\n  /**"
+  },
+  {
+    "id" : "011447a1-85fc-4b6a-bfff-2748274278ad",
+    "prId" : 26935,
+    "prUrl" : "https://github.com/apache/spark/pull/26935#pullrequestreview-517248722",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "25baf438-f463-42bd-8a7a-cb790046b99b",
+        "parentId" : null,
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "Ditto.",
+        "createdAt" : "2020-10-26T14:01:18Z",
+        "updatedAt" : "2020-10-29T23:31:56Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f469b2b4-ac02-4fbb-91b3-7fdcf67084e2",
+        "parentId" : "25baf438-f463-42bd-8a7a-cb790046b99b",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "same here",
+        "createdAt" : "2020-10-26T23:31:41Z",
+        "updatedAt" : "2020-10-29T23:31:56Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a58e9e1914d7a97a83e121d2ed10fa56e1d9445d",
+    "line" : 29,
+    "diffHunk" : "@@ -1,1 +55,59 @@   * Implementations can simply call this method in getPreferredLocations.\n   */\n  protected def _getPreferredLocations(partition: Partition): Seq[String] = {\n    val stateStoreProviderId = getStateProviderId(partition)\n    storeCoordinator.flatMap(_.getLocation(stateStoreProviderId)).toSeq"
   }
 ]

@@ -218,5 +218,280 @@
     "commit" : "557eb3099b3d0abe1fd2d7d91754fa747e05d200",
     "line" : 23,
     "diffHunk" : "@@ -1,1 +152,156 @@    \"The following reasons may cause this: 1. An old Spark version wrote the checkpoint that is \" +\n    \"incompatible with the current one; 2. Broken checkpoint files; 3. The query is changed \" +\n    \"among restart. For the first case, you can try to restart the application without \" +\n    \"checkpoint or use the legacy Spark version to process the streaming state.\", null)\n"
+  },
+  {
+    "id" : "595c0515-2c74-4eb7-aebf-2df92cbc6796",
+    "prId" : 26935,
+    "prUrl" : "https://github.com/apache/spark/pull/26935#pullrequestreview-517542935",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a4e92263-770d-40f7-9450-c750cc5167e8",
+        "parentId" : null,
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "I think I understand what's the point of this comment but this is true for all API methods in `ReadStateStore`, right? Or have I missed something and this one is different somehow?",
+        "createdAt" : "2020-10-26T09:20:21Z",
+        "updatedAt" : "2020-10-29T23:31:56Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "990f1c44-3546-4dd0-a8bf-5787a231d92b",
+        "parentId" : "a4e92263-770d-40f7-9450-c750cc5167e8",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "`abort` is only the one which is not properly named in point of ReadStateStore. It should be `close`, but we found it tricky to respect backward compatibility with having `close`, hence we decided to leave it as it is. \r\n\r\nPlease refer https://github.com/apache/spark/pull/26935#discussion_r493236101",
+        "createdAt" : "2020-10-26T22:42:09Z",
+        "updatedAt" : "2020-10-29T23:31:56Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "53adce20-aa85-41b6-be09-a53af695f8bb",
+        "parentId" : "a4e92263-770d-40f7-9450-c750cc5167e8",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "After reading it I see now. It's not ideal but agree.",
+        "createdAt" : "2020-10-27T10:19:55Z",
+        "updatedAt" : "2020-10-29T23:31:56Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a58e9e1914d7a97a83e121d2ed10fa56e1d9445d",
+    "line" : 46,
+    "diffHunk" : "@@ -1,1 +81,85 @@   * Clean up the resource.\n   *\n   * The method name is to respect backward compatibility on [[StateStore]].\n   */\n  def abort(): Unit"
+  },
+  {
+    "id" : "a5b3d72e-7f8c-4f1a-99a5-86eee0b30133",
+    "prId" : 26935,
+    "prUrl" : "https://github.com/apache/spark/pull/26935#pullrequestreview-517510014",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1fb8a254-560a-4d57-b1bc-303aaa2f99c3",
+        "parentId" : null,
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "Having an API which may or may not need to be called looks super odd.\r\nNot yet sure so asking doesn't this break the `Liskow` substitution law? All baseclass instances must be replaceable w/ the subclass instance. If I understand correctly `ReadStateStore.abort` always called to free up some resources. What happens when `StateStore.abort` called? According to the doc it may or may not be called (which is good) but does subclass handles a call correctly? If a sublass fails or makes the behavior different only by calling `abort` then something is not 100%.\r\n",
+        "createdAt" : "2020-10-26T13:52:04Z",
+        "updatedAt" : "2020-10-29T23:31:56Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "777550db-edd0-4d20-8ccd-ec6744e67281",
+        "parentId" : "1fb8a254-560a-4d57-b1bc-303aaa2f99c3",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "The pattern `prepare -> commit or abort -> (abort if commit fails)` is widely used across Spark, which both `commit` and `abort` have the responsibility of cleaning up. (`abort` needs to be careful of not impacted by double cleanup)\r\n\r\nIn ReadStateStore, the pattern is simplified to `prepare -> abort`, which `abort` has the responsibility of cleaning up.\r\n\r\nI see one case the issue may come up:\r\n\r\n- `class A implements ReadStateStore`\r\n- `class B extends A implements StateStore`\r\n- Both A and B have its own resources and needs to be cleaned up.\r\n\r\nIn this case, correctly cleaning up A's resource from B becomes non-trivial. B can call `A.abort` in both `B.commit` and `B.abort` to make sure A's resource is cleaned up but it is B's responsibility to not call A.abort multiple times as A would think there's no double cleanup as the simplified pattern.\r\n\r\nThe answer is probably the same as before: we know the problem - we need a `close` method, but backward compatibility also matters as we should provide the default implementation of `close` which is very tricky for current implementations (`close` should rely on resource cleanup in `commit`/`abort`) and we decided not to.\r\n\r\nMy feeling is that once the provider has different implementations between ReadStateStore and StateStore they would have different implementations (no inheritance between them). If it isn't  quite sure and we don't want to open the possibility, then adding `close` could be probably reconsidered.",
+        "createdAt" : "2020-10-26T23:25:27Z",
+        "updatedAt" : "2020-10-29T23:31:56Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b50075bd-081f-4db6-bdc4-07a219b3f3d1",
+        "parentId" : "1fb8a254-560a-4d57-b1bc-303aaa2f99c3",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "Thanks for the example! After had a second look + read your explanation I think it's fine.\r\n\r\nMy rationale: Since the following contract applies both cases the given example is fine: `either commit or abort called, which must free up resources with double free guard`. In the mentioned example an internal `protected def close...` can be added to A which can be called from `B.commit` and `B.abort`. The mentioned `close` can contain double guard so with the actual API proper solution can be implemented. I agree that adding close would be more clear but considering the complexity I agree with you guys.\r\n",
+        "createdAt" : "2020-10-27T09:42:02Z",
+        "updatedAt" : "2020-10-29T23:31:56Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a58e9e1914d7a97a83e121d2ed10fa56e1d9445d",
+    "line" : 82,
+    "diffHunk" : "@@ -1,1 +120,124 @@   * no more updates (puts, removes) can be after an abort in order to avoid incorrect usage.\n   */\n  override def abort(): Unit\n\n  /**"
+  },
+  {
+    "id" : "b60d9d31-adbc-414b-9907-3e5984ab4b03",
+    "prId" : 26935,
+    "prUrl" : "https://github.com/apache/spark/pull/26935#pullrequestreview-517460304",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e584f1f5-c136-48bf-8ed3-af0204cad482",
+        "parentId" : null,
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "Nit: Can we move the 2 instances into `getStateStoreProvider`?",
+        "createdAt" : "2020-10-26T13:56:58Z",
+        "updatedAt" : "2020-10-29T23:31:56Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "97561fcd-7f2e-458f-a63c-e380213a4543",
+        "parentId" : "e584f1f5-c136-48bf-8ed3-af0204cad482",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "`getStateStoreProvider` doesn't relate to version, right? I wouldn't correlate something only to reduce code duplication.",
+        "createdAt" : "2020-10-26T23:30:05Z",
+        "updatedAt" : "2020-10-29T23:31:56Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "76906d89-0791-476e-8a36-dbf7ec9792ae",
+        "parentId" : "e584f1f5-c136-48bf-8ed3-af0204cad482",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "OK, makes sense.",
+        "createdAt" : "2020-10-27T08:43:48Z",
+        "updatedAt" : "2020-10-29T23:31:56Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a58e9e1914d7a97a83e121d2ed10fa56e1d9445d",
+    "line" : 142,
+    "diffHunk" : "@@ -1,1 +438,442 @@      storeConf: StateStoreConf,\n      hadoopConf: Configuration): ReadStateStore = {\n    require(version >= 0)\n    val storeProvider = getStateStoreProvider(storeProviderId, keySchema, valueSchema,\n      indexOrdinal, storeConf, hadoopConf)"
+  },
+  {
+    "id" : "8d96a9aa-b34e-4316-b799-e0b3a866f74f",
+    "prId" : 26935,
+    "prUrl" : "https://github.com/apache/spark/pull/26935#pullrequestreview-520122185",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2697af7b-0beb-48dc-9804-01273275b979",
+        "parentId" : null,
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "How about adding a default param `readOnly: Boolean = false` here? The code changes will be smaller since the refactor and getReadOnly are no longer needed.",
+        "createdAt" : "2020-10-29T09:24:04Z",
+        "updatedAt" : "2020-10-29T23:31:56Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "43370712-40f1-4357-b5c2-887c5f07db00",
+        "parentId" : "2697af7b-0beb-48dc-9804-01273275b979",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "Having only one API and implementation would keep the actual `super hard to follow the code` situation.\r\nFrom my perspective having a separate API is more clean when one want to read the code.",
+        "createdAt" : "2020-10-29T14:48:48Z",
+        "updatedAt" : "2020-10-29T23:31:56Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b2d01f68-2eba-4a3d-8f05-1dae7cde0308",
+        "parentId" : "2697af7b-0beb-48dc-9804-01273275b979",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "You seem to miss the difference of return types between two. They were actually one method and I had to break to support different return types.",
+        "createdAt" : "2020-10-29T22:05:13Z",
+        "updatedAt" : "2020-10-29T23:31:57Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a58e9e1914d7a97a83e121d2ed10fa56e1d9445d",
+    "line" : 153,
+    "diffHunk" : "@@ -1,1 +452,456 @@      version: Long,\n      storeConf: StateStoreConf,\n      hadoopConf: Configuration): StateStore = {\n    require(version >= 0)\n    val storeProvider = getStateStoreProvider(storeProviderId, keySchema, valueSchema,"
+  },
+  {
+    "id" : "6ad5f3f0-a502-4e0f-ad78-3f86fd0a88b4",
+    "prId" : 26935,
+    "prUrl" : "https://github.com/apache/spark/pull/26935#pullrequestreview-520835040",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4cdf7979-14f3-44e2-914a-acc034d7caff",
+        "parentId" : null,
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "How about renaming this to ReadOnlyStateStore. I think it should be a better name consistent with other new functions in this PR, e.g mapPartitionsWithReadOnlyStateStore, ReadOnlyStateStoreRDD, etc",
+        "createdAt" : "2020-10-29T14:27:56Z",
+        "updatedAt" : "2020-10-29T23:31:56Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2a738566-cbbf-4e9a-9006-1407f37f12d8",
+        "parentId" : "4cdf7979-14f3-44e2-914a-acc034d7caff",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "+1 on this, I've suggested the same but there was another agreement before.",
+        "createdAt" : "2020-10-29T14:50:02Z",
+        "updatedAt" : "2020-10-29T23:31:56Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b143e193-bf9d-4997-b865-7b9d468e3f79",
+        "parentId" : "4cdf7979-14f3-44e2-914a-acc034d7caff",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Okay for me if you both think it is better. Not strong opinion here.",
+        "createdAt" : "2020-10-29T17:13:49Z",
+        "updatedAt" : "2020-10-29T23:31:56Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2c83bc99-d2cf-4414-a9c8-5ed41fa18413",
+        "parentId" : "4cdf7979-14f3-44e2-914a-acc034d7caff",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "It's your call then @HeartSaVioR :)",
+        "createdAt" : "2020-10-29T17:19:31Z",
+        "updatedAt" : "2020-10-29T23:31:57Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4366d789-20b8-4a4d-801c-cb461c15e332",
+        "parentId" : "4cdf7979-14f3-44e2-914a-acc034d7caff",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "OK I'll rename it. No big deal.",
+        "createdAt" : "2020-10-29T22:43:47Z",
+        "updatedAt" : "2020-10-29T23:31:57Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c2bc561c-a4eb-4a7c-b2f4-c4f2715cd8ac",
+        "parentId" : "4cdf7979-14f3-44e2-914a-acc034d7caff",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Ah sorry I reminded the comment from @viirya and still think his comment makes more sense. I'll rename others to make consistent for now, but I'm also open to rename this to ReadOnlyStateStore, if both of you think it's better after reading the comment from @viirya .\r\n\r\n@xuanyuanking @gaborgsomogyi Could you please go through the previous comment below and comment how you think?\r\nhttps://github.com/apache/spark/pull/26935#discussion_r491747706",
+        "createdAt" : "2020-10-29T22:53:48Z",
+        "updatedAt" : "2020-10-29T23:31:57Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "48ad5cf7-3231-45be-ace2-975a1ba16314",
+        "parentId" : "4cdf7979-14f3-44e2-914a-acc034d7caff",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "Ah sorry +1... Didn't notice the previous discussion.\r\nI think to rename others for consistency is enough.",
+        "createdAt" : "2020-10-30T03:23:21Z",
+        "updatedAt" : "2020-10-30T03:23:22Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "db9fcee2-82b3-494e-8298-30184c58dcb3",
+        "parentId" : "4cdf7979-14f3-44e2-914a-acc034d7caff",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "Just gone through and makes sense, +1.",
+        "createdAt" : "2020-10-30T16:28:48Z",
+        "updatedAt" : "2020-10-30T16:28:48Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a58e9e1914d7a97a83e121d2ed10fa56e1d9445d",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +44,48 @@ * the method.\n */\ntrait ReadStateStore {\n\n  /** Unique identifier of the store */"
   }
 ]

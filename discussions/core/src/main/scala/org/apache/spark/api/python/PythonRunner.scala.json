@@ -75,5 +75,60 @@
     "commit" : "baab9655153a1c20bfc8831c54dbf8b19e644e7d",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +421,425 @@            result = BarrierTaskContextMessageProtocol.BARRIER_RESULT_SUCCESS\n          case BarrierTaskContextMessageProtocol.ALL_GATHER_FUNCTION =>\n            val messages: Array[String] = context.asInstanceOf[BarrierTaskContext].allGather(\n              message\n            )"
+  },
+  {
+    "id" : "2783ca03-a833-4ca8-80cc-92fb71cb9f30",
+    "prId" : 26953,
+    "prUrl" : "https://github.com/apache/spark/pull/26953#pullrequestreview-578856679",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "51331037-a3cd-48fb-86d0-a979868dd513",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Have a couple of questions. \r\n\r\n- Is it possible to merge it with `SQLMetric`? It would be nicer if UI shows it as well.\r\n- Is it possible to integrate with existing Python profiler? The current read time isn't purely Python execution time. It includes socket IO time which can potentially be large.",
+        "createdAt" : "2020-01-17T06:27:11Z",
+        "updatedAt" : "2020-11-13T09:19:59Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a0dbe594-513c-46ad-982e-f48c6221cfc8",
+        "parentId" : "51331037-a3cd-48fb-86d0-a979868dd513",
+        "authorId" : "acf5aefc-4c46-451e-a28d-492ceaffd160",
+        "body" : "- I like the idea of adding SQLMetrics for Python UDF instrumentation and use them in the WEBUI. However, I think the work would rather fit for a separate JIRA/PR. The implementation details and the overhead of SQLMetrics are different from Dropwizard-based metrics, so probably we would like to have only a limited number of SQLMetrics instrumenting task activities in this area. Also the implementation of SQLMetrics for `[[PythonUDF]]` execution may require some important changes to the current plan evaluation code.\r\n\r\n- It is indeed the case that the “read time from worker” which is exposed to the users via the dropwizard library as “FetchResultsTimeFromWorkers” contains both socket I/O + deserialization time and Python UDF execution time. Measuring on the Python side could allow to separate the 2 time components, however currently I don’t see how to make a lightweight implementation for that. Python profiler has the possibility to measure on the Python side as you mentioned, but I see its usage more for debugging, while the proposed instrumentation is lightweight and intended to be used for production use cases too. Maybe future work can address this case if there is need?\r\n",
+        "createdAt" : "2020-01-22T16:07:06Z",
+        "updatedAt" : "2020-11-13T09:19:59Z",
+        "lastEditedBy" : "acf5aefc-4c46-451e-a28d-492ceaffd160",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "429d813b-f4c4-4813-91a1-a1b68b8e7c26",
+        "parentId" : "51331037-a3cd-48fb-86d0-a979868dd513",
+        "authorId" : "acf5aefc-4c46-451e-a28d-492ceaffd160",
+        "body" : "@HyukjinKwon I have finally managed to work on your suggestion to instrument Python execution using SQL Metrics, so that users can see the metrics via the WebUI. See [SPARK-34265]. I imagine that I could later refactor the work on this PR based on that.",
+        "createdAt" : "2021-01-27T16:06:56Z",
+        "updatedAt" : "2021-01-27T16:06:56Z",
+        "lastEditedBy" : "acf5aefc-4c46-451e-a28d-492ceaffd160",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "974e71cf-70bb-4896-b700-ab5d98d00608",
+        "parentId" : "51331037-a3cd-48fb-86d0-a979868dd513",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "PR link: https://github.com/apache/spark/pull/31367",
+        "createdAt" : "2021-01-29T00:39:34Z",
+        "updatedAt" : "2021-01-29T00:39:34Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "750b973b8e810572c7a15e5251d56d6c58066661",
+    "line" : 30,
+    "diffHunk" : "@@ -1,1 +479,483 @@        nextObj = read()\n        val deltaTime = System.nanoTime()-startTime\n        PythonMetrics.incFromWorkerReadTime(deltaTime)\n        hasNext\n      } else {"
   }
 ]

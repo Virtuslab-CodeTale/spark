@@ -1,0 +1,178 @@
+[
+  {
+    "id" : "3d48d10c-d76f-4564-83f3-f9447acfcb1e",
+    "prId" : 26924,
+    "prUrl" : "https://github.com/apache/spark/pull/26924#pullrequestreview-337196857",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7c30b71d-a81c-4a68-b045-47e856ecc870",
+        "parentId" : null,
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Are you trying to make sure listeners throw the exception after \"stop()\" is called? That's going to be hard, and your code isn't really guaranteeing that.\r\n\r\nYou could use a `CountDownLatch` that you signal right before calling `stop()` (in the thread) to unblock the listener; that will at least narrow the race down a bit.",
+        "createdAt" : "2019-12-20T18:23:54Z",
+        "updatedAt" : "2019-12-21T07:35:44Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ef7bb664-30d9-4f1f-8693-524fcfc585ae",
+        "parentId" : "7c30b71d-a81c-4a68-b045-47e856ecc870",
+        "authorId" : "a60cba77-410b-4436-a199-1f895ccca4c6",
+        "body" : "Maybe we could check the `stopped` status of `bus` in the listener. \r\nThis would be better than using a `CountDownLatch`, however, it can't get rid of racing completely. WDYT?",
+        "createdAt" : "2019-12-21T06:33:41Z",
+        "updatedAt" : "2019-12-21T07:35:44Z",
+        "lastEditedBy" : "a60cba77-410b-4436-a199-1f895ccca4c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "61d36e82-e5de-4494-bc9b-1e5aa05784f4",
+        "parentId" : "7c30b71d-a81c-4a68-b045-47e856ecc870",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "`CountDownLatch` always make things deterministic and it sounds better to me.\r\n\r\nWhat do you mean by \"it can't get rid of racing completely\"?",
+        "createdAt" : "2019-12-26T06:57:50Z",
+        "updatedAt" : "2019-12-26T06:57:54Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c76c8b95-ab39-4e1e-9856-dfcc9a6c47d8",
+        "parentId" : "7c30b71d-a81c-4a68-b045-47e856ecc870",
+        "authorId" : "a60cba77-410b-4436-a199-1f895ccca4c6",
+        "body" : "As the PR description, to reproduce the original issue, we have to make sure:\r\n\r\n1.  Holding the  synchronized lock of `bus` in the stopping thread\r\n2.  Trying to acquire the synchronized lock of `bus` in the interrupting listener thread\r\n\r\nBut signal the listener starts to interrupt just before `bus.stop` by a `CountDownLatch` can't guarantee this 100%, right?\r\n",
+        "createdAt" : "2019-12-26T07:26:15Z",
+        "updatedAt" : "2019-12-26T07:26:15Z",
+        "lastEditedBy" : "a60cba77-410b-4436-a199-1f895ccca4c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8d04c74f-475d-4280-aa8b-9cb3d24fa8e5",
+        "parentId" : "7c30b71d-a81c-4a68-b045-47e856ecc870",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Maybe, you should insert `CountDownLatch` after `bus.stop`?",
+        "createdAt" : "2019-12-26T07:49:21Z",
+        "updatedAt" : "2019-12-26T07:49:21Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "07a217fd-d567-4dd7-878f-1a6e398c2b0e",
+        "parentId" : "7c30b71d-a81c-4a68-b045-47e856ecc870",
+        "authorId" : "a60cba77-410b-4436-a199-1f895ccca4c6",
+        "body" : "I don't think so. `bus.stop` will block until all the underlying queues and listeners have been cleaned up and removed. \r\n\r\n> I don't think there's a way to write a proper test here without changing a bunch of things in the bus and queue code to expose internal hooks... and I don't think that's desirable.\r\n\r\nThe current test is just a trade-off. That said, it doesn't intrude into the bus code.\r\n",
+        "createdAt" : "2019-12-26T08:09:27Z",
+        "updatedAt" : "2019-12-26T08:09:27Z",
+        "lastEditedBy" : "a60cba77-410b-4436-a199-1f895ccca4c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "36cf2873-b335-45ac-ab7b-583c2d07a34a",
+        "parentId" : "7c30b71d-a81c-4a68-b045-47e856ecc870",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "An, I see, i see.  So, checking bus status by a loop should be ok.\r\n\r\n",
+        "createdAt" : "2019-12-26T08:17:48Z",
+        "updatedAt" : "2019-12-26T08:26:23Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d04ab58b-63ee-4fb0-bb82-68e4114d6e21",
+        "parentId" : "7c30b71d-a81c-4a68-b045-47e856ecc870",
+        "authorId" : "a60cba77-410b-4436-a199-1f895ccca4c6",
+        "body" : "Unfortunately,  checking the  `stoped` status can't guarantee this.  It's likely that the bus has already set the `stoped` status to true, but has not acquired the synchronized lock yet.\r\n\r\nTo avoid racing, we can pass a callback into `bus.stop`,  and notify the interrupting listener in the callback.\r\n```scala \r\n  def stop(callback: Option[() => Unit]): Unit = {\r\n    if (!started.get()) {\r\n      throw new IllegalStateException(s\"Attempted to stop bus that has not yet started!\")\r\n    }\r\n\r\n    if (!stopped.compareAndSet(false, true)) {\r\n      return\r\n    }\r\n\r\n    synchronized {\r\n      callback.foreach { c => c() } \r\n      queues.asScala.foreach(_.stop())\r\n      queues.clear()\r\n    }\r\n  }\r\n\r\n...\r\n// in the test\r\nbus.stop(Some(() => interruptingListener.sleep = false))\r\n\r\n```\r\nBut that's weird. \r\n1.  It changes the `bus.stop` API.\r\n2.  The synchronized in `bus.stop` has already been removed.  It's not desirable to do that for just testing an old bug.",
+        "createdAt" : "2019-12-26T08:43:41Z",
+        "updatedAt" : "2019-12-26T08:55:15Z",
+        "lastEditedBy" : "a60cba77-410b-4436-a199-1f895ccca4c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f25e5983-461c-4793-a33a-881bc997b32e",
+        "parentId" : "7c30b71d-a81c-4a68-b045-47e856ecc870",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "But your fix has removed the `synchronized`. What do you want to guarantee in the test?",
+        "createdAt" : "2019-12-26T09:36:23Z",
+        "updatedAt" : "2019-12-26T09:36:23Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "141c94a5-24ad-4207-a777-6dc67a12c654",
+        "parentId" : "7c30b71d-a81c-4a68-b045-47e856ecc870",
+        "authorId" : "a60cba77-410b-4436-a199-1f895ccca4c6",
+        "body" : "To make sure that there is no deadlock when a listener is interrupted after `bus.stop` is called. \r\nAt the same time, we don't introduce API changing or internal status (e.g. stoped status) exposed to `bus`.\r\n\r\nAny better idea?\r\n \r\n",
+        "createdAt" : "2019-12-26T09:51:01Z",
+        "updatedAt" : "2019-12-26T09:51:02Z",
+        "lastEditedBy" : "a60cba77-410b-4436-a199-1f895ccca4c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5a4caca2-3a90-49ee-ae70-eee8308cf965",
+        "parentId" : "7c30b71d-a81c-4a68-b045-47e856ecc870",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "> Unfortunately, checking the stoped status can't guarantee this. It's likely that the bus has already set the stoped status to true, but has not acquired the synchronized lock yet.\r\n\r\nIIUC, you want to let `interruptingListener` start to work once `bus` has moved to `stop` status and acquired the synchronized lock, right?\r\n\r\nBut how can `bus` acquired the synchronized lock now? This fix has already removed the synchronized lock. The only thing you could do is to check `bus` status now and I think it's enough.",
+        "createdAt" : "2019-12-26T09:57:44Z",
+        "updatedAt" : "2019-12-26T09:57:44Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9c4a6c23-7cc2-4221-beb8-533a2c761d9f",
+        "parentId" : "7c30b71d-a81c-4a68-b045-47e856ecc870",
+        "authorId" : "a60cba77-410b-4436-a199-1f895ccca4c6",
+        "body" : "Got your point.\r\n\r\nNow, there are two things.\r\n\r\n1. Without the fix, how the test would behave.\r\n2. With the fix,  how to make sure that there is no deadlock when a listener is interrupted after bus.stop is called.\r\n\r\nFor (1),  we can't avoid racing without changing the `bus.stop` code (e.g. add a callback).\r\nFor (2),  we at least have to expose the internal `stoped` status of `bus`, which maybe is not recommended. \r\n\r\nSo WDYT? ",
+        "createdAt" : "2019-12-26T10:13:15Z",
+        "updatedAt" : "2019-12-26T10:13:59Z",
+        "lastEditedBy" : "a60cba77-410b-4436-a199-1f895ccca4c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1bef2b9b-a775-4f1e-976d-28c8cfa5b3c9",
+        "parentId" : "7c30b71d-a81c-4a68-b045-47e856ecc870",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Only focus on `LiveListenerBus` may be impossible to workaround the difficulties you mentioned above. Maybe we should move to `AsyncEventQueue`. \r\n\r\nHow about this way:\r\n\r\n1. Add a method `status()` in `AsyncEventQueue` for testing only;\r\n\r\n2. In `interruptingListener`, keep checking `AsyncEventQueue.status()` until it's stopped. So, when  `AsyncEventQueue` is stopped, we're sure that `LiveListenerBus` has stopped too and acquired the lock(without fix).\r\n\r\nWDYT?",
+        "createdAt" : "2019-12-26T11:12:27Z",
+        "updatedAt" : "2019-12-26T11:12:27Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b970ebc0-94b6-4eb8-9d1f-2f2cd2ff22b2",
+        "parentId" : "7c30b71d-a81c-4a68-b045-47e856ecc870",
+        "authorId" : "a60cba77-410b-4436-a199-1f895ccca4c6",
+        "body" : "I believe this would work. In `AsyncEventQueue`, in fact, there is also a `stoped` status that we could check. \r\nBut associating a listener with its `AsyncEventQueue` would be another problem we have to resolve.  Currently, it's encapsulated by `bus.addToXXXQueue` inside the bus code.\r\n",
+        "createdAt" : "2019-12-26T12:10:36Z",
+        "updatedAt" : "2019-12-26T13:09:58Z",
+        "lastEditedBy" : "a60cba77-410b-4436-a199-1f895ccca4c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fb855ca0-1fe1-4940-bf97-eff81272c50b",
+        "parentId" : "7c30b71d-a81c-4a68-b045-47e856ecc870",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "You guys are trying to fabricate a test that will not be testing what the actual code is doing when a real app is running. That's the problem.\r\n\r\nTo do that you'd need the `stop()` code in the listener bus to wait holding a lock while the queues are being drained; and one of those queues need to run into the error that causes it to remove a bad listener. That's hard to do without inserting callbacks that don't exist into the code; and adding those callbacks would only be enabling the test, which is why that's questionably.\r\n\r\nSo you basically need this in the new `stop()`:\r\n\r\n```\r\ndef stop() {\r\n  // do some stop stuff here\r\n  testStartCallback()\r\n  // clear the queues here\r\n  testEndCallback()\r\n}\r\n```\r\n\r\nThe two callbacks are needed because otherwise there is no guarantee that what the queues do will happen before `stop()` does its thing.\r\n\r\nBut really I don't see what really that test would be actually testing now that there is no synchronized block anymore.\r\n\r\nAnything you do here without these callbacks will be racy, and thus may not hit the original issue. Also, without the synchronized block, there's nothing to cause a deadlock in the first place, so that's why I said the test isn't that great to begin with.\r\n\r\nSo I'd avoid trying to create a fancy test that isn't really testing the issue and just adding unneeded hooks into the main code. The current test is ok and as close as you'll get without the above callbacks; so either go with that, or just remove the test.",
+        "createdAt" : "2019-12-30T18:27:03Z",
+        "updatedAt" : "2019-12-30T18:27:03Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3d7f435f8452faff71b98a9163cd8e86e77c0a79",
+    "line" : 31,
+    "diffHunk" : "@@ -1,1 +557,561 @@      stoppingThread.start()\n      // Notify interrupting listener starts to work\n      interruptingListener.sleep = false\n      // Wait for bus to stop\n      stoppingThread.join(LISTENER_BUS_STOP_WAITING_TIMEOUT_MILLIS)"
+  }
+]
