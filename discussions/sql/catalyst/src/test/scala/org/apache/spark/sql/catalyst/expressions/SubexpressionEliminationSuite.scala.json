@@ -20,5 +20,104 @@
     "commit" : "92786a625a7288edf93479f0615bd77a254f589b",
     "line" : 1,
     "diffHunk" : "@@ -1,1 +45,49 @@    assert(a.semanticEquals(b3))\n  }\n\n  test(\"Expression Equivalence - basic\") {\n    val equivalence = new EquivalentExpressions"
+  },
+  {
+    "id" : "0ed1e4d5-3a17-4ff8-9fb2-1426c1b8bd0f",
+    "prId" : 32559,
+    "prUrl" : "https://github.com/apache/spark/pull/32559#pullrequestreview-663582769",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b283abbc-0049-4ba2-91d2-b785d033dbaa",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "is this only a problem for conditional expression?",
+        "createdAt" : "2021-05-17T14:37:17Z",
+        "updatedAt" : "2021-05-17T14:37:17Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b168f42f-888c-4df2-8434-6db13318729c",
+        "parentId" : "b283abbc-0049-4ba2-91d2-b785d033dbaa",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "So far the only one I can think about.",
+        "createdAt" : "2021-05-17T16:23:54Z",
+        "updatedAt" : "2021-05-17T16:23:54Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "27e4101b-cb33-4920-80fb-7ce81d419a71",
+        "parentId" : "b283abbc-0049-4ba2-91d2-b785d033dbaa",
+        "authorId" : "92aa9573-b64a-4a86-aebf-54c827df3ed0",
+        "body" : "Found a non-conditional example that still is an issue even with this update (a bit contrived, but I'm sure there's a real use case)\r\n\r\n```\r\nval myUdf = udf(() => {\r\n  println(\"In UDF\")\r\n  1\r\n}).withName(\"myUdf\")\r\nspark.range(1).withColumn(\"a\", myUdf()).select(($\"a\" + $\"a\") / ($\"a\" + $\"a\")).show()\r\n```\r\nThis generates subexpressions myUdf() and (myUdf() + myUdf()), even though only the second one is used.\r\n",
+        "createdAt" : "2021-05-17T22:37:58Z",
+        "updatedAt" : "2021-05-17T22:37:58Z",
+        "lastEditedBy" : "92aa9573-b64a-4a86-aebf-54c827df3ed0",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7d977e0a-5fdf-4d62-bb67-9b7a8e93ac1c",
+        "parentId" : "b283abbc-0049-4ba2-91d2-b785d033dbaa",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Thanks @Kimahriman. I see. Let me also look at it. As it is non-conditional case, but looks like the similar case. Let me see if it can be solved similarly.",
+        "createdAt" : "2021-05-17T22:51:15Z",
+        "updatedAt" : "2021-05-17T22:51:15Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c03f6edf-14d8-40de-8c4f-96be67df1b62",
+        "parentId" : "b283abbc-0049-4ba2-91d2-b785d033dbaa",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Oh, I figured out. This might be an issue since we have sub-expr elimination. We also need to remove redundant children exprs for non-conditional cases.",
+        "createdAt" : "2021-05-18T02:27:57Z",
+        "updatedAt" : "2021-05-18T02:27:57Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e4311b85-4d54-4e89-82cf-addc03bc3bd7",
+        "parentId" : "b283abbc-0049-4ba2-91d2-b785d033dbaa",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "But the fix might be different. I will work on it locally and submit another fix for it.",
+        "createdAt" : "2021-05-18T02:29:44Z",
+        "updatedAt" : "2021-05-18T02:29:44Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "29c38fb9-9b0e-47c1-9fdb-a45beb71f6f9",
+        "parentId" : "b283abbc-0049-4ba2-91d2-b785d033dbaa",
+        "authorId" : "92aa9573-b64a-4a86-aebf-54c827df3ed0",
+        "body" : "Any more thoughts on this? Was the subexpr sorting supposed to address this?",
+        "createdAt" : "2021-05-19T19:15:25Z",
+        "updatedAt" : "2021-05-19T19:15:25Z",
+        "lastEditedBy" : "92aa9573-b64a-4a86-aebf-54c827df3ed0",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4dc7c421-b2b7-44d7-9c98-fd10c65c4ede",
+        "parentId" : "b283abbc-0049-4ba2-91d2-b785d033dbaa",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "It might need another fix. I'm working on it and will submit it after these PRs merged.",
+        "createdAt" : "2021-05-19T19:26:25Z",
+        "updatedAt" : "2021-05-19T19:26:25Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9973c1a4d6bbaa089b120e47a8418e99b132704d",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +312,316 @@\n  test(\"SPARK-35410: SubExpr elimination should not include redundant child exprs \" +\n    \"for conditional expressions\") {\n    val add1 = Add(Literal(1), Literal(2))\n    val add2 = Add(Literal(2), Literal(3))"
   }
 ]

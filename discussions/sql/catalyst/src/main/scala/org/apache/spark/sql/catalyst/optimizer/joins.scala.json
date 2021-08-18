@@ -1,0 +1,46 @@
+[
+  {
+    "id" : "7e576a3e-749d-43b2-be71-c5e41f05b3f6",
+    "prId" : 32550,
+    "prUrl" : "https://github.com/apache/spark/pull/32550#pullrequestreview-661734366",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ace51882-e89f-4237-8d04-2081c7ca5360",
+        "parentId" : null,
+        "authorId" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "body" : "what about the case when both left and right sides meet requirement of AQE shuffled hash join (i.e. each partition size < threshold) ? Here we always build left. Shall we build right in case right side is smaller than left side?",
+        "createdAt" : "2021-05-18T06:11:16Z",
+        "updatedAt" : "2021-05-18T06:15:17Z",
+        "lastEditedBy" : "8df147d9-bc9d-4fd9-bb98-5dcf9619220b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "778e5d7e-cf6a-4eb0-a351-e2abbede2ca5",
+        "parentId" : "ace51882-e89f-4237-8d04-2081c7ca5360",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "Yeah,  we have already chose a smaller one since the `LogicalQueryStage` has override the `computeStats`. And see the code in `joins.getBuildSide`:\r\n```\r\nprivate def getBuildSide(\r\n      canBuildLeft: Boolean,\r\n      canBuildRight: Boolean,\r\n      left: LogicalPlan,\r\n      right: LogicalPlan): Option[BuildSide] = {\r\n    if (canBuildLeft && canBuildRight) {\r\n      // returns the smaller side base on its estimated physical size, if we want to build the\r\n      // both sides.\r\n      Some(getSmallerSide(left, right))\r\n    } else if (canBuildLeft) {\r\n      Some(BuildLeft)\r\n    } else if (canBuildRight) {\r\n      Some(BuildRight)\r\n    } else {\r\n      None\r\n    }\r\n  }\r\n```",
+        "createdAt" : "2021-05-18T07:28:06Z",
+        "updatedAt" : "2021-05-18T07:28:06Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "467e7a09-248f-4001-86da-8efae5cb5540",
+        "parentId" : "ace51882-e89f-4237-8d04-2081c7ca5360",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "Add an build side check if you worry about this.  [c747a23](https://github.com/apache/spark/pull/32550/commits/c747a23be0e59bcb7edb6e9bb377d2aed7248c96)",
+        "createdAt" : "2021-05-18T07:31:43Z",
+        "updatedAt" : "2021-05-18T07:31:43Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "957215452e9df57f5e0424f63556897ea928744f",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +254,258 @@      hintToShuffleHashJoinLeft(hint)\n    } else {\n      if (hintToPreferShuffleHashJoinLeft(hint)) {\n        true\n      } else {"
+  }
+]

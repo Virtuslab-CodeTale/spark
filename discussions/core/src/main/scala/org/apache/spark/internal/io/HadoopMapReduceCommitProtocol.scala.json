@@ -1,0 +1,90 @@
+[
+  {
+    "id" : "666f1bb2-ef80-4f0d-a875-ae12829676cf",
+    "prId" : 32530,
+    "prUrl" : "https://github.com/apache/spark/pull/32530#pullrequestreview-659313592",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5f8e2bc3-ca1c-48c9-bcdd-365984ac665b",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "do we need to do the rename when `dynamicPartitionOverwrite == false`?",
+        "createdAt" : "2021-05-13T13:35:32Z",
+        "updatedAt" : "2021-05-13T13:35:32Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "08f10df3-883b-411e-9927-52bc97f71fef",
+        "parentId" : "5f8e2bc3-ca1c-48c9-bcdd-365984ac665b",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I'm asking because this is different from https://github.com/apache/spark/pull/32207/files#diff-714f288ff8f97acca2fc3449e005d4abcab4a5d95883498652f507fa42a92a6aR191",
+        "createdAt" : "2021-05-13T13:36:53Z",
+        "updatedAt" : "2021-05-13T13:36:53Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0fbd1216-6890-4edc-97c2-37b02225fbc1",
+        "parentId" : "5f8e2bc3-ca1c-48c9-bcdd-365984ac665b",
+        "authorId" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "body" : "I believe we do actually need the rename here. My PR was based on a very limited understanding of what was going on here and made the assumption that, with HDFS semantics, the code works properly. Later investigations (as in the comments) showed this wasn't the case and that this rename step is actually necessary.",
+        "createdAt" : "2021-05-13T15:11:32Z",
+        "updatedAt" : "2021-05-13T15:11:32Z",
+        "lastEditedBy" : "ddb80038-2da6-4937-8c45-4d52fbe0300f",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7ff2e1c6-5475-4025-b41f-1168ec79a93a",
+        "parentId" : "5f8e2bc3-ca1c-48c9-bcdd-365984ac665b",
+        "authorId" : "d0706b4b-56e1-4a0a-a5a1-1f93c9c8ebd0",
+        "body" : "Yes, [staging files for custom partition are under `.spark-staging...`](https://github.com/apache/spark/blob/master/core/src/main/scala/org/apache/spark/internal/io/HadoopMapReduceCommitProtocol.scala#L149),  even when `dynamicPartitionOverwrite == false` ",
+        "createdAt" : "2021-05-13T21:22:31Z",
+        "updatedAt" : "2021-05-13T21:22:31Z",
+        "lastEditedBy" : "d0706b4b-56e1-4a0a-a5a1-1f93c9c8ebd0",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "68fd13176673f2b4fbcec54661fd7dcf8e900e39",
+    "line" : 16,
+    "diffHunk" : "@@ -1,1 +197,201 @@      absParentPaths.foreach(fs.mkdirs)\n      for ((src, dst) <- filesToMove) {\n        if (!fs.rename(new Path(src), new Path(dst))) {\n          throw new IOException(s\"Failed to rename $src to $dst when committing files staged for \" +\n            s\"absolute locations\")"
+  },
+  {
+    "id" : "4a31427e-b2f1-449a-b463-6febb8b8f81e",
+    "prId" : 32530,
+    "prUrl" : "https://github.com/apache/spark/pull/32530#pullrequestreview-662703141",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f98e862a-c6ca-42e5-aea7-ae7f00cc3966",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "If `dynamicPartitionOverwrite == false`, we don't delete `absParentPaths`. Why do we always make dirs here?",
+        "createdAt" : "2021-05-17T15:56:02Z",
+        "updatedAt" : "2021-05-17T15:56:03Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0001fc10-60dd-4639-b481-8487913c55ac",
+        "parentId" : "f98e862a-c6ca-42e5-aea7-ae7f00cc3966",
+        "authorId" : "d0706b4b-56e1-4a0a-a5a1-1f93c9c8ebd0",
+        "body" : "It's in case that `absParentPaths` has never been created before the job.",
+        "createdAt" : "2021-05-19T01:38:17Z",
+        "updatedAt" : "2021-05-19T01:38:17Z",
+        "lastEditedBy" : "d0706b4b-56e1-4a0a-a5a1-1f93c9c8ebd0",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "68fd13176673f2b4fbcec54661fd7dcf8e900e39",
+    "line" : 13,
+    "diffHunk" : "@@ -1,1 +195,199 @@      }\n      logDebug(s\"Create absolute parent directories: $absParentPaths\")\n      absParentPaths.foreach(fs.mkdirs)\n      for ((src, dst) <- filesToMove) {\n        if (!fs.rename(new Path(src), new Path(dst))) {"
+  }
+]

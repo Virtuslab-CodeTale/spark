@@ -1,0 +1,123 @@
+[
+  {
+    "id" : "d7ebc8ef-081c-4f48-9085-64561cde6bc5",
+    "prId" : 32526,
+    "prUrl" : "https://github.com/apache/spark/pull/32526#pullrequestreview-663634581",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a24cda71-7570-42e5-8c19-9f5383c9e226",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Is the case of 0 different from >1 here? If there is >1 do you want to remove something anyway?",
+        "createdAt" : "2021-05-15T17:41:14Z",
+        "updatedAt" : "2021-05-15T17:41:14Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "62cf9e3a-7bda-403c-b8d0-dff3ee2b4435",
+        "parentId" : "a24cda71-7570-42e5-8c19-9f5383c9e226",
+        "authorId" : "607c2c93-3680-41e7-baaf-dc5887b76b9f",
+        "body" : "I'm not sure. This behaviour was there before and it is not directly related to the bug.",
+        "createdAt" : "2021-05-19T20:31:47Z",
+        "updatedAt" : "2021-05-19T20:31:47Z",
+        "lastEditedBy" : "607c2c93-3680-41e7-baaf-dc5887b76b9f",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "887cbfb01dec1d417571b4f416b7ec5150e1e506",
+    "line" : 53,
+    "diffHunk" : "@@ -1,1 +867,871 @@          resourceProfileIdToStageAttempt(rpForStage.head) -= stageAttempt\n        } else {\n          logWarning(s\"Should have exactly one resource profile for stage $stageAttempt,\" +\n              s\" but have $rpForStage\")\n        }"
+  },
+  {
+    "id" : "1c8f1b6b-f5f3-409a-a5da-6c5f319845c3",
+    "prId" : 32526,
+    "prUrl" : "https://github.com/apache/spark/pull/32526#pullrequestreview-666843236",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5e698a9c-ffae-4d7b-9e72-a3e9e6bb0571",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Last item - is the point here that there's no point is storing a 0 in the map, as that's the default, and it makes the attempt turn up in the map keys, when you need it not to?",
+        "createdAt" : "2021-05-20T21:12:37Z",
+        "updatedAt" : "2021-05-20T21:12:38Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6a91ce09-55cb-48c5-b2ed-e1aea7fc74dc",
+        "parentId" : "5e698a9c-ffae-4d7b-9e72-a3e9e6bb0571",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "I would like to clarify this, is this causing a leak?  ie are you getting some event late or out of order such that this added an entry in stageAttemptToNumRunningTask but then its never removed?    I think this change is actually ok but would like to know if its needed. I would also like to know when it happened to see if perhaps there is a race we can handle elsewhere in the stage attempt being added. ",
+        "createdAt" : "2021-05-24T14:00:52Z",
+        "updatedAt" : "2021-05-24T14:00:52Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b2d2c401-569e-4741-a4d7-6be4972a7d1c",
+        "parentId" : "5e698a9c-ffae-4d7b-9e72-a3e9e6bb0571",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "guess there is more in the jira:\r\n> If spark-dynamic-executor-allocation thread calls schedule() after a SparkListenerTaskEnd event for the last task in a stage\r\nbut before SparkListenerStageCompleted event for the stage, then stageAttemptToNumRunningTask will not be cleaned up properly.\r\n\r\nI'm not following this though because onTaskEnd both removes the stage from stageAttemptToNumRunningTask as well as removes the stageAttempt from resourceProfileIdToStageAttempt. so when this is called it shouldn't be in  resourceProfileIdToStageAttempt.  Is there a case we are hitting that it is in there, like multiple stages using that resource profile?",
+        "createdAt" : "2021-05-24T14:07:02Z",
+        "updatedAt" : "2021-05-24T14:07:02Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "772db2bf-61c5-4c6e-a503-d2f7a0410e8d",
+        "parentId" : "5e698a9c-ffae-4d7b-9e72-a3e9e6bb0571",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "ok understanding the other issue, makes this one clear now, this change is fine. \r\nthis introduces the possibility to add it back to the map with value 0 and it never be removed, returning 0 here is fine because it is really needs to be added back it will be added in the task start handling",
+        "createdAt" : "2021-05-24T14:55:43Z",
+        "updatedAt" : "2021-05-24T14:55:44Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "887cbfb01dec1d417571b4f416b7ec5150e1e506",
+    "line" : 64,
+    "diffHunk" : "@@ -1,1 +931,935 @@      // attempts is a Set, change to Seq so we keep all values\n      attempts.map { attempt =>\n        stageAttemptToNumRunningTask.getOrElse(attempt, 0)\n      }.sum\n    }"
+  },
+  {
+    "id" : "2c2958b9-4dfb-473f-8e5f-f35ecadd463a",
+    "prId" : 32526,
+    "prUrl" : "https://github.com/apache/spark/pull/32526#pullrequestreview-666802100",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "66a9bb10-36da-4224-9c61-020bda5b5c85",
+        "parentId" : null,
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "from jira:\r\n> If a SparkListenerTaskEnd event for the last task in a stage was processed before SparkListenerStageCompleted for that stage,\r\nthen resourceProfileIdToStageAttempt will not be cleaned up properly.\r\n\r\nI don't follow this, onTaskEnd is where resourceProfileIdToStageAttempt is cleaned up and removed, so how does  SparkListenerStageCompleted being called afterward affect it?  Is it being added back somehow that I\"m not seeing?  If you can give the sequence of events that would be very helpful.",
+        "createdAt" : "2021-05-24T14:15:27Z",
+        "updatedAt" : "2021-05-24T14:15:28Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "67eade0e-c754-43f1-a087-a72ede17f552",
+        "parentId" : "66a9bb10-36da-4224-9c61-020bda5b5c85",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "oh wait, I think I see it.   stageAttemptToNumTasks only gets cleaned up in the onStageCompleted method.",
+        "createdAt" : "2021-05-24T14:18:58Z",
+        "updatedAt" : "2021-05-24T14:18:58Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "887cbfb01dec1d417571b4f416b7ec5150e1e506",
+    "line" : 26,
+    "diffHunk" : "@@ -1,1 +783,787 @@          if (stageAttemptToNumRunningTask(stageAttempt) == 0) {\n            stageAttemptToNumRunningTask -= stageAttempt\n            removeStageFromResourceProfileIfUnused(stageAttempt)\n          }\n        }"
+  }
+]

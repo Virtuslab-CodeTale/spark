@@ -350,5 +350,126 @@
     "commit" : "0ecab9f41dcd5a669ae105a7af9db592d4800f40",
     "line" : 7,
     "diffHunk" : "@@ -1,1 +774,778 @@                  // ApproximatePercentile takes two literals for accuracy and percentage which\n                  // should not be wrapped by if-else.\n                  a.withNewChildren(ifExpr(a.first) :: a.second :: a.third :: Nil)\n                case a: AggregateFunction =>\n                  a.withNewChildren(a.children.map(ifExpr))"
+  },
+  {
+    "id" : "e094b0bd-c2c5-46d6-aae9-803aef558e02",
+    "prId" : 32553,
+    "prUrl" : "https://github.com/apache/spark/pull/32553#pullrequestreview-661335351",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a1002da9-37e9-438f-a6e3-8a97a8d81d59",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "how about primitive type parameters?",
+        "createdAt" : "2021-05-17T14:54:05Z",
+        "updatedAt" : "2021-05-17T14:54:06Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c7bd8795-c436-4391-8270-cb7287e36d15",
+        "parentId" : "a1002da9-37e9-438f-a6e3-8a97a8d81d59",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "I think it shouldn't matter. Here we're making sure that the magic method will always be invoked **regardless** of null-ness of the arguments. \r\n\r\nFor primitive types this has less significant meaning because even if `progagateNull` is true, `needNullCheck`\r\n```\r\n  protected lazy val needNullCheck: Boolean = propagateNull && arguments.exists(_.nullable)\r\n```\r\nin `InvokeLike` also considers null-ness of arguments.",
+        "createdAt" : "2021-05-17T18:14:30Z",
+        "updatedAt" : "2021-05-17T18:14:31Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "35f6812f-a484-4ee0-b994-774169295b1a",
+        "parentId" : "a1002da9-37e9-438f-a6e3-8a97a8d81d59",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "How can users handle nullable int values if the UDF is something like `isPositive(int i)` which can't accept null argument?",
+        "createdAt" : "2021-05-17T18:51:06Z",
+        "updatedAt" : "2021-05-17T18:51:07Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3f71f8e0-f1b2-4e7b-8de7-2d884777b9e7",
+        "parentId" : "a1002da9-37e9-438f-a6e3-8a97a8d81d59",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Ah I see what you mean, thanks. Seems we should allow users to define magic method with boxed primitive types for this case? We could also follow the behavior of [ScalaUDF](https://github.com/apache/spark/blob/master/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/expressions/ScalaUDF.scala#L32) and returns null if any of the primitive type parameter is nullable and the input is null, however currently `InvokeLike` cannot handle the case where a subset of the input types are of primitive nullable type.",
+        "createdAt" : "2021-05-17T19:22:26Z",
+        "updatedAt" : "2021-05-17T19:22:26Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "fb0d959fa2ba7ced2370840e3bb9fd53321b921b",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +2205,2209 @@          case Some(m) if Modifier.isStatic(m.getModifiers) =>\n            StaticInvoke(scalarFunc.getClass, scalarFunc.resultType(),\n              MAGIC_METHOD_NAME, arguments, propagateNull = false,\n              returnNullable = scalarFunc.isResultNullable)\n          case Some(_) =>"
+  },
+  {
+    "id" : "48420f45-9f54-409b-bfdf-ac6c4ecba605",
+    "prId" : 32553,
+    "prUrl" : "https://github.com/apache/spark/pull/32553#pullrequestreview-661729604",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8680767a-36f7-42b6-ab17-4a35a2c94d40",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "So I think we need `propagateNull` as true, instead of false?",
+        "createdAt" : "2021-05-18T06:22:50Z",
+        "updatedAt" : "2021-05-18T06:22:50Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "29295584-9452-4822-9674-83eebe7d78b4",
+        "parentId" : "8680767a-36f7-42b6-ab17-4a35a2c94d40",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "If `propagateNull` is true, we'd return null directly even if input arguments are of non-primitive type, which is not what we want.",
+        "createdAt" : "2021-05-18T06:43:31Z",
+        "updatedAt" : "2021-05-18T06:43:31Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cfa7ecb3-3898-4718-b27f-e3d95c9455a6",
+        "parentId" : "8680767a-36f7-42b6-ab17-4a35a2c94d40",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Got it. Thanks.",
+        "createdAt" : "2021-05-18T07:26:39Z",
+        "updatedAt" : "2021-05-18T07:26:39Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "fb0d959fa2ba7ced2370840e3bb9fd53321b921b",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +2205,2209 @@          case Some(m) if Modifier.isStatic(m.getModifiers) =>\n            StaticInvoke(scalarFunc.getClass, scalarFunc.resultType(),\n              MAGIC_METHOD_NAME, arguments, propagateNull = false,\n              returnNullable = scalarFunc.isResultNullable)\n          case Some(_) =>"
+  },
+  {
+    "id" : "86361c83-554b-41f5-b926-9c02bd40785f",
+    "prId" : 32542,
+    "prUrl" : "https://github.com/apache/spark/pull/32542#pullrequestreview-659567253",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "937bdf70-e11c-4dfc-ae28-74b98fdcc748",
+        "parentId" : null,
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "This is moved from `ResolveSessionCatalog.scala`.",
+        "createdAt" : "2021-05-14T06:48:56Z",
+        "updatedAt" : "2021-05-14T06:49:00Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9e058b10a3e61cfe702cab8a4b15726660e3da78",
+    "line" : 31,
+    "diffHunk" : "@@ -1,1 +3518,3522 @@        val normalizedChanges = a.changes.flatMap {\n          case add: AddColumn =>\n            CatalogV2Util.failNullType(add.dataType)\n            def addColumn(\n                parentSchema: StructType,"
   }
 ]

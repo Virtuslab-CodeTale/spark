@@ -427,5 +427,82 @@
     "commit" : "f1f64f7ba0f6246a21515ffddc2d99efbe2409db",
     "line" : 52,
     "diffHunk" : "@@ -1,1 +1085,1089 @@          }.head\n\n          val value = addMutableState(javaType(expr.dataType), \"subExprValue\")\n\n          val isNullLiteral = eval.isNull match {"
+  },
+  {
+    "id" : "1936d853-2d9d-4fff-984c-f17768724aca",
+    "prId" : 32536,
+    "prUrl" : "https://github.com/apache/spark/pull/32536#pullrequestreview-660548651",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "83bab319-48dd-4a46-a287-c13cf68b55e8",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "It seems fine, but have you checked if this stat value does not change before/after this PR?",
+        "createdAt" : "2021-05-13T23:29:54Z",
+        "updatedAt" : "2021-05-13T23:29:54Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4dec124d-8358-4475-bc8e-bff6e10b2f87",
+        "parentId" : "83bab319-48dd-4a46-a287-c13cf68b55e8",
+        "authorId" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "body" : "Yes, I did some manual tests to check this. \r\nFor example, add a `afterEach()` method to `CodeGenerationSuite` to record the `CodegenMetrics.METRIC_GENERATED_CLASS_BYTECODE_SIZE.getSnapshot.getValues` after each case and the stat value not change before/after this PR.\r\n\r\n",
+        "createdAt" : "2021-05-14T03:00:03Z",
+        "updatedAt" : "2021-05-14T03:00:03Z",
+        "lastEditedBy" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "785aca12-9bd5-4abb-8fb0-503d74592a8f",
+        "parentId" : "83bab319-48dd-4a46-a287-c13cf68b55e8",
+        "authorId" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "body" : "In the same way, the stat values of `CodegenMetrics.METRIC_GENERATED_METHOD_BYTECODE_SIZE` has not changed before/after this PR.",
+        "createdAt" : "2021-05-14T03:07:56Z",
+        "updatedAt" : "2021-05-14T03:07:56Z",
+        "lastEditedBy" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9891cc10-8cdc-4bcc-b463-62112078d0fb",
+        "parentId" : "83bab319-48dd-4a46-a287-c13cf68b55e8",
+        "authorId" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "body" : "@maropu If we want to do some code checking, maybe we can enhanced the case `metrics are recorded on compile` in `CodeGenerationSuite` as follows:\r\n```\r\ntest(\"metrics are recorded on compile\") {\r\n    ...\r\n    val metricGeneratedClassByteCodeSizeSnapshot =\r\n      CodegenMetrics.METRIC_GENERATED_CLASS_BYTECODE_SIZE.getSnapshot.getValues\r\n    val metricGeneratedMethodByteCodeSizeSnapshot =\r\n      CodegenMetrics.METRIC_GENERATED_METHOD_BYTECODE_SIZE.getSnapshot.getValues\r\n    GenerateOrdering.generate(Add(Literal(123), Literal(1)).asc :: Nil)\r\n    ...\r\n    // Make sure the stat content doesn't change before/after SPARK-35398\r\n    assert(CodegenMetrics.METRIC_GENERATED_CLASS_BYTECODE_SIZE.getSnapshot.getValues\r\n      .diff(metricGeneratedClassByteCodeSizeSnapshot)\r\n      .sameElements(Array(740, 1293)))\r\n    assert(CodegenMetrics.METRIC_GENERATED_METHOD_BYTECODE_SIZE.getSnapshot.getValues\r\n      .diff(metricGeneratedMethodByteCodeSizeSnapshot)\r\n      .sameElements(Array(5, 5, 6, 7, 10, 15, 46)))\r\n  }\r\n```\r\n\r\nThe new assertion can be passed before and after this pr, however, if we update the version of janino or change the codegen of `Add`, we may need to update the content of the assertion because the size of the generated code may change.\r\nFor example `CodegenMetrics.METRIC_GENERATED_CLASS_BYTECODE_SIZE` with janino 3.1.4 are `Array(740, 1293)`, but with  janino 3.0.16 are `Array(687, 1036)`, so I'm not sure if we need to add these assertions in this pr.",
+        "createdAt" : "2021-05-14T03:55:07Z",
+        "updatedAt" : "2021-05-14T03:57:51Z",
+        "lastEditedBy" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8660750d-6734-483d-aaec-54a5d2d38c5a",
+        "parentId" : "83bab319-48dd-4a46-a287-c13cf68b55e8",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "> @maropu If we want to do some code checking, maybe we can enhanced the case metrics are recorded on compile in CodeGenerationSuite as follows:\r\n\r\nAh, I see. Thank for the explanation, @LuciferYang. Could you add a new test unit for the assert with the prefix `SPARK-35398: `?",
+        "createdAt" : "2021-05-17T04:10:49Z",
+        "updatedAt" : "2021-05-17T04:13:13Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ce62d844-5d8a-49da-873f-7a33f4b387bb",
+        "parentId" : "83bab319-48dd-4a46-a287-c13cf68b55e8",
+        "authorId" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "body" : "ok",
+        "createdAt" : "2021-05-17T04:48:25Z",
+        "updatedAt" : "2021-05-17T04:48:25Z",
+        "lastEditedBy" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8db3551ea9ed012369cb67be1398f2c4dac81e8f",
+    "line" : 31,
+    "diffHunk" : "@@ -1,1 +1433,1437 @@  private def updateAndGetCompilationStats(evaluator: ClassBodyEvaluator): ByteCodeStats = {\n    // First retrieve the generated classes.\n    val classes = evaluator.getBytecodes.asScala\n\n    // Then walk the classes to get at the method bytecode."
   }
 ]

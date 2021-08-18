@@ -20,5 +20,291 @@
     "commit" : "cabebd922fe816acd8ccde1168dc2f0ac6d0bf56",
     "line" : 48,
     "diffHunk" : "@@ -1,1 +476,480 @@            if (blockInfoManager.lockForWriting(blockId, blocking = false).isDefined) {\n              selectedBlocks += blockId\n              freedMemory += entry.size\n            }\n          }"
+  },
+  {
+    "id" : "a0d2de14-513d-492d-98d3-8ffaf1786490",
+    "prId" : 32534,
+    "prUrl" : "https://github.com/apache/spark/pull/32534#pullrequestreview-664405295",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a79486a5-bbd2-4367-af8e-9755760a5d99",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "OK to this would cover plain Closeable too. I get the idea. On the one hand I don't think we _know_ it's safe to close, but also can't think of a case where you wouldn't, if it is closeable. Nothing else likely has a reference to it anyway.\r\n\r\nThe downside here is that you spend time closing, and we're in a synchronized block here, which is a little worrying. But it also may encounter an exception. Do you want to try-catch for NonFatal here so that it doesn't fail if close fails?",
+        "createdAt" : "2021-05-13T14:31:32Z",
+        "updatedAt" : "2021-05-13T14:33:03Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f39120e3-8732-4cc9-ac87-829d3284ec1a",
+        "parentId" : "a79486a5-bbd2-4367-af8e-9755760a5d99",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "I suppose you can at least only synchronize on entries to remove and get the remove elements; the rest can happen after the synchronized block. We're still holding the memoryManager lock here though.",
+        "createdAt" : "2021-05-13T14:33:56Z",
+        "updatedAt" : "2021-05-13T14:33:56Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "589dd538-cdf0-41cc-a0cd-4a63278bdfd9",
+        "parentId" : "a79486a5-bbd2-4367-af8e-9755760a5d99",
+        "authorId" : "359156d5-9e0d-40b0-adc4-50c5b3908f25",
+        "body" : "@srowen , I fixed the codes based on your last review, 1) directly using foreach { instead of foreach(v => v {  2) I added an async call here, so I hope close functions won't hold memoryManager lock for too long 3) Added a try catch to skip NonFatal exceptions.",
+        "createdAt" : "2021-05-17T10:44:10Z",
+        "updatedAt" : "2021-05-17T10:44:10Z",
+        "lastEditedBy" : "359156d5-9e0d-40b0-adc4-50c5b3908f25",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f6a72236-a144-4dfd-a5ff-27728af982dd",
+        "parentId" : "a79486a5-bbd2-4367-af8e-9755760a5d99",
+        "authorId" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "body" : "In general, semantics of `AutoCloseable` has an expectation that it would be closed when released. I dont think we can make that assumption about `Closeable`.\r\nI have not looked in greater detail if this assumption holds for Closeable for this usecase though.",
+        "createdAt" : "2021-05-18T16:07:22Z",
+        "updatedAt" : "2021-05-18T16:07:23Z",
+        "lastEditedBy" : "d35df420-57a9-43e8-b8d5-cad0f4002681",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6e08eb5f-3124-466c-8923-260769494cd4",
+        "parentId" : "a79486a5-bbd2-4367-af8e-9755760a5d99",
+        "authorId" : "359156d5-9e0d-40b0-adc4-50c5b3908f25",
+        "body" : "@mridulm , I see, to me, I think AutoCloseable is mostly commonly used, and close function implemented should be safe to close even more than once if it already be called by exception. Anyway, I can create a self-defined trait maybe named as \"ManualCloseable\", then any class extends from this \"ManualCloseable\" can be manual closed here, does that makes sense to you? @srowen , what do you think?",
+        "createdAt" : "2021-05-19T15:35:18Z",
+        "updatedAt" : "2021-05-19T15:35:18Z",
+        "lastEditedBy" : "359156d5-9e0d-40b0-adc4-50c5b3908f25",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "daa30d50-a50a-4aa9-962e-7a86fa8b5e6f",
+        "parentId" : "a79486a5-bbd2-4367-af8e-9755760a5d99",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "I wouldn't make a new trait, no. I think anything AutoCloseable or Closeable is, well, closeable when done and should be closed at a point like this when we are sure (?) there are no other users of it.",
+        "createdAt" : "2021-05-19T16:23:13Z",
+        "updatedAt" : "2021-05-19T16:23:13Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "34480f94-a952-4f20-900b-d48e4b774b68",
+        "parentId" : "a79486a5-bbd2-4367-af8e-9755760a5d99",
+        "authorId" : "359156d5-9e0d-40b0-adc4-50c5b3908f25",
+        "body" : "@srowen , thx, so ... Using AutoCloseable here as a hint to do manual close should be OK, am I understanding correctly?",
+        "createdAt" : "2021-05-19T17:09:03Z",
+        "updatedAt" : "2021-05-19T17:09:03Z",
+        "lastEditedBy" : "359156d5-9e0d-40b0-adc4-50c5b3908f25",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "40aefafe-bfe0-4dd7-97b0-81c74ad38bc8",
+        "parentId" : "a79486a5-bbd2-4367-af8e-9755760a5d99",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "I think this is OK, as AutoCloseable is a supertype of Closeable, so this would handle both cases.",
+        "createdAt" : "2021-05-20T13:47:09Z",
+        "updatedAt" : "2021-05-20T13:47:09Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "844f03385b3a713fd36ecd7c1bf9f783ac2b2949",
+    "line" : 23,
+    "diffHunk" : "@@ -1,1 +395,399 @@      entry match {\n        case e: DeserializedMemoryEntry[_] => e.value.foreach {\n          case o: AutoCloseable =>\n            try {\n              o.close"
+  },
+  {
+    "id" : "0fcce553-3ea7-46e7-b4f7-329c2ae87271",
+    "prId" : 32534,
+    "prUrl" : "https://github.com/apache/spark/pull/32534#pullrequestreview-663462811",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "95efae36-7ca8-4690-b27c-96aa94e7e970",
+        "parentId" : null,
+        "authorId" : "359156d5-9e0d-40b0-adc4-50c5b3908f25",
+        "body" : "@srowen , I replace ThreadUtils.awaitResult with onComplete here. And I also wrapped manual close as a function upon @mridulm 's suggestion.",
+        "createdAt" : "2021-05-19T17:07:43Z",
+        "updatedAt" : "2021-05-19T17:07:43Z",
+        "lastEditedBy" : "359156d5-9e0d-40b0-adc4-50c5b3908f25",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "844f03385b3a713fd36ecd7c1bf9f783ac2b2949",
+    "line" : 38,
+    "diffHunk" : "@@ -1,1 +410,414 @@      case Success(_) =>\n      case Failure(e) => throw e\n    }\n    entry\n  }"
+  },
+  {
+    "id" : "1738da7f-9232-4bbd-bd77-26bc0456387f",
+    "prId" : 32534,
+    "prUrl" : "https://github.com/apache/spark/pull/32534#pullrequestreview-664517444",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "991e16ed-b90d-4054-b6cb-d8fea28e6087",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "This is still waiting on the tasks - I think we don't need to?",
+        "createdAt" : "2021-05-19T18:03:45Z",
+        "updatedAt" : "2021-05-19T18:03:46Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5176ac4b-4360-498f-b0d6-70ebf5f823de",
+        "parentId" : "991e16ed-b90d-4054-b6cb-d8fea28e6087",
+        "authorId" : "359156d5-9e0d-40b0-adc4-50c5b3908f25",
+        "body" : "@srowen , using onComplete should be non-blocking, I tested with my own cluster by below codes:\r\nIf onComplete is not prefered, I am happy to change to something else, do you have any suggestion? \r\n\r\n```\r\n    memoryStore.clear\r\n    // Check if allocator was cleared.\r\n    while (allocator.getAllocatedMemory > 0) {\r\n      System.out.println(s\"memoryStore clear start, wait it to finish.\")\r\n      Thread.sleep(500)\r\n    }\r\n    System.out.println(s\"memoryStore clear finish.\")\r\n    assert(allocator.getAllocatedMemory == 0)\r\n```\r\n\r\nand see output like this\r\n![image](https://user-images.githubusercontent.com/4355494/118982083-a5f96d80-b9ad-11eb-9251-2c97c036b959.png)\r\n\r\n",
+        "createdAt" : "2021-05-20T12:55:38Z",
+        "updatedAt" : "2021-05-20T12:55:39Z",
+        "lastEditedBy" : "359156d5-9e0d-40b0-adc4-50c5b3908f25",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "da93c7d5-4ea3-4c57-baf5-7722c1c35df4",
+        "parentId" : "991e16ed-b90d-4054-b6cb-d8fea28e6087",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "OK I think you're right, it's not blocking",
+        "createdAt" : "2021-05-20T13:47:31Z",
+        "updatedAt" : "2021-05-20T13:47:31Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "45a3acc0-4861-4caa-bf38-349092b45720",
+        "parentId" : "991e16ed-b90d-4054-b6cb-d8fea28e6087",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "This callback will throw an exception but not sure what that will do - probably just get logged. I think it's reasonable to log the error as a warning and continue - not being able to close is \"OK\" and shouldn't stop anything else",
+        "createdAt" : "2021-05-20T13:49:06Z",
+        "updatedAt" : "2021-05-20T13:49:15Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "831142eb-77f1-4c5a-9291-6293e76ae5e7",
+        "parentId" : "991e16ed-b90d-4054-b6cb-d8fea28e6087",
+        "authorId" : "359156d5-9e0d-40b0-adc4-50c5b3908f25",
+        "body" : "@srowen , because NonFatal exception has been captured and logged in above try/catch, so I think only fail it will catch on this onComplete callback is Fatal exception, that is why I continue to throw here.  ",
+        "createdAt" : "2021-05-20T14:47:55Z",
+        "updatedAt" : "2021-05-20T14:47:55Z",
+        "lastEditedBy" : "359156d5-9e0d-40b0-adc4-50c5b3908f25",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0741e00e-667f-43be-baef-97e98f89e1a6",
+        "parentId" : "991e16ed-b90d-4054-b6cb-d8fea28e6087",
+        "authorId" : "359156d5-9e0d-40b0-adc4-50c5b3908f25",
+        "body" : "@srowen , to make sure, I tested to throw one NonFatal and one Fatal errors in close function, and the behavior is as expected. \r\n```\r\ncase class NativeObject(alloc: DummyAllocator, size: Int)\r\n      extends KnownSizeEstimation\r\n      with AutoCloseable {\r\n\r\n      alloc.alloc(size)\r\n      var allocated_size: Int = size\r\n      override def estimatedSize: Long = allocated_size\r\n      override def close(): Unit = synchronized {\r\n        Thread.sleep(10)\r\n        alloc.release(allocated_size)\r\n        allocated_size = 0\r\n        throw new NotImplementedError()\r\n        // throw new OutOfMemoryError()\r\n      }\r\n    }\r\n```\r\n![image](https://user-images.githubusercontent.com/4355494/119004235-f4fcce00-b9c0-11eb-9fbb-b6804efe6bd8.png)\r\n\r\n![image](https://user-images.githubusercontent.com/4355494/119003362-3f317f80-b9c0-11eb-9c24-4c783bff3fe0.png)\r\n\r\nand Then I tried to throw OutOfMemoryError as a FatalError, and UT will break\r\n![image](https://user-images.githubusercontent.com/4355494/119004160-e57d8500-b9c0-11eb-9a08-bd4a3f2c61a9.png)\r\n",
+        "createdAt" : "2021-05-20T15:15:05Z",
+        "updatedAt" : "2021-05-20T15:15:05Z",
+        "lastEditedBy" : "359156d5-9e0d-40b0-adc4-50c5b3908f25",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "844f03385b3a713fd36ecd7c1bf9f783ac2b2949",
+    "line" : 35,
+    "diffHunk" : "@@ -1,1 +407,411 @@      }\n    }\n    entryManualCloseTasks.onComplete {\n      case Success(_) =>\n      case Failure(e) => throw e"
+  },
+  {
+    "id" : "4a52f525-716b-463b-bf7a-7057e7a25241",
+    "prId" : 32534,
+    "prUrl" : "https://github.com/apache/spark/pull/32534#pullrequestreview-673101228",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ec832aee-fd53-422d-9465-14fc1f677352",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "shall we create a dedicated thread pool (with a reasonable capacity) to run the closing tasks?",
+        "createdAt" : "2021-06-01T13:50:47Z",
+        "updatedAt" : "2021-06-01T13:50:48Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b2010552-df57-41d4-a010-8eed8a039337",
+        "parentId" : "ec832aee-fd53-422d-9465-14fc1f677352",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Could be, yeah - just hard to know when to shut down that pool, but they can be daemon threads / min size 0",
+        "createdAt" : "2021-06-01T13:52:37Z",
+        "updatedAt" : "2021-06-01T13:52:37Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "844f03385b3a713fd36ecd7c1bf9f783ac2b2949",
+    "line" : 7,
+    "diffHunk" : "@@ -1,1 +25,29 @@import scala.collection.mutable\nimport scala.collection.mutable.ArrayBuffer\nimport scala.concurrent.ExecutionContext.Implicits.global\nimport scala.concurrent.Future\nimport scala.reflect.ClassTag"
+  },
+  {
+    "id" : "2d8a6766-f799-4977-8836-01237b2ee61e",
+    "prId" : 32534,
+    "prUrl" : "https://github.com/apache/spark/pull/32534#pullrequestreview-673100468",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "fb086ad9-e8bc-45cc-beed-27fdafb4d603",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "nit: `Fail to close a memory entry`",
+        "createdAt" : "2021-06-01T13:52:00Z",
+        "updatedAt" : "2021-06-01T13:52:01Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "844f03385b3a713fd36ecd7c1bf9f783ac2b2949",
+    "line" : 28,
+    "diffHunk" : "@@ -1,1 +400,404 @@            } catch {\n              case NonFatal(e) =>\n                logWarning(s\"Got NonFatal exception during remove\")\n            }\n          case _ =>"
+  },
+  {
+    "id" : "c402c7e5-0232-4e20-93d3-759138a4d430",
+    "prId" : 32534,
+    "prUrl" : "https://github.com/apache/spark/pull/32534#pullrequestreview-673104114",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "41985220-70a5-46e9-a667-53a5887e4e30",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "To confirm: this is a callback, so throwing an exception doesn't break the Spark application and just gets logged?",
+        "createdAt" : "2021-06-01T13:54:14Z",
+        "updatedAt" : "2021-06-01T13:54:14Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "20585c9b-e6b7-4b0b-af84-e3774b8b8889",
+        "parentId" : "41985220-70a5-46e9-a667-53a5887e4e30",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "From prior discussions, I believe that's right. In which case you could just log it ",
+        "createdAt" : "2021-06-01T13:54:55Z",
+        "updatedAt" : "2021-06-01T13:54:55Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "844f03385b3a713fd36ecd7c1bf9f783ac2b2949",
+    "line" : 37,
+    "diffHunk" : "@@ -1,1 +409,413 @@    entryManualCloseTasks.onComplete {\n      case Success(_) =>\n      case Failure(e) => throw e\n    }\n    entry"
   }
 ]

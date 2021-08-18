@@ -1,0 +1,145 @@
+[
+  {
+    "id" : "b3cb2d07-9a54-4850-b854-17010241592f",
+    "prId" : 32488,
+    "prUrl" : "https://github.com/apache/spark/pull/32488#pullrequestreview-669673430",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "fe0437d1-d05b-420f-a481-aa5a7ddf6fb9",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I'm not sure we can hit this case, as `OptimizeIn` will turn it into `InSet`.\r\n\r\nCan you try a real query and see if the optimization in this PR takes place?",
+        "createdAt" : "2021-05-24T15:49:09Z",
+        "updatedAt" : "2021-05-24T15:49:09Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e7cd4fc5-041f-4b5f-a4aa-5ec0049753ff",
+        "parentId" : "fe0437d1-d05b-420f-a481-aa5a7ddf6fb9",
+        "authorId" : "c12eb4aa-c39d-4fa9-8470-ed071c0be24a",
+        "body" : "Yes, it does.\r\n\r\n```scala\r\n    spark.range(50)\r\n      .selectExpr(\"cast(id as int) as id\")\r\n      .write\r\n      .mode(\"overwrite\")\r\n      .parquet(\"/tmp/parquet/t1\")\r\n\r\n    spark.sql(\"SET spark.sql.planChangeLog.level=WARN\")\r\n    val in = (1 to 20).map {\r\n      case i => Literal.create(i.toLong)\r\n    }\r\n    spark.read\r\n      .load(\"/tmp/parquet/t1\")\r\n      .filter($\"id\".isin(in: _*))\r\n      .explain\r\n```\r\n\r\nBefore this pr:\r\n```\r\n== Physical Plan ==\r\n*(1) Filter cast(id#105 as bigint) INSET (5,10,14,20,1,6,9,13,2,17,12,7,3,18,16,11,8,19,4,15)\r\n+- *(1) ColumnarToRow\r\n   +- FileScan parquet [id#105] Batched: true, DataFilters: [cast(id#105 as bigint) INSET (5,10,14,20,1,6,9,13,2,17,12,7,3,18,16,11,8,19,4,15)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/tmp/parquet/t1], PartitionFilters: [], PushedFilters: [], ReadSchema: struct<id:int>\r\n```\r\nAfter this pr;\r\n```\r\n15:33:02.191 WARN org.apache.spark.sql.catalyst.rules.PlanChangeLogger: \r\n=== Applying Rule org.apache.spark.sql.catalyst.optimizer.UnwrapCastInBinaryComparison ===\r\n!Filter cast(id#105 as bigint) IN (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20)   Filter id#105 IN (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20)\r\n +- Relation [id#105] parquet                                                            +- Relation [id#105] parquet\r\n\r\n15:33:02.197 WARN org.apache.spark.sql.catalyst.rules.PlanChangeLogger: \r\n=== Applying Rule org.apache.spark.sql.catalyst.optimizer.OptimizeIn ===\r\n!Filter id#105 IN (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20)   Filter id#105 INSET (5,10,14,20,1,6,9,13,2,17,12,7,3,18,16,11,8,19,4,15)\r\n +- Relation [id#105] parquet                                            +- Relation [id#105] parquet\r\n\r\n== Physical Plan ==\r\n*(1) Filter id#105 INSET (5,10,14,20,1,6,9,13,2,17,12,7,3,18,16,11,8,19,4,15)\r\n+- *(1) ColumnarToRow\r\n   +- FileScan parquet [id#105] Batched: true, DataFilters: [id#105 INSET (5,10,14,20,1,6,9,13,2,17,12,7,3,18,16,11,8,19,4,15)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/tmp/parquet/t1], PartitionFilters: [], PushedFilters: [In(id, [5,10,14,20,1,6,9,13,2,17,12,7,3,18,16,11,8,19,4,15])], ReadSchema: struct<id:int>\r\n```",
+        "createdAt" : "2021-05-25T07:41:09Z",
+        "updatedAt" : "2021-05-25T07:41:10Z",
+        "lastEditedBy" : "c12eb4aa-c39d-4fa9-8470-ed071c0be24a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "18f17eaf-daf3-4a3a-af4b-ed003c5df8dc",
+        "parentId" : "fe0437d1-d05b-420f-a481-aa5a7ddf6fb9",
+        "authorId" : "c12eb4aa-c39d-4fa9-8470-ed071c0be24a",
+        "body" : "Shall we add an end-to-end test for this case?",
+        "createdAt" : "2021-05-25T07:45:38Z",
+        "updatedAt" : "2021-05-25T07:45:38Z",
+        "lastEditedBy" : "c12eb4aa-c39d-4fa9-8470-ed071c0be24a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "73f37065-1dbc-4574-b6a0-1c45a5b27ea4",
+        "parentId" : "fe0437d1-d05b-420f-a481-aa5a7ddf6fb9",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "So we are relying on the assumption that `UnwrapCastInBinaryComparison` happens before `OptimizeIn`.\r\n\r\nThis is fragile as the execution order of the rules in the same batch is pretty unpredictable, and may change over time if code factor happens, new optimization rules added, etc.\r\n\r\nIt's better to make sure these catalyst rules are orthogonal, and that's why `In` and `InSet` usually appears together: if a rule needs to handle In, it usually should handle InSet as well.",
+        "createdAt" : "2021-05-25T13:52:31Z",
+        "updatedAt" : "2021-05-25T13:52:38Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b17fb7b5-e562-45d5-8d24-455f12939715",
+        "parentId" : "fe0437d1-d05b-420f-a481-aa5a7ddf6fb9",
+        "authorId" : "c12eb4aa-c39d-4fa9-8470-ed071c0be24a",
+        "body" : "Make sense.",
+        "createdAt" : "2021-05-26T09:45:55Z",
+        "updatedAt" : "2021-05-26T09:45:55Z",
+        "lastEditedBy" : "c12eb4aa-c39d-4fa9-8470-ed071c0be24a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "49649e49-abfd-40ac-9d14-a41cdb57b264",
+        "parentId" : "fe0437d1-d05b-420f-a481-aa5a7ddf6fb9",
+        "authorId" : "c12eb4aa-c39d-4fa9-8470-ed071c0be24a",
+        "body" : "Updated and add `InSet` support.",
+        "createdAt" : "2021-05-27T01:41:09Z",
+        "updatedAt" : "2021-05-27T01:41:10Z",
+        "lastEditedBy" : "c12eb4aa-c39d-4fa9-8470-ed071c0be24a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ea0ba385ec38b231a37f871cecf1ca9ffb852c3d",
+    "line" : 24,
+    "diffHunk" : "@@ -1,1 +33,37 @@ * - `BinaryComparison(Cast(fromExp, toType), Literal(value, toType))`\n * - `BinaryComparison(Literal(value, toType), Cast(fromExp, toType))`\n * - `In(Cast(fromExp, toType), Seq(Literal(v1, toType), Literal(v2, toType), ...)`\n * - `InSet(Cast(fromExp, toType), Set(v1, v2, ...))`\n *"
+  },
+  {
+    "id" : "443c0228-ea2e-4578-981d-be5addcb399d",
+    "prId" : 32488,
+    "prUrl" : "https://github.com/apache/spark/pull/32488#pullrequestreview-673890722",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "38eadbb9-06f5-4732-ba94-884e5e754312",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "The null literal handling is a bit tricky and I think it's better to put all the steps in the comment. There are 3 kinds of literals in the list:\r\n1. null literals\r\n2. The literals that can cast to `fromExp.dataType`\r\n3. The literals that cannot cast to `fromExp.dataType`\r\n\r\nnull literals is special, because if we call `unwrapCast` directly, null means cannot cast, which is misleading as we can cast null literals to any data type.\r\n\r\nThe ideal steps in my mind:\r\n1. Call `unwrapCast` with non-null literals in the list\r\n2. If there is no literal that can cast to `fromExp.dataType`, return the original expression\r\n3. Otherwise, use the literals that can cast to `fromExp.dataType` and the null literals to create a new `In` expression, with additional `falseIfNotNull` check.",
+        "createdAt" : "2021-06-01T12:36:48Z",
+        "updatedAt" : "2021-06-01T12:36:49Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0e15dd9d-a473-4101-b74e-5b4acca5756f",
+        "parentId" : "38eadbb9-06f5-4732-ba94-884e5e754312",
+        "authorId" : "c12eb4aa-c39d-4fa9-8470-ed071c0be24a",
+        "body" : "Thanks for your suggestion, I'll try your idea.",
+        "createdAt" : "2021-06-02T02:19:26Z",
+        "updatedAt" : "2021-06-02T02:19:26Z",
+        "lastEditedBy" : "c12eb4aa-c39d-4fa9-8470-ed071c0be24a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0005dccc-7ba8-490e-a159-53f5761e9e8f",
+        "parentId" : "38eadbb9-06f5-4732-ba94-884e5e754312",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Another idea: We can use `AnsiCast(...).eval`, which fails if overflow happens. Then null literal is the same as other literals that can cast to `fromExp.dataType`, and we don't need to distinguish them.",
+        "createdAt" : "2021-06-02T03:00:15Z",
+        "updatedAt" : "2021-06-02T03:00:15Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "27bd433c-a45d-45a5-a49d-1cbf4e366035",
+        "parentId" : "38eadbb9-06f5-4732-ba94-884e5e754312",
+        "authorId" : "c12eb4aa-c39d-4fa9-8470-ed071c0be24a",
+        "body" : "> Another idea: We can use AnsiCast(...).eval, which fails if overflow happens. Then null literal is the same as other literals that can cast to fromExp.dataType, and we don't need to distinguish them.\r\n\r\nGood idea,\r\n\r\n>The ideal steps in my mind:\r\n> 1. Call unwrapCast with non-null literals in the list\r\n> 2. If there is no literal that can cast to fromExp.dataType, return the original expression\r\n> 3. Otherwise, use the literals that can cast to fromExp.dataType and the null literals to create a new In expression, with additional falseIfNotNull check.\r\n\r\nbut I think this one is more clear.\r\n\r\nAnother question for stage 2: we should not return original expression when the can not cast literals is non-empty, but return `falseIfNotNull` instead, this is because original expression `In(Cast(fromExp, toType), list)` can't be optimized by other rules and trigger a filter stage, but `falseIfNotNull` can be optimized by `BooleanSimplification`, WDYT?\r\n\r\n",
+        "createdAt" : "2021-06-02T07:31:45Z",
+        "updatedAt" : "2021-06-02T07:31:46Z",
+        "lastEditedBy" : "c12eb4aa-c39d-4fa9-8470-ed071c0be24a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e1da46f4-f901-4eeb-b32e-637c618c680d",
+        "parentId" : "38eadbb9-06f5-4732-ba94-884e5e754312",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "SGTM, it's still useful to optimize to `falseIfNotNull`",
+        "createdAt" : "2021-06-02T07:48:56Z",
+        "updatedAt" : "2021-06-02T07:48:56Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ea0ba385ec38b231a37f871cecf1ca9ffb852c3d",
+    "line" : 61,
+    "diffHunk" : "@@ -1,1 +137,141 @@    // As the analyzer makes sure that the list of In is already of the same data type, then the\n    // rule can simply check the first literal in `in.list` can implicitly cast to `toType` or not,\n    // and note that:\n    // 1. this rule doesn't convert in when `in.list` is empty or `in.list` contains only null\n    // values."
+  }
+]

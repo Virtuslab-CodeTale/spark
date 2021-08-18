@@ -64,5 +64,104 @@
     "commit" : "0fe14d0001adedef66696699d478dd4d4e9c392c",
     "line" : 15,
     "diffHunk" : "@@ -1,1 +1363,1367 @@case class RebalancePartitions(\n    partitionExpressions: Seq[Expression],\n    child: LogicalPlan) extends UnaryNode {\n  override def maxRows: Option[Long] = child.maxRows\n  override def output: Seq[Attribute] = child.output"
+  },
+  {
+    "id" : "fa54bb2b-19df-48f6-a0b1-d42ef7aa6051",
+    "prId" : 32498,
+    "prUrl" : "https://github.com/apache/spark/pull/32498#pullrequestreview-658585331",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9e111b49-ffe9-48d4-b24e-ea94c08018a5",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "```\r\n  private def getRangeValue(index: Int): Long = {\r\n    assert(index >= 0, \"index must be greater than and equal to 0\")\r\n    if (step == 0) {\r\n      start + (numElements.toLong - index - 1) * step\r\n    } else {\r\n      start + index * step\r\n    }\r\n  }\r\n```\r\n?",
+        "createdAt" : "2021-05-13T04:11:54Z",
+        "updatedAt" : "2021-05-13T04:11:54Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "03c04694-9d5b-4e3b-81eb-e70db22fe6c0",
+        "parentId" : "9e111b49-ffe9-48d4-b24e-ea94c08018a5",
+        "authorId" : "d0d56018-475d-4da3-93a6-5e843402b7f2",
+        "body" : "Done",
+        "createdAt" : "2021-05-13T05:02:42Z",
+        "updatedAt" : "2021-05-13T05:02:43Z",
+        "lastEditedBy" : "d0d56018-475d-4da3-93a6-5e843402b7f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "bb69f84a3d05acec239db571afbfe2f41007d9ce",
+    "line" : 50,
+    "diffHunk" : "@@ -1,1 +821,825 @@\n  // Utility method to compute histogram\n  private def getRangeValue(index: Int): Long = {\n    assert(index >= 0, \"index must be greater than and equal to 0\")\n    if (step < 0) {"
+  },
+  {
+    "id" : "fe00874a-5504-42de-a6be-940c23bba6a7",
+    "prId" : 32498,
+    "prUrl" : "https://github.com/apache/spark/pull/32498#pullrequestreview-661462423",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b5a57242-1d23-47f7-a54c-9d9d4d746d7f",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "EDIT: Fixed my formula\r\nI'm probably missing something, but isn't this more like:\r\n```\r\nstart + (numElements.toLong - 1) * (-step) + index * step\r\n```\r\nThis tries to step backwards from the end, right? `step` is negative.\r\n\r\nAlso I assume step = 0 is an error actually, maybe it's caught earlier, but the result should be `start` always in that case anyway, so `step < 0` as a condition?",
+        "createdAt" : "2021-05-17T14:26:36Z",
+        "updatedAt" : "2021-05-17T14:37:16Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1a12600e-5704-4a07-83ed-b42342792790",
+        "parentId" : "b5a57242-1d23-47f7-a54c-9d9d4d746d7f",
+        "authorId" : "d0d56018-475d-4da3-93a6-5e843402b7f2",
+        "body" : ">This tries to step backwards from the end, right? step is negative\r\n\r\nYes, we reverse the range values if the step is negative to compute histogram statistics.\r\n\r\n>I'm probably missing something, but isn't this more like:\r\n    start + (numElements.toLong - 1) * (-step) + index * step\r\n\r\nI am not sure this gives the right range values if the step is negative. \r\nFor eg: start = 1 , step = -2, and numElements = 4, Range values  = [1, -1, -3, -5]\r\nBut for computing histogram we need values like this [-5, -3, -1, 1]. So if the index = 0, it should return -5.\r\n\r\nWith the formula in the PR => 1 + (4 - 0 -1 )* -2= -5\r\n With the formula you have given above  => 1 + (4 -1) *-(-2) + 0 = 7\r\n\r\nSo I think the formula in the PR seems correct?\r\n\r\n",
+        "createdAt" : "2021-05-17T20:42:18Z",
+        "updatedAt" : "2021-05-17T20:42:18Z",
+        "lastEditedBy" : "d0d56018-475d-4da3-93a6-5e843402b7f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ebd5f341-2122-47a9-95e0-4c35f73eccab",
+        "parentId" : "b5a57242-1d23-47f7-a54c-9d9d4d746d7f",
+        "authorId" : "d0d56018-475d-4da3-93a6-5e843402b7f2",
+        "body" : ">Also I assume step = 0 is an error actually, maybe it's caught earlier, but the result should be start always in that case anyway, so step < 0 as a condition?\r\n\r\nYes, if step=0 both the conditions will return same start element. I have updated the condition to step < 0.",
+        "createdAt" : "2021-05-17T20:44:47Z",
+        "updatedAt" : "2021-05-17T20:44:47Z",
+        "lastEditedBy" : "d0d56018-475d-4da3-93a6-5e843402b7f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4eb48290-7ba0-4a31-812d-3a4c54656a70",
+        "parentId" : "b5a57242-1d23-47f7-a54c-9d9d4d746d7f",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "OK, I thought it might mean the desired result was [7, 5, 3, 1] in this case. You step back from the start. But it has to be reversed? OK if it needs to be [-5, -3, -1, 1] yeah that looks right. A comment to this effect might be helpful.",
+        "createdAt" : "2021-05-17T21:20:11Z",
+        "updatedAt" : "2021-05-17T21:20:11Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "abcf5ed9-7925-4ddc-8828-1f4a6d3d4083",
+        "parentId" : "b5a57242-1d23-47f7-a54c-9d9d4d746d7f",
+        "authorId" : "d0d56018-475d-4da3-93a6-5e843402b7f2",
+        "body" : "Yes. I added a comment.",
+        "createdAt" : "2021-05-17T22:05:29Z",
+        "updatedAt" : "2021-05-17T22:16:05Z",
+        "lastEditedBy" : "d0d56018-475d-4da3-93a6-5e843402b7f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "bb69f84a3d05acec239db571afbfe2f41007d9ce",
+    "line" : 54,
+    "diffHunk" : "@@ -1,1 +825,829 @@    if (step < 0) {\n      // Reverse the range values for computing histogram, if the step size is negative.\n      start + (numElements.toLong - index - 1) * step\n    } else {\n      start + index * step"
   }
 ]
