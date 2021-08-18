@@ -361,5 +361,71 @@
     "commit" : "014bc8b69854efd98d1458a01996a9cbf2741721",
     "line" : 204,
     "diffHunk" : "@@ -1,1 +1251,1255 @@\n      val subExprCode = s\"${addNewFunction(fnName, fn)}($INPUT_ROW);\"\n      subexprFunctions += s\"${addNewFunction(fnName, fn)}($INPUT_ROW);\"\n      val state = SubExprEliminationState(\n        ExprCode(code\"$subExprCode\","
+  },
+  {
+    "id" : "da505aca-f799-4e6f-b902-96442a40f206",
+    "prId" : 32699,
+    "prUrl" : "https://github.com/apache/spark/pull/32699#pullrequestreview-672471375",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4f4ba443-055d-4fcb-b348-93df6c259ee0",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "what does this recursive call of `withSubExprEliminationExprs` give us?",
+        "createdAt" : "2021-05-31T07:03:21Z",
+        "updatedAt" : "2021-05-31T07:03:21Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a5873dfb-6c6b-48e6-ad28-a2de661f0dd5",
+        "parentId" : "4f4ba443-055d-4fcb-b348-93df6c259ee0",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "For each set of common expressions, `withSubExprEliminationExprs` only called once so I think it is not actually a recursive call?\r\n\r\n`withSubExprEliminationExprs` takes the given map used for subexpression elimination to replace common expression during expression codegen in the closure. It returns evaluated expression code (value/isNull/code).\r\n\r\nFor the two subexpressions as example:\r\n\r\n1. `simpleUDF($\"id\")`\r\n2. `functions.length(simpleUDF($\"id\"))`\r\n\r\n1st round `withSubExprEliminationExprs`:\r\n\r\nThe map is empty.\r\nGen code for `simpleUDF($\"id\")`.\r\nPut it into the map => (`simpleUDF($\"id\")` -> gen-ed code)\r\n\r\n2nd round `withSubExprEliminationExprs`:\r\n\r\nGen code for `functions.length(simpleUDF($\"id\"))`.\r\nLooking at the map and replace common expression `simpleUDF($\"id\")` as gen-ed code.\r\nPut it into the map => (`simpleUDF($\"id\")` -> gen-ed code, `functions.length(simpleUDF($\"id\"))` -> gen-ed code)\r\n\r\nThe map will be used later for subexpression elimination.\r\n\r\n\r\n\r\n\r\n\r\n\r\n",
+        "createdAt" : "2021-05-31T17:43:29Z",
+        "updatedAt" : "2021-05-31T17:43:29Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f1f64f7ba0f6246a21515ffddc2d99efbe2409db",
+    "line" : 23,
+    "diffHunk" : "@@ -1,1 +1052,1056 @@    val nonSplitExprCode = {\n      commonExprs.map { exprs =>\n        val eval = withSubExprEliminationExprs(localSubExprEliminationExprsForNonSplit.toMap) {\n          val eval = exprs.head.genCode(this)\n          // Generate the code for this expression tree."
+  },
+  {
+    "id" : "d93e5288-da75-4fc9-aab2-c61f602f0bdf",
+    "prId" : 32699,
+    "prUrl" : "https://github.com/apache/spark/pull/32699#pullrequestreview-672084069",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5623ae01-1855-4a54-ab89-32da1e733cc2",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "why does this have to be a mutable state now?",
+        "createdAt" : "2021-05-31T07:04:52Z",
+        "updatedAt" : "2021-05-31T07:04:52Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3903e318-45c1-4336-b1e3-2809a993f837",
+        "parentId" : "5623ae01-1855-4a54-ab89-32da1e733cc2",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Use the example in the description to explain. For the two subexpressions:\r\n\r\n1. `simpleUDF($\"id\")`\r\n2. `functions.length(simpleUDF($\"id\"))`\r\n\r\n\r\nPreviously we evaluate them independently, i.e.,\r\n\r\n```\r\nString subExpr1 = simpleUDF($\"id\");\r\nInt subExpr2 = functions.length(simpleUDF($\"id\"));\r\n```\r\n\r\nNow we remove redundant evaluation of nested subexpressions:\r\n```\r\nString subExpr1 = simpleUDF($\"id\");\r\nInt subExpr2 = functions.length(subExpr1);\r\n```\r\n\r\nIf we need to split the functions, when we evaluate `functions.length`, it needs access of `subExpr1`. We have two choices. One is to add `subExpr1` to the function parameter list of the split function for `functions.length`. Another one is to use mutable state.\r\n\r\nTo add it to parameter list will complicate the way we compute parameter length. That's said we need to link nested subexpression relations and get the correct parameters. Seems to me it is not worth doing that.\r\n\r\nCurrently I choose the simpler approach that is to use mutable state.\r\n\r\n\r\n",
+        "createdAt" : "2021-05-31T08:33:41Z",
+        "updatedAt" : "2021-05-31T08:33:41Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f1f64f7ba0f6246a21515ffddc2d99efbe2409db",
+    "line" : 52,
+    "diffHunk" : "@@ -1,1 +1085,1089 @@          }.head\n\n          val value = addMutableState(javaType(expr.dataType), \"subExprValue\")\n\n          val isNullLiteral = eval.isNull match {"
   }
 ]

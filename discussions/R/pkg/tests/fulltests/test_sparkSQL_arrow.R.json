@@ -1,0 +1,35 @@
+[
+  {
+    "id" : "da43af69-f74d-44f6-a645-5f28bcfaaa97",
+    "prId" : 32709,
+    "prUrl" : "https://github.com/apache/spark/pull/32709#pullrequestreview-672281001",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c7d46de7-471f-4ecc-96ec-60917a15ebfc",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Here I work around to make the tests work with any R version. The problem was [R 4.1 introduced `check.tzone` at `all.equal`](https://cran.r-project.org/doc/manuals/r-release/NEWS.html) which apparently `testthat` uses.\r\n\r\nWhen you collect from a POSIXct with an empty tzone (by default), Arrow conversion fills a local timezone instead of being empty:\r\n\r\n```r\r\nrdf <- data.frame(list(list(t = as.POSIXct(\"1990-02-24 12:34:56\", tz=\"UTC\"))))\r\nSparkR:::callJMethod(SparkR:::callJMethod(spark, \"conf\"), \"set\", \"spark.sql.execution.arrow.sparkr.enabled\", \"false\")\r\nwithoutArrow <- collect(createDataFrame(rdf))\r\nSparkR:::callJMethod(SparkR:::callJMethod(spark, \"conf\"), \"set\", \"spark.sql.execution.arrow.sparkr.enabled\", \"true\")\r\nwithArrow <- collect(createDataFrame(rdf))\r\n\r\nattr(withoutArrow$t, \"tzone\")\r\nattr(withArrow$t, \"tzone\")\r\n```\r\n```\r\n[1] \"\"\r\n[1] \"Asia/Seoul\"\r\n```\r\n\r\nSpark returns a local time instances in Scala, Python and R. Therefore, I think either being an empty timezone or local timezone can be correct in Spark context, and it's not an issue IMO.\r\n\r\nFWIW, we're the one who sets the timezone on JVM side if I remember all correctly.\r\n\r\n",
+        "createdAt" : "2021-05-31T12:49:10Z",
+        "updatedAt" : "2021-05-31T12:59:56Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6869bbae-be8d-41b7-acb8-905ce34700a1",
+        "parentId" : "c7d46de7-471f-4ecc-96ec-60917a15ebfc",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "cc @MaxGekk @BryanCutler FYI.",
+        "createdAt" : "2021-05-31T12:50:38Z",
+        "updatedAt" : "2021-05-31T12:59:14Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "97f3c0e0ef828a4374b2ed5740aac929c3597574",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +69,73 @@  })\n\n  expect_true(all(collect(createDataFrame(rdf)) == expected))\n})\n"
+  }
+]

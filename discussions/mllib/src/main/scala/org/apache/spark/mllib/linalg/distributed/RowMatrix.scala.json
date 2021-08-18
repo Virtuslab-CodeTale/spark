@@ -1,0 +1,167 @@
+[
+  {
+    "id" : "fc70311b-46af-49db-a98d-1ed52108c7ba",
+    "prId" : 32734,
+    "prUrl" : "https://github.com/apache/spark/pull/32734#pullrequestreview-676812978",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f12a8bec-a898-479b-b805-9f132df9cb8e",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "I think this could be fine but why 0.5? do we not still have similar problems for less-sparse sparse input? I feel like this isn't fixing the underlying problem - does anyone know why PCA is giving different results for sparse input?",
+        "createdAt" : "2021-06-03T19:54:23Z",
+        "updatedAt" : "2021-06-03T19:54:23Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "96106502-f8cf-4e71-8b1c-d8cb35a5eea1",
+        "parentId" : "f12a8bec-a898-479b-b805-9f132df9cb8e",
+        "authorId" : "d0d56018-475d-4da3-93a6-5e843402b7f2",
+        "body" : "Hi @srowen , The underlying assumptions behind the PR are following,\r\n1. For Sparse data, both the methods gives accurate results, but for dense data `computeDenseVectorCovariance` gives more accurate results.\r\n2. `computeDenseVectorCovariance` is costlier than `computeSparseVectorCovariance`.\r\n\r\nSo based on the above points, we need to restrict the computeSparseVectorCovariance only to sparse matrix.\r\nBut how to find the sparse matrix is the problem. In this PR, if more than 50% of the matrix/vector values are zeros, then consider that matrix as sparse.\r\n\r\nThe 0.5 factor can change to 0.6 or 0.75 to increase the sparsity.",
+        "createdAt" : "2021-06-04T18:28:05Z",
+        "updatedAt" : "2021-06-04T18:28:38Z",
+        "lastEditedBy" : "d0d56018-475d-4da3-93a6-5e843402b7f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1472526c-92ea-45b1-9509-f56aa5b28b8a",
+        "parentId" : "f12a8bec-a898-479b-b805-9f132df9cb8e",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Do you have insight into why the dense computation is more accurate? it shouldn't be in theory. I am OK with the change if it's a band-aid that improves results, but not quite sure why this is happening.",
+        "createdAt" : "2021-06-05T22:22:52Z",
+        "updatedAt" : "2021-06-05T22:22:52Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b72fc65d-d4b1-434a-a1b7-e7ae00fd52fa",
+        "parentId" : "f12a8bec-a898-479b-b805-9f132df9cb8e",
+        "authorId" : "d0d56018-475d-4da3-93a6-5e843402b7f2",
+        "body" : " In this PR: https://github.com/apache/spark/pull/23126, @KyleLi1985 has done experiments with Sparse and dense data https://github.com/apache/spark/pull/23126#issuecomment-441658381\r\n\r\nThe conclusion was, for dense data `computeSparseVectorCovariance` doesn't give good accuracy. That is why we have moved to `computeDenseVectorCovariance`. In this PR, I am trying to classify which one to choose dense and sparse path. \r\n I can do more experimentation on sparse and dense datasets to verify the accuracy part.",
+        "createdAt" : "2021-06-05T22:36:06Z",
+        "updatedAt" : "2021-06-05T22:40:18Z",
+        "lastEditedBy" : "d0d56018-475d-4da3-93a6-5e843402b7f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "618d66e3-8ecd-4dba-b0e4-7c472fd5bddd",
+        "parentId" : "f12a8bec-a898-479b-b805-9f132df9cb8e",
+        "authorId" : "d0d56018-475d-4da3-93a6-5e843402b7f2",
+        "body" : ">Do you have insight into why the dense computation is more accurate? it shouldn't be in theory.\r\n\r\nYes, For dense case we are using the actual formula to compute the covariance (which is costly). For sparse case we do approximation.",
+        "createdAt" : "2021-06-05T22:45:52Z",
+        "updatedAt" : "2021-06-05T22:45:52Z",
+        "lastEditedBy" : "d0d56018-475d-4da3-93a6-5e843402b7f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ee82258e67125156aad6333ac174fae678dc781b",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +424,428 @@  // The matrix is sparse, if all the rows has sparsity more than 0.5.\n  private def isSparseMatrix: Boolean = {\n    rows.filter(row => row.sparsity() < 0.5).isEmpty()\n  }\n"
+  },
+  {
+    "id" : "5cdcd75e-e83c-4310-bac9-65a15186709d",
+    "prId" : 32734,
+    "prUrl" : "https://github.com/apache/spark/pull/32734#pullrequestreview-678847130",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9dd2ae0f-7af9-46be-81a9-4a7a8f02f060",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "OK, I was going to say, why do we treat these two cases differently? but the code already does. I think this is a better test, so I support the change.",
+        "createdAt" : "2021-06-07T01:37:51Z",
+        "updatedAt" : "2021-06-07T01:37:51Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "82a5da86-4dc1-4952-bf07-a8f7b3c5d9a7",
+        "parentId" : "9dd2ae0f-7af9-46be-81a9-4a7a8f02f060",
+        "authorId" : "d0d56018-475d-4da3-93a6-5e843402b7f2",
+        "body" : "So you mean, we should use `computeDenseVectorCovariance` for both sparse and dense data and remove the `computeSparseVectorCovariance` method?",
+        "createdAt" : "2021-06-07T01:57:37Z",
+        "updatedAt" : "2021-06-07T01:57:38Z",
+        "lastEditedBy" : "d0d56018-475d-4da3-93a6-5e843402b7f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "75bb3d65-6a41-43d8-ae7f-3df72c89b37d",
+        "parentId" : "9dd2ae0f-7af9-46be-81a9-4a7a8f02f060",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "No I think the change is reasonable. Just wondering why it ever treated these two paths so differently. But that is not the issue here.",
+        "createdAt" : "2021-06-07T01:59:42Z",
+        "updatedAt" : "2021-06-07T01:59:42Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0f968e1b-eaff-49a2-a27f-c569c43d3e48",
+        "parentId" : "9dd2ae0f-7af9-46be-81a9-4a7a8f02f060",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "I will take a look at the two different code pathes.\r\nAs to this PR, what about just adding a param (values are \"dense\"/\"sparse\"/\"auto\"(just keep curent behavior)) to control which impl is used?",
+        "createdAt" : "2021-06-07T02:03:04Z",
+        "updatedAt" : "2021-06-07T02:03:04Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a4da6287-50f0-4548-bdac-27b6c44bd272",
+        "parentId" : "9dd2ae0f-7af9-46be-81a9-4a7a8f02f060",
+        "authorId" : "d0d56018-475d-4da3-93a6-5e843402b7f2",
+        "body" : "Sure, I will update",
+        "createdAt" : "2021-06-07T02:21:51Z",
+        "updatedAt" : "2021-06-07T02:21:51Z",
+        "lastEditedBy" : "d0d56018-475d-4da3-93a6-5e843402b7f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d379416d-0ad6-4d64-93f7-9a87b18c70c9",
+        "parentId" : "9dd2ae0f-7af9-46be-81a9-4a7a8f02f060",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "@shahidki31   This is just a idea. What is your and @srowen  thoughts on it?\r\n\r\nThere are several similar existing places in ML, like `ANOVATest`.\r\nAnd I am also thinking about whether to make two impls (for dense cases using BLAS, for sparse cases using triangle-inequality) in KMeans.",
+        "createdAt" : "2021-06-07T02:35:44Z",
+        "updatedAt" : "2021-06-07T02:35:44Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cf3b9a34-c1ec-4b79-b295-89dd2d718b45",
+        "parentId" : "9dd2ae0f-7af9-46be-81a9-4a7a8f02f060",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Hm, maybe, but I don't know whether the caller can meaningfully figure out how to set it. I think this change is OK - but how did you determine the correct answer for this case? In the UT?",
+        "createdAt" : "2021-06-07T12:59:45Z",
+        "updatedAt" : "2021-06-07T12:59:45Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ecee58aa-7053-48cc-ad11-69ac1c1d33d8",
+        "parentId" : "9dd2ae0f-7af9-46be-81a9-4a7a8f02f060",
+        "authorId" : "d0d56018-475d-4da3-93a6-5e843402b7f2",
+        "body" : "@srowen I have done experimentation on 10x10 dummy data with 1's and 0's. I have computed the Eigen values and Eigen vectors using both the methods. Following are the observation\r\n\r\n1. For both sparse and dense, strong eigen value difference is almost negligible (diff is factor of 10^-16). Huge variations come from the weak eigen values and corresponding Eigen vectors.\r\n2. Users are mostly interested in strong eigen vectors. So, fluctuations in the weak eigen values doesn't affect the end users much.\r\n\r\n",
+        "createdAt" : "2021-06-08T18:03:44Z",
+        "updatedAt" : "2021-06-08T18:09:31Z",
+        "lastEditedBy" : "d0d56018-475d-4da3-93a6-5e843402b7f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ee82258e67125156aad6333ac174fae678dc781b",
+    "line" : 20,
+    "diffHunk" : "@@ -1,1 +446,450 @@    // If all the rows are sparse vectors, then compute based on `computeSparseVectorCovariance`.\n    if (!isSparseMatrix) {\n      computeDenseVectorCovariance(mean, n, m)\n    } else {\n      computeSparseVectorCovariance(mean, n, m)"
+  }
+]

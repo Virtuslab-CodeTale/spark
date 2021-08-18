@@ -152,5 +152,192 @@
     "commit" : "f5e97b77005456894cce6e01bc54160ee0cf1d01",
     "line" : 10,
     "diffHunk" : "@@ -1,1 +174,178 @@      WritableColumnVector values,\n      VectorizedValuesReader valueReader,\n      ParquetVectorUpdater updater) throws IOException {\n    int offset = state.offset;\n    int left = Math.min(state.valuesToReadInBatch, state.valuesToReadInPage);"
+  },
+  {
+    "id" : "145e347d-46ca-4e64-9113-afa165fb2850",
+    "prId" : 32753,
+    "prUrl" : "https://github.com/apache/spark/pull/32753#pullrequestreview-688727523",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8d0cc7bf-54a0-4692-93f0-0ec1a6d8725e",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I need more context to review this PR\r\n1. where do we read the column index in `VectorizedColumnReader`?\r\n2. where do we leverage the index to skip pages? In `VectorizedRleValuesReader`? ",
+        "createdAt" : "2021-06-21T17:36:47Z",
+        "updatedAt" : "2021-06-21T17:36:47Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "36f7dca2-4271-4326-b196-139d8dddc2bb",
+        "parentId" : "8d0cc7bf-54a0-4692-93f0-0ec1a6d8725e",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Sorry @cloud-fan, I should've add more context in the PR description. Let me try to add here and copy later to there.\r\n\r\n1. The column index filtering is largely implemented in parquet-mr (via classes such as `ColumnIndex` and `ColumnIndexFilter`), and the filtered Parquet pages are returned to Spark through the `ParquetFileReader.readNextFilteredRowGroup` and `ParquetFileReader.getFilteredRecordCount` API. Please see #31393 for the related changes in the vectorized reader path.\r\n2. Spark needs more work to handle mis-aligned Parquet pages returned from parquet-mr side, when there are multiple columns and their type width are different (e.g., int and bigint). For this issue, @lxian already gave a pretty good description in [SPARK-34859](https://issues.apache.org/jira/browse/SPARK-34859). To support the case, Spark needs to leverage the API [`PageReadStore.getRowIndexes`](https://javadoc.io/doc/org.apache.parquet/parquet-column/latest/org/apache/parquet/column/page/PageReadStore.html), which returns the indexes of all rows (note the difference between rows and values: for flat schema there is no difference between the two, but for nested schema they're different) after filtering within a Parquet row group. In addition, because there are gaps between pages, we'll need to know what is the index for the first row in a page, so we can compare indexes of values (rows) from a page with the row indexes mentioned above. This is provided by the `DataPage.getFirstRowIndex` method.",
+        "createdAt" : "2021-06-21T18:07:34Z",
+        "updatedAt" : "2021-06-21T18:12:05Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6541d99bd6788ae7ee3da1ccc76d30e9b39b9cb5",
+    "line" : 23,
+    "diffHunk" : "@@ -1,1 +164,168 @@   * non-null values. If the value is null, `values` will be populated with null value.\n   */\n  public void readBatch(\n      ParquetReadState state,\n      WritableColumnVector values,"
+  },
+  {
+    "id" : "a2c7f493-5dba-423a-b1e2-00334b31029f",
+    "prId" : 32753,
+    "prUrl" : "https://github.com/apache/spark/pull/32753#pullrequestreview-694688821",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3f89008d-c7aa-4b5e-a9fd-65a69f470cdc",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "do we need to update `leftInBatch` here?",
+        "createdAt" : "2021-06-28T17:01:37Z",
+        "updatedAt" : "2021-06-28T17:01:37Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7f56175b-1c01-41ba-ab90-16a42ffaa8de",
+        "parentId" : "3f89008d-c7aa-4b5e-a9fd-65a69f470cdc",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "No, because we are skipping the batch here, and not adding the values into the batch.",
+        "createdAt" : "2021-06-28T17:24:33Z",
+        "updatedAt" : "2021-06-28T17:24:33Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f69f14da-2890-4cd8-a749-845cc78456d0",
+        "parentId" : "3f89008d-c7aa-4b5e-a9fd-65a69f470cdc",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "I think it is because the name `skipBatch` somehow confuses. Actually it means to skip values from the reader.",
+        "createdAt" : "2021-06-28T23:35:46Z",
+        "updatedAt" : "2021-06-28T23:35:46Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a459d266-d24c-44eb-8faa-247ddc149abe",
+        "parentId" : "3f89008d-c7aa-4b5e-a9fd-65a69f470cdc",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Maybe rename it? E.g. `skipFromReader`?",
+        "createdAt" : "2021-06-29T00:02:49Z",
+        "updatedAt" : "2021-06-29T00:02:49Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ef804aa2-7ad5-4297-97dc-998ed433acdf",
+        "parentId" : "3f89008d-c7aa-4b5e-a9fd-65a69f470cdc",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I see, so there are 2 actions here:\r\n1. get values from the parquet reader\r\n2. put values into the spark columnar batch.\r\n\r\n`skipBatch` does look confusing, we should use a better name, `skipValues`?",
+        "createdAt" : "2021-06-29T02:48:34Z",
+        "updatedAt" : "2021-06-29T02:48:35Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3e7f05cb-5c6b-4d45-910c-4b4270e1d7c7",
+        "parentId" : "3f89008d-c7aa-4b5e-a9fd-65a69f470cdc",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "> I see, so there are 2 actions here: ...\r\n\r\nIf you mean `readBatch`, then yes it does the two bullets above. For `skipBatch` it just skip the next `n` values from `valueReader`.\r\n\r\n@viirya @cloud-fan Yeah I can change the method name to `skipValues` or `skipFromReader` if that's more clearer :) my preference, though, is to keep this close to the `readBatch` above. So how about I update the 3 methods in `ParquetVectorUpdater` to be: `readValues`, `readValue` and `skipValues`?",
+        "createdAt" : "2021-06-29T05:15:31Z",
+        "updatedAt" : "2021-06-29T05:15:31Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "df438b16-ad7f-4101-bc63-a6108cadba44",
+        "parentId" : "3f89008d-c7aa-4b5e-a9fd-65a69f470cdc",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "SGTM, I think `readValues` implies that it puts the values to the spark columnar batch",
+        "createdAt" : "2021-06-29T07:37:17Z",
+        "updatedAt" : "2021-06-29T07:37:17Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6541d99bd6788ae7ee3da1ccc76d30e9b39b9cb5",
+    "line" : 60,
+    "diffHunk" : "@@ -1,1 +185,189 @@        advance(n);\n        rowId += n;\n        leftInPage -= n;\n      } else if (rowId > rangeEnd) {\n        state.nextRange();"
+  },
+  {
+    "id" : "d08c9659-b517-47c2-a9e8-2c8d167463d5",
+    "prId" : 32753,
+    "prUrl" : "https://github.com/apache/spark/pull/32753#pullrequestreview-694473588",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "53912e02-a292-4d9f-9dd5-703a3eb89888",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "This is different to what I commented (https://github.com/apache/spark/pull/32753#discussion_r656582039) before. This looks more straightforward. ",
+        "createdAt" : "2021-06-28T23:31:54Z",
+        "updatedAt" : "2021-06-28T23:31:54Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6541d99bd6788ae7ee3da1ccc76d30e9b39b9cb5",
+    "line" : 51,
+    "diffHunk" : "@@ -1,1 +176,180 @@    while (leftInBatch > 0 && leftInPage > 0) {\n      if (this.currentCount == 0) this.readNextGroup();\n      int n = Math.min(leftInBatch, Math.min(leftInPage, this.currentCount));\n\n      long rangeStart = state.currentRangeStart();"
+  },
+  {
+    "id" : "92c8f0c7-7e0e-45e9-b0ca-5236bee7e3e7",
+    "prId" : 32753,
+    "prUrl" : "https://github.com/apache/spark/pull/32753#pullrequestreview-696502673",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f7d01a1c-8fd5-42ce-8f36-d9024e94234f",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Just a question. We may have two negative value cases.\r\n1. start < rowId\r\n2. (start - rowId) > Int.MaxValue\r\n\r\nAre we considering both? Or, there is no change for case (2)?",
+        "createdAt" : "2021-06-30T07:25:08Z",
+        "updatedAt" : "2021-06-30T07:25:20Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "eb16a646-c8fd-493d-b586-bf6eef37539f",
+        "parentId" : "f7d01a1c-8fd5-42ce-8f36-d9024e94234f",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "To be safe, I'd like to recommend to move the type casting `(int)` into inside this `if` statement. For `if (toSkip > 0) {` check, we had better use `long`. If the ranges are protected by line 191 ~ 192, then ignore this comment.",
+        "createdAt" : "2021-06-30T07:27:01Z",
+        "updatedAt" : "2021-06-30T07:29:57Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fccd4836-34fb-4427-8796-2a3bf2761f39",
+        "parentId" : "f7d01a1c-8fd5-42ce-8f36-d9024e94234f",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "`start` must >= `rowId` because it is defined as `long start = Math.max(rangeStart, rowId)`. Therefore, the case 1 `start < rowId` will never happen.\r\n\r\nThe second case, `(start - rowId) > Int.MaxValue`, can only occur if `start` is equal to `rangeStart`. In this case we also know that `rangeStart <= rowId + n` (from line 183) and `n` is `Math.min(leftInBatch, Math.min(leftInPage, this.currentCount))` which is guaranteed to be within integer range. Therefore, the cast is safe.",
+        "createdAt" : "2021-06-30T18:40:13Z",
+        "updatedAt" : "2021-06-30T18:40:14Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6541d99bd6788ae7ee3da1ccc76d30e9b39b9cb5",
+    "line" : 70,
+    "diffHunk" : "@@ -1,1 +195,199 @@        // skip the part [rowId, start)\n        int toSkip = (int) (start - rowId);\n        if (toSkip > 0) {\n          updater.skipValues(toSkip, valueReader);\n          advance(toSkip);"
   }
 ]

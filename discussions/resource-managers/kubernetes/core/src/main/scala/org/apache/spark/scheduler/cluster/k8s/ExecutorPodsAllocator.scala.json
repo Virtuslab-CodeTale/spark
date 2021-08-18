@@ -185,5 +185,71 @@
     "commit" : "2e78f6c08a8a066cc52123c35a5de852b92457c4",
     "line" : 121,
     "diffHunk" : "@@ -1,1 +330,334 @@      } else {\n        // for this resource profile we do not request more PODs\n        None\n      }\n    }"
+  },
+  {
+    "id" : "b376e080-db13-45ed-8d90-dc678a32dab1",
+    "prId" : 32752,
+    "prUrl" : "https://github.com/apache/spark/pull/32752#pullrequestreview-675881629",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0f912a9b-699c-45d1-975e-1591cdf92d38",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "If we are going to just `logWarning`, the following code pattern will be better like the other places.\r\n```scala\r\nUtils.tryLogNonFatalError {\r\n  kubernetesClient.pods()\r\n    .withName(kubernetesDriverPodName.get)\r\n    .waitUntilReady(driverPodReadinessTimeout, TimeUnit.MINUTES)\r\n}\r\n```",
+        "createdAt" : "2021-06-03T16:52:25Z",
+        "updatedAt" : "2021-06-03T16:52:25Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "83972e88-cde8-4972-afbb-f34b76c37b56",
+        "parentId" : "0f912a9b-699c-45d1-975e-1591cdf92d38",
+        "authorId" : "da8d4675-e56b-4240-b43c-bac7c4a2f788",
+        "body" : "If we just do `logWarning` and continue to create executor pods after this timeout, it's very likely executor pods will still hit the `UnknownHostException` issue.\r\nConsidering this, throwing a SparkException may be more intuitive and fail-fast. Please let me know your thoughts on this. Thanks.\r\nLike here:\r\nhttps://github.com/apache/spark/blob/0342dcb6289bae67f6ab742b8fd03b2d653e52ea/resource-managers/kubernetes/core/src/main/scala/org/apache/spark/scheduler/cluster/k8s/ExecutorPodsAllocator.scala#L73-L79\r\n",
+        "createdAt" : "2021-06-03T17:39:01Z",
+        "updatedAt" : "2021-06-03T17:39:02Z",
+        "lastEditedBy" : "da8d4675-e56b-4240-b43c-bac7c4a2f788",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "42a79b3f-43ab-4fd7-870e-790bba227d53",
+        "parentId" : "0f912a9b-699c-45d1-975e-1591cdf92d38",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "-1 for `SparkException` idea. That is a huge regression.\r\n\r\n`UnknownHostException` is not a job blocker because Spark is going to create the required executors in any way eventually. If you throws SparkException, you change will be a breaker of the existing Spark pipelines indeed.",
+        "createdAt" : "2021-06-04T00:10:15Z",
+        "updatedAt" : "2021-06-04T00:10:15Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "31b37a83-194c-44a2-9dff-16f2ddca3fc1",
+        "parentId" : "0f912a9b-699c-45d1-975e-1591cdf92d38",
+        "authorId" : "da8d4675-e56b-4240-b43c-bac7c4a2f788",
+        "body" : "As the [JIRA issue](https://issues.apache.org/jira/browse/SPARK-32975) describes, driver will not create new executors when this error happens.\r\n> Once this error happens, driver doesn't restart executor.\r\n\r\nHowever, other executors may be running fine. It's just that the number of healthy executors will be less than expected.    So I agree not to use `SparkException` here.",
+        "createdAt" : "2021-06-04T02:36:04Z",
+        "updatedAt" : "2021-06-04T02:36:04Z",
+        "lastEditedBy" : "da8d4675-e56b-4240-b43c-bac7c4a2f788",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e552fa54-cf97-4d04-882c-8536806a9d2f",
+        "parentId" : "0f912a9b-699c-45d1-975e-1591cdf92d38",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "I don't think the error report is correct because Apache Spark doesn't use `restart` executor at all. The driver will keep creating new executors because the executors with `UnknownHostException` will be dead on the failure. I'm currently describing the Apache Spark behavior, not 3rd party operator behavior.",
+        "createdAt" : "2021-06-04T03:04:26Z",
+        "updatedAt" : "2021-06-04T03:04:27Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4dbae0a7280471df9903c9a4b2a998f915968bc9",
+    "line" : 28,
+    "diffHunk" : "@@ -1,1 +110,114 @@        .withName(kubernetesDriverPodName.get)\n        .waitUntilReady(driverPodReadinessTimeout, TimeUnit.SECONDS)\n    }\n    snapshotsStore.addSubscriber(podAllocationDelay) {\n      onNewSnapshots(applicationId, schedulerBackend, _)"
   }
 ]

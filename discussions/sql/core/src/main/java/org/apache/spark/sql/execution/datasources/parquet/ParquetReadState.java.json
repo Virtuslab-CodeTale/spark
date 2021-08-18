@@ -64,5 +64,291 @@
     "commit" : "f5e97b77005456894cce6e01bc54160ee0cf1d01",
     "line" : 28,
     "diffHunk" : "@@ -1,1 +26,30 @@\n  /** The offset in the current batch to put the next value */\n  int offset;\n\n  /** The remaining number of values to read in the current page */"
+  },
+  {
+    "id" : "8ee234f8-ee32-40ce-b986-cd37895c3541",
+    "prId" : 32753,
+    "prUrl" : "https://github.com/apache/spark/pull/32753#pullrequestreview-688913778",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "63447f69-2c85-41a7-9d63-d406415948cb",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "If possible can we do this refactor first before adding column index support?",
+        "createdAt" : "2021-06-21T17:37:57Z",
+        "updatedAt" : "2021-06-21T17:37:57Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e4225b5e-3681-4d6b-a72b-d38499c3d14d",
+        "parentId" : "63447f69-2c85-41a7-9d63-d406415948cb",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Yes this occurred to me the other day as well :) I think it's a good idea. Let me move this refactoring part into a separate PR. Thanks.",
+        "createdAt" : "2021-06-21T18:08:47Z",
+        "updatedAt" : "2021-06-21T18:08:47Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "07b8b646-684d-4a69-8acc-60f472c6c751",
+        "parentId" : "63447f69-2c85-41a7-9d63-d406415948cb",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Opened #33006",
+        "createdAt" : "2021-06-21T22:35:39Z",
+        "updatedAt" : "2021-06-21T22:35:40Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6541d99bd6788ae7ee3da1ccc76d30e9b39b9cb5",
+    "line" : 12,
+    "diffHunk" : "@@ -1,1 +26,30 @@ * Helper class to store intermediate state while reading a Parquet column chunk.\n */\nfinal class ParquetReadState {\n  /** A special row range used when there is no row indexes (hence all rows must be included) */\n  private static final RowRange MAX_ROW_RANGE = new RowRange(Long.MIN_VALUE, Long.MAX_VALUE);"
+  },
+  {
+    "id" : "eabe000c-980e-4bb7-bee1-ce54732985fe",
+    "prId" : 32753,
+    "prUrl" : "https://github.com/apache/spark/pull/32753#pullrequestreview-691373353",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4b2d28f0-7060-4778-ba7a-276d1ccfe697",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Ya, new names (resetForNewBatch/resetForNewPage) look clear and better.",
+        "createdAt" : "2021-06-24T06:17:31Z",
+        "updatedAt" : "2021-06-24T06:17:32Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6541d99bd6788ae7ee3da1ccc76d30e9b39b9cb5",
+    "line" : 89,
+    "diffHunk" : "@@ -1,1 +101,105 @@   * Must be called at the beginning of reading a new batch.\n   */\n  void resetForNewBatch(int batchSize) {\n    this.offset = 0;\n    this.valuesToReadInBatch = batchSize;"
+  },
+  {
+    "id" : "1ffecaf2-6aba-4b98-b5f7-2c48dcd825ba",
+    "prId" : 32753,
+    "prUrl" : "https://github.com/apache/spark/pull/32753#pullrequestreview-693269983",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1cdf5adb-2697-4092-8b12-f58f9e457a6e",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "does each column generate one row range?",
+        "createdAt" : "2021-06-24T07:57:30Z",
+        "updatedAt" : "2021-06-24T07:57:30Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "aea98a34-9f8e-4bc3-90b5-e20cb6d90019",
+        "parentId" : "1cdf5adb-2697-4092-8b12-f58f9e457a6e",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "No. The list of row ranges is associated with a Parquet row group. For example, let's say you have two columns `c1:int` and `c2:bigint` in the row group, and the following pages:\r\n\r\n```\r\n  row index   0        500       1000      1500\r\n              -------------------------------\r\n  c1 (int)    |         |         |         |\r\n              -------------------------------\r\n  c2 (bigint) |    |    |    |    |    |    |\r\n              -------------------------------\r\n              0   250  500  750  1000 1250 1500\r\n```\r\n\r\nSuppose the query is `SELECT * FROM tbl WHERE c1 = 750 AND c2 = 1100`\r\nThis, when applied on `c1`, will produce row range `[500, 1000)`. When applied on `c2`, will produce row range `[1000, 1250)`. These two will be unioned into `[500, 1250)` and that is the row range for the whole row group.\r\n\r\n",
+        "createdAt" : "2021-06-25T19:26:34Z",
+        "updatedAt" : "2021-06-25T20:50:44Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8934429b-a50c-429b-ac5d-e677f3a2e06c",
+        "parentId" : "1cdf5adb-2697-4092-8b12-f58f9e457a6e",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Thank you for the illustration.",
+        "createdAt" : "2021-06-26T02:43:02Z",
+        "updatedAt" : "2021-06-26T02:43:02Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6541d99bd6788ae7ee3da1ccc76d30e9b39b9cb5",
+    "line" : 25,
+    "diffHunk" : "@@ -1,1 +38,42 @@\n  /** Iterator over all row ranges, only not-null if column index is present */\n  private final Iterator<RowRange> rowRanges;\n\n  /** The current row range */"
+  },
+  {
+    "id" : "2ff2af65-3841-4a4d-9e34-925dd56639a4",
+    "prId" : 32753,
+    "prUrl" : "https://github.com/apache/spark/pull/32753#pullrequestreview-693132341",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8aa2f283-bd7a-4234-a2a9-333dffa8491e",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Can we add some comments to explain how to generate row ranges?",
+        "createdAt" : "2021-06-24T07:59:28Z",
+        "updatedAt" : "2021-06-24T07:59:28Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2cb76546-1379-4ebb-b00e-a7eb84183610",
+        "parentId" : "8aa2f283-bd7a-4234-a2a9-333dffa8491e",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Yup will do",
+        "createdAt" : "2021-06-25T19:26:54Z",
+        "updatedAt" : "2021-06-25T19:26:54Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6541d99bd6788ae7ee3da1ccc76d30e9b39b9cb5",
+    "line" : 58,
+    "diffHunk" : "@@ -1,1 +70,74 @@   * `[0-2], [4-5], [7-9]`.\n   */\n  private Iterator<RowRange> constructRanges(PrimitiveIterator.OfLong rowIndexes) {\n    if (rowIndexes == null) {\n      return null;"
+  },
+  {
+    "id" : "e9339a63-bef7-42dc-b139-7dfcdbd0de15",
+    "prId" : 32753,
+    "prUrl" : "https://github.com/apache/spark/pull/32753#pullrequestreview-693328311",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "50f26b19-0852-4b42-8485-88d87ee3d0da",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "If we always do `previous = idx` in all three cases, shall we simplify the logic by moving `previous = idx` out of the `if-else-statements`?",
+        "createdAt" : "2021-06-26T02:46:05Z",
+        "updatedAt" : "2021-06-26T02:46:05Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "692d2198-a5d9-4712-9bd7-d02b9ed78daa",
+        "parentId" : "50f26b19-0852-4b42-8485-88d87ee3d0da",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Yeah good point. Will change.",
+        "createdAt" : "2021-06-26T16:49:53Z",
+        "updatedAt" : "2021-06-26T16:49:53Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6541d99bd6788ae7ee3da1ccc76d30e9b39b9cb5",
+    "line" : 75,
+    "diffHunk" : "@@ -1,1 +87,91 @@        rowRanges.add(range);\n        currentStart = idx;\n      }\n      previous = idx;\n    }"
+  },
+  {
+    "id" : "7523fe5d-a832-40c5-8b2f-a8751abc981e",
+    "prId" : 32753,
+    "prUrl" : "https://github.com/apache/spark/pull/32753#pullrequestreview-693270430",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b7ddce7d-799d-4477-949a-ad27e8de0065",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Shall we flatten more?\r\n```java\r\nif (rowRanges == null) {\r\n  currentRange = MAX_ROW_RANGE;\r\n} else if (!rowRanges.hasNext()) {\r\n  currentRange = MIN_ROW_RANGE;\r\n} else {\r\n  currentRange = rowRanges.next();\r\n}\r\n```",
+        "createdAt" : "2021-06-26T02:49:34Z",
+        "updatedAt" : "2021-06-26T02:49:34Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6541d99bd6788ae7ee3da1ccc76d30e9b39b9cb5",
+    "line" : 141,
+    "diffHunk" : "@@ -1,1 +148,152 @@    } else {\n      currentRange = rowRanges.next();\n    }\n  }\n"
+  },
+  {
+    "id" : "3b7f1091-5202-4fb5-88a5-f82cacdcdb03",
+    "prId" : 32753,
+    "prUrl" : "https://github.com/apache/spark/pull/32753#pullrequestreview-694229299",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "22c4bcc6-a6fa-40cc-847d-3e1b11afcdb1",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "interesting, does the parquet reader lib give you a big array containing these indexes, or it uses an algorithm to generate the indexes on the fly?",
+        "createdAt" : "2021-06-28T17:04:31Z",
+        "updatedAt" : "2021-06-28T17:05:01Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9b3203d1-d40e-49c4-906f-743894fc982c",
+        "parentId" : "22c4bcc6-a6fa-40cc-847d-3e1b11afcdb1",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "And how fast/slow the parquet reader lib can generate the indexes?",
+        "createdAt" : "2021-06-28T17:05:15Z",
+        "updatedAt" : "2021-06-28T17:05:16Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "73986c53-c065-4b82-8f08-20d1b13ef78a",
+        "parentId" : "22c4bcc6-a6fa-40cc-847d-3e1b11afcdb1",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "It gives you an iterator so yeah generating them on the fly: https://github.com/apache/parquet-mr/blob/master/parquet-column/src/main/java/org/apache/parquet/internal/filter2/columnindex/RowRanges.java#L253. The indexes are generated from `Range` which is very similar to what we defined here. I'm planning to file a JIRA in parquet-mr to just return the original `Range`s so we don't have to do this step in Spark.\r\n\r\n",
+        "createdAt" : "2021-06-28T17:33:12Z",
+        "updatedAt" : "2021-06-28T17:33:13Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "de75a57c-82dc-4243-9696-ac1bb527e615",
+        "parentId" : "22c4bcc6-a6fa-40cc-847d-3e1b11afcdb1",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "https://issues.apache.org/jira/browse/PARQUET-2061",
+        "createdAt" : "2021-06-28T17:40:20Z",
+        "updatedAt" : "2021-06-28T17:40:21Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6541d99bd6788ae7ee3da1ccc76d30e9b39b9cb5",
+    "line" : 54,
+    "diffHunk" : "@@ -1,1 +67,71 @@  /**\n   * Construct a list of row ranges from the given `rowIndexes`. For example, suppose the\n   * `rowIndexes` are `[0, 1, 2, 4, 5, 7, 8, 9]`, it will be converted into 3 row ranges:\n   * `[0-2], [4-5], [7-9]`.\n   */"
+  },
+  {
+    "id" : "be13307b-82c7-4651-b5c4-7fee6603c722",
+    "prId" : 32753,
+    "prUrl" : "https://github.com/apache/spark/pull/32753#pullrequestreview-694468968",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a1f42cf4-f9a4-4ea8-9867-48906136c539",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Should we assert `newOffset - offset` == `newRowId - rowId`?",
+        "createdAt" : "2021-06-28T23:01:42Z",
+        "updatedAt" : "2021-06-28T23:01:42Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fe31d768-10cd-4f1a-b07b-61f157188d02",
+        "parentId" : "a1f42cf4-f9a4-4ea8-9867-48906136c539",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "I think this is not necessarily true: `rowId` tracks all the values that could be either read or skipped, while `offset` only tracks value that are read into the result column vector.",
+        "createdAt" : "2021-06-28T23:24:54Z",
+        "updatedAt" : "2021-06-28T23:24:54Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6541d99bd6788ae7ee3da1ccc76d30e9b39b9cb5",
+    "line" : 126,
+    "diffHunk" : "@@ -1,1 +133,137 @@  void advanceOffsetAndRowId(int newOffset, long newRowId) {\n    valuesToReadInBatch -= (newOffset - offset);\n    valuesToReadInPage -= (newRowId - rowId);\n    offset = newOffset;\n    rowId = newRowId;"
   }
 ]

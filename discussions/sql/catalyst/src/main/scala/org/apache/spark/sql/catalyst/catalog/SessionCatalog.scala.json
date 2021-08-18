@@ -1,0 +1,90 @@
+[
+  {
+    "id" : "9a2f6f84-81e0-4b83-8c05-547595e3e37f",
+    "prId" : 32768,
+    "prUrl" : "https://github.com/apache/spark/pull/32768#pullrequestreview-675897835",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a675c5ed-ef5e-4a60-a1a4-cdfbe4883385",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "My only concern is that now `externalCatalog` cannot handle `ignoreIfNotExists` properly. Previously the handling was delegated.",
+        "createdAt" : "2021-06-04T00:52:34Z",
+        "updatedAt" : "2021-06-04T00:52:35Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1fa9411b-3815-4499-b56c-35297f068b9b",
+        "parentId" : "a675c5ed-ef5e-4a60-a1a4-cdfbe4883385",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "Not sure I get your ponit. You mean this `SessionCatalog` can not handle `ignoreIfNotExists` correctly ?",
+        "createdAt" : "2021-06-04T02:48:30Z",
+        "updatedAt" : "2021-06-04T02:48:30Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6d550c08-fc45-4186-be0d-67579c9d98e5",
+        "parentId" : "a675c5ed-ef5e-4a60-a1a4-cdfbe4883385",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "I mean, if the DB already exists, `externalCatalog` cannot handle the case anymore because it will throw an exception in the Spark. Previously it was delegated to `externalCatalog` right?",
+        "createdAt" : "2021-06-04T03:27:22Z",
+        "updatedAt" : "2021-06-04T03:27:22Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7aee4d26-f8cb-4b1a-ba36-eafa4d096d3d",
+        "parentId" : "a675c5ed-ef5e-4a60-a1a4-cdfbe4883385",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "`externalCatalog` can be not only Hive but can be other implementations, and maybe there could be some special handling for these cases (e.g., cleaning up resources)",
+        "createdAt" : "2021-06-04T03:28:28Z",
+        "updatedAt" : "2021-06-04T03:28:28Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2e715c7f-c0c2-4895-8d22-88e1d3e4f6a1",
+        "parentId" : "a675c5ed-ef5e-4a60-a1a4-cdfbe4883385",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "thanks for the explaination, I see your concern. Seems we also didn't handle this in `drop table` or `drop function`.. \r\n```\r\nrequireDbExists(db)\r\nif (tableExists(TableIdentifier(table, Option(db)))) {\r\n  externalCatalog.dropTable(db, table, ignoreIfNotExists = true, purge = purge)\r\n} else if (!ignoreIfNotExists) {\r\n  throw new NoSuchTableException(db = db, table = table)\r\n}\r\n```\r\n\r\nSo I'm assuming it's OK in `drop database` ? ",
+        "createdAt" : "2021-06-04T03:42:34Z",
+        "updatedAt" : "2021-06-04T03:42:34Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "26ef98c4-3742-4921-997c-128c9d87b51d",
+        "parentId" : "a675c5ed-ef5e-4a60-a1a4-cdfbe4883385",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "hm .. okie",
+        "createdAt" : "2021-06-04T03:56:13Z",
+        "updatedAt" : "2021-06-04T03:56:14Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7be58a98-e38c-4831-8883-324c1c1f8740",
+        "parentId" : "a675c5ed-ef5e-4a60-a1a4-cdfbe4883385",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "As I see it, we'd better remove `requireDbExists` check from the table and function APIs in the `SessionCatalog`?",
+        "createdAt" : "2021-06-04T03:56:55Z",
+        "updatedAt" : "2021-06-04T03:56:55Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "db9425d09cf339a5cd7eb588feebb84fda5a07fb",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +267,271 @@    }\n    if (!ignoreIfNotExists) {\n      requireDbExists(dbName)\n    }\n    if (cascade && databaseExists(dbName)) {"
+  }
+]
