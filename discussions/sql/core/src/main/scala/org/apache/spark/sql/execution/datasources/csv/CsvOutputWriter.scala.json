@@ -97,5 +97,104 @@
     "commit" : "b84f63bb2ed6421397e52462a42604e5a9f29cda",
     "line" : 33,
     "diffHunk" : "@@ -1,1 +59,63 @@      dataSchema: StructType,\n      params: CSVOptions): UnivocityGenerator = this.synchronized {\n    NormalizedString.getCache.setMaxStringLength(maxLength)\n    new UnivocityGenerator(dataSchema, writer, params)\n  }"
+  },
+  {
+    "id" : "2ae8b790-53b0-44bb-81d8-cbb96b86f75f",
+    "prId" : 29088,
+    "prUrl" : "https://github.com/apache/spark/pull/29088#pullrequestreview-468083509",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "aaa32ea6-eef4-4ebc-b9f5-57edd99d7d11",
+        "parentId" : null,
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "More details: https://stackoverflow.com/questions/32072017/write-utf-8-bom-with-supercsv",
+        "createdAt" : "2020-07-13T15:17:34Z",
+        "updatedAt" : "2020-07-14T12:42:36Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "933e5c20-0ab8-4268-bf3b-964034f92f11",
+        "parentId" : "aaa32ea6-eef4-4ebc-b9f5-57edd99d7d11",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Hm, `0xFEFF` is the BOM for UTF-16 Big Endian, see https://en.wikipedia.org/wiki/Byte_order_mark. Does it work if you specify `0xEFBBBF` instead?",
+        "createdAt" : "2020-07-14T06:36:53Z",
+        "updatedAt" : "2020-07-14T12:42:36Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5115abe4-8aa4-4ef5-90a7-e045959462d7",
+        "parentId" : "aaa32ea6-eef4-4ebc-b9f5-57edd99d7d11",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "No. `0xEFBBBF` will change the value:\r\n![image](https://user-images.githubusercontent.com/5399861/87413662-2b2d2c80-c5fd-11ea-81b9-d363247f02e6.png)\r\n",
+        "createdAt" : "2020-07-14T10:09:57Z",
+        "updatedAt" : "2020-07-14T12:42:36Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f71a34c2-d81f-4a97-9234-f6f9e2324e8e",
+        "parentId" : "aaa32ea6-eef4-4ebc-b9f5-57edd99d7d11",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Yes, this is the wrong BOM. It may help your case but is going to break others - even adding the BOM might break things. I think you should tell Excel that you need _UTF-16_ when reading the file. That's what you're 'fixing'",
+        "createdAt" : "2020-07-14T15:18:16Z",
+        "updatedAt" : "2020-07-14T15:18:17Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0f014169-f7a6-4336-a373-fa9edecd67f2",
+        "parentId" : "aaa32ea6-eef4-4ebc-b9f5-57edd99d7d11",
+        "authorId" : "0f4ef4e8-09be-436f-b743-bf8fbc343490",
+        "body" : "We meet the same problem in our project, and we use `0xEFBBBF` as default BOM for UTF-8, it will change the value if we use `0xFEFF`. Besides, we have meet other problems, such as the commas were used incorrectly or quotation marks were not displayed properly. If we fix these problems, it will cause other users can not read these files with other tools.\r\n\r\nHm, what I trying to say is, maybe it is not a good idea to change CsvOutputWriter to fit Excel format. It can be done in project before use downloads the csv files or just use Excel to import.",
+        "createdAt" : "2020-07-15T02:07:27Z",
+        "updatedAt" : "2020-07-15T02:07:45Z",
+        "lastEditedBy" : "0f4ef4e8-09be-436f-b743-bf8fbc343490",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6c363996-de40-4c66-b836-bbccaba682f9",
+        "parentId" : "aaa32ea6-eef4-4ebc-b9f5-57edd99d7d11",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "@stczwd What tool will change the value if we use `0xFEFF`?",
+        "createdAt" : "2020-07-15T03:14:36Z",
+        "updatedAt" : "2020-07-15T03:14:36Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a6d8006d-15a7-4230-8e05-d0f001c83f0e",
+        "parentId" : "aaa32ea6-eef4-4ebc-b9f5-57edd99d7d11",
+        "authorId" : "0f4ef4e8-09be-436f-b743-bf8fbc343490",
+        "body" : "Excel. It will change the actual value if we add `0xFEFF` in the front.",
+        "createdAt" : "2020-07-15T04:58:09Z",
+        "updatedAt" : "2020-07-15T04:58:09Z",
+        "lastEditedBy" : "0f4ef4e8-09be-436f-b743-bf8fbc343490",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "79f2f52c-9530-4958-b74e-ecb30e38f189",
+        "parentId" : "aaa32ea6-eef4-4ebc-b9f5-57edd99d7d11",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "This change is still wrong. I cannot see merging this.",
+        "createdAt" : "2020-08-16T18:06:48Z",
+        "updatedAt" : "2020-08-16T18:06:48Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9dde8c277dfb7d4925cd4981f7c3183c51f4af8e",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +41,45 @@\n  if (params.writeBOM) {\n    writer.write(0xFEFF)\n  }\n"
   }
 ]

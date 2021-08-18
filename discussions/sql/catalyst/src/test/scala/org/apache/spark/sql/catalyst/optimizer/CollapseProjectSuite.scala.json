@@ -75,5 +75,38 @@
     "commit" : "bbaae3ed9b96ca517ec5435838ac37feb578c959",
     "line" : 29,
     "diffHunk" : "@@ -1,1 +182,186 @@        val relation = LocalRelation('json.string)\n        val query1 = relation.select(\n          JsonToStructs(schema, options, 'json).as(\"struct\"))\n          .select(\n            GetStructField('struct, 0).as(\"a\"),"
+  },
+  {
+    "id" : "123cb8d5-1696-4575-83a9-130db0770b28",
+    "prId" : 29094,
+    "prUrl" : "https://github.com/apache/spark/pull/29094#pullrequestreview-453082593",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "49a55ecd-8eca-484b-a135-9025e0edca6e",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "The same issue can happens in `ProjectExec` even if the issue of `CollapseProject` fixed? https://github.com/apache/spark/blob/4da93b00d7c8b6dd35ae37ece584aac1d7793c33/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/planning/patterns.scala#L127-L135\r\n\r\n```\r\nscala> Seq((1, 2)).toDF(\"a\", \"b\").write.saveAsTable(\"a\")\r\nscala> var query = spark.table(\"a\")\r\nscala> for( _ <- 1 to 10) {\r\n     |   query = query.select(('a + 'b).as('a), ('a - 'b).as('b))\r\n     | }\r\n\r\nscala> query.explain(true)\r\n== Parsed Logical Plan ==\r\n...\r\n\r\n== Analyzed Logical Plan ==\r\n...\r\n\r\n== Optimized Logical Plan ==\r\nProject [(a#49 + b#50) AS a#53, (a#49 - b#50) AS b#54]\r\n+- Project [(a#45 + b#46) AS a#49, (a#45 - b#46) AS b#50]\r\n   +- Project [(a#41 + b#42) AS a#45, (a#41 - b#42) AS b#46]\r\n      +- Project [(a#37 + b#38) AS a#41, (a#37 - b#38) AS b#42]\r\n         +- Project [(a#33 + b#34) AS a#37, (a#33 - b#34) AS b#38]\r\n            +- Project [(a#29 + b#30) AS a#33, (a#29 - b#30) AS b#34]\r\n               +- Project [(a#25 + b#26) AS a#29, (a#25 - b#26) AS b#30]\r\n                  +- Project [(a#21 + b#22) AS a#25, (a#21 - b#22) AS b#26]\r\n                     +- Project [(a#17 + b#18) AS a#21, (a#17 - b#18) AS b#22]\r\n                        +- Project [(a#13 + b#14) AS a#17, (a#13 - b#14) AS b#18]\r\n                           +- Relation[a#13,b#14] parquet\r\n\r\n== Physical Plan ==\r\n*(1) Project [((((((((((a#13 + b#14) AS a#17 + ...\r\n  // too many expressions...\r\n\r\n+- *(1) ColumnarToRow\r\n   +- FileScan parquet default.a[a#13,b#14] Batched: true, DataFilters: [], Format: Parquet, Location: InMemoryFileIndex[file:/Users/maropu/Repositories/spark/spark-master/spark-warehouse/a], PartitionFilters: [], PushedFilters: [], ReadSchema: struct<a:int,b:int>\r\n```\r\n",
+        "createdAt" : "2020-07-21T15:47:45Z",
+        "updatedAt" : "2020-07-22T12:03:43Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a4cdda20-5ed0-4644-a2b2-794fb6e94074",
+        "parentId" : "49a55ecd-8eca-484b-a135-9025e0edca6e",
+        "authorId" : "7753faf4-1cf0-4d0e-a47b-b3791190ca2f",
+        "body" : "Thanks for reminding, my test case is :\r\n\r\nvar query = spark.range(5).withColumn(\"new_column\", 'id + 5 as \"plus5\").toDF(\"a\",\"b\")\r\nfor( a <- 1 to 10) {query = query.select(('a + 'b).as('a), ('a - 'b).as('b))}\r\nquery.explain(true)\r\n\r\nAnd it works for both Optimized Logical Plan and Physical Plan.\r\n\r\nI notice the difference is that my data type is bigint:  org.apache.spark.sql.DataFrame = [a: bigint, b: bigint], it seems the project will not collapse\r\n\r\nI test the case above and the problem exist for Physical Plan, so we also add a check for that? ",
+        "createdAt" : "2020-07-22T07:59:36Z",
+        "updatedAt" : "2020-07-22T12:03:43Z",
+        "lastEditedBy" : "7753faf4-1cf0-4d0e-a47b-b3791190ca2f",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "06a0bcedc02b055d8f5a01989e05e2e2a27d8aca",
+    "line" : 9,
+    "diffHunk" : "@@ -1,1 +127,131 @@      // after n iterations the number of leaf expressions will be 2^{n+1}\n      // => after 10 iterations we would end up with more than 1000 leaf expressions\n      query = query.select(('a + 'b).as('a), ('a - 'b).as('b))\n    }\n    val projects = Optimize.execute(query.analyze).collect { case p: Project => p }"
   }
 ]

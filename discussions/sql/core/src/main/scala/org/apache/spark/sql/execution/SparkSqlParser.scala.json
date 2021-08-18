@@ -130,5 +130,93 @@
     "commit" : "e83f6a55e20e7f4edfa11ad91e06115a5eb38c6d",
     "line" : 7,
     "diffHunk" : "@@ -1,1 +788,792 @@        val props = Seq(\n          \"field.delim\" -> \"\\t\",\n          \"serialization.last.column.takes.rest\" -> \"true\")\n        val recordHandler = Option(conf.getConfString(configKey, defaultConfigValue))\n        (Nil, Option(name), props, recordHandler)"
+  },
+  {
+    "id" : "91e45a27-ebf6-42c8-96e5-2f3bf842a175",
+    "prId" : 29146,
+    "prUrl" : "https://github.com/apache/spark/pull/29146#pullrequestreview-459723953",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "90287896-e6f3-4be4-91a8-7517b6d1f9a2",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Will it match something like `a ###`?  Shall we use `([a-zA-Z_\\d\\\\.:]+)$`?",
+        "createdAt" : "2020-08-03T03:07:56Z",
+        "updatedAt" : "2020-08-03T10:05:19Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3065ed9aa5ce232ce4f16335cbf830bd93a73f3f",
+    "line" : 26,
+    "diffHunk" : "@@ -1,1 +73,77 @@      case configKeyValueDef(key, value) =>\n        SetCommand(Some(key -> Option(value.trim)))\n      case configKeyDef(key) =>\n        SetCommand(Some(key -> None))\n      case s if s == \"-v\" =>"
+  },
+  {
+    "id" : "6e325957-6ccf-4770-a418-ae142906b85e",
+    "prId" : 29146,
+    "prUrl" : "https://github.com/apache/spark/pull/29146#pullrequestreview-459814582",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "da21b991-384e-4498-bd91-7216e5c5c1d2",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "`(EQ value=.*)` we have an alias, can we use it here?",
+        "createdAt" : "2020-08-03T03:09:58Z",
+        "updatedAt" : "2020-08-03T10:05:19Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "191a21f6-9cce-4e9e-8179-7ee088c6a412",
+        "parentId" : "da21b991-384e-4498-bd91-7216e5c5c1d2",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "I did so first, but the added tests below failed;\r\n```\r\n     val keyStr = ctx.quotedConfigKey().getText\r\n     if (ctx.value != null) {\r\n-      SetCommand(Some(keyStr -> Option(remainder(ctx.EQ().getSymbol).trim)))\r\n+      SetCommand(Some(keyStr -> Option(ctx.value.getText)))\r\n     } else {\r\n       SetCommand(Some(keyStr -> None))\r\n     }\r\n\r\n// The failed tests\r\nassertEqual(\"SET `spark.sql.    key`=  -1\",\r\n  SetCommand(Some(\"spark.sql.    key\" -> Some(\"-1\"))))\r\n[info] - Report Error for invalid usage of SET command *** FAILED *** (104 milliseconds)\r\n[info]   == FAIL: Plans do not match ===\r\n[info]   !SetCommand (spark.sql.    key,Some(1))   SetCommand (spark.sql.    key,Some(-1)) (PlanTest.scala:157)\r\n...\r\n\r\nassertEqual(\"SET `spark.sql.    key`= v  a lu e \",\r\n  SetCommand(Some(\"spark.sql.    key\" -> Some(\"v  a lu e\"))))\r\n[info] - Report Error for invalid usage of SET command *** FAILED *** (121 milliseconds)\r\n[info]   == FAIL: Plans do not match ===\r\n[info]   !SetCommand (spark.sql.    key,Some(e))   SetCommand (spark.sql.    key,Some(v  a lu e)) (PlanTest.scala:157)\r\n[info]   org.scalatest.exceptions.TestFailedException:\r\n...\r\n```\r\nSo, I selected the current one to avoid the test failures. Do you know something about this behaivour?",
+        "createdAt" : "2020-08-03T06:50:10Z",
+        "updatedAt" : "2020-08-03T10:05:19Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "052c5ceb-20ba-488c-a8ea-dbc075edb323",
+        "parentId" : "da21b991-384e-4498-bd91-7216e5c5c1d2",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "-      SetCommand(Some(keyStr -> Option(remainder(ctx.EQ().getSymbol).trim)))\r\n+      SetCommand(Some(keyStr -> Option(ctx.value.getText)))\r\n\r\none has trim but one doesn't. How about `ctx.value.getText.trim`?",
+        "createdAt" : "2020-08-03T06:59:38Z",
+        "updatedAt" : "2020-08-03T10:05:19Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "13540b25-7fca-4d5c-a019-0b986aff30ec",
+        "parentId" : "da21b991-384e-4498-bd91-7216e5c5c1d2",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "I added `.trim` and checked that the same tests failed. To tell the truth, I'm not sure about why the rule `(EQ value=.*)` parses `v  a lu e` into `e` (Probably, this is the effect of the hidden channel?);\r\n```\r\n[info]   !SetCommand (spark.sql.    key,Some(e))   SetCommand (spark.sql.    key,Some(v  a lu e)) (PlanTest.scala:157)\r\n```",
+        "createdAt" : "2020-08-03T07:39:10Z",
+        "updatedAt" : "2020-08-03T10:05:19Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2a4a3cec-8eb5-4dcb-9bf6-01769595105a",
+        "parentId" : "da21b991-384e-4498-bd91-7216e5c5c1d2",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "ah, seems we should use `(value+=.)*`",
+        "createdAt" : "2020-08-03T07:46:48Z",
+        "updatedAt" : "2020-08-03T10:05:19Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3065ed9aa5ce232ce4f16335cbf830bd93a73f3f",
+    "line" : 42,
+    "diffHunk" : "@@ -1,1 +89,93 @@    val keyStr = ctx.configKey().getText\n    if (ctx.EQ() != null) {\n      SetCommand(Some(keyStr -> Option(remainder(ctx.EQ().getSymbol).trim)))\n    } else {\n      SetCommand(Some(keyStr -> None))"
   }
 ]

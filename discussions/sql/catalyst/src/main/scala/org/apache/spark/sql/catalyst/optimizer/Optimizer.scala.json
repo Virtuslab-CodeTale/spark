@@ -2143,5 +2143,302 @@
     "commit" : "b30d2ba400af5e2a46fad11cc2131542db1ab246",
     "line" : 17,
     "diffHunk" : "@@ -1,1 +1853,1857 @@ * than default projection size.\n */\nobject SplitAggregateWithExpand extends Rule[LogicalPlan] {\n  private def splitExpand(expand: Expand, num: Int): Seq[Expand] = {\n    val groupedProjections = expand.projections.grouped(num).toList"
+  },
+  {
+    "id" : "873fe874-84e4-4d49-b1ba-6d14e55e91b1",
+    "prId" : 29170,
+    "prUrl" : "https://github.com/apache/spark/pull/29170#pullrequestreview-452156354",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7d78ee35-d9eb-4cfa-985c-569378b89ed7",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Note: This rule was separated because https://github.com/apache/spark/pull/19149",
+        "createdAt" : "2020-07-21T06:20:35Z",
+        "updatedAt" : "2020-07-24T01:11:51Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2b3c82af48a8890a951cc3bf5f85d92b698c4d31",
+    "line" : 7,
+    "diffHunk" : "@@ -1,1 +119,123 @@      Batch(\"Infer Filters\", fixedPoint,\n        PushDownPredicates,\n        InferFiltersFromConstraints) ::\n      Batch(\"Operator Optimization after Inferring Filters\", fixedPoint,\n        rulesWithoutInferFiltersFromConstraints: _*) ::"
+  },
+  {
+    "id" : "a6b68ea8-9599-46c7-98dc-6d90c78f9890",
+    "prId" : 29170,
+    "prUrl" : "https://github.com/apache/spark/pull/29170#pullrequestreview-526567429",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f9b4d6cb-58ba-44a2-9386-d0653a69f45b",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "My concern is that the change above might cause the issue described in #19149. Instead, (just a suggestion), we couldn't improve  `InferFiltersFromConstraints` to cover the case you pointed out in the PR description?",
+        "createdAt" : "2020-11-06T07:30:42Z",
+        "updatedAt" : "2020-11-06T07:30:42Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "727304af-4884-4e47-9160-2b85ba7b7519",
+        "parentId" : "f9b4d6cb-58ba-44a2-9386-d0653a69f45b",
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "Unfortunately, there is no UT in the commit to see what was the exact issue and why `InferFiltersFromConstraints` needs to be separated entirely from other rules.\r\n\r\nIf I get the issue described in https://issues.apache.org/jira/browse/SPARK-21652 right, if we combine `InferFiltersFromConstraints` with other rules into a batch then we can end up in an infinite loop in that batch. But this is only because `InferFiltersFromConstraints` can create a new constraint that a subsequent rule removes. The example in https://issues.apache.org/jira/browse/SPARK-21652 required running `ConstantPropagation`, `ConstantFolding` and then `BooleanSimplification` to remove such an inferred constraint/filter.\r\nI think if we combine `InferFiltersFromConstraints` with other rules that doesn't reduce constraints (like `PushDownPredicates`) then we are still good. But I might be wrong so please share your thoughts on this.\r\n\r\nSidebar:\r\nI think the source of the above mentioned loop is that `ConstantPropagation` doesn't propagate constants into a join condition (it handles filters only). I had an old PR to enhance that rule where I also commented why it is not so simple to propagate constants into a join: https://github.com/apache/spark/pull/24553/files#diff-d43484d56a4d9991066b5c00d12ec2465c75131e055fc02ee7fb6dfd45b5006fR76-R79 but it is doable if we fix https://issues.apache.org/jira/browse/SPARK-30598 (https://github.com/apache/spark/pull/27309).\r\nBut I'm not saying that `ConstantPropagation` is the only reduction rule that can collide with `InferFiltersFromConstraints`.",
+        "createdAt" : "2020-11-06T11:30:01Z",
+        "updatedAt" : "2020-11-06T11:30:01Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7f690443-cac0-4e69-9b79-c3d98d1e3f2d",
+        "parentId" : "f9b4d6cb-58ba-44a2-9386-d0653a69f45b",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "> I think if we combine InferFiltersFromConstraints with other rules that doesn't reduce constraints (like PushDownPredicates) then we are still good. But I might be wrong so please share your thoughts on this.\r\n\r\nYea, I don't have a specific query to deny your thought and I also think it is true, but, in my current feeling, I a bit hesitate to change `Once` -> `fixedPoint ` for this batch without adding no logic to avoid the infinite loop case (and without any evidence that it will not affect users queries...). WDTY, @cloud-fan @viirya ?",
+        "createdAt" : "2020-11-09T01:36:19Z",
+        "updatedAt" : "2020-11-09T01:36:19Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b3a32ca7-964e-487e-ab28-64fda805452b",
+        "parentId" : "f9b4d6cb-58ba-44a2-9386-d0653a69f45b",
+        "authorId" : "f7e8d656-68f6-4783-b24e-5d70947b2f1d",
+        "body" : "I initially looked at trying to see if InferFiltersFromConstraints could itself handle this, but I think I could not figure out a way to solve the case in the unit test. I also don't think that this can cause an infinite loop, but let me take another look at this to see if we can either be sure that it cannot result in an infinite loop or if we can push this into InferFiltersFromConstraints so that we don't need the fixedPoint.",
+        "createdAt" : "2020-11-09T03:30:17Z",
+        "updatedAt" : "2020-11-09T03:30:18Z",
+        "lastEditedBy" : "f7e8d656-68f6-4783-b24e-5d70947b2f1d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d6d4efad-c5ee-4938-aa42-9871ec15ce70",
+        "parentId" : "f9b4d6cb-58ba-44a2-9386-d0653a69f45b",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Not look at `InferFiltersFromConstraints`, but I tend to agree with @maropu's initial comment. Can we possibly make `InferFiltersFromConstraints` deal with this kind of case? ",
+        "createdAt" : "2020-11-09T19:04:11Z",
+        "updatedAt" : "2020-11-09T19:04:12Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2b3c82af48a8890a951cc3bf5f85d92b698c4d31",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +118,122 @@        rulesWithoutInferFiltersFromConstraints: _*) ::\n      Batch(\"Infer Filters\", fixedPoint,\n        PushDownPredicates,\n        InferFiltersFromConstraints) ::\n      Batch(\"Operator Optimization after Inferring Filters\", fixedPoint,"
+  },
+  {
+    "id" : "8c92ca14-3a62-4b93-8352-a351e2fb6fcd",
+    "prId" : 29142,
+    "prUrl" : "https://github.com/apache/spark/pull/29142#pullrequestreview-451270129",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7f96efc1-6496-4afc-b0bb-d986ebb8cb55",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Adding this itself looks fine to me.",
+        "createdAt" : "2020-07-20T03:05:05Z",
+        "updatedAt" : "2020-07-20T03:59:14Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "cd93b707dfd9e033a0580d688a19fe044af379f9",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +1005,1009 @@  private def isOrderIrrelevantAggs(aggs: Seq[NamedExpression]): Boolean = {\n    def isOrderIrrelevantAggFunction(func: AggregateFunction): Boolean = func match {\n      case _: Min | _: Max | _: Count | _: MaxMinBy => true\n      // Arithmetic operations for floating-point values are order-sensitive\n      // (they are not associative)."
+  },
+  {
+    "id" : "2d31b056-7e33-4312-b565-1b217b1aeddf",
+    "prId" : 29094,
+    "prUrl" : "https://github.com/apache/spark/pull/29094#pullrequestreview-453043324",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b6afa864-282b-404f-9c74-aff0f06e6641",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Seems like you can simplify it like this?;\r\n```\r\n  private def hasTooManyExprs(exprs: Seq[Expression]): Boolean = {\r\n    var numExprs = 0\r\n    exprs.foreach { _.foreach { _ => numExprs += 1 } }\r\n    numExprs > SQLConf.get.XXXX\r\n  }\r\n\r\n  def apply(plan: LogicalPlan): LogicalPlan = plan transformUp {\r\n    case p1 @ Project(_, p2: Project) if hasTooManyExprs(p2.projectList) => // skip\r\n      p1\r\n\r\n    case p1 @ Project(_, p2: Project) =>\r\n```",
+        "createdAt" : "2020-07-21T15:41:30Z",
+        "updatedAt" : "2020-07-22T12:03:43Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4b5bb9ff-e549-45dd-9817-158c764461fb",
+        "parentId" : "b6afa864-282b-404f-9c74-aff0f06e6641",
+        "authorId" : "7753faf4-1cf0-4d0e-a47b-b3791190ca2f",
+        "body" : "Sure, I can simplify the condition check logic, do you suggest to add a new SQLConf instead of the hard limit? And for the case statement there is already a condition check called 'haveCommonNonDeterministicOutput', so I put them together. Also the same for  'case p @ Project(_, agg: Aggregate)' ",
+        "createdAt" : "2020-07-22T06:50:38Z",
+        "updatedAt" : "2020-07-22T12:03:43Z",
+        "lastEditedBy" : "7753faf4-1cf0-4d0e-a47b-b3791190ca2f",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "337fe296-7fac-4f73-8b5d-15d2d6a3f8c9",
+        "parentId" : "b6afa864-282b-404f-9c74-aff0f06e6641",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Yea, if we add this logic, I think we need a conf for that.",
+        "createdAt" : "2020-07-22T06:59:17Z",
+        "updatedAt" : "2020-07-22T12:03:43Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "06a0bcedc02b055d8f5a01989e05e2e2a27d8aca",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +699,703 @@object CollapseProject extends Rule[LogicalPlan] {\n  def apply(plan: LogicalPlan): LogicalPlan = plan transformUp {\n    case p1 @ Project(_, p2: Project) =>\n      if (haveCommonNonDeterministicOutput(p1.projectList, p2.projectList)\n        || hasTooManyExprs(p2.projectList)) {"
+  },
+  {
+    "id" : "2f752f1b-c8cd-46ab-a97b-38a1c20573d3",
+    "prId" : 29092,
+    "prUrl" : "https://github.com/apache/spark/pull/29092#pullrequestreview-506774842",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "101b55e8-6abc-4fef-a8da-1e90ded6dffd",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Why did you put this rule only in this batch? https://github.com/apache/spark/pull/29092/files#diff-a636a87d8843eeccca90140be91d4fafR82",
+        "createdAt" : "2020-10-07T01:44:31Z",
+        "updatedAt" : "2020-10-13T09:00:48Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "32a54771-fac4-476b-b91b-a4e92e062b01",
+        "parentId" : "101b55e8-6abc-4fef-a8da-1e90ded6dffd",
+        "authorId" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "body" : "I'm sorry, I don't get the question.",
+        "createdAt" : "2020-10-07T01:47:17Z",
+        "updatedAt" : "2020-10-13T09:00:48Z",
+        "lastEditedBy" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "198758a0-b8be-43e9-8f97-2ba6b99d4f59",
+        "parentId" : "101b55e8-6abc-4fef-a8da-1e90ded6dffd",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Ah, ok. Looks okay as it is. Since `operatorOptimizationRuleSet` has `InferFiltersFromConstraints`, I thought we'd better to put `InferFiltersFromConstraints`/`InferFiltersFromGenerate` there together.",
+        "createdAt" : "2020-10-07T04:27:14Z",
+        "updatedAt" : "2020-10-13T09:00:48Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f7bc6f73-0441-442b-9d59-e77221e5ebe7",
+        "parentId" : "101b55e8-6abc-4fef-a8da-1e90ded6dffd",
+        "authorId" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "body" : "Actually the `InferFiltersFromConstraints` is allways filtered out from the `operatorOptimizationRuleSet`:\r\nhttps://github.com/apache/spark/blob/5ce321dc80a699fa525ca5b69bf2c28e10f8a12a/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/optimizer/Optimizer.scala#L120-L123\r\n\r\nI think it is very misleading , perhaps we could remove it from there and avoid further confusion?\r\n\r\nIt was asked in the original PR, put looks like it was forgotten:\r\nhttps://github.com/apache/spark/pull/19149/files#r157777935",
+        "createdAt" : "2020-10-07T04:44:08Z",
+        "updatedAt" : "2020-10-13T09:00:48Z",
+        "lastEditedBy" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "770e385e-5eae-4e92-b092-48922bacb76f",
+        "parentId" : "101b55e8-6abc-4fef-a8da-1e90ded6dffd",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Yea, but I also don't know why. cc: @cloud-fan ",
+        "createdAt" : "2020-10-07T04:52:27Z",
+        "updatedAt" : "2020-10-13T09:00:48Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "19023a64-1263-460a-acce-a677b2abe1b1",
+        "parentId" : "101b55e8-6abc-4fef-a8da-1e90ded6dffd",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I don't quite remember, maybe we can remove it.",
+        "createdAt" : "2020-10-12T14:15:24Z",
+        "updatedAt" : "2020-10-13T09:00:48Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "72aa579a-e668-41c1-9502-432ba05d7752",
+        "parentId" : "101b55e8-6abc-4fef-a8da-1e90ded6dffd",
+        "authorId" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "body" : "I went ahead and removed it from the `operatorOptimizationRuleSet`. All the tests are still passing as was expected.",
+        "createdAt" : "2020-10-12T16:47:26Z",
+        "updatedAt" : "2020-10-13T09:00:48Z",
+        "lastEditedBy" : "a8e23d47-3ae4-4385-848c-38a216d1bd08",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "857c0078f20609e9aca6839034b52708991aa1bf",
+    "line" : 18,
+    "diffHunk" : "@@ -1,1 +120,124 @@        operatorOptimizationRuleSet: _*) ::\n      Batch(\"Infer Filters\", Once,\n        InferFiltersFromGenerate,\n        InferFiltersFromConstraints) ::\n      Batch(\"Operator Optimization after Inferring Filters\", fixedPoint,"
+  },
+  {
+    "id" : "545633ed-47a9-4149-9e92-5bd0e3a291b8",
+    "prId" : 29092,
+    "prUrl" : "https://github.com/apache/spark/pull/29092#pullrequestreview-506983708",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8c3654f9-0a3d-4b82-9b43-d79b2ad631cb",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "nit: `operatorOptimizationRuleSet` -> `rulesWithoutInferFilters`?",
+        "createdAt" : "2020-10-12T23:50:52Z",
+        "updatedAt" : "2020-10-13T09:00:48Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "857c0078f20609e9aca6839034b52708991aa1bf",
+    "line" : 22,
+    "diffHunk" : "@@ -1,1 +123,127 @@        InferFiltersFromConstraints) ::\n      Batch(\"Operator Optimization after Inferring Filters\", fixedPoint,\n        operatorOptimizationRuleSet: _*) ::\n      // Set strategy to Once to avoid pushing filter every time because we do not change the\n      // join condition."
+  },
+  {
+    "id" : "b5618532-4f33-48b4-bc7f-f0a2f72bb90f",
+    "prId" : 29092,
+    "prUrl" : "https://github.com/apache/spark/pull/29092#pullrequestreview-507607013",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6174a669-a16a-4052-9bd5-625865604fce",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "This can be useful to filter rows before join, but can we pushdown `Size` expression to datasource?",
+        "createdAt" : "2020-10-13T16:11:11Z",
+        "updatedAt" : "2020-10-13T16:11:11Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8d7cf669-140a-43a8-946e-93c2775777d5",
+        "parentId" : "6174a669-a16a-4052-9bd5-625865604fce",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I don't think so...",
+        "createdAt" : "2020-10-13T16:12:46Z",
+        "updatedAt" : "2020-10-13T16:12:47Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "857c0078f20609e9aca6839034b52708991aa1bf",
+    "line" : 46,
+    "diffHunk" : "@@ -1,1 +883,887 @@      val inferredFilters = ExpressionSet(\n        Seq(\n          GreaterThan(Size(g.children.head), Literal(0)),\n          IsNotNull(g.children.head)\n        )"
   }
 ]

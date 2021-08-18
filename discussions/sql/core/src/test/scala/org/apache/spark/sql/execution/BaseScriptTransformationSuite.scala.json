@@ -108,5 +108,115 @@
     "commit" : "4173cfb64de7b29b64586b469e67ae4b8fa56df3",
     "line" : 6,
     "diffHunk" : "@@ -1,1 +375,379 @@\n  test(\"SPARK-32667: SCRIPT TRANSFORM pad null value to fill column\" +\n    \" when without schema less (no-serde)\") {\n    val df = Seq(\n      (1, \"1\", 1.0, BigDecimal(1.0), new Timestamp(1)),"
+  },
+  {
+    "id" : "058a2945-eaa7-4a27-955c-219e90fcccb9",
+    "prId" : 29085,
+    "prUrl" : "https://github.com/apache/spark/pull/29085#pullrequestreview-451041972",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4ddbbc25-9c3f-4a7f-a322-c1fb84a0bf75",
+        "parentId" : null,
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "@maropu add a Test case for schema less pattern , In AstBuilder,  in schema less mode, it return out put as key value string pair\r\n```\r\nprivate def withTransformQuerySpecification(\r\n      ctx: ParserRuleContext,\r\n      transformClause: TransformClauseContext,\r\n      whereClause: WhereClauseContext,\r\n    relation: LogicalPlan): LogicalPlan = withOrigin(ctx) {\r\n    // Add where.\r\n    val withFilter = relation.optionalMap(whereClause)(withWhereClause)\r\n\r\n    // Create the transform.\r\n    val expressions = visitNamedExpressionSeq(transformClause.namedExpressionSeq)\r\n\r\n    // Create the attributes.\r\n    val (attributes, schemaLess) = if (transformClause.colTypeList != null) {\r\n      // Typed return columns.\r\n      (createSchema(transformClause.colTypeList).toAttributes, false)\r\n    } else if (transformClause.identifierSeq != null) {\r\n      // Untyped return columns.\r\n      val attrs = visitIdentifierSeq(transformClause.identifierSeq).map { name =>\r\n        AttributeReference(name, StringType, nullable = true)()\r\n      }\r\n      (attrs, false)\r\n    } else {\r\n      (Seq(AttributeReference(\"key\", StringType)(),\r\n        AttributeReference(\"value\", StringType)()), true)\r\n    }\r\n\r\n    // Create the transform.\r\n    ScriptTransformation(\r\n      expressions,\r\n      string(transformClause.script),\r\n      attributes,\r\n      withFilter,\r\n      withScriptIOSchema(\r\n        ctx,\r\n        transformClause.inRowFormat,\r\n        transformClause.recordWriter,\r\n        transformClause.outRowFormat,\r\n        transformClause.recordReader,\r\n        schemaLess\r\n      )\r\n    )\r\n  }\r\n```",
+        "createdAt" : "2020-07-18T05:22:58Z",
+        "updatedAt" : "2020-07-23T03:08:36Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "61a995f1-3c72-4fca-b516-41a49a72cc42",
+        "parentId" : "4ddbbc25-9c3f-4a7f-a322-c1fb84a0bf75",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "How do we use this feature in SQL? Also, hive TRANSFORM in v3.0 supports this feature?",
+        "createdAt" : "2020-07-18T06:42:41Z",
+        "updatedAt" : "2020-07-23T03:08:36Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ffbe127b-bdec-4178-bfcc-3c6d9915978e",
+        "parentId" : "4ddbbc25-9c3f-4a7f-a322-c1fb84a0bf75",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> How do we use this feature in SQL? Also, hive TRANSFORM in v3.0 supports this feature?\r\n\r\n```\r\nSELECT transform(a)\r\nUSING 'cat'\r\nFROM  table\r\n```\r\n\r\nreturn column as `key string`, `value string`.\r\nwithout serde, it split return line by `split(line, 2)(what i added in this commit as origin way)`\r\n\r\nwith hive serde, it still return like `split(line, 2)` and got first and second value as return column and got result like  https://github.com/apache/spark/pull/29085#discussion_r456751726\r\n\r\n\r\n",
+        "createdAt" : "2020-07-18T08:31:46Z",
+        "updatedAt" : "2020-07-23T03:08:36Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "03d3409f6ca641a4f10fdc2ac71479445220f676",
+    "line" : 180,
+    "diffHunk" : "@@ -1,1 +178,182 @@          'b.cast(\"string\").as(\"value\")).collect())\n    }\n  }\n\n  test(\"SPARK-30973: TRANSFORM should wait for the termination of the script (no serde)\") {"
+  },
+  {
+    "id" : "16b89d37-d964-4985-97d7-6bf56d3721ff",
+    "prId" : 29085,
+    "prUrl" : "https://github.com/apache/spark/pull/29085#pullrequestreview-451233507",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1e8e1eba-9ce6-4894-9ceb-a8e85a21c210",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "If hive/spark has the same behaviours, could we move this test into `SQLQuryTestSuite`, too?",
+        "createdAt" : "2020-07-20T00:17:07Z",
+        "updatedAt" : "2020-07-23T03:08:36Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0f979a09-8095-4cad-bb36-2674c961eccb",
+        "parentId" : "1e8e1eba-9ce6-4894-9ceb-a8e85a21c210",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> If hive/spark has the same behaviours, could we move this test into `SQLQuryTestSuite`, too?\r\n\r\nSee https://github.com/apache/spark/pull/29085/files#r456991221\r\nAnd in current `transform/sql` contains test of all common supported type",
+        "createdAt" : "2020-07-20T02:03:40Z",
+        "updatedAt" : "2020-07-23T03:08:36Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "03d3409f6ca641a4f10fdc2ac71479445220f676",
+    "line" : 267,
+    "diffHunk" : "@@ -1,1 +265,269 @@      // For UserDefinedType, if user defined deserialize method to support convert string\n      // to UserType like [[SimpleTupleUDT]], we can support convert to this UDT, else we\n      // will return null value as column.\n      checkAnswer(\n        df,"
+  },
+  {
+    "id" : "cfd28d72-3e95-4fa6-bcd5-318034d56b30",
+    "prId" : 29085,
+    "prUrl" : "https://github.com/apache/spark/pull/29085#pullrequestreview-453194429",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "20dc5a12-82f8-4b2c-a7ac-c454ffbcdae3",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Since this option is related only to `date/timestamp`, how about adding separating it? Running this test two times looks verbose. (Note: it is okay for this test unit to have tests for date/timestamp).",
+        "createdAt" : "2020-07-22T10:15:57Z",
+        "updatedAt" : "2020-07-23T03:08:37Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d31b3220-2f13-4312-b81e-87d6a65022a3",
+        "parentId" : "20dc5a12-82f8-4b2c-a7ac-c454ffbcdae3",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> Since this option is related only to `date/timestamp`, how about adding separating it? Running this test two times looks verbose. (Note: it is okay for this test unit to have tests for date/timestamp).\r\n\r\nDone",
+        "createdAt" : "2020-07-22T10:33:21Z",
+        "updatedAt" : "2020-07-23T03:08:37Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "03d3409f6ca641a4f10fdc2ac71479445220f676",
+    "line" : 294,
+    "diffHunk" : "@@ -1,1 +292,296 @@    assume(TestUtils.testCommandAvailable(\"python\"))\n    Array(false, true).foreach { java8AapiEnable =>\n      withSQLConf(SQLConf.DATETIME_JAVA8API_ENABLED.key -> java8AapiEnable.toString) {\n        withTempView(\"v\") {\n          val df = Seq("
   }
 ]

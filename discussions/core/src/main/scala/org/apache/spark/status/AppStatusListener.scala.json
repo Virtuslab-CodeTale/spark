@@ -229,5 +229,71 @@
     "commit" : "b38dd66500cdd4a12f78cca1eeacf116f0ea5b4e",
     "line" : 149,
     "diffHunk" : "@@ -1,1 +402,406 @@      if (excluded) {\n        appStatusSource.foreach(_.BLACKLISTED_EXECUTORS.inc())\n        appStatusSource.foreach(_.EXCLUDED_EXECUTORS.inc())\n      } else {\n        appStatusSource.foreach(_.UNBLACKLISTED_EXECUTORS.inc())"
+  },
+  {
+    "id" : "23f4caa5-dc04-48e6-ac7d-53552eb07327",
+    "prId" : 29082,
+    "prUrl" : "https://github.com/apache/spark/pull/29082#pullrequestreview-492504272",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "07ed30b1-2da5-43a9-b336-5660854981e9",
+        "parentId" : null,
+        "authorId" : "3a227965-84e0-47cf-9974-11293764f028",
+        "body" : "As I mention in another place, `message` field in `FailureReason` seems to be redundant.\r\nIf we can remove it away,  can we just parse error message and build `FailureReason` in `computeFailureSummary`?",
+        "createdAt" : "2020-09-21T11:52:36Z",
+        "updatedAt" : "2021-01-26T02:07:13Z",
+        "lastEditedBy" : "3a227965-84e0-47cf-9974-11293764f028",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "769ce48b4f1500e65c9548e2bdc93d5c8e01079f",
+    "line" : 13,
+    "diffHunk" : "@@ -1,1 +659,663 @@      task.errorMessage = errorMessage\n      task.failureReason = event.reason match {\n        case e: ExceptionFailure =>\n          Some(new v1.FailureReason(e.className, e.description, e.toErrorString))\n        case e: ExecutorLostFailure =>"
+  },
+  {
+    "id" : "35948917-fcb5-4a90-bba2-b9b9cfbaf069",
+    "prId" : 29082,
+    "prUrl" : "https://github.com/apache/spark/pull/29082#pullrequestreview-515861549",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "51366170-a978-4877-ba60-0ae25c8589bd",
+        "parentId" : null,
+        "authorId" : "3a227965-84e0-47cf-9974-11293764f028",
+        "body" : "As I mentioned in another place, `message` in FailureReason can be redundant.\r\nIf we can remove it, we can just parse error message and build `FailureReason` in `computeFailureSummary` regardless of `event.reason`.",
+        "createdAt" : "2020-09-21T12:30:50Z",
+        "updatedAt" : "2021-01-26T02:07:13Z",
+        "lastEditedBy" : "3a227965-84e0-47cf-9974-11293764f028",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4574160c-84f4-4b9c-918f-593a2b5e067f",
+        "parentId" : "51366170-a978-4877-ba60-0ae25c8589bd",
+        "authorId" : "cf8c9534-0cf3-4aad-8ead-54c363cfa86e",
+        "body" : "Yes, in previous version, I directly passed error message to build failure reason, but I found it hard, complex and error-prone. This due to different failure reason has different format:\r\n1. `ExceptionFailure` is most common and easy one. The message is only exception's message, we can parse it from errorString.\r\n2. `ExecutorLostFailure` errorString has format like `ExecutorLostFailure (executor 72 exited caused by one of the running tasks) Reason: Executor heartbeat timed out after 123153 ms`. We can split the message out using keyword `Reason:`\r\n3. `FetchFailed` errorString has format like `FetchFailed($bmAddressString, shuffleId=$shuffleId, mapId=$mapId, reduceId=$reduceId, message=\\n$message\\n)`. We need to parse message from this.\r\n\r\nIn summary, parsing will rely on and couple with specific format of different failure reason. If in the future, the format changed, it's easy to break. So I chose the solution to directly get from TaskEndReason. ",
+        "createdAt" : "2020-09-24T16:52:16Z",
+        "updatedAt" : "2021-01-26T02:07:13Z",
+        "lastEditedBy" : "cf8c9534-0cf3-4aad-8ead-54c363cfa86e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2acce83b-57d2-473c-943c-65b45ba8a13c",
+        "parentId" : "51366170-a978-4877-ba60-0ae25c8589bd",
+        "authorId" : "cf8c9534-0cf3-4aad-8ead-54c363cfa86e",
+        "body" : "@sarutak Any more comments on this?",
+        "createdAt" : "2020-10-23T17:19:05Z",
+        "updatedAt" : "2021-01-26T02:07:13Z",
+        "lastEditedBy" : "cf8c9534-0cf3-4aad-8ead-54c363cfa86e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "769ce48b4f1500e65c9548e2bdc93d5c8e01079f",
+    "line" : 12,
+    "diffHunk" : "@@ -1,1 +658,662 @@      }\n      task.errorMessage = errorMessage\n      task.failureReason = event.reason match {\n        case e: ExceptionFailure =>\n          Some(new v1.FailureReason(e.className, e.description, e.toErrorString))"
   }
 ]
