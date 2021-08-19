@@ -1,0 +1,101 @@
+[
+  {
+    "id" : "2e17dd87-372c-4fd7-bc1c-2d1afb42dfc3",
+    "prId" : 25110,
+    "prUrl" : "https://github.com/apache/spark/pull/25110#pullrequestreview-261022384",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9daf746a-6e3d-49bb-be25-c5e95c01c72b",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Amazingly, this still fails with `INT` type. And, Spark seems to return a wrong value due to truncation.\r\n\r\n- https://amplab.cs.berkeley.edu/jenkins/view/Spark%20QA%20Test%20(Dashboard)/job/spark-master-test-maven-hadoop-2.7/6584/testReport/org.apache.spark.sql/SQLQueryTestSuite/udf_pgSQL_udf_aggregates_part1_sql___Regular_Python_UDF/\r\n\r\n```\r\nExpected \"700000000000[6] 1\", but got \"700000000000[5] 1\" Result did not match for query #33&#010;SELECT CAST(avg(udf(CAST(x AS DOUBLE))) AS long), CAST(udf(var_pop(CAST(x AS DOUBLE))) AS decimal(10,3))&#010;FROM (VALUES (7000000000005), (7000000000007)) v(x)\r\n```",
+        "createdAt" : "2019-07-11T20:48:38Z",
+        "updatedAt" : "2019-07-11T20:48:38Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9a7905b1-b07d-421d-b937-dea115eaa911",
+        "parentId" : "9daf746a-6e3d-49bb-be25-c5e95c01c72b",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "In `master` branch, all maven Jenkins fail with this. Only SBT Jenkins are running.",
+        "createdAt" : "2019-07-11T21:51:35Z",
+        "updatedAt" : "2019-07-11T21:51:35Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "747a95ec-56cf-4438-ab5d-398dd8f3ffa3",
+        "parentId" : "9daf746a-6e3d-49bb-be25-c5e95c01c72b",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "BTW, in SBT Jenkins result, we can distinguish the test file name. This is a separate issue.\r\n- https://amplab.cs.berkeley.edu/jenkins/view/Spark%20QA%20Test%20(Dashboard)/job/spark-master-test-sbt-hadoop-3.2/87/testReport/org.apache.spark.sql/SQLQueryTestSuite/",
+        "createdAt" : "2019-07-11T21:52:57Z",
+        "updatedAt" : "2019-07-11T21:52:57Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a40b6cb5-7ec8-4da1-9943-1faa1e75b919",
+        "parentId" : "9daf746a-6e3d-49bb-be25-c5e95c01c72b",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Thanks @dongjoon-hyun. Let me take a look and make a fix soon.",
+        "createdAt" : "2019-07-12T00:01:29Z",
+        "updatedAt" : "2019-07-12T00:01:29Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9010fcdc-689f-4a05-bace-cc6e7e189450",
+        "parentId" : "9daf746a-6e3d-49bb-be25-c5e95c01c72b",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Thank you!",
+        "createdAt" : "2019-07-12T00:24:35Z",
+        "updatedAt" : "2019-07-12T00:24:35Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "89c3ce30-7f33-472e-a41c-8fbc141ce5c6",
+        "parentId" : "9daf746a-6e3d-49bb-be25-c5e95c01c72b",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "It passes with Maven in my local:\r\n\r\n```\r\n- udf/pgSQL/udf-aggregates_part1.sql - Scala UDF\r\n- udf/pgSQL/udf-aggregates_part1.sql - Regular Python UDF\r\n- udf/pgSQL/udf-aggregates_part1.sql - Scalar Pandas UDF\r\n```\r\n\r\nI believe the problem seems similarly the Python or OS installed in the machine.\r\n\r\nLooks here's what's going on:\r\n\r\n```\r\nscala> Seq(\"7000000000004.999\", \"7000000000006.999\").toDF().selectExpr(\"CAST(avg(value) AS long)\").show()\r\n+--------------------------+\r\n|CAST(avg(value) AS BIGINT)|\r\n+--------------------------+\r\n|             7000000000005|\r\n+--------------------------+\r\n```\r\n\r\nLet me try to find a better way to work around it ... ",
+        "createdAt" : "2019-07-12T00:40:52Z",
+        "updatedAt" : "2019-07-12T01:58:41Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e37a3d3e-cb7c-4dfe-bd7e-c5897ea5ddfb",
+        "parentId" : "9daf746a-6e3d-49bb-be25-c5e95c01c72b",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Can we ignore this test first because this is consistent and permanent in Jenkins Maven? This will hide another PR's bugs.\r\n\r\nI mean this line of this file.",
+        "createdAt" : "2019-07-12T00:45:59Z",
+        "updatedAt" : "2019-07-12T00:46:22Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "17efe632-ae8c-4327-8872-cf76551185f6",
+        "parentId" : "9daf746a-6e3d-49bb-be25-c5e95c01c72b",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Can you give me a couple of hours? I will disable this line if I can't make it .. ",
+        "createdAt" : "2019-07-12T01:21:02Z",
+        "updatedAt" : "2019-07-12T01:21:02Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "21870c64e6fccf44844770867f14e966cba9512e",
+    "line" : 214,
+    "diffHunk" : "@@ -1,1 +277,281 @@struct<CAST(avg(CAST(udf(cast(x as double)) AS DOUBLE)) AS BIGINT):bigint,CAST(udf(var_pop(cast(x as double))) AS DECIMAL(10,3)):decimal(10,3)>\n-- !query 33 output\n7000000000006\t1\n\n"
+  }
+]

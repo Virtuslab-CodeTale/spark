@@ -4409,5 +4409,126 @@
     "commit" : "1abcc9d8a228fbceaabb24de9deb0c92c6298087",
     "line" : 2,
     "diffHunk" : "@@ -1,1 +2453,2457 @@\n      } else {\n        // always add an UpCast. it will be removed in the optimizer if it is unnecessary.\n        Some(Alias(\n          Cast(queryExpr, tableAttr.dataType), tableAttr.name"
+  },
+  {
+    "id" : "d5f929a9-3808-477c-8d61-a3373d46423f",
+    "prId" : 25115,
+    "prUrl" : "https://github.com/apache/spark/pull/25115#pullrequestreview-273867096",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6fcbdb78-a9b7-41ec-8f67-23619f8f777d",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "isn't `DeleteFromTable` a unary node?",
+        "createdAt" : "2019-08-08T10:38:20Z",
+        "updatedAt" : "2019-08-14T01:57:20Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8476348f-2fc8-46f1-8625-20e5c732af0e",
+        "parentId" : "6fcbdb78-a9b7-41ec-8f67-23619f8f777d",
+        "authorId" : "8afcf008-6988-44a5-92fa-2bef54bb4058",
+        "body" : "Thank you @cloud-fan. Currently it is a `Command`. Maybe your suggestion is right, since `Command` is usually for DDLs and we need not `DeleteFromTable` be executed eagerly. Will update it.",
+        "createdAt" : "2019-08-08T11:20:21Z",
+        "updatedAt" : "2019-08-14T01:57:20Z",
+        "lastEditedBy" : "8afcf008-6988-44a5-92fa-2bef54bb4058",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "58fef9a5-62fa-4635-bc7e-2266253d13d4",
+        "parentId" : "6fcbdb78-a9b7-41ec-8f67-23619f8f777d",
+        "authorId" : "8afcf008-6988-44a5-92fa-2bef54bb4058",
+        "body" : "However, some similar operators like `OverwriteByExpression` is actually a `Command`. Should we consider this seriously?",
+        "createdAt" : "2019-08-08T11:27:13Z",
+        "updatedAt" : "2019-08-14T01:57:20Z",
+        "lastEditedBy" : "8afcf008-6988-44a5-92fa-2bef54bb4058",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "99b413ff-c3df-4fba-b16b-39536caf01f7",
+        "parentId" : "6fcbdb78-a9b7-41ec-8f67-23619f8f777d",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "`Command` is a trait, `DeleteFromTable` can be both `UnaryNode` and `Command`.",
+        "createdAt" : "2019-08-08T12:15:04Z",
+        "updatedAt" : "2019-08-14T01:57:20Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e08a4ac0-be02-4cb6-87c0-273be414f068",
+        "parentId" : "6fcbdb78-a9b7-41ec-8f67-23619f8f777d",
+        "authorId" : "8afcf008-6988-44a5-92fa-2bef54bb4058",
+        "body" : "`UnaryNode` has a final `children` while there's a default override version of `children` in `Command`, which is a problem. A `Command` is designed for operators that has side-effects, so they can be executed eagerly. In this sense, I'd prefer to keep `DeleteFromTable` a `Command`. What do you think?",
+        "createdAt" : "2019-08-09T08:12:49Z",
+        "updatedAt" : "2019-08-14T01:57:20Z",
+        "lastEditedBy" : "8afcf008-6988-44a5-92fa-2bef54bb4058",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3547cf89-dbbf-4e7d-a958-5932527be041",
+        "parentId" : "6fcbdb78-a9b7-41ec-8f67-23619f8f777d",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "makes sense",
+        "createdAt" : "2019-08-09T10:36:27Z",
+        "updatedAt" : "2019-08-14T01:57:20Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e48e6ed4-6d19-4210-a373-4772b060ab29",
+        "parentId" : "6fcbdb78-a9b7-41ec-8f67-23619f8f777d",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "I agree that `DeleteFromTable` should be a command that is executed eagerly because it has side-effects.",
+        "createdAt" : "2019-08-12T18:21:17Z",
+        "updatedAt" : "2019-08-14T01:57:20Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "bbf515666495cbf5f12731b3cdab4a23960f3d77",
+    "line" : 4,
+    "diffHunk" : "@@ -1,1 +1762,1766 @@      case q: UnaryNode if q.childrenResolved =>\n        resolveSubQueries(q, q.children)\n      case d: DeleteFromTable if d.childrenResolved =>\n        resolveSubQueries(d, d.children)\n    }"
+  },
+  {
+    "id" : "947d296b-7cf8-47a1-a16e-b06396993b75",
+    "prId" : 25104,
+    "prUrl" : "https://github.com/apache/spark/pull/25104#pullrequestreview-284019017",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5fdbdd89-86b3-47e2-8601-03fa6d546856",
+        "parentId" : null,
+        "authorId" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "body" : "I don't link this too much. Do we need to change too much if we need to remove this constructor? It's bad to inject test related stuff in production code",
+        "createdAt" : "2019-09-04T18:40:40Z",
+        "updatedAt" : "2019-09-09T04:38:40Z",
+        "lastEditedBy" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1ff28ce7-00c3-4ff0-b774-9bdc5fdc6e36",
+        "parentId" : "5fdbdd89-86b3-47e2-8601-03fa6d546856",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "There are more than 10 test suites using this constructor. BTW this is an existing constructor, this PR just add a comment.",
+        "createdAt" : "2019-09-05T05:02:47Z",
+        "updatedAt" : "2019-09-09T04:38:40Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "05db8602d0ef8c98f0f4d70ef8a4d67bb3f73692",
+    "line" : 59,
+    "diffHunk" : "@@ -1,1 +127,131 @@  extends RuleExecutor[LogicalPlan] with CheckAnalysis with LookupCatalog {\n\n  // Only for tests.\n  def this(catalog: SessionCatalog, conf: SQLConf) = {\n    this(catalog, FakeV2SessionCatalog, conf, conf.optimizerMaxIterations)"
   }
 ]

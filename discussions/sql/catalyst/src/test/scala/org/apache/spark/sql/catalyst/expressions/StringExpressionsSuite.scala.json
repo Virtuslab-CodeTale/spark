@@ -141,5 +141,93 @@
     "commit" : "afa19a89d786e4fa4158487ab1748ba11a5c69dc",
     "line" : 89,
     "diffHunk" : "@@ -1,1 +919,923 @@    checkEvaluation(ToNumber(Literal(\"42nd\"), Literal(\"99th\")), \"42\")\n\n    ToNumber(Literal(\"454.3.2\"), Literal(\"999D9D9\")).checkInputDataTypes() match {\n      case TypeCheckResult.TypeCheckFailure(msg) =>\n        assert(msg.contains(\"Multiple decimal points in\"))"
+  },
+  {
+    "id" : "f0e01485-913b-4b3b-a871-d82995385e33",
+    "prId" : 25172,
+    "prUrl" : "https://github.com/apache/spark/pull/25172#pullrequestreview-268759724",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "dc6cc60c-a784-468c-bac4-9c921cf64499",
+        "parentId" : null,
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "Nit: Also test corner case, e.g. position is negative, or position is larger than 9",
+        "createdAt" : "2019-07-22T15:33:25Z",
+        "updatedAt" : "2019-09-09T11:18:09Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3ba84e43-d110-4440-99b2-487c74e690c9",
+        "parentId" : "dc6cc60c-a784-468c-bac4-9c921cf64499",
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "Thanks for your reminder. but the negative is illegal in `Postgresql`.\r\n```\r\norg.postgresql.util.PSQLException: ERROR: negative substring length not allowed\r\n  在位置：SQL function \"overlay\" statement 1\r\n```\r\nOracle's description:\r\n`If pos is specified, it must be greater than or equal to 1.`\r\nDB2's description:\r\n`If you specify n, it must be a positive whole number.`\r\nVertical's description:\r\n`(INTEGER) is the character or octet position (counting from one) at which to begin the overlay`\r\nI will check position is larger than 9.\r\nPostgresql's behavior is:\r\n`select OVERLAY('abcdef' PLACING '45' FROM 7);      // abcdef45`\r\nOracle and DB2 expanded the Overlay function, but not follow ANSI standard.",
+        "createdAt" : "2019-07-23T07:07:13Z",
+        "updatedAt" : "2019-09-09T11:18:09Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4498ea12-fcdd-4267-ab75-cbc431057c7b",
+        "parentId" : "dc6cc60c-a784-468c-bac4-9c921cf64499",
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "I will add tests about your suggestion in `StringExpressionsSuite`.",
+        "createdAt" : "2019-07-23T08:04:08Z",
+        "updatedAt" : "2019-09-09T11:18:09Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2f2e7efe-3c7a-4349-9955-d28cd4274585",
+        "parentId" : "dc6cc60c-a784-468c-bac4-9c921cf64499",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "I think Spark basically avoids runtime exceptions. Could you follow the behaivour for string cases?\r\n```\r\nscala> sql(\"\"\"select overlay(\"aaaaaa\", \"bb\", 0)\"\"\").show\r\n+--------------------------+                                                    \r\n|overlay(aaaaaa, bb, 0, -1)|\r\n+--------------------------+\r\n|                   bbaaaaa|\r\n+--------------------------+\r\n\r\n\r\nscala> sql(\"\"\"select overlay(\"aaaaaa\", \"bb\", -10)\"\"\").show\r\n+----------------------------+\r\n|overlay(aaaaaa, bb, -10, -1)|\r\n+----------------------------+\r\n|                    bbaaaaaa|\r\n+----------------------------+\r\n```",
+        "createdAt" : "2019-07-24T01:57:58Z",
+        "updatedAt" : "2019-09-09T11:18:09Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1001b95f-a82b-46d0-b285-f90adccec040",
+        "parentId" : "dc6cc60c-a784-468c-bac4-9c921cf64499",
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "I have added tests for negative and zero. I think this behavior is very different from ANSI SQL and other databases.",
+        "createdAt" : "2019-07-24T04:18:11Z",
+        "updatedAt" : "2019-09-09T11:18:09Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "30b9d8b1-3b17-4b14-9c86-40e9e89f3535",
+        "parentId" : "dc6cc60c-a784-468c-bac4-9c921cf64499",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "In this pr, plz follow the current behaivour of overlay(string, string). If you wanna to change this behaivour, you can make an another pr for that.",
+        "createdAt" : "2019-07-30T05:21:02Z",
+        "updatedAt" : "2019-09-09T11:18:09Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4657e0ca-8388-44fd-8096-461c577e1a9e",
+        "parentId" : "dc6cc60c-a784-468c-bac4-9c921cf64499",
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "@maropu OK. I will follow the current behaivour of overlay(string, string).",
+        "createdAt" : "2019-07-31T02:40:35Z",
+        "updatedAt" : "2019-09-09T11:18:09Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6201a3725036ee860f0d5c6d8b3053b79dbb1a62",
+    "line" : 41,
+    "diffHunk" : "@@ -1,1 +472,476 @@    val input = Literal(Array[Byte](1, 2, 3, 4, 5, 6, 7, 8, 9))\n    checkEvaluation(new Overlay(input, Literal(Array[Byte](-1)),\n      Literal.create(6, IntegerType)), Array[Byte](1, 2, 3, 4, 5, -1, 7, 8, 9))\n    checkEvaluation(new Overlay(input, Literal(Array[Byte](-1, -1, -1, -1)),\n      Literal.create(7, IntegerType)), Array[Byte](1, 2, 3, 4, 5, 6, -1, -1, -1, -1))"
   }
 ]

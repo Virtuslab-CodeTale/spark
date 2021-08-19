@@ -163,5 +163,49 @@
     "commit" : "31436a81f9761b26605eee99ca634e4231ac6191",
     "line" : 10,
     "diffHunk" : "@@ -1,1 +88,92 @@      val distinctNumPreShufflePartitions =\n        validMetrics.map(stats => stats.bytesByPartitionId.length).distinct\n      if (validMetrics.nonEmpty && distinctNumPreShufflePartitions.length == 1) {\n        val partitionStartIndices = estimatePartitionStartIndices(validMetrics.toArray)\n        // This transformation adds new nodes, so we must use `transformUp` here."
+  },
+  {
+    "id" : "d2f9c50f-039b-41e5-9163-718b8104c570",
+    "prId" : 25121,
+    "prUrl" : "https://github.com/apache/spark/pull/25121#pullrequestreview-275998965",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "595ba988-359d-4b75-8d1a-3dae10861e06",
+        "parentId" : null,
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "@carsonwang is it safe to remove `distinctNumPreShufflePartitions.length == 1` from here? I think @hvanhovell's comment (https://github.com/apache/spark/pull/24978/files#r299396944) still applies here about `Union`. I run into an issue with my plan:\r\n```\r\nUnion\r\n:- Project [id_key#236, true AS row_type#249, link#232]\r\n:  +- Filter (isnotnull(min(id_key) OVER (ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)#246) AND (id_key#236 = min(id_key) OVER (ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)#246))\r\n:     +- Window [min(id_key#236) windowspecdefinition(specifiedwindowframe(RowFrame, unboundedpreceding$(), unboundedfollowing$())) AS min(id_key) OVER (ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)#246]\r\n:        +- ShuffleQueryStage 5\r\n:           +- Exchange SinglePartition, true\r\n:              +- *(7) Project [id_key#236, link#232]\r\n:                 +- *(7) SortMergeJoin [link#237], [link#232], Inner, (id_key#236 > id_key#230)\r\n:                    :- *(5) Sort [link#237 ASC NULLS FIRST], false, 0\r\n:                    :  +- CoalescedShuffleReader [0]\r\n:                    :     +- ShuffleQueryStage 0\r\n:                    :        +- Exchange hashpartitioning(link#237, 5), true\r\n:                    :           +- *(1) Project [col1#224 AS id_key#236, col2#225 AS link#237]\r\n:                    :              +- *(1) LocalTableScan [col1#224, col2#225]\r\n:                    +- *(6) Sort [link#232 ASC NULLS FIRST], false, 0\r\n:                       +- CoalescedShuffleReader [0]\r\n:                          +- ShuffleQueryStage 1\r\n:                             +- Exchange hashpartitioning(link#232, 5), true\r\n:                                +- *(2) Project [id_key#230, link#232]\r\n:                                   +- *(2) Filter (isnotnull(link#232) AND isnotnull(id_key#230))\r\n:                                      +- *(2) Scan RecursiveReference iter[id_key#230,row_type#231,link#232]\r\n+- Project [id_key#240, new AS new#256, link#241]\r\n   +- SortMergeJoin [id_key#238], [id_key#240], Inner\r\n      :- Sort [id_key#238 ASC NULLS FIRST], false, 0\r\n      :  +- ShuffleQueryStage 4\r\n      :     +- Exchange hashpartitioning(id_key#238, 5), true\r\n      :        +- *(4) Project [id_key#238]\r\n      :           +- *(4) Filter (isnotnull(min(id_key) OVER (ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)#247) AND (id_key#238 = min(id_key) OVER (ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)#247))\r\n      :              +- Window [min(id_key#238) windowspecdefinition(specifiedwindowframe(RowFrame, unboundedpreceding$(), unboundedfollowing$())) AS min(id_key) OVER (ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)#247]\r\n      :                 +- CoalescedShuffleReader [0]\r\n      :                    +- ShuffleQueryStage 2\r\n      :                       +- Exchange SinglePartition, true\r\n      :                          +- LocalTableScan <empty>, [id_key#238]\r\n      +- Sort [id_key#240 ASC NULLS FIRST], false, 0\r\n         +- ShuffleQueryStage 3\r\n            +- Exchange hashpartitioning(id_key#240, 5), true\r\n               +- *(3) Project [col1#228 AS id_key#240, col2#229 AS link#241]\r\n                  +- *(3) LocalTableScan [col1#228, col2#229]\r\n```\r\nwhere `ShuffleQueryStage 5` conflicts with `ShuffleQueryStage 4` and `ShuffleQueryStage 3`.",
+        "createdAt" : "2019-08-13T14:58:27Z",
+        "updatedAt" : "2019-08-13T14:58:37Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fb6623e0-dbae-4807-a013-1e582473f4eb",
+        "parentId" : "595ba988-359d-4b75-8d1a-3dae10861e06",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "ah `SinglePartition` is an exception. So it's still possible to hit `distinctNumPreShufflePartitions.length > 1` here. Let's add back this check @carsonwang @maryannxue \r\n\r\nthanks for reporting it!",
+        "createdAt" : "2019-08-14T03:22:19Z",
+        "updatedAt" : "2019-08-14T03:22:19Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ee67bb51-0bee-44c5-aabd-4391fc065932",
+        "parentId" : "595ba988-359d-4b75-8d1a-3dae10861e06",
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "I've opened a small PR here: https://github.com/apache/spark/pull/25479 as a follow-up, please let me know if this requires a new ticket.",
+        "createdAt" : "2019-08-16T14:57:35Z",
+        "updatedAt" : "2019-08-16T14:57:35Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ba1bda815fe4219961222ed9c872f2810cfab1d5",
+    "line" : 33,
+    "diffHunk" : "@@ -1,1 +83,87 @@      // we should skip it when calculating the `partitionStartIndices`.\n      val validMetrics = shuffleMetrics.filter(_ != null)\n      if (validMetrics.nonEmpty) {\n        val partitionStartIndices = estimatePartitionStartIndices(validMetrics.toArray)\n        // This transformation adds new nodes, so we must use `transformUp` here."
   }
 ]

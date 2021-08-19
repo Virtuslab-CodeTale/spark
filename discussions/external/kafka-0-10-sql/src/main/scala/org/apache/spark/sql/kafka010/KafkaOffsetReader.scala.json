@@ -152,5 +152,214 @@
     "commit" : "70454134af555d934cd78ee48acb54736cf24a77",
     "line" : 103,
     "diffHunk" : "@@ -1,1 +224,228 @@    val newParams: Map[TopicPartition, Long] = paramsGroupedByTopic.map {\n      case (topic, tpToOffset) =>\n        if (tpToOffset.keySet.map(_.partition()).contains(GLOBAL_PARTITION_NUM)) {\n          // global timestamp has been set for all partitions in topic\n"
+  },
+  {
+    "id" : "863354d7-878b-4c03-b4a6-e827bf11390e",
+    "prId" : 25135,
+    "prUrl" : "https://github.com/apache/spark/pull/25135#pullrequestreview-261749335",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1fce90f6-d985-471b-a0fe-187c597d6d37",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Better to put some sleep in a loop if poll(0) doesn't employ any sleep. If the duration is somewhat big value, exponential sleep would be ideal.",
+        "createdAt" : "2019-07-12T21:23:51Z",
+        "updatedAt" : "2019-08-06T12:59:10Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ae3ff2c1-6fc6-4a3e-8349-3428934a0269",
+        "parentId" : "1fce90f6-d985-471b-a0fe-187c597d6d37",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "+1 on having sleep not to be too aggressive, will check whether exponential sleep is a custom in Spark.",
+        "createdAt" : "2019-07-15T09:14:05Z",
+        "updatedAt" : "2019-08-06T12:59:10Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "38c4a65c-01d9-4f91-b84d-9c2c2e2cc250",
+        "parentId" : "1fce90f6-d985-471b-a0fe-187c597d6d37",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "I've added sleep in the `poll` as timeout:\r\n* If `poll` succeeds it returns immediately\r\n* If no assignment the it waits until the specified timeout.",
+        "createdAt" : "2019-07-15T10:57:44Z",
+        "updatedAt" : "2019-08-06T12:59:10Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "82f1520246f9a3304288f7f873967635b3fbe5ee",
+    "line" : 117,
+    "diffHunk" : "@@ -1,1 +422,426 @@    var partitions = consumer.assignment()\n    val startTimeMs = System.currentTimeMillis()\n    while (partitions.isEmpty && System.currentTimeMillis() - startTimeMs < pollTimeoutMs) {\n      // Poll to get the latest assigned partitions\n      consumer.poll(jt.Duration.ofMillis(100))"
+  },
+  {
+    "id" : "e1caeae2-449e-4eed-8cd8-141a968d4ba2",
+    "prId" : 25135,
+    "prUrl" : "https://github.com/apache/spark/pull/25135#pullrequestreview-262296301",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d1e58c11-5a6a-462f-b679-29eea310d257",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "I'm sorry for back and forth on this, but it would be better if we can add timeout only when it's retrying. So try once with no delay, and retry with some timeouts (effectively sleep) only if it fails. \r\n\r\nThis would avoid introducing additional timeout when the metadata is available, but still adding some delay between retrying. WDYT?",
+        "createdAt" : "2019-07-16T07:08:05Z",
+        "updatedAt" : "2019-08-06T12:59:10Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bc442eb0-c821-465e-bb65-838ed317ee5a",
+        "parentId" : "d1e58c11-5a6a-462f-b679-29eea310d257",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "If assignment is available and the consumer is able to poll then `consumer.poll(jt.Duration.ofMillis(100))` call returns immediately (not mentioning the time required to poll) so not yet understand why would it be better.\r\n\r\nBased on your suggestion I've concluded the following implementation (correct me if I misunderstood):\r\n```\r\nvar firstFetch = false\r\n...\r\nif (!firstFetch) {\r\n  consumer.poll(jt.Duration.Zero)\r\n  firstFetch = true\r\n} else {\r\n  consumer.poll(jt.Duration.ofMillis(100))\r\n}\r\n...\r\n```\r\nDoes it worth such complication to spare 100ms?\r\n",
+        "createdAt" : "2019-07-16T08:33:17Z",
+        "updatedAt" : "2019-08-06T12:59:10Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a0f9a8a5-5d9c-4f03-996a-b6fa9bae255a",
+        "parentId" : "d1e58c11-5a6a-462f-b679-29eea310d257",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "No you just need to start the method with below:\r\n\r\n```\r\nconsumer.poll(jt.Duration.Zero)\r\nvar partitions = consumer.assignment()\r\n```\r\n\r\ninstead of initializing partitions as empty set.\r\n\r\nIf `consumer.poll(0)` works and partitions are filled with assignment, loop will not be executed. Does it work for you?",
+        "createdAt" : "2019-07-16T08:46:12Z",
+        "updatedAt" : "2019-08-06T12:59:10Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4f5ea5a9-d2e7-4ec0-b7b5-e4585fe222f0",
+        "parentId" : "d1e58c11-5a6a-462f-b679-29eea310d257",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "Aha, I see your point. What you're suggesting is correct.\r\nOn the other hand still don't understand the point. If assignment is available `consumer.poll(jt.Duration.Zero)` should return the same speed just like `consumer.poll(jt.Duration.ofMillis(100))`.\r\n",
+        "createdAt" : "2019-07-16T09:05:36Z",
+        "updatedAt" : "2019-08-06T12:59:10Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cb948a76-a3b2-445d-b87d-2b7ad379ce3b",
+        "parentId" : "d1e58c11-5a6a-462f-b679-29eea310d257",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Please correct me if I'm missing here. (Not an expert of Kafka, may miss some details.) \r\n\r\nIt may return after 100ms if there's no record to consume even metadata is ready. Here we only need metadata but once we call poll, the request is bound to the records. \r\n\r\nTo be clear, we would like to call `poll(0)` with explicitly putting sleep (to avoid coupling with records), but it would be also OK to let `consumer.poll` wait instead. Explicit sleep may sleep more accurately if there's a case record is ready to poll but metadata is not ready (I'm not sure this can be possible).",
+        "createdAt" : "2019-07-16T09:13:36Z",
+        "updatedAt" : "2019-08-06T12:59:10Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b8075d86-2196-43f2-8b72-1012c9c48b37",
+        "parentId" : "d1e58c11-5a6a-462f-b679-29eea310d257",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "I see the point, if there is no data in the queue which happens rarely then it waits an unwanted 100ms. Maybe this can be useful to speed up unit tests so changed to `Thread.sleep`.\r\n",
+        "createdAt" : "2019-07-16T09:36:07Z",
+        "updatedAt" : "2019-08-06T12:59:10Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "82f1520246f9a3304288f7f873967635b3fbe5ee",
+    "line" : 119,
+    "diffHunk" : "@@ -1,1 +424,428 @@    while (partitions.isEmpty && System.currentTimeMillis() - startTimeMs < pollTimeoutMs) {\n      // Poll to get the latest assigned partitions\n      consumer.poll(jt.Duration.ofMillis(100))\n      partitions = consumer.assignment()\n    }"
+  },
+  {
+    "id" : "f8f9c778-5109-440c-adde-66f725427693",
+    "prId" : 25135,
+    "prUrl" : "https://github.com/apache/spark/pull/25135#pullrequestreview-271791228",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "92655388-72f7-4f3a-a4ee-f3b6b699503f",
+        "parentId" : null,
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "For this kind of logic it's better to use `System.nanoTime()` which is monotonic. Also you can do a little less computation this way:\r\n\r\n```\r\nval deadline = System.nanoTime() + someTimeout;\r\nwhile (... && System.nanoTime() < deadline) {\r\n\r\n}\r\n```",
+        "createdAt" : "2019-08-06T22:22:42Z",
+        "updatedAt" : "2019-08-06T22:22:42Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2028e8a6-5cae-43b0-b851-14cfc02b3b77",
+        "parentId" : "92655388-72f7-4f3a-a4ee-f3b6b699503f",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "Good point, since @zsxwing suggested new API usage I would wait here and check the Kafka side.",
+        "createdAt" : "2019-08-07T08:05:01Z",
+        "updatedAt" : "2019-08-07T08:05:01Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "82f1520246f9a3304288f7f873967635b3fbe5ee",
+    "line" : 116,
+    "diffHunk" : "@@ -1,1 +421,425 @@    consumer.poll(jt.Duration.ZERO)\n    var partitions = consumer.assignment()\n    val startTimeMs = System.currentTimeMillis()\n    while (partitions.isEmpty && System.currentTimeMillis() - startTimeMs < pollTimeoutMs) {\n      // Poll to get the latest assigned partitions"
+  },
+  {
+    "id" : "64dd7f7f-db67-420b-968d-89b714278a82",
+    "prId" : 25135,
+    "prUrl" : "https://github.com/apache/spark/pull/25135#pullrequestreview-271797155",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "69eaef8d-0994-4b0a-a498-752cc669fb14",
+        "parentId" : null,
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "So using this new API will pull data to driver. Right? The previous `poll(0)` is basically a hack to avoid fetching data to driver. Maybe we should ask the Kafka community to add a new API to pull metadata only.",
+        "createdAt" : "2019-08-06T22:40:59Z",
+        "updatedAt" : "2019-08-06T22:41:11Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9e288e04-37b5-4bd0-9eeb-9bd79ea84b3b",
+        "parentId" : "69eaef8d-0994-4b0a-a498-752cc669fb14",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Good point. While Kafka doc says the behavior of such hack has been indeterministic and Kafka never support it officially, we expect such behavior in any way.\r\n\r\nI've initiated thread to ask about viable alternatives of `poll(0)` and possibility of adding public API to update metadata only.\r\nhttps://lists.apache.org/thread.html/017cf631ef981ab1b494b1249be5c11d7edfe5f4867770a18188ebdc@%3Cdev.kafka.apache.org%3E",
+        "createdAt" : "2019-08-07T07:33:06Z",
+        "updatedAt" : "2019-08-07T07:33:59Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c2d8ddf7-a0a6-40bb-9c73-3dd4b0460475",
+        "parentId" : "69eaef8d-0994-4b0a-a498-752cc669fb14",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "I'm aware of that but since the doc says:\r\n> there is no guarantee that poll(0) won't return records the first time it's called\r\n\r\nI've considered `poll(0)` usage as design decision and no problem if small amount of data comes. Since you say it is not guaranteed but was working like that all the time the situation is different.\r\n\r\n@HeartSaVioR thanks for initiating the discussion and let's see where it goes.\r\n",
+        "createdAt" : "2019-08-07T08:00:53Z",
+        "updatedAt" : "2019-08-07T08:00:54Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c270a297-d0f1-4840-85eb-edc849ce23bb",
+        "parentId" : "69eaef8d-0994-4b0a-a498-752cc669fb14",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Yeah you're right that's also true as well. One thing slightly different between two is, we are providing small amount of timeout (not 0) and we don't know how much amount of remaining timeout would be used as polling records (instead of polling metadata). It would be unlikely to be exactly 0 as it would be timed out if it goes below 0.",
+        "createdAt" : "2019-08-07T08:16:30Z",
+        "updatedAt" : "2019-08-07T08:16:47Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "82f1520246f9a3304288f7f873967635b3fbe5ee",
+    "line" : 119,
+    "diffHunk" : "@@ -1,1 +424,428 @@    while (partitions.isEmpty && System.currentTimeMillis() - startTimeMs < pollTimeoutMs) {\n      // Poll to get the latest assigned partitions\n      consumer.poll(jt.Duration.ofMillis(100))\n      partitions = consumer.assignment()\n    }"
   }
 ]

@@ -1,0 +1,189 @@
+[
+  {
+    "id" : "42496d7c-2f11-46a8-85bc-ff93f4bdc31c",
+    "prId" : 25136,
+    "prUrl" : "https://github.com/apache/spark/pull/25136#pullrequestreview-273452846",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "00cbc6cb-9d8d-49f9-89e1-48bd6ce87883",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Any test for the overflow case?",
+        "createdAt" : "2019-08-10T08:37:04Z",
+        "updatedAt" : "2019-08-20T12:52:29Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1d1928a3-bdc3-4cc9-9a37-6ca9e8895f9a",
+        "parentId" : "00cbc6cb-9d8d-49f9-89e1-48bd6ce87883",
+        "authorId" : "24e1dd39-ae3f-4bbb-a391-f60afb62d075",
+        "body" : "it is very hard to cause an overflow, since the scale is 0, so the overflow can happen only in the `promotePrecision` phase, in those casts... maybe we can get rid of this `CheckOverflow`, although I think for safety it is good to have it. WDYT?",
+        "createdAt" : "2019-08-10T10:46:09Z",
+        "updatedAt" : "2019-08-20T12:52:29Z",
+        "lastEditedBy" : "24e1dd39-ae3f-4bbb-a391-f60afb62d075",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5420f8bd-81da-4f33-bf79-e3be4d48d905",
+        "parentId" : "00cbc6cb-9d8d-49f9-89e1-48bd6ce87883",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "For example `select div(-9223372036854775808, -1)` should cause overflow with `spark.sql.legacy.integralDivide.returnBigint=true`? In case of `spark.sql.legacy.integralDivide.returnBigint=false` and the numeric input, IIUC we have no chance to hit overflow. Actually, I think we should adjust scale/precision without overflow. \r\n\r\nBut, I understand your concern since `Divide` already uses `CheckOverflow` for nuemric input. cc: @gatorsmile @cloud-fan @dongjoon-hyun \r\n",
+        "createdAt" : "2019-08-10T13:19:15Z",
+        "updatedAt" : "2019-08-20T12:52:29Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "553c9f56-daa3-478e-a8ba-d6ea4215047c",
+        "parentId" : "00cbc6cb-9d8d-49f9-89e1-48bd6ce87883",
+        "authorId" : "24e1dd39-ae3f-4bbb-a391-f60afb62d075",
+        "body" : "when `spark.sql.legacy.integralDivide.returnBigint=true` anyway, the overflow should be checked by the `toLong` method, ie. the \"cast\" to long, which is yet to be handled in a different PR.\r\n\r\nThe `CheckOverflow` is still needed to return the proper datatype here. Eg, if the operands are `decimal(35, 0)` and `decimal(5, 3)`, they are promoted to `decimal(35, 3)`, but the correct return type should be `decimal(38,0)` which prevents any overflow. So despite no exception or null can happen, the `CheckOverflow` is still needed. I added a comment for this. Thanks.",
+        "createdAt" : "2019-08-10T13:28:03Z",
+        "updatedAt" : "2019-08-20T12:52:29Z",
+        "lastEditedBy" : "24e1dd39-ae3f-4bbb-a391-f60afb62d075",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "eb904e16-00bf-4db8-afbe-440e4dddac2c",
+        "parentId" : "00cbc6cb-9d8d-49f9-89e1-48bd6ce87883",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "> when spark.sql.legacy.integralDivide.returnBigint=true anyway, the overflow should be checked by the toLong method, ie. the \"cast\" to long, which is yet to be handled in a different PR.\r\n\r\nYea, it looks ok to me. Thanks for the check!",
+        "createdAt" : "2019-08-10T22:13:38Z",
+        "updatedAt" : "2019-08-20T12:52:29Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "187e6707-72aa-4e5a-986d-83cb33797e6d",
+        "parentId" : "00cbc6cb-9d8d-49f9-89e1-48bd6ce87883",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "> Eg, if the operands are decimal(35, 0) and decimal(5, 3), they are promoted to decimal(35, 3), but the correct return type should be decimal(38,0)\r\n\r\nAh, I see. Thanks for the explanation! I missed that case. But, even if you know that condition, you cannot write a test case for that?",
+        "createdAt" : "2019-08-10T22:47:44Z",
+        "updatedAt" : "2019-08-20T12:52:29Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a04acbf4-077f-4fbe-8295-14ba09f5510b",
+        "parentId" : "00cbc6cb-9d8d-49f9-89e1-48bd6ce87883",
+        "authorId" : "24e1dd39-ae3f-4bbb-a391-f60afb62d075",
+        "body" : "> Yea, it looks ok to me. Thanks for the check!\r\n\r\nthank you for the comment and checking this out.\r\n\r\n> even if you know that condition, you cannot write a test case for that?\r\n\r\nI can, the point is that we are not testing any overflow. But I can add a test like the one mentioned above and I am doing it, thanks.",
+        "createdAt" : "2019-08-11T07:58:31Z",
+        "updatedAt" : "2019-08-20T12:52:29Z",
+        "lastEditedBy" : "24e1dd39-ae3f-4bbb-a391-f60afb62d075",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bf8be318-ebb1-4ed0-b30b-f513319f05f1",
+        "parentId" : "00cbc6cb-9d8d-49f9-89e1-48bd6ce87883",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Many Thanks!!",
+        "createdAt" : "2019-08-11T08:07:10Z",
+        "updatedAt" : "2019-08-20T12:52:29Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dbbed7c1-4525-4726-a4cb-83b6642ce7a6",
+        "parentId" : "00cbc6cb-9d8d-49f9-89e1-48bd6ce87883",
+        "authorId" : "24e1dd39-ae3f-4bbb-a391-f60afb62d075",
+        "body" : "Thank you!",
+        "createdAt" : "2019-08-11T08:10:30Z",
+        "updatedAt" : "2019-08-20T12:52:30Z",
+        "lastEditedBy" : "24e1dd39-ae3f-4bbb-a391-f60afb62d075",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8caf4a95376623bd6f1e3e999c49be69e726852e",
+    "line" : 16,
+    "diffHunk" : "@@ -1,1 +187,191 @@        // overflows in that phase, no overflow can happen, but CheckOverflow is needed in order\n        // to return a decimal with the proper scale and precision\n        CheckOverflow(promotedExpr, DecimalType.bounded(intDig, 0), nullOnOverflow)\n      } else {\n        promotedExpr"
+  },
+  {
+    "id" : "e37b85dc-ff60-4a38-9c46-3f81d5ec6cd0",
+    "prId" : 25136,
+    "prUrl" : "https://github.com/apache/spark/pull/25136#pullrequestreview-276313458",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "17275541-360b-47fc-a682-1b70da5fbd8a",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Looks nice, thanks!",
+        "createdAt" : "2019-08-19T01:53:32Z",
+        "updatedAt" : "2019-08-20T12:52:30Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8caf4a95376623bd6f1e3e999c49be69e726852e",
+    "line" : 15,
+    "diffHunk" : "@@ -1,1 +186,190 @@        // Overflow can happen only in the promote precision of the operands, but if none of them\n        // overflows in that phase, no overflow can happen, but CheckOverflow is needed in order\n        // to return a decimal with the proper scale and precision\n        CheckOverflow(promotedExpr, DecimalType.bounded(intDig, 0), nullOnOverflow)\n      } else {"
+  },
+  {
+    "id" : "db7521fd-eb24-48d7-ad45-bfede114ab15",
+    "prId" : 25136,
+    "prUrl" : "https://github.com/apache/spark/pull/25136#pullrequestreview-277137719",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8cd3264b-023d-443d-ba3e-eab128e40756",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I don't quite get it. How can we avoid overflow for division? e.g. `div(999..., 0.000...1)`, we can't represent the result with decimal.\r\n\r\n",
+        "createdAt" : "2019-08-20T06:32:57Z",
+        "updatedAt" : "2019-08-20T12:52:30Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f1a74a19-9803-4d60-8da4-6906885b67ee",
+        "parentId" : "8cd3264b-023d-443d-ba3e-eab128e40756",
+        "authorId" : "24e1dd39-ae3f-4bbb-a391-f60afb62d075",
+        "body" : "Because in a case like you mentioned, the overflow doesn't happen in the `CheckOverflow`, but it happens in the `PromotePrecision` on the operands. If no overflows happen on the operands, since the result has scale 0, we cannot have more than 38 digits of the integer part and no overflow can happen.\r\n\r\nI mean, either there is an overflow in the promote precision of the operands or no overflow can happen at all.",
+        "createdAt" : "2019-08-20T08:02:40Z",
+        "updatedAt" : "2019-08-20T12:52:30Z",
+        "lastEditedBy" : "24e1dd39-ae3f-4bbb-a391-f60afb62d075",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "19474649-4dca-44c2-85f1-a87f47da6fd8",
+        "parentId" : "8cd3264b-023d-443d-ba3e-eab128e40756",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "do we have a test case for operand overflow?",
+        "createdAt" : "2019-08-20T09:03:51Z",
+        "updatedAt" : "2019-08-20T12:52:30Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3d742a04-c505-4ab5-9a49-dd1e16cddf25",
+        "parentId" : "8cd3264b-023d-443d-ba3e-eab128e40756",
+        "authorId" : "24e1dd39-ae3f-4bbb-a391-f60afb62d075",
+        "body" : "no, I am adding it, thanks.",
+        "createdAt" : "2019-08-20T12:45:48Z",
+        "updatedAt" : "2019-08-20T12:52:30Z",
+        "lastEditedBy" : "24e1dd39-ae3f-4bbb-a391-f60afb62d075",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8caf4a95376623bd6f1e3e999c49be69e726852e",
+    "line" : 12,
+    "diffHunk" : "@@ -1,1 +183,187 @@        // This follows division rule\n        val intDig = p1 - s1 + s2\n        // No precision loss can happen as the result scale is 0.\n        // Overflow can happen only in the promote precision of the operands, but if none of them\n        // overflows in that phase, no overflow can happen, but CheckOverflow is needed in order"
+  }
+]

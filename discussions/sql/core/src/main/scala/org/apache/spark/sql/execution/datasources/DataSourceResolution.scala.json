@@ -262,5 +262,104 @@
     "commit" : "6f2fa4e7b8572a6b9dd243f1253e4962af27d40a",
     "line" : 39,
     "diffHunk" : "@@ -1,1 +202,206 @@              s\"The database name is not valid: ${namespace.quoted}\")\n          }\n          ShowTablesCommand(Some(namespace.quoted), pattern)\n      }\n  }"
+  },
+  {
+    "id" : "4767ef0f-7dc3-408b-9eb7-f35b97020baa",
+    "prId" : 25115,
+    "prUrl" : "https://github.com/apache/spark/pull/25115#pullrequestreview-274653227",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "09c7a42e-2779-4976-be26-8881306726a3",
+        "parentId" : null,
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "Since this always throws `AnalysisException`, I think this case should be removed. Instead, the next case should match and the `V2SessionCatalog` should be used. If the table loaded by the v2 session catalog doesn't support delete, then conversion to physical plan will fail when `asDeletable` is called.\r\n\r\nThen users can still call v2 deletes for formats like `parquet` that have a v2 implementation that will work.\r\n\r\nFYI @brkyvz.",
+        "createdAt" : "2019-08-12T18:25:58Z",
+        "updatedAt" : "2019-08-14T01:57:20Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ac7176d6-d058-41de-83c4-5e6a496c11d9",
+        "parentId" : "09c7a42e-2779-4976-be26-8881306726a3",
+        "authorId" : "8afcf008-6988-44a5-92fa-2bef54bb4058",
+        "body" : "Thank you @rdblue . Removed this case and fallback to `sessionCatalog` when `resolveTables` for `DeleteFromTable`.",
+        "createdAt" : "2019-08-13T06:56:09Z",
+        "updatedAt" : "2019-08-14T01:57:20Z",
+        "lastEditedBy" : "8afcf008-6988-44a5-92fa-2bef54bb4058",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0974e767-e725-4d5d-acb3-c205fb89cc2b",
+        "parentId" : "09c7a42e-2779-4976-be26-8881306726a3",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I think it's worse to move this case from here to https://github.com/apache/spark/pull/25115/files#diff-57b3d87be744b7d79a9beacf8e5e5eb2R657 .\r\n\r\nIf we can't merge these 2 cases into one here, let's keep it as it was.",
+        "createdAt" : "2019-08-13T12:37:23Z",
+        "updatedAt" : "2019-08-14T01:57:20Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d69aeec2-e6c2-4547-b096-60e6a1bf34ca",
+        "parentId" : "09c7a42e-2779-4976-be26-8881306726a3",
+        "authorId" : "8afcf008-6988-44a5-92fa-2bef54bb4058",
+        "body" : "If I understand correctly, one purpose of removing the first case is we can execute delete on `parquet` format via this API (if we implement it later) as @rdblue mentioned. The key point here is we resolve the table use `V2SessionCatalog` **as the fallback catalog**.  The original `resolveTable` doesn't give any fallback-to-sessionCatalog mechanism (if no catalog found, it will fallback to `resolveRelation`). So maybe we can modify `resolveTable` and let it treat `V2SessionCatalog` as a try option:\r\n```\r\ncase u @ UnresolvedRelation(CatalogObjectIdentifier(maybeCatalog, ident)) =>\r\n        maybeCatalog.orElse(sessionCatalog) match {\r\n          case Some(catalogPlugin) =>\r\n            loadTable(catalogPlugin, ident).map(DataSourceV2Relation.create).getOrElse(u)\r\n          case None =>\r\n            u\r\n        }\r\n```\r\n",
+        "createdAt" : "2019-08-13T14:49:08Z",
+        "updatedAt" : "2019-08-14T01:57:20Z",
+        "lastEditedBy" : "8afcf008-6988-44a5-92fa-2bef54bb4058",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d51ac4aa-b0f1-464b-80de-00b350daa076",
+        "parentId" : "09c7a42e-2779-4976-be26-8881306726a3",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "I don't think we need to update `ResolveTables`, though I do see that it would be nice to use `ResolveTables` as the only rule that resolves `UnresolvedRelation` for v2 tables.\r\n\r\nThere is already another rule that loads tables from a catalog, [`ResolveInsertInto`](https://github.com/apache/spark/blob/master/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/analysis/Analyzer.scala#L772).\r\n\r\nI considered updating that rule and moving the table resolution part into `ResolveTables` as well, but I think it is a little cleaner to resolve the table when converting the statement (in `DataSourceResolution`), as @cloud-fan is suggesting.\r\n\r\nOne of the reasons to do this for the insert plans is that those plans don't include the target relation as a child. Instead, those plans have the data to insert as a child node, which means that the unresolved relation won't be visible to the `ResolveTables` rule.\r\n\r\nTaking the same approach in this PR would also make this a little cleaner. If `DeleteFrom` didn't expose the relation as a child, it could be a `UnaryNode` and you wouldn't need to update some of the other rules to explicitly include `DeleteFrom`.",
+        "createdAt" : "2019-08-13T17:10:38Z",
+        "updatedAt" : "2019-08-14T01:57:20Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6ab69cd6-27f9-4374-9879-3a4f1e251114",
+        "parentId" : "09c7a42e-2779-4976-be26-8881306726a3",
+        "authorId" : "8afcf008-6988-44a5-92fa-2bef54bb4058",
+        "body" : "Okay, I rolled back the resolve rules for `DeleteFromTable` as it was as @cloud-fan suggested. For cases that like deleting from formats or `V2SessionCatalog` support, let's open another pr. And another pr for resolve rules is also need because I found other issues related with that. Does this sounds reasonable?",
+        "createdAt" : "2019-08-14T02:05:37Z",
+        "updatedAt" : "2019-08-14T02:05:37Z",
+        "lastEditedBy" : "8afcf008-6988-44a5-92fa-2bef54bb4058",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ff34688e-cc6b-4602-b621-6399a01fbef4",
+        "parentId" : "09c7a42e-2779-4976-be26-8881306726a3",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "We can remove this case after https://github.com/apache/spark/pull/25402, which updates `ResolveTable` to fallback to v2 session catalog.",
+        "createdAt" : "2019-08-14T03:04:06Z",
+        "updatedAt" : "2019-08-14T03:04:06Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a3b6c1a1-112b-4821-a70b-507563e006c4",
+        "parentId" : "09c7a42e-2779-4976-be26-8881306726a3",
+        "authorId" : "8afcf008-6988-44a5-92fa-2bef54bb4058",
+        "body" : "Saw the code in #25402 . I think it's the best choice.",
+        "createdAt" : "2019-08-14T03:29:34Z",
+        "updatedAt" : "2019-08-14T03:29:34Z",
+        "lastEditedBy" : "8afcf008-6988-44a5-92fa-2bef54bb4058",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "bbf515666495cbf5f12731b3cdab4a23960f3d77",
+    "line" : 19,
+    "diffHunk" : "@@ -1,1 +175,179 @@\n    case DeleteFromStatement(AsTableIdentifier(table), tableAlias, condition) =>\n      throw new AnalysisException(\n        s\"Delete from tables is not supported using the legacy / v1 Spark external catalog\" +\n            s\" API. Identifier: $table.\")"
   }
 ]
