@@ -570,5 +570,148 @@
     "commit" : "a2c055715ccf2992e399cef3768b1299c24d9a82",
     "line" : 34,
     "diffHunk" : "@@ -1,1 +275,279 @@        if (allBlocksMigrated && previousAllBlocksMigrated) {\n          logInfo(\"No running tasks, all blocks migrated, stopping.\")\n          exitExecutor(0, \"Finished decommissioning\", notifyDriver = true)\n        }\n        previousAllBlocksMigrated = allBlocksMigrated"
+  },
+  {
+    "id" : "7ed6b029-0751-46ae-b486-998a7df5d573",
+    "prId" : 26440,
+    "prUrl" : "https://github.com/apache/spark/pull/26440#pullrequestreview-315654242",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "724ded9e-65c5-499e-9fa6-df93489c9366",
+        "parentId" : null,
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "is there an application level config to enable decommissioning?  For instance YARN doesn't need this if YARN is telling the driver",
+        "createdAt" : "2019-11-08T21:45:17Z",
+        "updatedAt" : "2020-02-13T23:10:10Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e1ea350a-005d-4343-9444-a777dc54ab2a",
+        "parentId" : "724ded9e-65c5-499e-9fa6-df93489c9366",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "That's a good point. Right now we register SIGPWR regardless, but we only really need it on K8s & stand alone. Do you think there is any harm in having SIGPWR registered in YARN deployments?",
+        "createdAt" : "2019-11-08T22:43:51Z",
+        "updatedAt" : "2020-02-13T23:10:10Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7eb3c353-30db-48da-8483-62dc8951c3d8",
+        "parentId" : "724ded9e-65c5-499e-9fa6-df93489c9366",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "I don't know of any specific issues with having it registered on YARN. I was just thinking if not needed no reason to register just in case something unexpected happened.  If we don't need the app config for anything else then at this point I think we can leave it.\r\n",
+        "createdAt" : "2019-11-11T15:00:13Z",
+        "updatedAt" : "2020-02-13T23:10:10Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ad3ae50e-844f-4172-b734-65dd42714638",
+        "parentId" : "724ded9e-65c5-499e-9fa6-df93489c9366",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "I think the only situations in which SIGPWR would get sent are from our script or system shutdown. Now if this a graceful system shutdown which didn't fall back to an unblockable signal that might be annoying, but I think on servers it should be fine. But lets leave this comment here incase anyone else has a counter point.",
+        "createdAt" : "2019-11-12T16:10:35Z",
+        "updatedAt" : "2020-02-13T23:10:10Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "af550303e0b929dc9f7436bcfb36438ff36b8208",
+    "line" : 22,
+    "diffHunk" : "@@ -1,1 +83,87 @@  override def onStart(): Unit = {\n    logInfo(\"Registering PWR handler.\")\n    SignalUtils.register(\"PWR\")(decommissionSelf)\n\n    logInfo(\"Connecting to driver: \" + driverUrl)"
+  },
+  {
+    "id" : "7c48fa66-6372-4cda-a7bd-5804b7043c9a",
+    "prId" : 26440,
+    "prUrl" : "https://github.com/apache/spark/pull/26440#pullrequestreview-359200340",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "545f4042-71da-4007-8ce0-143911820158",
+        "parentId" : null,
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "I think that instead of doing this here, it should be done in `onStart` where the driver reference is created. That means the decommission message is sent to the driver as soon as possible after the signal arrives, instead of waiting for the driver to try to use the executor for something.\r\n\r\n(That also means this block can go away and you can just keep the log message in `Executor.scala`.)",
+        "createdAt" : "2020-01-06T20:25:16Z",
+        "updatedAt" : "2020-02-13T23:10:10Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0ced7175-da60-4e77-a341-11cff511b73a",
+        "parentId" : "545f4042-71da-4007-8ce0-143911820158",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "So what about when we are scaling down after the driver reference is created?",
+        "createdAt" : "2020-01-09T22:40:55Z",
+        "updatedAt" : "2020-02-13T23:10:10Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d1208498-3669-4952-8c22-383ebea75aec",
+        "parentId" : "545f4042-71da-4007-8ce0-143911820158",
+        "authorId" : "31c8cfa2-9d5f-412b-80d0-c7d204dd8cd1",
+        "body" : "https://docs.google.com/document/d/1xVO1b6KAwdUhjEJBolVPl9C6sLj7oOveErwDSYdT-pE/edit?disco=AAAAI73a0FM\r\nI have marked a comment on this in design doc as well. I think it can be handled by the driver by not allocating tasks to the executor at the first place.\r\nWhen driver is aware of the possible decommission of the node, it can stop allocating tasks to this executor. A small code change in the driver's org.apache.spark.scheduler.cluster.CoarseGrainedSchedulerBackend.DriverEndpoint#makeOffers \r\n```\r\n       // Filter out executors on decommissioning worker\r\n        val activeExecutors = executorDataMap.filterKeys(isExecutorActive)\r\n                                 .filter(x => !isNodeDecommissioning(x._2.executorHost))\r\n```\r\nFor this there can be DecommissionTracker ( in the same lines as BlacklistTracker). The DT is filled when the driver is informed of the decommissioning is informed on the host. As comment on the design I have tried to elaborate the flow of populating DT.\r\n```\r\n  private def isNodeDecommissioning(hostname: String): Boolean = {\r\n    decommissionTracker match {\r\n      case None => return false\r\n      case Some(decommissionTracker) => return decommissionTracker.isNodeDecommissioning(hostname)\r\n    }\r\n  }\r\n}\r\n```\r\n",
+        "createdAt" : "2020-02-10T06:32:55Z",
+        "updatedAt" : "2020-02-13T23:10:10Z",
+        "lastEditedBy" : "31c8cfa2-9d5f-412b-80d0-c7d204dd8cd1",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5ff14b67-11c3-4908-b2d2-953e6f65489a",
+        "parentId" : "545f4042-71da-4007-8ce0-143911820158",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "So @itskals on Kubernetes and in standalone the driver won't know first (and those the only parts implemented in this PR). Certainly, when we go to implement YARN support we could try and short circuit talking to the executor -- however to enable later things like migrations I'd still want to send the message.\r\n\r\nThis could make a difference when we implement YARN support and I've added a note in the design doc so that we don't skip it then.\r\n\r\n",
+        "createdAt" : "2020-02-14T20:27:22Z",
+        "updatedAt" : "2020-02-14T20:27:22Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "af550303e0b929dc9f7436bcfb36438ff36b8208",
+    "line" : 34,
+    "diffHunk" : "@@ -1,1 +168,172 @@          logError(\"Asked to launch a task while decommissioned.\")\n          driver match {\n            case Some(endpoint) =>\n              logInfo(\"Sending DecommissionExecutor to driver.\")\n              endpoint.send(DecommissionExecutor(executorId))"
+  },
+  {
+    "id" : "2158f5d7-2566-455a-9b6f-27e5466303d8",
+    "prId" : 26440,
+    "prUrl" : "https://github.com/apache/spark/pull/26440#pullrequestreview-356205639",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1f55b4e1-1d88-4ec5-a876-47da344d77f3",
+        "parentId" : null,
+        "authorId" : "11f6c849-b5b9-4c65-990c-525cf572b913",
+        "body" : "Instead of decommission Executor, Can we have Entire node decommission\r\neg.  driver.get.askSync[Boolean](AddNodeToDecommission(hostname, terminationTime, NodeLossReason))",
+        "createdAt" : "2020-02-10T13:20:57Z",
+        "updatedAt" : "2020-02-13T23:10:10Z",
+        "lastEditedBy" : "11f6c849-b5b9-4c65-990c-525cf572b913",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5dff0c45-3370-4a7d-83b0-bfb8ae98a950",
+        "parentId" : "1f55b4e1-1d88-4ec5-a876-47da344d77f3",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Same as previous comment, in standalone only sure, but in YARN/K8s we could see individual executors decommission.",
+        "createdAt" : "2020-02-10T19:33:57Z",
+        "updatedAt" : "2020-02-13T23:10:10Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "af550303e0b929dc9f7436bcfb36438ff36b8208",
+    "line" : 55,
+    "diffHunk" : "@@ -1,1 +264,268 @@      // Tell master we are are decommissioned so it stops trying to schedule us\n      if (driver.nonEmpty) {\n        driver.get.askSync[Boolean](DecommissionExecutor(executorId))\n      } else {\n        logError(\"No driver to message decommissioning.\")"
   }
 ]

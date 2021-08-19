@@ -1,0 +1,112 @@
+[
+  {
+    "id" : "a34ad8c6-ced7-4388-9bff-a4bf3e03f1b7",
+    "prId" : 26472,
+    "prUrl" : "https://github.com/apache/spark/pull/26472#pullrequestreview-319784201",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4d8c8881-7139-4311-91bc-0acfa55273b7",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "I believe that postgre could correctly parse string `19700101`, `1970/01/01`, `January 1 04:05:06 1970 PST` while spark can't. So, I think that we may also need to support it in `PostgreCastToTimestamp`.",
+        "createdAt" : "2019-11-16T15:32:26Z",
+        "updatedAt" : "2019-11-27T18:39:27Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "46a65da5-383b-404b-9185-34d363a5b589",
+        "parentId" : "4d8c8881-7139-4311-91bc-0acfa55273b7",
+        "authorId" : "75554730-8183-463c-bf1d-7cd5b4e9f22b",
+        "body" : "Thanks for your suggestion.  I will check this.",
+        "createdAt" : "2019-11-16T17:32:54Z",
+        "updatedAt" : "2019-11-27T18:39:27Z",
+        "lastEditedBy" : "75554730-8183-463c-bf1d-7cd5b4e9f22b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "40a61a05-a9c7-4672-ae80-46e37995bcdc",
+        "parentId" : "4d8c8881-7139-4311-91bc-0acfa55273b7",
+        "authorId" : "75554730-8183-463c-bf1d-7cd5b4e9f22b",
+        "body" : "```\r\npostgres# select cast('19700101' as timestamp);\r\n01.01.1970 00:00:00\r\n```\r\n```\r\npostgres# select cast('1970/01/01' as timestamp);\r\n01.01.1970 00:00:00\r\n```\r\n```\r\npostgres# select cast('January 1 04:05:06 1970 PST' as timestamp);\r\n01.01.1970 04:05:06\r\n```\r\nSpark results with NULL for all of them.",
+        "createdAt" : "2019-11-18T06:01:09Z",
+        "updatedAt" : "2019-11-27T18:39:27Z",
+        "lastEditedBy" : "75554730-8183-463c-bf1d-7cd5b4e9f22b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "76964f0c-444b-424a-adeb-107a67c3489d",
+        "parentId" : "4d8c8881-7139-4311-91bc-0acfa55273b7",
+        "authorId" : "75554730-8183-463c-bf1d-7cd5b4e9f22b",
+        "body" : "@maropu kindly review latest changes and give your feedback on supporting above queries.\r\n\r\nDo we need to support them in this PR? If yes, we need to list all formats for timestamps which postgres supports but spark don't.",
+        "createdAt" : "2019-11-18T06:16:59Z",
+        "updatedAt" : "2019-11-27T18:39:27Z",
+        "lastEditedBy" : "75554730-8183-463c-bf1d-7cd5b4e9f22b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4a6d583d-2d1a-49f9-90f6-40b285ddfd93",
+        "parentId" : "4d8c8881-7139-4311-91bc-0acfa55273b7",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "I personally think that the support above is not a main issue of this pr, so better to separate the two work: the timestamp cast support and the timestamp format support for the pg dialect.",
+        "createdAt" : "2019-11-20T11:52:38Z",
+        "updatedAt" : "2019-11-27T18:39:27Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "08c71f1eaf0e6f867b964832ccc360a50cf6fc53",
+    "line" : 96,
+    "diffHunk" : "@@ -1,1 +107,111 @@  override def castToTimestamp(from: DataType): Any => Any = from match {\n    case StringType =>\n      buildCast[UTF8String](_, utfs => DateTimeUtils.stringToTimestamp(utfs, zoneId)\n        .getOrElse(throw new\n            IllegalArgumentException(s\"invalid input syntax for type timestamp:$utfs\")))"
+  },
+  {
+    "id" : "1b291ca5-4943-4860-bbe6-acec2ea4b81b",
+    "prId" : 26472,
+    "prUrl" : "https://github.com/apache/spark/pull/26472#pullrequestreview-320631926",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f5ce4243-e200-4830-ad32-1ad09c431883",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "btw, we need to define a new rule and a new cast expr for each Pg cast pattern? I mean we cannot define all the Pg cast patterns in a single rule and a cast expr? cc: @cloud-fan @Ngone51 ",
+        "createdAt" : "2019-11-20T11:49:12Z",
+        "updatedAt" : "2019-11-27T18:39:27Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f6ca55b6-6969-4303-8a07-c2a1c2860868",
+        "parentId" : "f5ce4243-e200-4830-ad32-1ad09c431883",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "I think we can and should combine them into a single one(both rule and expression) when more types get in. Just like the original `Cast` does. But I'm not sure where shall we start. Maybe, this one ?",
+        "createdAt" : "2019-11-21T04:03:53Z",
+        "updatedAt" : "2019-11-27T18:39:27Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2787754f-ede8-4623-b516-cc7fe22d5f46",
+        "parentId" : "f5ce4243-e200-4830-ad32-1ad09c431883",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "yea, I personally think so. @cloud-fan ",
+        "createdAt" : "2019-11-21T04:15:44Z",
+        "updatedAt" : "2019-11-27T18:39:27Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "08c71f1eaf0e6f867b964832ccc360a50cf6fc53",
+    "line" : 83,
+    "diffHunk" : "@@ -1,1 +97,101 @@}\n\ncase class PostgreCastToTimestamp(child: Expression, timeZoneId: Option[String])\n  extends PostgreCastBase(TimestampType) {\n"
+  }
+]

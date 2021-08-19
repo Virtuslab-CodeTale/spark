@@ -658,5 +658,93 @@
     "commit" : "b6b2c5a3cc46d25595bfa7e187846187dd5ac806",
     "line" : 164,
     "diffHunk" : "@@ -1,1 +1025,1029 @@            maybeTruncated = maybeTruncated, eventsFilter = eventsFilter, lineToSkip)\n          continueReplay = result.success\n          // We need to reset the lineToSkip to -1 as we need to parse next file from the beginning\n          lineToSkip = -1\n          if (info.isDefined && (!continueReplay || fileIndex >= logFiles.size -1)) {"
+  },
+  {
+    "id" : "887f3b34-d52c-45a3-adb7-c9f1965ec255",
+    "prId" : 26416,
+    "prUrl" : "https://github.com/apache/spark/pull/26416#pullrequestreview-337909022",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "984a8c99-dc5b-449e-a683-c7ad82080284",
+        "parentId" : null,
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "I started trying to track down how this works and it's all over the place. The fact that the code around this is all new from the previous patch also makes it really hard to do incremental reviews. This is a huge PR and when significant parts of it change every time an update is made, it makes reviews really slow.\r\n\r\nHave you tried to break this down into more incremental PRs?\r\n\r\nFor example, I hardly ever get into the `FsHistoryProvider` part before I start questioning why previous code behaves the way it does. Kinda feels like all the filtering and compaction code could be added before it's hooked up to the provider.\r\n\r\nThis particular code that does caching of the compactor is scattered all over the place. Here you cache the instances, but there's a bunch of code and exception handling in the compactor code itself to deal with the fact that the internal compactor state may not be reusable.\r\n\r\nThat to me screams like a bad abstraction, and that you should be thinking differently about how this caching is done, and the API between the provider and the compactor.\r\n\r\nAnother thing I noticed is that you only seem to remove things from this cache when logs are cleaned up, but not e.g. when an application finishes (and the code can make the final compaction).",
+        "createdAt" : "2020-01-03T00:31:42Z",
+        "updatedAt" : "2020-01-03T00:38:05Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e1a6e42b73f8d58dbc0a04882f2288d2fae0dad8",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +161,165 @@\n  // Visible for testing.\n  private[history] val logToCompactor = new mutable.HashMap[String, EventLogFileCompactor]\n\n  // Used to store the paths, which are being processed. This enable the replay log tasks execute"
+  },
+  {
+    "id" : "02670115-1cb8-434a-94d9-fbc4cebd5c7a",
+    "prId" : 26397,
+    "prUrl" : "https://github.com/apache/spark/pull/26397#pullrequestreview-314115148",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "27b62144-fe6c-4ca2-b8a5-f28d5433c9ac",
+        "parentId" : null,
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "Nit: There are couple of unused imports at the beginning of the file. Maybe worth to clean them up.",
+        "createdAt" : "2019-11-07T15:52:28Z",
+        "updatedAt" : "2019-11-10T04:57:07Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "07926898-9d42-4f6b-9191-dcc3befb716a",
+        "parentId" : "27b62144-fe6c-4ca2-b8a5-f28d5433c9ac",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "If it's occurred from here I'll remove. If not, it might make other PRs be broken, so I might take it carefully.",
+        "createdAt" : "2019-11-08T01:07:35Z",
+        "updatedAt" : "2019-11-10T04:57:07Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2eb35c07-146f-4ea6-8559-5260608a7d06",
+        "parentId" : "27b62144-fe6c-4ca2-b8a5-f28d5433c9ac",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "Since `FsHistoryProvider.scala` is one of the main target of this development (I mean not the PR) it would be good to clean it up somewhere. What do you think where should we do it?",
+        "createdAt" : "2019-11-08T08:58:27Z",
+        "updatedAt" : "2019-11-10T04:57:07Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9783e7a4-f9cf-4333-a4ea-31d09f623643",
+        "parentId" : "27b62144-fe6c-4ca2-b8a5-f28d5433c9ac",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "I guess it's OK to do with minor PR, but commiter could finally judge the worth. (treat my comment as 2 cents)",
+        "createdAt" : "2019-11-08T09:56:46Z",
+        "updatedAt" : "2019-11-10T04:57:07Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "25a87ba0-6cee-4356-ba02-9c7e1b76bdcd",
+        "parentId" : "27b62144-fe6c-4ca2-b8a5-f28d5433c9ac",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "I agree with this resolution. Such way we separate the concerns. I've created https://github.com/apache/spark/pull/26436, in case of disagreement it can be just dropped.",
+        "createdAt" : "2019-11-08T10:28:13Z",
+        "updatedAt" : "2019-11-10T04:57:07Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "698a6571e6f798b74d8469be32b41999c5397d60",
+    "line" : 1,
+    "diffHunk" : "@@ -1,1 +16,20 @@ */\n\npackage org.apache.spark.deploy.history\n\nimport java.io.{File, FileNotFoundException, IOException}"
   }
 ]

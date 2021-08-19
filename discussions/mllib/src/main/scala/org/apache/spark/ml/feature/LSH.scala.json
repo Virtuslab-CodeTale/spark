@@ -405,5 +405,104 @@
     "commit" : "48a91eefad0901881c2b3abd44e6fb49d024ca8a",
     "line" : 24,
     "diffHunk" : "@@ -1,1 +143,147 @@      // for a small dataset, use BoundedPriorityQueue\n      if (count < 1000) {\n        val queue = new BoundedPriorityQueue[Double](count.toInt)(Ordering[Double])\n        modelDatasetWithDist.collect().foreach { case Row(keys, values, distCol: Double) =>\n          queue += distCol"
+  },
+  {
+    "id" : "6da0dc1a-241b-44d6-b0bf-b30f33981030",
+    "prId" : 26415,
+    "prUrl" : "https://github.com/apache/spark/pull/26415#pullrequestreview-320653149",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "98ea6ddb-8784-4da2-bb67-9e83ae5eb6c0",
+        "parentId" : null,
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "sorry for late reply.\r\n1, Since `approxNearestNeighbors` is for query with only one key, it is supposed to be called many times in practice. Is `val count = dataset.count()` too expensive between calls? Can it be precomputed somewhere?\r\n2, Do we need `numNearestNeighbors <= count`? refer to scala's and RDD's behavior:\r\n```\r\nscala> Array(1).take(2)\r\nres1: Array[Int] = Array(1)\r\n```\r\n\r\n```\r\nscala> val rdd = sc.range(0, 1)\r\nrdd: org.apache.spark.rdd.RDD[Long] = MapPartitionsRDD[1] at range at <console>:24\r\n\r\nscala> rdd.count\r\nres0: Long = 1\r\n\r\nscala> rdd.take\r\ntake   takeAsync   takeOrdered   takeSample\r\n\r\nscala> rdd.take(3)\r\nres1: Array[Long] = Array(0)\r\n```\r\n",
+        "createdAt" : "2019-11-21T03:39:13Z",
+        "updatedAt" : "2019-11-21T03:45:52Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a0162fca-2b8a-49b8-b954-c3fad1ad9890",
+        "parentId" : "98ea6ddb-8784-4da2-bb67-9e83ae5eb6c0",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Fair point, but it's hardly the most expensive operation here, before or after. I'd expect a caller has to cache the input for multiple calls to make sense anyway. I think the count + approxQuantile still beats sort + take.\r\n\r\nI also take the point about take() but relaxing the requirement won't remove the need for count() here. Does it make more sense semantically? You're right it would be more consistent with the original implementation. Hm. I guess I'm neutral on it, but it's a valid question.",
+        "createdAt" : "2019-11-21T03:53:21Z",
+        "updatedAt" : "2019-11-21T03:53:21Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b7dcd9b3-2b3c-41d3-86bc-c83e29bdbca3",
+        "parentId" : "98ea6ddb-8784-4da2-bb67-9e83ae5eb6c0",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "According to the [doc](https://github.com/apache/spark/blob/56a65b971d4f1b43c37a5664a3a4e2e4fcad1c14/mllib/src/main/scala/org/apache/spark/ml/feature/LSH.scala#L175) \r\n\"@param numNearestNeighbors The maximum number of nearest neighbors.\"\r\nIt imply that the output should not contain exact `numNearestNeighbors` items.\r\n\r\n1, if we do not require `numNearestNeighbors <= count`, then if `singleProbe` is true, this `count` job can be avoided.\r\n2, if we found that `numNearestNeighbors <= count`, we can directly return `modelDatasetWithDist`.\r\n",
+        "createdAt" : "2019-11-21T05:04:48Z",
+        "updatedAt" : "2019-11-21T05:04:48Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bee5baba-62ab-4143-844d-a13b6ed9cc14",
+        "parentId" : "98ea6ddb-8784-4da2-bb67-9e83ae5eb6c0",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "It implies it _could_ have fewer, yeah. This would be the only case to return fewer, yes, and you'd just return the input. I don't think singleProbe is used (and could be removed). But the count() is still needed below in any event.\r\n\r\nI mean, if the caller cares, they can check count() vs number of neighbors before calling it a bunch of times anyway.",
+        "createdAt" : "2019-11-21T05:53:15Z",
+        "updatedAt" : "2019-11-21T05:53:15Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ddc278bc354c1dadbe6b015ac9c9b6b463edb1c4",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +113,117 @@      singleProbe: Boolean,\n      distCol: String): Dataset[_] = {\n    val count = dataset.count()\n    require(numNearestNeighbors > 0 && numNearestNeighbors <= count, \"The number of\" +\n      \" nearest neighbors cannot be less than 1 or greater than the number of elements in dataset\")"
+  },
+  {
+    "id" : "d217617c-4c60-4ef7-be0a-883a4ac4459b",
+    "prId" : 26415,
+    "prUrl" : "https://github.com/apache/spark/pull/26415#pullrequestreview-320640009",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "dc171bf2-98ac-4b73-af09-760736e7fb52",
+        "parentId" : null,
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "Here can we add a check of `numNearestNeighbors` in the future?\r\n1, if it is a small number, using `TopByKeyAggregator` will skip above `count` job and return a exact threshold;\r\n2, otherwise, using `approxQuantile`\r\n\r\nSimilar logic can be found in `PCA`&`GMM`, with small `numFeatures`&`k`, the impls are differenct from those with large numbers.",
+        "createdAt" : "2019-11-21T03:45:47Z",
+        "updatedAt" : "2019-11-21T03:45:52Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "13618001-f0d3-43b8-a0c0-94099f9b9e12",
+        "parentId" : "dc171bf2-98ac-4b73-af09-760736e7fb52",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "From ALS? OK I could see that being an efficient alternative, to get top k per partition and merge them to a final top k -- if k isn't big. The existing impl works on keyed data but a simplified version would work here. I think that could be a valid further improvement.",
+        "createdAt" : "2019-11-21T03:56:05Z",
+        "updatedAt" : "2019-11-21T03:56:05Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ccc11eab-2dae-410b-98f1-7a24567246f0",
+        "parentId" : "dc171bf2-98ac-4b73-af09-760736e7fb52",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "Yes, this logic is quite similar to ALS.",
+        "createdAt" : "2019-11-21T04:56:05Z",
+        "updatedAt" : "2019-11-21T04:56:05Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ddc278bc354c1dadbe6b015ac9c9b6b463edb1c4",
+    "line" : 23,
+    "diffHunk" : "@@ -1,1 +140,144 @@      val hashDistCol = hashDistUDF(col($(outputCol)))\n\n      // Compute threshold to get around k elements.\n      // To guarantee to have enough neighbors in one pass, we need (p - err) * N >= M\n      // so we pick quantile p = M / N + err"
   }
 ]

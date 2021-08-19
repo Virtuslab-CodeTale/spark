@@ -878,5 +878,104 @@
     "commit" : "e6f881451d4fb10d23aaa735919278cefe88c0c3",
     "line" : 16,
     "diffHunk" : "@@ -1,1 +215,219 @@          // or if it ignored our blacklist), then we reject that executor immediately.\n          logInfo(s\"Rejecting $executorId as it has been blacklisted.\")\n          context.sendFailure(new IllegalStateException(s\"Executor is blacklisted: $executorId\"))\n        } else {\n          // If the executor's rpc env is not listening for incoming connections, `hostPort`"
+  },
+  {
+    "id" : "0cd93229-b357-4ebb-b396-ed89bcbd5b00",
+    "prId" : 26440,
+    "prUrl" : "https://github.com/apache/spark/pull/26440#pullrequestreview-348287524",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "263f9bbb-0a1b-41f7-907e-6b3e02cb194b",
+        "parentId" : null,
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "I see you adding things to this set but didn't notice anywhere removing the executor from it.",
+        "createdAt" : "2020-01-06T20:31:02Z",
+        "updatedAt" : "2020-02-13T23:10:10Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "61c096e7-d844-4b49-b919-d6faa69ca621",
+        "parentId" : "263f9bbb-0a1b-41f7-907e-6b3e02cb194b",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Good catch, I dropped that in the rebase.",
+        "createdAt" : "2020-01-09T22:43:33Z",
+        "updatedAt" : "2020-02-13T23:10:10Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ec8fb7fa-e051-412d-a679-ea22183667f8",
+        "parentId" : "263f9bbb-0a1b-41f7-907e-6b3e02cb194b",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Added the cleanup logic back in.",
+        "createdAt" : "2020-01-25T00:07:01Z",
+        "updatedAt" : "2020-02-13T23:10:10Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "af550303e0b929dc9f7436bcfb36438ff36b8208",
+    "line" : 71,
+    "diffHunk" : "@@ -1,1 +417,421 @@        // Only bother decommissioning executors which are alive.\n        if (isExecutorActive(executorId)) {\n          executorsPendingDecommission += executorId\n          true\n        } else {"
+  },
+  {
+    "id" : "46a9794b-6f37-4f96-88bc-eafa474bb9f4",
+    "prId" : 26440,
+    "prUrl" : "https://github.com/apache/spark/pull/26440#pullrequestreview-359201672",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "909c213a-4f05-4184-a8f0-696c60a305ae",
+        "parentId" : null,
+        "authorId" : "11f6c849-b5b9-4c65-990c-525cf572b913",
+        "body" : "Here the entire node will be decommissioned , So instead of checking for each executor id contains in executorsPendingDecommission, can we have the filter on the node level with its HostName as the input parameter. So there will be only one entry of the node hostname that would be added in the some decommission tracker.At the end we don't want any task to be scheduled on the executor running on the node. We can check this in org.apache.spark.scheduler.cluster.CoarseGrainedSchedulerBackend.DriverEndpoint#makeOffers",
+        "createdAt" : "2020-02-10T12:50:43Z",
+        "updatedAt" : "2020-02-13T23:10:10Z",
+        "lastEditedBy" : "11f6c849-b5b9-4c65-990c-525cf572b913",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f35b93ee-e310-48de-bc8a-9ee65db0bdb4",
+        "parentId" : "909c213a-4f05-4184-a8f0-696c60a305ae",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "We could, but we also use this as a basis for other cluster managers which may not have an entire node decom always (hence executor decommissioning).",
+        "createdAt" : "2020-02-10T19:33:18Z",
+        "updatedAt" : "2020-02-13T23:10:10Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c13fe782-4b18-4b20-84bf-ecc03f16aee1",
+        "parentId" : "909c213a-4f05-4184-a8f0-696c60a305ae",
+        "authorId" : "11f6c849-b5b9-4c65-990c-525cf572b913",
+        "body" : "I am considering this scenario where there is spotloss in aws or Preemptible VM loss in GCP, the entire node will not be available and all the executors on that node will not be available.There may be scenario as per the existing code where the code is checking the decommissioning of executors and then API call is send to update the executorsPendingDecommission for each executors and in mean time when the executor information is added into the executorsPendingDecommission and node is lost/ about to be lost. Since there might be some of the enteries of executors that are not added into executorsPendingDecommission and we are still scheduling a task in those executors.\r\n\r\nIf it would have been on the node level, just there is need to add first node info in the NodePendingToDecommission and rest if the other executors running same node will try to add there entry can be ignored. In this there is less chance of the task to be scheduled on any executor on the decommissioning nodes. This is possible at the yarn end where AM can send the request to RM to find the updated states of the node. Not sure if its possible in the case of k8s where each executorpods can also get the information about hostName where that pods are running and pods loss reason. \r\n\r\nIf its not possible to get the above info in the k8s, can we scope this executor decommission to k8s level and also add the node level decommissioning also here where other cluster manager can take the benefit of node level decommissioning",
+        "createdAt" : "2020-02-11T08:35:54Z",
+        "updatedAt" : "2020-02-13T23:10:10Z",
+        "lastEditedBy" : "11f6c849-b5b9-4c65-990c-525cf572b913",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1e8460da-3e09-48e7-a51d-dfbe36bf296d",
+        "parentId" : "909c213a-4f05-4184-a8f0-696c60a305ae",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "We could also add node-level information when we implement YARN support, I'm not sure what that would give us over just adding the executors on the node to the current structure.",
+        "createdAt" : "2020-02-14T20:30:14Z",
+        "updatedAt" : "2020-02-14T20:30:15Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "af550303e0b929dc9f7436bcfb36438ff36b8208",
+    "line" : 122,
+    "diffHunk" : "@@ -1,1 +603,607 @@      !executorsPendingToRemove.contains(id) &&\n      !executorsPendingLossReason.contains(id) &&\n      !executorsPendingDecommission.contains(id)\n\n  }"
   }
 ]

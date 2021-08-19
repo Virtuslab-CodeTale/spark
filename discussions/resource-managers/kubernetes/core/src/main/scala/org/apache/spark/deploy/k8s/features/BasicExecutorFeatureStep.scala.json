@@ -42,5 +42,159 @@
     "commit" : "5600542d43bfd0221ba633b90226a15962ee92ce",
     "line" : 6,
     "diffHunk" : "@@ -1,1 +61,65 @@      MEMORY_OVERHEAD_MIN_MIB))\n  private val memoryOffHeapMiB = KubernetesUtils.executorOffHeapMemorySizeAsMb(kubernetesConf)\n  private val executorMemoryWithOverhead = executorMemoryMiB + memoryOverheadMiB + memoryOffHeapMiB\n  private val executorMemoryTotal =\n    if (kubernetesConf.get(APP_RESOURCE_TYPE) == Some(APP_RESOURCE_TYPE_PYTHON)) {"
+  },
+  {
+    "id" : "5785f73a-46e4-4146-97ce-41e9f22d62e5",
+    "prId" : 26440,
+    "prUrl" : "https://github.com/apache/spark/pull/26440#pullrequestreview-348067808",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "509cf0ce-d2d1-4e2b-b0ba-390d7aa8005e",
+        "parentId" : null,
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Will this get triggered when Spark itself stops the executor (i.e. when you turn on dynamic allocation)? Does the code behave as it should in that case?",
+        "createdAt" : "2020-01-06T20:45:19Z",
+        "updatedAt" : "2020-02-13T23:10:10Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9437079d-9679-4d7d-ad5c-a0af2d05acec",
+        "parentId" : "509cf0ce-d2d1-4e2b-b0ba-390d7aa8005e",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "I'm not sure why it would not, all the other properties presumably work. Am I missing some special handling logic we have seperate for the pods for dynamic alloc?",
+        "createdAt" : "2020-01-09T22:23:16Z",
+        "updatedAt" : "2020-02-13T23:10:10Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "176caa56-0765-4a1c-83fb-35d07a866cc6",
+        "parentId" : "509cf0ce-d2d1-4e2b-b0ba-390d7aa8005e",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "My question is more in the lines of: since this will be triggered by Spark itself killing executors, will everything else triggered by this script behave correctly when Spark itself, and not the cluster, is requesting that the executor be killed?\r\n\r\ne.g. now you have an executor being killed that some other code might try to decommission and those are all tracked in separate places, and might get out of sync.",
+        "createdAt" : "2020-01-09T22:38:34Z",
+        "updatedAt" : "2020-02-13T23:10:10Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b925822c-34cb-4275-9925-d79f43cbb8b7",
+        "parentId" : "509cf0ce-d2d1-4e2b-b0ba-390d7aa8005e",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Oh I think I see where this is going. So (for right now) when Spark is doing it's own internal down scaling we don't take advantage of that knowledge. We totally should in the future, that's actually my plan in part 5 but I wanted to keep the scope as small as possible for the first change.",
+        "createdAt" : "2020-01-09T22:59:25Z",
+        "updatedAt" : "2020-02-13T23:10:10Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "00fa8c61-1d7b-4267-b357-fb20f81dc6d7",
+        "parentId" : "509cf0ce-d2d1-4e2b-b0ba-390d7aa8005e",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "I was thinking more in terms of correctness; e.g. if the executor exits by itself (which is what dynamic allocation does), will the pre-exit script cause any errors in log files or the status of the container, things long those lines.\r\n\r\nI think it's easier if you just try it (with `spark.dynamicAllocation.enabled=true` and `spark.dynamicAllocation.shuffleTracking.enabled=true`).",
+        "createdAt" : "2020-01-10T00:15:54Z",
+        "updatedAt" : "2020-02-13T23:10:10Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b3c41a58-5393-4ed2-8906-4a7403a9e45d",
+        "parentId" : "509cf0ce-d2d1-4e2b-b0ba-390d7aa8005e",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "So I'm not seeing how this might be an issue and I want to make sure I understand. Whats the exact situation where you think it would go bad/why?",
+        "createdAt" : "2020-01-10T22:02:42Z",
+        "updatedAt" : "2020-02-13T23:10:10Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e33e15d7-bf04-44d3-ad7d-891499938f07",
+        "parentId" : "509cf0ce-d2d1-4e2b-b0ba-390d7aa8005e",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "I'm asking you to make sure nothing can go bad. You're adding hooks in the shutdown path for when the cluster is shutting things down. With dynamic allocation, Spark it shutting things down itself. I want to ensure that you accounted for that, and that your solution doesn't cause problems in that scenario.",
+        "createdAt" : "2020-01-10T22:16:31Z",
+        "updatedAt" : "2020-02-13T23:10:10Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a941e7bc-69ec-4ff5-afdc-68d0da09559e",
+        "parentId" : "509cf0ce-d2d1-4e2b-b0ba-390d7aa8005e",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Just to make sure I'm understanding the desire you want me to spin up a cluster with both these enabled, or change/add integration test to enable & trigger dynamic alloc and decom, or something else?",
+        "createdAt" : "2020-01-10T22:19:11Z",
+        "updatedAt" : "2020-02-13T23:10:10Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9dbeff08-6310-4e49-9c01-426dc94e69d7",
+        "parentId" : "509cf0ce-d2d1-4e2b-b0ba-390d7aa8005e",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Whatever you need to convince yourself that nothing bad is happening.",
+        "createdAt" : "2020-01-10T22:21:59Z",
+        "updatedAt" : "2020-02-13T23:10:10Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "10b328bc-a3a5-498f-b0fe-b78d362922da",
+        "parentId" : "509cf0ce-d2d1-4e2b-b0ba-390d7aa8005e",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "So I did some looking in the code and how we remove executors during dynamic allocation is a different mechanism. When we kill executors in the K8s backend we first ask Spark to exit. If it doesn't exit (see L153) we do a delete. Now the decommissioning would be triggered in that event and could keep the executor alive for the length of the timeout period configured. I think that's ok given that the timeout period should be set something not too long, and most of the executors likely exit when asked by Spark and don't have to be cleaned up by K8s. That being said if that is not OK from https://kubernetes.io/docs/tasks/run-application/force-delete-stateful-set-pod/ it looks like K8s in 1.5+ supports force delition with no grace period regardless of the pods configuration.",
+        "createdAt" : "2020-01-15T02:48:57Z",
+        "updatedAt" : "2020-02-13T23:10:10Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1697fc0f-2544-43ba-a2e1-9f9a097fbc82",
+        "parentId" : "509cf0ce-d2d1-4e2b-b0ba-390d7aa8005e",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "So when the Spark executor exits by itself, the pre-exit script is not executed?",
+        "createdAt" : "2020-01-15T21:16:25Z",
+        "updatedAt" : "2020-02-13T23:10:10Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5f5b4c04-f842-4c82-b31d-0e8169355fb3",
+        "parentId" : "509cf0ce-d2d1-4e2b-b0ba-390d7aa8005e",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Indeed, the Kubernetes docs were updated to clarify how prestop hooks work https://github.com/kubernetes/website/pull/12498/files which indicates they only trigger on pod deletion, not when the containers main process exits gracefully.",
+        "createdAt" : "2020-01-23T22:47:29Z",
+        "updatedAt" : "2020-02-13T23:10:10Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dae39a14-1020-4e7c-b622-85ab57e35d76",
+        "parentId" : "509cf0ce-d2d1-4e2b-b0ba-390d7aa8005e",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Cool, that answers my initial question and takes care of my concerns.",
+        "createdAt" : "2020-01-24T16:22:16Z",
+        "updatedAt" : "2020-02-13T23:10:10Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "af550303e0b929dc9f7436bcfb36438ff36b8208",
+    "line" : 28,
+    "diffHunk" : "@@ -1,1 +195,199 @@        logInfo(\"Adding decommission script to lifecycle\")\n        new ContainerBuilder(containerWithLimitCores).withNewLifecycle()\n          .withNewPreStop()\n            .withNewExec()\n              .addToCommand(\"/opt/decom.sh\")"
   }
 ]

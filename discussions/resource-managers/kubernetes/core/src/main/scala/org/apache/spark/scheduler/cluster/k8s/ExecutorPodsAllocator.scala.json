@@ -548,5 +548,71 @@
     "commit" : "90ad4d140a80df379384f81ffbbdfec758eb1b39",
     "line" : 20,
     "diffHunk" : "@@ -1,1 +219,223 @@        && knownPodCount < currentTotalExpectedExecutors) {\n      val numExecutorsToAllocate = math.min(\n        currentTotalExpectedExecutors - knownPodCount, podAllocationSize)\n      logInfo(s\"Going to request $numExecutorsToAllocate executors from Kubernetes.\")\n      for ( _ <- 0 until numExecutorsToAllocate) {"
+  },
+  {
+    "id" : "a9b7b088-8d1c-4c2f-b85d-8760b85e3ef7",
+    "prId" : 26433,
+    "prUrl" : "https://github.com/apache/spark/pull/26433#pullrequestreview-317958443",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d6ee1f73-6402-45ea-96cd-c731fac321f4",
+        "parentId" : null,
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "I don't know about this necessarily being the best way to track the number of failed executors. In dynamic allocation it seems like if we scaled up and then down a few times this would give us a incorrect reading. Or is that taken care of elsewhere?",
+        "createdAt" : "2019-11-15T17:49:29Z",
+        "updatedAt" : "2019-11-15T17:52:08Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "15234dd5-9e11-47d6-a15b-816144558c9f",
+        "parentId" : "d6ee1f73-6402-45ea-96cd-c731fac321f4",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Holden is right. To track failures you'll have to look at `ExecutorPodsLifecycleManager` instead.",
+        "createdAt" : "2019-11-15T20:54:15Z",
+        "updatedAt" : "2019-11-15T20:54:21Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c38b27dc-3c3c-4a7b-b158-ad09d17acdb0",
+        "parentId" : "d6ee1f73-6402-45ea-96cd-c731fac321f4",
+        "authorId" : "0f4ef4e8-09be-436f-b743-bf8fbc343490",
+        "body" : "Oh, I will reconsider the acquisition of numFailedExecutors.",
+        "createdAt" : "2019-11-16T07:47:32Z",
+        "updatedAt" : "2019-11-16T07:47:32Z",
+        "lastEditedBy" : "0f4ef4e8-09be-436f-b743-bf8fbc343490",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2ef2cd70684da1cbb355db3fb8d78f816c24764b",
+    "line" : 33,
+    "diffHunk" : "@@ -1,1 +159,163 @@        s\"${newlyCreatedExecutors.size} unacknowledged.\")\n\n      val numFailedExecutors =\n        EXECUTOR_ID_COUNTER.get() - currentPendingExecutors.size - currentRunningCount\n      if (numFailedExecutors >= maxNumExecutorFailures) {"
+  },
+  {
+    "id" : "b14f190c-88f9-49b8-b01c-bf6c6edc20ad",
+    "prId" : 26433,
+    "prUrl" : "https://github.com/apache/spark/pull/26433#pullrequestreview-317862661",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7ab0ea6b-ae91-4b6e-b93b-37bbf2eb4fc5",
+        "parentId" : null,
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "This isn't a good way to stop the application. It may be running as part of other code that can recover from such a failure.\r\n\r\nYou should do something like stop the SparkContext instead.",
+        "createdAt" : "2019-11-15T20:53:39Z",
+        "updatedAt" : "2019-11-15T20:54:21Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2ef2cd70684da1cbb355db3fb8d78f816c24764b",
+    "line" : 37,
+    "diffHunk" : "@@ -1,1 +163,167 @@      if (numFailedExecutors >= maxNumExecutorFailures) {\n        logError(s\"Max number of executor failures ($maxNumExecutorFailures) reached\")\n        System.exit(EXIT_MAX_EXECUTOR_FAILURES)\n      }\n    }"
   }
 ]

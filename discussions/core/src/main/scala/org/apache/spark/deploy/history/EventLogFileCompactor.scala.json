@@ -130,5 +130,93 @@
     "commit" : "163bda018d054a0d41e983e6c448ce3b3e746d35",
     "line" : 205,
     "diffHunk" : "@@ -1,1 +203,207 @@case class CompactionResult(code: CompactionResultCode.Value, compactIndex: Option[Long])\n\nobject CompactionResultCode extends Enumeration {\n  val SUCCESS, NOT_ENOUGH_FILES, LOW_SCORE_FOR_COMPACTION = Value\n}"
+  },
+  {
+    "id" : "5ae66cf6-058f-4aea-838c-143a4e1a1803",
+    "prId" : 26416,
+    "prUrl" : "https://github.com/apache/spark/pull/26416#pullrequestreview-312763584",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e29f9f1b-2726-41a0-8426-4fb3fe24b867",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "At first I implemented this as an event listener, and realized the serialized JSON is no longer be same. Bigger size, and some information could even change (e.g. Spark version). So I changed the implementation to write its own string if it passes the filters.",
+        "createdAt" : "2019-11-06T21:51:52Z",
+        "updatedAt" : "2019-12-26T02:35:39Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e1a6e42b73f8d58dbc0a04882f2288d2fae0dad8",
+    "line" : 233,
+    "diffHunk" : "@@ -1,1 +231,235 @@ * the event is written to the compact file as it is.\n */\nclass FilteredEventLogFileRewriter(\n    sparkConf: SparkConf,\n    hadoopConf: Configuration,"
+  },
+  {
+    "id" : "aa819bb2-feb7-488f-ac6f-3475009b660e",
+    "prId" : 26416,
+    "prUrl" : "https://github.com/apache/spark/pull/26416#pullrequestreview-315935176",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a63b7c32-185c-4f3e-bbb4-d3018d71cac3",
+        "parentId" : null,
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "Maybe we can call such vals `COMPACTED_SUFFIX`? When I see `stripSuffix` I know what it is but such case when stays alone maybe better to name it more meaningful.",
+        "createdAt" : "2019-11-11T10:25:43Z",
+        "updatedAt" : "2019-12-26T02:35:39Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "11045a30-53ab-4b05-b127-024898abccbf",
+        "parentId" : "a63b7c32-185c-4f3e-bbb4-d3018d71cac3",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "I tend to make longer name for clarity but I feel the community prefers concise name more. Same applied to `IN_PROGRESS`. So let's hear more voices on this.",
+        "createdAt" : "2019-11-13T00:48:53Z",
+        "updatedAt" : "2019-12-26T02:35:39Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e1a6e42b73f8d58dbc0a04882f2288d2fae0dad8",
+    "line" : 274,
+    "diffHunk" : "@@ -1,1 +272,276 @@  extends SingleEventLogFileWriter(appId, appAttemptId, logBaseDir, sparkConf, hadoopConf) {\n\n  override val logPath: String = originalFilePath.toUri.toString + EventLogFileWriter.COMPACTED\n}"
+  },
+  {
+    "id" : "bae468bc-0baf-4603-801a-f5cb379f4f83",
+    "prId" : 26416,
+    "prUrl" : "https://github.com/apache/spark/pull/26416#pullrequestreview-328715422",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f18beeb5-cacd-434f-816f-6e9692297569",
+        "parentId" : null,
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "The semantics of this code are weird. It feels more like this should be a method somewhere that takes an `EventFilterApplier` (weird name) instance. Then you call that method with an instance of this class, where things like `logWriter` are initialized in its constructor.\r\n\r\nOtherwise you can ask questions like \"what if I call `handleFilteredInEvent` before `rewrite`\", which you probably shouldn't do, but is completely not clear from the interface.",
+        "createdAt" : "2019-12-06T00:59:09Z",
+        "updatedAt" : "2019-12-26T02:35:39Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e56d713f-0658-4708-8744-058571e22a5a",
+        "parentId" : "f18beeb5-cacd-434f-816f-6e9692297569",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Looks like EventFilterApplier is badly designed - mixed-in seems to disrupt the intention. It should just need to be the utility method which accepts event log files, callback function for accepted line/event, callback function for rejected line/event, callback function for unidentified line/event.",
+        "createdAt" : "2019-12-09T06:53:58Z",
+        "updatedAt" : "2019-12-26T02:35:39Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e1a6e42b73f8d58dbc0a04882f2288d2fae0dad8",
+    "line" : 239,
+    "diffHunk" : "@@ -1,1 +237,241 @@    filters: Seq[EventFilter]) {\n\n  def rewrite(eventLogFiles: Seq[FileStatus]): String = {\n    require(eventLogFiles.nonEmpty)\n"
   }
 ]

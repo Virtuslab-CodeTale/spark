@@ -53,5 +53,93 @@
     "commit" : "ec4408341fc8589becdc67e8fa7231cd07ec4d7f",
     "line" : 110,
     "diffHunk" : "@@ -1,1 +491,495 @@\n-- !query\nselect to_timestamp('2019-10-06 10:11:12.123', 'yyyy-MM-dd HH:mm:ss[.SSSSSS]')\n-- !query schema\nstruct<to_timestamp('2019-10-06 10:11:12.123', 'yyyy-MM-dd HH:mm:ss[.SSSSSS]'):timestamp>"
+  },
+  {
+    "id" : "61b8c1af-8f35-46ed-9124-63097e410fcc",
+    "prId" : 26412,
+    "prUrl" : "https://github.com/apache/spark/pull/26412#pullrequestreview-327373689",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d8097479-4314-48a4-bdcb-18e978a52273",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "can we avoid adding cast if not necessary?",
+        "createdAt" : "2019-12-05T08:12:35Z",
+        "updatedAt" : "2019-12-05T08:14:49Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a79427df-14eb-4443-83f9-a42085f9836b",
+        "parentId" : "d8097479-4314-48a4-bdcb-18e978a52273",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "OK it's the existing behavior too, we can revisit it later.",
+        "createdAt" : "2019-12-05T08:26:58Z",
+        "updatedAt" : "2019-12-05T08:26:58Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a44948eccea4ac3f033248babe84c8ab6792d5e0",
+    "line" : 37,
+    "diffHunk" : "@@ -1,1 +119,123 @@select timestamp'2011-11-11 11:11:11' + interval '2' day\n-- !query 13 schema\nstruct<CAST(TIMESTAMP '2011-11-11 11:11:11' + INTERVAL '2 days' AS TIMESTAMP):timestamp>\n-- !query 13 output\n2011-11-13 11:11:11"
+  },
+  {
+    "id" : "17ea5ac2-3014-4dab-bb0d-4e2e2c042fad",
+    "prId" : 26412,
+    "prUrl" : "https://github.com/apache/spark/pull/26412#pullrequestreview-327382271",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "87441141-42fc-481a-8764-efe305bee3c1",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "it's super weird that this returns string. What was the behavior before?",
+        "createdAt" : "2019-12-05T08:14:05Z",
+        "updatedAt" : "2019-12-05T08:14:49Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "61954a69-2d06-430a-8627-c885ff6f5822",
+        "parentId" : "87441141-42fc-481a-8764-efe305bee3c1",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "OK it's the existing behavior. We can revisit it later.",
+        "createdAt" : "2019-12-05T08:23:03Z",
+        "updatedAt" : "2019-12-05T08:23:04Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6fe7fff7-6bbc-4fdd-9e83-5e88b5a12e72",
+        "parentId" : "87441141-42fc-481a-8764-efe305bee3c1",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "yea, but follows the behavior before https://github.com/apache/spark/pull/26412/files/c84d46ea6d384dcb1f442ca54abad48e59c92bb3#diff-383a8cdd0a9c58cae68e0a79295520a3L846",
+        "createdAt" : "2019-12-05T08:28:24Z",
+        "updatedAt" : "2019-12-05T08:28:25Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ed954ee5-26ef-4e93-9fe3-eaddc9177d05",
+        "parentId" : "87441141-42fc-481a-8764-efe305bee3c1",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "https://github.com/apache/hive/blob/master/ql/src/java/org/apache/hadoop/hive/ql/udf/generic/GenericUDFOPDTIMinus.java#L111-121\r\n```scala\r\n   // Allowed operations:\r\n    // IntervalYearMonth - IntervalYearMonth = IntervalYearMonth\r\n    // Date - IntervalYearMonth = Date (operands not reversible)\r\n    // Timestamp - IntervalYearMonth = Timestamp (operands not reversible)\r\n    // IntervalDayTime - IntervalDayTime = IntervalDayTime\r\n    // Date - IntervalYearMonth = Timestamp (operands not reversible)\r\n    // Timestamp - IntervalYearMonth = Timestamp (operands not reversible)\r\n    // Timestamp - Timestamp = IntervalDayTime\r\n    // Date - Date = IntervalDayTime\r\n    // Timestamp - Date = IntervalDayTime (operands reversible)\r\n    // Date - Int = Date\r\n```\r\nHive's behavior is more convictive, we can check this later.",
+        "createdAt" : "2019-12-05T08:43:42Z",
+        "updatedAt" : "2019-12-05T08:43:42Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a44948eccea4ac3f033248babe84c8ab6792d5e0",
+    "line" : 81,
+    "diffHunk" : "@@ -1,1 +151,155 @@select '2011-11-11' - interval '2' day\n-- !query 17 schema\nstruct<CAST(CAST(2011-11-11 AS TIMESTAMP) - INTERVAL '2 days' AS STRING):string>\n-- !query 17 output\n2011-11-09 00:00:00"
   }
 ]

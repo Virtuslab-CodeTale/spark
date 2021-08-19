@@ -1,0 +1,123 @@
+[
+  {
+    "id" : "70c203dd-e486-41f5-8036-e9b71c93da54",
+    "prId" : 26470,
+    "prUrl" : "https://github.com/apache/spark/pull/26470#pullrequestreview-339835103",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2679d8e7-f23f-46b4-9a7d-78b788bab2cb",
+        "parentId" : null,
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "I know this is just matching what the consumer code does, but I'm a little unsure that it's correct (in both cases).\r\n\r\nCan't you re-use the consumer in different jobs? If so, you can have:\r\n\r\n- job 1 task 1 attempt 0 runs with producer 1 and fails\r\n- job 1 task 1 attempt 1 runs with producer 2 and succeeds\r\n- job 2 task 1 attempt 0 runs with producer 1 and re-uses the same instance that should have been closed?\r\n\r\nSo I'm wondering if instead the task itself shouldn't be invalidating the producer when it detects an error.",
+        "createdAt" : "2019-11-13T23:30:04Z",
+        "updatedAt" : "2019-11-13T23:30:05Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5339a3c3-cbdd-4d62-8744-85d2262e0186",
+        "parentId" : "2679d8e7-f23f-46b4-9a7d-78b788bab2cb",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Strictly saying, we should discard the instance (not instances) when the instance throws some error, but then we may need to wrap the code to catch exception and discard the instance wherever we use the instance. A bit verbose, but we still have to return the instance to the pool even it succeeds, so maybe not impossible.\r\n\r\nI'm not aware whether Kafka consumer or Kafka producer is self-healing - if they provide such functionality, we wouldn't need to even discard them at any case.",
+        "createdAt" : "2019-11-14T09:18:31Z",
+        "updatedAt" : "2019-11-15T01:44:15Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8beb769b-0cb7-4df9-b10a-ae8cd2793e81",
+        "parentId" : "2679d8e7-f23f-46b4-9a7d-78b788bab2cb",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "To answer the question1: Yes, job 2 can use job 1 created producers in the same JVM. Such case another task retry is needed to recover in the following way:\r\n* job 2 task 1 attempt 0 runs with producer 1 and fails\r\n* job 2 task 1 attempt 1 runs with producer 3 (this would invalidate producer 1 and 2 if not used)\r\n\r\nIf I consider the use-case this would mean 2 jobs must write the same `TopicPartition` at the same time. Until now I haven't seen use-cases where the exact same topic would be used by 2 different job (of course this doesn't mean it's not done).\r\n\r\nTo answer the question2: Kafka consumers and producers doesn't provide any kind of self healing.\r\n\r\nI think I have to take some time to check the other way because I've similar fear what @HeartSaVioR mentioned (horror complicated code with catch blocks all the places where producer touched). The general fear what I have with the invalidation from exception side is the following: if the code is leaking and doesn't catch one single exception then the task may not heal itself.\r\n",
+        "createdAt" : "2019-11-14T18:17:22Z",
+        "updatedAt" : "2019-11-14T18:17:23Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "60212412-a42a-485c-919a-076c9e98c766",
+        "parentId" : "2679d8e7-f23f-46b4-9a7d-78b788bab2cb",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : ">  2 jobs must write the same TopicPartition at the same time\r\n\r\nWhy at the same time? All you need to hit my case is two tasks on the first job using different producers, and can't that happen e.g. if you have executors with more than one core?\r\n\r\nIt seems like Spark would eventually self-heal at the cost of some failed tasks, but can't we do better? As Jungtaek said we already have to return the producer to the pool. It's just a matter of, instead of returning it, invalidating it if an error is detected.",
+        "createdAt" : "2019-11-14T20:58:32Z",
+        "updatedAt" : "2019-11-14T20:58:32Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c0062415-56b4-4d89-b4d9-ede0ba11d81e",
+        "parentId" : "2679d8e7-f23f-46b4-9a7d-78b788bab2cb",
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "IIUC, this is trying to close a shared producer because of a random failure (including user code errors)? IMO, we should not do this for producer. It can be shared with multiple Spark jobs as long as they are using the same Kafka parameters. Kafka actually suggests to share the producer in their doc:\r\n\r\n> The producer is thread safe and sharing a single producer instance across threads will generally be faster than having multiple instances.\r\n\r\nHence I would assume it can self-heal. Kafka consumer is a different story. It's not thread-safe and cannot be shared with multiple tasks at the same time. That's why we can close the old one since we are pretty sure it's not used by another task in the same JVM.",
+        "createdAt" : "2019-11-14T21:55:02Z",
+        "updatedAt" : "2019-11-14T21:55:11Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b7232332-c368-43f9-8e42-483a68df4be5",
+        "parentId" : "2679d8e7-f23f-46b4-9a7d-78b788bab2cb",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "> IIUC, this is trying to close a shared producer because of a random failure (including user code errors)? IMO, we should not do this for producer. It can be shared with multiple Spark jobs as long as they are using the same Kafka parameters.\r\n\r\nWe changed the producer pool to follow the same approach as Kafka consumer - #25853 to resolve the long-standing \"producer close on idle\" issue. #19096 proves closing idle producer while producer can be shard with multiple tasks is very complicated - we should consider adding \"in-use\" and then should deal with thread-safety. One task one producer is pretty much simpler, and we didn't observe performance issue there.",
+        "createdAt" : "2019-11-15T01:42:43Z",
+        "updatedAt" : "2019-11-15T02:41:37Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8705b9c6-a33a-4d37-869f-d1160102379b",
+        "parentId" : "2679d8e7-f23f-46b4-9a7d-78b788bab2cb",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "> Why at the same time?\r\n\r\nI thought job 1 and job 2 are different queries. Single query + multiple cores could end-up in the same situation.\r\n\r\n> Hence I would assume it can self-heal.\r\n\r\nI would assume it can't heal if programming failure would be in the producer code itself. On the other had I see your general concern related this. What is your point considering https://github.com/apache/spark/pull/25853?\r\n",
+        "createdAt" : "2019-11-15T09:58:41Z",
+        "updatedAt" : "2019-11-15T09:58:42Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "59221262-1fa8-4fc6-9a9d-8fdaf4ddf074",
+        "parentId" : "2679d8e7-f23f-46b4-9a7d-78b788bab2cb",
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "> I would assume it can't heal if programming failure would be in the producer code itself.\r\n\r\nThat's true. Softwares have bugs. But I have never heard any Kafka producer issues reported when using Spark. The task failure most likely is a user error, transient network error, or something unrelated. And a task failure like this should be isolated and should not impact other tasks in the same executor. This seems overkill.\r\n",
+        "createdAt" : "2019-11-15T19:07:53Z",
+        "updatedAt" : "2019-11-15T19:07:53Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "45d67fd9-2c65-444e-a519-e27fb9ff0441",
+        "parentId" : "2679d8e7-f23f-46b4-9a7d-78b788bab2cb",
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "> What is your point considering #25853?\r\n\r\nThanks for pointing me to this PR. I posted my concerns there.",
+        "createdAt" : "2019-11-15T19:21:27Z",
+        "updatedAt" : "2019-11-15T19:21:33Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "373399fc-040e-4360-a981-30213a662bfb",
+        "parentId" : "2679d8e7-f23f-46b4-9a7d-78b788bab2cb",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "Since https://github.com/apache/spark/pull/25853 rolled back this PR just doesn't make sense, closing...",
+        "createdAt" : "2020-01-08T12:35:57Z",
+        "updatedAt" : "2020-01-08T12:35:58Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d3843244c467487f255a4895feb9368c2199a8b3",
+    "line" : 13,
+    "diffHunk" : "@@ -1,1 +94,98 @@        .build()\n    val key = toCacheKey(updatedKafkaParams)\n    if (TaskContext.get != null && TaskContext.get.attemptNumber >= 1) {\n      logDebug(s\"Invalidating key $key\")\n      producerPool.invalidateKey(key)"
+  }
+]

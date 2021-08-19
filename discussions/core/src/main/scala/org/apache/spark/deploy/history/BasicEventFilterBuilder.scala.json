@@ -42,5 +42,71 @@
     "commit" : "163bda018d054a0d41e983e6c448ce3b3e746d35",
     "line" : 163,
     "diffHunk" : "@@ -1,1 +161,165 @@    case e: SparkListenerExecutorBlacklisted => liveExecutors.contains(e.executorId)\n    case e: SparkListenerExecutorUnblacklisted => liveExecutors.contains(e.executorId)\n    case e: SparkListenerStageExecutorMetrics => liveExecutors.contains(e.execId)\n    case e: SparkListenerBlockManagerAdded => acceptBlockManagerEvent(e.blockManagerId)\n    case e: SparkListenerBlockManagerRemoved => acceptBlockManagerEvent(e.blockManagerId)"
+  },
+  {
+    "id" : "b4f6d094-56b1-41cd-ad0e-9af67d482a08",
+    "prId" : 26416,
+    "prUrl" : "https://github.com/apache/spark/pull/26416#pullrequestreview-337908524",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b2bda0cf-30be-4bbe-9a34-e73e0d41a4d8",
+        "parentId" : null,
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "I know that task end events can arrive after a stage end; but just in case the start event also can, maybe it's safer to check if the stage is really active (by checking `_liveJobToStages`?).",
+        "createdAt" : "2019-12-12T23:49:29Z",
+        "updatedAt" : "2019-12-26T02:35:39Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fedf31b2-0b36-4ade-84df-6cd652618cb4",
+        "parentId" : "b2bda0cf-30be-4bbe-9a34-e73e0d41a4d8",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Honestly I'm not sure how much the events can be out of order. The code assumes job start event will be placed earlier than any stage/task events in the job, and job end event will be placed later than any stage/task events in the job. If that's not true, may need to revisit the whole builder logic.",
+        "createdAt" : "2019-12-13T03:05:05Z",
+        "updatedAt" : "2019-12-26T02:35:39Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bba79b74-efcd-4d37-830e-1719cbcad773",
+        "parentId" : "b2bda0cf-30be-4bbe-9a34-e73e0d41a4d8",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "> job end event will be placed later than any stage/task events\r\n\r\nI'm sure that's not true. You can see in `AppStatusListener` that `onTaskEnd` has logic to clean up stuff if the event arrives after a job / stage end.\r\n\r\nI'm actually going further here, and saying you should double check that the stage is active when a start event arrives, or maybe change the way you're tracking things here if being exact is important.",
+        "createdAt" : "2020-01-02T23:44:39Z",
+        "updatedAt" : "2020-01-02T23:44:39Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e1a6e42b73f8d58dbc0a04882f2288d2fae0dad8",
+    "line" : 66,
+    "diffHunk" : "@@ -1,1 +64,68 @@  override def onTaskStart(taskStart: SparkListenerTaskStart): Unit = {\n    totalTasks += 1\n    val curTasks = _stageToTasks.getOrElseUpdate(taskStart.stageId,\n      mutable.HashSet[Long]())\n    curTasks += taskStart.taskInfo.taskId"
+  },
+  {
+    "id" : "c0946ddc-4e10-4016-bfd7-80e7ca9617ee",
+    "prId" : 26416,
+    "prUrl" : "https://github.com/apache/spark/pull/26416#pullrequestreview-337909022",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "abffca90-ecc2-489e-8650-edcf16433df2",
+        "parentId" : null,
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "statistics (also in the type name)",
+        "createdAt" : "2020-01-02T23:47:17Z",
+        "updatedAt" : "2020-01-03T00:38:05Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e1a6e42b73f8d58dbc0a04882f2288d2fae0dad8",
+    "line" : 81,
+    "diffHunk" : "@@ -1,1 +79,83 @@  override def createFilter(): EventFilter = new BasicEventFilter(this)\n\n  def statistic(): FilterStatistic = {\n    FilterStatistic(totalJobs, liveJobToStages.size, totalStages,\n      liveJobToStages.map(_._2.size).sum, totalTasks, _stageToTasks.map(_._2.size).sum)"
   }
 ]

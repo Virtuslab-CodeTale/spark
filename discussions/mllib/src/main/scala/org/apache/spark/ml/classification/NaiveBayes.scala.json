@@ -86,5 +86,126 @@
     "commit" : "ad36b5be386300cf259f30f87d9ef480d4020bf9",
     "line" : 84,
     "diffHunk" : "@@ -1,1 +232,236 @@      val thetaLogDenom = $(modelType) match {\n        case Multinomial | Complement =>\n          math.log(sumTermFreqs.toArray.sum + numFeatures * lambda)\n        case Bernoulli => math.log(n + 2.0 * lambda)\n      }"
+  },
+  {
+    "id" : "e177f56a-ccd3-44cc-ab3c-48a617f92d3c",
+    "prId" : 26413,
+    "prUrl" : "https://github.com/apache/spark/pull/26413#pullrequestreview-313125895",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e7c6866c-6add-453e-85c5-f2fcceb56a85",
+        "parentId" : null,
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "here, I use dataset OPs instead of previous RDD, and found that the speeds are almost the same.\r\n\r\n\r\n```scala\r\nimport org.apache.spark.ml.feature._\r\nimport org.apache.spark.ml.regression._\r\nimport org.apache.spark.ml.classification._\r\n\r\n\r\nvar df = spark.read.format(\"libsvm\").load(\"/data1/Datasets/a9a/a9a\")\r\ndf.persist()\r\ndf.count\r\n(0 until 8).foreach(_ => df = df.union(df))\r\ndf.count\r\n\r\nval nb = new NaiveBayes()\r\n\r\n\r\nval durations = (0 until 50).map{i => val tic = System.currentTimeMillis; val model = nb.fit(df); val toc = System.currentTimeMillis; toc - tic}\r\n\r\ndurations.takeRight(30).sum.toDouble / 30\r\n\r\n```\r\n\r\nPrevious impl based on RDD: 25535.0\r\nthis PR: 25261.7\r\n\r\nSo I use dataset-based one for consistency and simplity.",
+        "createdAt" : "2019-11-07T06:11:23Z",
+        "updatedAt" : "2019-11-09T07:00:36Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "82961dae05500b865c5fe192c1d7ac1beec87861",
+    "line" : 134,
+    "diffHunk" : "@@ -1,1 +182,186 @@\n    // Aggregates term frequencies per label.\n    // TODO: Summarizer directly returns sum vector.\n    val aggregated = dataset.groupBy(col($(labelCol)))\n      .agg(sum(w).as(\"weightSum\"), Summarizer.metrics(\"mean\", \"count\")"
+  },
+  {
+    "id" : "d9804a8e-f60a-4455-bcaa-4796fe509ad5",
+    "prId" : 26413,
+    "prUrl" : "https://github.com/apache/spark/pull/26413#pullrequestreview-314544499",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "386e2e88-f623-4780-a4c3-5ef6a1160a8d",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Would it make sense to subclass this model for the Gaussian case, to only add this there, or is that too much noise? should it be Option[Matrix] if it's here?",
+        "createdAt" : "2019-11-08T16:05:49Z",
+        "updatedAt" : "2019-11-09T07:00:36Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7f85dc5f-a186-4fdb-ab30-cdaa7c500a57",
+        "parentId" : "386e2e88-f623-4780-a4c3-5ef6a1160a8d",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "I will have a try to make a subclass GaussianNaiveBayesModel",
+        "createdAt" : "2019-11-09T05:32:14Z",
+        "updatedAt" : "2019-11-09T07:00:36Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6ae06e2c-6862-4a2d-857c-a84bd8261bb6",
+        "parentId" : "386e2e88-f623-4780-a4c3-5ef6a1160a8d",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "1, I have try make a subclass `GaussianNaiveBayesModel`, I think it will involve too much complexity in usage and impl: \r\nwe have to explictly assign the subclass `GaussianNaiveBayesModel` in some way if we need sigma matrix.\r\nI am not sure whether to define a new object `object GaussianNaiveBayesModel extends MLReadable[GaussianNaiveBayesModel]` and impl write/read method in it.\r\n```scala\r\nval model: NaiveBayesModel = new NaiveBayes().setModelType(\"gaussian\").fit(df)\r\nval sigma = model.asInstanceOf[GaussianNaiveBayesModel].sigma\r\n```\r\n\r\n2, It is ok to use `Option[Matrix]` here, however it include a little complexity for pyspark:\r\n I have to define a helper function in the scala side:\r\n```scala\r\n  // helper function for pyspark, since python do not have option type.\r\n  private[spark] def pySigma: Matrix = sigma.get\r\n```\r\nand in the py side\r\n```python\r\n    @property\r\n    @since(\"3.0.0\")\r\n    def sigma(self):\r\n        \"\"\"\r\n        variance of each feature.\r\n        \"\"\"\r\n        if self.getModelType() == \"gaussian\":\r\n            return self._call_java(\"pySigma\")\r\n        else:\r\n            return None\r\n```\r\nThat is because it seems that scala's `Option` type can not be converted to a python object automatically.\r\n\r\n3, otherwise we may create an empty matrix for Multinomial & Bernoulli.\r\n\r\n4, just contine use `null` sigma.  scala's `null` will be automaticly converted to python's `None`.\r\n\r\nAmong above 4 approaches, I prefer to 3&4. How do you think about it?",
+        "createdAt" : "2019-11-09T06:52:42Z",
+        "updatedAt" : "2019-11-09T07:00:36Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "82961dae05500b865c5fe192c1d7ac1beec87861",
+    "line" : 300,
+    "diffHunk" : "@@ -1,1 +365,369 @@    @Since(\"2.0.0\") val pi: Vector,\n    @Since(\"2.0.0\") val theta: Matrix,\n    @Since(\"3.0.0\") val sigma: Matrix)\n  extends ProbabilisticClassificationModel[Vector, NaiveBayesModel]\n  with NaiveBayesParams with MLWritable {"
+  },
+  {
+    "id" : "e41851e2-4a5f-4d7b-8cd8-521af6c284a9",
+    "prId" : 26413,
+    "prUrl" : "https://github.com/apache/spark/pull/26413#pullrequestreview-314544763",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "51a8f10c-fec8-4d26-9873-2de911702116",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Does this need to be lazy or transient? it's just a function",
+        "createdAt" : "2019-11-08T16:07:29Z",
+        "updatedAt" : "2019-11-09T07:00:36Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4b203804-0bbd-4f22-9489-9105cc25985b",
+        "parentId" : "51a8f10c-fec8-4d26-9873-2de911702116",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "Oh it should be lazy, other it will cause:\r\n```scala\r\njava.util.NoSuchElementException: Failed to find a default value for modelType\r\n[info]   at org.apache.spark.ml.param.Params.$anonfun$getOrDefault$2(params.scala:780)\r\n[info]   at scala.Option.getOrElse(Option.scala:189)\r\n[info]   at org.apache.spark.ml.param.Params.getOrDefault(params.scala:780)\r\n[info]   at org.apache.spark.ml.param.Params.getOrDefault$(params.scala:777)\r\n[info]   at org.apache.spark.ml.PipelineStage.getOrDefault(Pipeline.scala:43)\r\n[info]   at org.apache.spark.ml.param.Params.$(params.scala:786)\r\n[info]   at org.apache.spark.ml.param.Params.$$(params.scala:786)\r\n[info]   at org.apache.spark.ml.PipelineStage.$(Pipeline.scala:43)\r\n[info]   at org.apache.spark.ml.classification.NaiveBayesModel.<init>(NaiveBayes.scala:466)\r\n```\r\n\r\nSince  `NaiveBayesModel` should not contain `setDefault(modelType -> NaiveBayes.Multinomial)`",
+        "createdAt" : "2019-11-09T06:16:08Z",
+        "updatedAt" : "2019-11-09T07:00:36Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "90aa5bd4-0744-40cc-874c-83f9b03a8a8d",
+        "parentId" : "51a8f10c-fec8-4d26-9873-2de911702116",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "I found that VectorIndexerModel also mark [transformFunc](https://github.com/apache/spark/blob/ed12b61784e2ce5a1779c162bde1e16e9a9a0135/mllib/src/main/scala/org/apache/spark/ml/feature/VectorIndexer.scala#L351) lazy.",
+        "createdAt" : "2019-11-09T06:17:24Z",
+        "updatedAt" : "2019-11-09T07:00:36Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a56109e8-f5fd-4b69-b2e1-2dc372d2d601",
+        "parentId" : "51a8f10c-fec8-4d26-9873-2de911702116",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "I mark it transient since I guess the precomputed matrices are included in this closure, whose size may be big in high-dim cases.",
+        "createdAt" : "2019-11-09T07:01:59Z",
+        "updatedAt" : "2019-11-09T07:02:00Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "82961dae05500b865c5fe192c1d7ac1beec87861",
+    "line" : 380,
+    "diffHunk" : "@@ -1,1 +461,465 @@  }\n\n  @transient private lazy val predictRawFunc = {\n    $(modelType) match {\n      case Multinomial =>"
   }
 ]

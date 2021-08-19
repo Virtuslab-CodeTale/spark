@@ -53,5 +53,60 @@
     "commit" : "5b0aaaad661f10fd8e9b3dd9a43da9e9f9078f20",
     "line" : 21,
     "diffHunk" : "@@ -1,1 +101,105 @@ * Replaces the expression of CurrentCatalog with the current catalog name.\n */\ncase class ReplaceCurrentLike(catalogManager: CatalogManager) extends Rule[LogicalPlan] {\n  def apply(plan: LogicalPlan): LogicalPlan = {\n    import org.apache.spark.sql.connector.catalog.CatalogV2Implicits._"
+  },
+  {
+    "id" : "ddb455d1-1d19-4cdf-b6c5-0de3a6805334",
+    "prId" : 26437,
+    "prUrl" : "https://github.com/apache/spark/pull/26437#pullrequestreview-338414177",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e69b756d-3d46-43a6-9800-7fdccea2a5f3",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "non correlated -> uncorrelated",
+        "createdAt" : "2020-01-05T18:17:51Z",
+        "updatedAt" : "2020-01-06T03:57:21Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "26258b0bb285644ea9d1b43f7ac20a7e02c5d6f4",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +54,58 @@\n/**\n * Rewrite non correlated exists subquery to use ScalarSubquery\n *   WHERE EXISTS (SELECT A FROM TABLE B WHERE COL1 > 10)\n * will be rewritten to"
+  },
+  {
+    "id" : "c498cafd-cece-4bda-9943-b31c564c1e6d",
+    "prId" : 26437,
+    "prUrl" : "https://github.com/apache/spark/pull/26437#pullrequestreview-338453960",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "15f31d93-e53e-4326-96c2-1e6127457108",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Shall we add a test for this rule?",
+        "createdAt" : "2020-01-05T18:24:33Z",
+        "updatedAt" : "2020-01-06T03:57:21Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "14c7d628-51a1-4c39-baf8-eb4349879868",
+        "parentId" : "15f31d93-e53e-4326-96c2-1e6127457108",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> Shall we add a test for this rule?\r\n\r\nWith test case \r\n```\r\n\r\n  test(\"Rewritten uncorrelated exists subquery to use ScalarSubquery\") {\r\n    val relation = LocalRelation('a.int)\r\n    val relExistSubquery = LocalRelation('x.int, 'y.int, 'z.int).where('x > 10)\r\n\r\n\r\n    val query = relation.where(Exists(relExistSubquery)).select('a)\r\n\r\n    val optimized = Optimize.execute(query.analyze)\r\n    val correctAnswer = relation\r\n      .where(IsNotNull(ScalarSubquery(Limit(Literal(1),\r\n        Project(Seq(Alias(Literal(1), \"col\")()), relExistSubquery)))))\r\n      .analyze\r\n\r\n    comparePlans(optimized, correctAnswer)\r\n  }\r\n```\r\n\r\nGet error \r\n```\r\n\\[info] RewriteSubquerySuite:\r\n[info] - Rewritten uncorrelated exists subquery to use ScalarSubquery *** FAILED *** (852 milliseconds)\r\n[info]   == FAIL: Plans do not match ===\r\n[info]    Filter isnotnull(scalar-subquery#0 [])                     Filter isnotnull(scalar-subquery#0 [])\r\n[info]    :  +- GlobalLimit 1                                        :  +- GlobalLimit 1\r\n[info]    :     +- LocalLimit 1                                      :     +- LocalLimit 1\r\n[info]   !:        +- Project [1 AS col#5]                           :        +- Project [1 AS col#6]\r\n[info]    :           +- Filter (x#1 > 10)                           :           +- Filter (x#1 > 10)\r\n[info]    :              +- LocalRelation <empty>, [x#1, y#2, z#3]   :              +- LocalRelation <empty>, [x#1, y#2, z#3]\r\n[info]    +- LocalRelation <empty>, [a#0]                            +- LocalRelation <empty>, [a#0] (PlanTest.scala:147)\r\n[info]   org.scalatest.exceptions.TestFailedException:\r\n[info]   at org.scalatest.Assertions.newAssertionFailedException(Assertions.scala:530)\r\n```\r\n\r\nBecause of `Alias` in `RewriteNonCorrelatedExists `. \r\n\r\nAny good advise for test case, where I add test case can avoid this problem? @cloud-fan @viirya ",
+        "createdAt" : "2020-01-06T03:23:12Z",
+        "updatedAt" : "2020-01-06T03:57:21Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "26258b0bb285644ea9d1b43f7ac20a7e02c5d6f4",
+    "line" : 10,
+    "diffHunk" : "@@ -1,1 +59,63 @@ *   WHERE (SELECT 1 FROM (SELECT A FROM TABLE B WHERE COL1 > 10) LIMIT 1) IS NOT NULL\n */\nobject RewriteNonCorrelatedExists extends Rule[LogicalPlan] {\n  override def apply(plan: LogicalPlan): LogicalPlan = plan transformAllExpressions {\n    case exists: Exists if exists.children.isEmpty =>"
   }
 ]

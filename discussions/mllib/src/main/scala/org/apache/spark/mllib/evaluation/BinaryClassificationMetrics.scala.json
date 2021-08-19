@@ -1,0 +1,200 @@
+[
+  {
+    "id" : "0d1457bc-9474-41be-af4b-ae424ca1e3cd",
+    "prId" : 26454,
+    "prUrl" : "https://github.com/apache/spark/pull/26454#pullrequestreview-316393856",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ea4be64b-f79d-4030-8619-f5c803cf33be",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "This still isn't unpersisted",
+        "createdAt" : "2019-11-13T16:27:27Z",
+        "updatedAt" : "2019-11-13T16:56:29Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "433e37ee-0051-457b-8c13-23b10b7e5bea",
+        "parentId" : "ea4be64b-f79d-4030-8619-f5c803cf33be",
+        "authorId" : "75554730-8183-463c-bf1d-7cd5b4e9f22b",
+        "body" : "Do you mean it should be unpersisted after use?",
+        "createdAt" : "2019-11-13T16:30:14Z",
+        "updatedAt" : "2019-11-13T16:56:29Z",
+        "lastEditedBy" : "75554730-8183-463c-bf1d-7cd5b4e9f22b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "22e390a6-2800-48dd-93f7-66b4db73a4a5",
+        "parentId" : "ea4be64b-f79d-4030-8619-f5c803cf33be",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Yes otherwise the caller has no way to unpersist it until it's GCed",
+        "createdAt" : "2019-11-13T16:47:08Z",
+        "updatedAt" : "2019-11-13T16:56:29Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "31c0fe72c4998965a55532f0806bd4094213ece2",
+    "line" : 22,
+    "diffHunk" : "@@ -1,1 +175,179 @@    )\n    if (scoreLabelsWeight.getStorageLevel != StorageLevel.NONE) {\n      binnedWeights.persist()\n    }\n    val counts = binnedWeights.sortByKey(ascending = false)"
+  },
+  {
+    "id" : "89fe7a97-8e2d-462a-981b-534ad46e858a",
+    "prId" : 26454,
+    "prUrl" : "https://github.com/apache/spark/pull/26454#pullrequestreview-316470859",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a2daefa3-43e3-42ac-a94a-5dda979200c6",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Wait, hm, I don't understand this. You persist binnedWeights, but it is now only used once. Why? If anything it's binnedCounts that needs persisting. I'm still not clear if it makes enough difference to matter.",
+        "createdAt" : "2019-11-13T17:09:18Z",
+        "updatedAt" : "2019-11-13T17:09:18Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "679d83ff-710e-48fb-8647-1dad260efe08",
+        "parentId" : "a2daefa3-43e3-42ac-a94a-5dda979200c6",
+        "authorId" : "75554730-8183-463c-bf1d-7cd5b4e9f22b",
+        "body" : "`binnedCounts` is a child RDD of `binnedWeights`. And here one action `sortByKey` is performed on `binnedWeights`.",
+        "createdAt" : "2019-11-13T17:17:29Z",
+        "updatedAt" : "2019-11-13T17:17:30Z",
+        "lastEditedBy" : "75554730-8183-463c-bf1d-7cd5b4e9f22b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "80e39fb6-0098-49ec-b65b-e6b1b5ef19b8",
+        "parentId" : "a2daefa3-43e3-42ac-a94a-5dda979200c6",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Yes, but, why bother persisting binnedWeights? you recompute everything in between it and binnedCounts twice, when I think that would be the point, to avoid that.",
+        "createdAt" : "2019-11-13T17:31:10Z",
+        "updatedAt" : "2019-11-13T17:31:11Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6933cee7-04f1-4fa4-9e6f-5a8404bfc390",
+        "parentId" : "a2daefa3-43e3-42ac-a94a-5dda979200c6",
+        "authorId" : "75554730-8183-463c-bf1d-7cd5b4e9f22b",
+        "body" : "I think `binnedWeights` is required to be persisted because more than one action is getting applied here.\r\n\r\n`binnedWeights`\r\n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|\r\n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| `sortByKey` (action)\r\n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;V\r\n`counts`\r\n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|\r\n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| `count` (action)\r\n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;V\r\n`binnedCounts` (on which action `collect` is applied to compute `agg`)\r\n",
+        "createdAt" : "2019-11-13T17:53:15Z",
+        "updatedAt" : "2019-11-13T17:58:46Z",
+        "lastEditedBy" : "75554730-8183-463c-bf1d-7cd5b4e9f22b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f1e6a1ea-9b24-4b52-93ab-a0bbe0388eae",
+        "parentId" : "a2daefa3-43e3-42ac-a94a-5dda979200c6",
+        "authorId" : "75554730-8183-463c-bf1d-7cd5b4e9f22b",
+        "body" : "I might be wrong here. Kindly correct me @srowen ",
+        "createdAt" : "2019-11-13T17:56:01Z",
+        "updatedAt" : "2019-11-13T17:56:01Z",
+        "lastEditedBy" : "75554730-8183-463c-bf1d-7cd5b4e9f22b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ae6cb46d-7fae-41dd-8440-5b44817fc62a",
+        "parentId" : "a2daefa3-43e3-42ac-a94a-5dda979200c6",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "caching helps where more than one action is performed on the same RDD. That's not the case here. Each of the first two has one thing executed on it. sortByKey is not an action, anyway.",
+        "createdAt" : "2019-11-13T18:07:52Z",
+        "updatedAt" : "2019-11-13T18:07:52Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ee44f142-55c2-4488-8cc9-a11586d6d973",
+        "parentId" : "a2daefa3-43e3-42ac-a94a-5dda979200c6",
+        "authorId" : "75554730-8183-463c-bf1d-7cd5b4e9f22b",
+        "body" : "Oh, okay. One question here, will it be worth persisting `counts` since actions `count` and `collect` is applied directly on it ?",
+        "createdAt" : "2019-11-13T18:21:47Z",
+        "updatedAt" : "2019-11-13T18:21:47Z",
+        "lastEditedBy" : "75554730-8183-463c-bf1d-7cd5b4e9f22b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fa3feffb-e13e-4bff-987c-4a7636a49349",
+        "parentId" : "a2daefa3-43e3-42ac-a94a-5dda979200c6",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Doesn't seem so. But that is the question I'd put to you in these cases - are you sure it makes a difference meaningful enough to overcome the overhead? I could imagine so here, just wondering if these are based on more investigation or benchmarking, vs just trying to persist lots of things.",
+        "createdAt" : "2019-11-13T18:27:06Z",
+        "updatedAt" : "2019-11-13T18:27:06Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b9defdc9-c064-48f8-a851-f018c1c40a94",
+        "parentId" : "a2daefa3-43e3-42ac-a94a-5dda979200c6",
+        "authorId" : "75554730-8183-463c-bf1d-7cd5b4e9f22b",
+        "body" : "> are you sure it makes a difference meaningful enough to overcome the overhead?\r\n\r\nI think, no. Persisting `count` doesn't makes sense here. It will just be an overhead. Now I am getting clear picture of where to use persist. \r\nKey learnings from this PR about persist.\r\n\r\n- persist introduce memory and CPU overheads.\r\n\r\n- So only important inputs (such as intermediate results, user data which is already cached, etc) should be persisted or RDD on which more than one action is performed.\r\n\r\n- Avoid using persist in loop.\r\n\r\n- Persist should be meaningful enough to overcome overheads.",
+        "createdAt" : "2019-11-13T18:44:30Z",
+        "updatedAt" : "2019-11-13T18:44:30Z",
+        "lastEditedBy" : "75554730-8183-463c-bf1d-7cd5b4e9f22b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7c806832-a25f-4f1a-9132-4db2e118bff4",
+        "parentId" : "a2daefa3-43e3-42ac-a94a-5dda979200c6",
+        "authorId" : "75554730-8183-463c-bf1d-7cd5b4e9f22b",
+        "body" : "TYSM @srowen . Looking forward for more learning opportunities.",
+        "createdAt" : "2019-11-13T18:46:18Z",
+        "updatedAt" : "2019-11-13T18:46:37Z",
+        "lastEditedBy" : "75554730-8183-463c-bf1d-7cd5b4e9f22b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "31c0fe72c4998965a55532f0806bd4094213ece2",
+    "line" : 24,
+    "diffHunk" : "@@ -1,1 +177,181 @@      binnedWeights.persist()\n    }\n    val counts = binnedWeights.sortByKey(ascending = false)\n\n    val binnedCounts ="
+  },
+  {
+    "id" : "7c946ce7-85f7-45ee-9d2f-32b44e91974e",
+    "prId" : 26447,
+    "prUrl" : "https://github.com/apache/spark/pull/26447#pullrequestreview-314573925",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a4b021c3-6924-4518-8e9d-d5d79bb4b308",
+        "parentId" : null,
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "Could you explain why do you persist `binnedWeights` but not `counts`? As I can see `binnedWeights` is used only once ... or I missed something?",
+        "createdAt" : "2019-11-09T18:48:56Z",
+        "updatedAt" : "2019-11-09T18:49:00Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ad427cf0-0353-4d73-99a7-4800491ffe6d",
+        "parentId" : "a4b021c3-6924-4518-8e9d-d5d79bb4b308",
+        "authorId" : "75554730-8183-463c-bf1d-7cd5b4e9f22b",
+        "body" : "Rdd `scoreAndLabels.combineByKey` is found to be used more than one time, as mentioned in [SPARK-29816](https://issues.apache.org/jira/browse/SPARK-29816).\r\nI think, `counts` rdd is constructed over `scoreAndLabels.combineByKey` after action `sortByKey`. `counts` is indirectly dependent on `scoreAndLabels.combineByKey` i.e, `binnedWeights`?",
+        "createdAt" : "2019-11-09T19:28:11Z",
+        "updatedAt" : "2019-11-09T19:28:12Z",
+        "lastEditedBy" : "75554730-8183-463c-bf1d-7cd5b4e9f22b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "23726f920763a7fb5293405913222b4a82cc4861",
+    "line" : 13,
+    "diffHunk" : "@@ -1,1 +173,177 @@      mergeCombiners = (c1: BinaryLabelCounter, c2: BinaryLabelCounter) => c1 += c2\n    )\n    binnedWeights.persist()\n    val counts = binnedWeights.sortByKey(ascending = false)\n"
+  }
+]
