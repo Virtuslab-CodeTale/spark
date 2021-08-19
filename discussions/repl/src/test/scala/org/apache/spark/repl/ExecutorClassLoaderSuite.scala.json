@@ -31,5 +31,49 @@
     "commit" : "908863543372655091b8f6114b8ec5ec0290763e",
     "line" : 4,
     "diffHunk" : "@@ -1,1 +232,236 @@      .setAppName(\"executor-class-loader-test\")\n      .set(\"spark.network.timeout\", \"11s\")\n      .set(\"spark.network.timeoutInterval\", \"11s\")\n      .set(\"spark.repl.class.outputDir\", tempDir1.getAbsolutePath)\n    val sc = new SparkContext(conf)"
+  },
+  {
+    "id" : "a25270eb-e0ec-4c94-8348-0e3ad8fedaf5",
+    "prId" : 24683,
+    "prUrl" : "https://github.com/apache/spark/pull/24683#pullrequestreview-270498427",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "fcd5dfd3-4232-4d7a-bc0e-8fa9da08032a",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "@zsxwing I just noticed this generates a compiler warning. `RemoteClassLoaderError` can't be an instance of either of those. Did you mean to check the `cause` of this exception?",
+        "createdAt" : "2019-08-03T18:22:40Z",
+        "updatedAt" : "2019-08-03T18:22:40Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a86c99f2-4756-42e6-a361-784023fb3780",
+        "parentId" : "fcd5dfd3-4232-4d7a-bc0e-8fa9da08032a",
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "@srowen this line is to ensure we will never make `RemoteClassLoaderError` extend `LinkageError` or `ClassNotFoundException` in future. Can we turn the warning off for this check, or just rewrite it to something like `assert(e.getClass.getSimpleName != \"LinkageError\" && e.getClass.getSimpleName != \"ClassNotFoundException\")`?",
+        "createdAt" : "2019-08-04T07:39:04Z",
+        "updatedAt" : "2019-08-04T07:39:04Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1667db25-b173-4fef-a6e2-8630d2b0cd62",
+        "parentId" : "fcd5dfd3-4232-4d7a-bc0e-8fa9da08032a",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Oh I see. Ideally we would avoid the warning. You wouldn't be able to check its name but can check isAssignableFrom without a warning. ",
+        "createdAt" : "2019-08-04T13:42:02Z",
+        "updatedAt" : "2019-08-04T13:42:02Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "0b5cb4880b1793152f0ef2e4e664e6ebe7a82d4d",
+    "line" : 94,
+    "diffHunk" : "@@ -1,1 +273,277 @@        // RemoteClassLoaderError must not be LinkageError nor ClassNotFoundException. Otherwise,\n        // JVM will cache it and doesn't retry to load a class.\n        assert(!e.isInstanceOf[LinkageError] && !e.isInstanceOf[ClassNotFoundException])\n      } finally {\n        rpcEnv.shutdown()"
   }
 ]

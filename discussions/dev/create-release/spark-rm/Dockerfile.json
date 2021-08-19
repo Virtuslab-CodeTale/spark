@@ -372,5 +372,82 @@
     "commit" : "54896aa60b43013b20ecc15bf47d9b6cc158893d",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +39,43 @@# This is all in a single \"RUN\" command so that if anything changes, \"apt update\" is run to fetch\n# the most current package versions (instead of potentially using old versions cached by docker).\nRUN apt-get clean && apt-get update && $APT_INSTALL gnupg ca-certificates apt-transport-https && \\\n  echo 'deb https://cloud.r-project.org/bin/linux/ubuntu xenial/' >> /etc/apt/sources.list && \\\n  gpg --keyserver keyserver.ubuntu.com --recv-key E084DAB9 && \\"
+  },
+  {
+    "id" : "97cf1e9d-96cf-4cb1-a2a8-9db26609471e",
+    "prId" : 24664,
+    "prUrl" : "https://github.com/apache/spark/pull/24664#pullrequestreview-240332431",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "95a977f5-58a3-4c36-942c-e3e0412ec25a",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "I couldn't test that this works as a Debian repo, but the result of browsing both URLs looks the same and contains a bionic-cran35 subdir.",
+        "createdAt" : "2019-05-21T14:26:43Z",
+        "updatedAt" : "2019-05-22T13:37:03Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4bcb2f7a-ce9f-4d0b-a8c8-530dd66dd5aa",
+        "parentId" : "95a977f5-58a3-4c36-942c-e3e0412ec25a",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "This seems to need more works. Could you try with docker image?\r\n```\r\nroot@8a08d6e45096:/# apt-get update\r\nIgn:1 https://cloud.r-project.org/bin/linux/ubuntu bionic-cran35/ InRelease\r\nErr:2 https://cloud.r-project.org/bin/linux/ubuntu bionic-cran35/ Release\r\n  Certificate verification failed: The certificate is NOT trusted. The certificate issuer is unknown.  Could not handshake: Error in the certificate verification. [IP: 54.192.146.13 443]\r\n```",
+        "createdAt" : "2019-05-21T20:51:06Z",
+        "updatedAt" : "2019-05-22T13:37:03Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c51f99c9-559f-42df-b28e-b0248f43135a",
+        "parentId" : "95a977f5-58a3-4c36-942c-e3e0412ec25a",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Dang, OK, I didn't test this. I don't see browser warnings when browsing to https://cloud.r-project.org/bin/linux/ubuntu so that's odd. How are you testing it? What about using https://cran.r-project.org/bin/linux/ubuntu directly here?",
+        "createdAt" : "2019-05-21T21:40:19Z",
+        "updatedAt" : "2019-05-22T13:37:03Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a49ff422-2fed-4ea4-a96f-c34f3736c4e4",
+        "parentId" : "95a977f5-58a3-4c36-942c-e3e0412ec25a",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "I tested like this.\r\n```bash\r\n$ docker run -it ubuntu:18.04 /bin/bash\r\nroot@f088bff95325:/# apt-get clean && apt-get update && apt-get install --no-install-recommends -y gnupg && echo 'deb https://cloud.r-project.org/bin/linux/ubuntu bionic-cran35/' >> /etc/apt/sources.list && gpg --keyserver keyserver.ubuntu.com --recv-key E084DAB9 && gpg -a --export E084DAB9 | apt-key add - && apt-get clean && rm -rf /var/lib/apt/lists/* && apt-get clean && apt-get update\r\n```\r\n\r\nThe original one works. But, `https://cran.XXX` also fails.\r\n```\r\nErr:2 https://cran.cnr.Berkeley.edu/bin/linux/ubuntu bionic-cran35/ Release\r\n  Certificate verification failed: The certificate is NOT trusted. The certificate issuer is unknown.  Could not handshake: Error in the certificate verification. [IP: 169.229.19.202 443]\r\n```",
+        "createdAt" : "2019-05-21T21:50:20Z",
+        "updatedAt" : "2019-05-22T13:37:03Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "632d1dfa-b3f9-4d32-8c79-ad3ee53b87a6",
+        "parentId" : "95a977f5-58a3-4c36-942c-e3e0412ec25a",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "See my latest commit. Adding `ca-certificates` and `[trusted=yes]` made it work for me.",
+        "createdAt" : "2019-05-21T22:28:16Z",
+        "updatedAt" : "2019-05-22T13:37:03Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d22776f5-04ec-4666-a527-61c94532ed40",
+        "parentId" : "95a977f5-58a3-4c36-942c-e3e0412ec25a",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Great!",
+        "createdAt" : "2019-05-21T22:31:36Z",
+        "updatedAt" : "2019-05-22T13:37:03Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "254e5cb935071f5ebf584e4b349514bbf1853398",
+    "line" : 7,
+    "diffHunk" : "@@ -1,1 +44,48 @@# the most current package versions (instead of potentially using old versions cached by docker).\nRUN apt-get clean && apt-get update && $APT_INSTALL gnupg ca-certificates && \\\n  echo 'deb https://cloud.r-project.org/bin/linux/ubuntu bionic-cran35/' >> /etc/apt/sources.list && \\\n  gpg --keyserver keyserver.ubuntu.com --recv-key E084DAB9 && \\\n  gpg -a --export E084DAB9 | apt-key add - && \\"
   }
 ]

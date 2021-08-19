@@ -1,0 +1,68 @@
+[
+  {
+    "id" : "bee11035-9ff4-4581-b7ae-f5709de21bcb",
+    "prId" : 24617,
+    "prUrl" : "https://github.com/apache/spark/pull/24617#pullrequestreview-241382888",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0a3f447f-a90c-4305-81e9-c15e41a0e2f9",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I checked presto's SPI, it asks the connector to implement a [`createTable`](https://github.com/prestodb/presto/blob/3060c65a1812c6c8b0c2ab725b0184dbad67f0ed/presto-spi/src/main/java/com/facebook/presto/spi/connector/ConnectorMetadata.java#L182) method with the `ignoreExisting` parameter.\r\n\r\nWhen implementing Hive/JDBC with data source v2, I think it's better to directly pass the `ignoreIfExists` flag, as these data sources support this flag natively.\r\n\r\nI don't know the exact reason why presto designed its SPI in this way, maybe it's because the data source can have a chance to optimize for the `ignoreIfExists` flag. I think it's better to follow the design of presto here.",
+        "createdAt" : "2019-05-23T13:03:14Z",
+        "updatedAt" : "2019-05-23T15:32:37Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c2b8f0e1-2506-40e4-ab03-9ff888646de0",
+        "parentId" : "0a3f447f-a90c-4305-81e9-c15e41a0e2f9",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "BTW I think it's a separated issue from adding CREATE TABLE support. I'm fine as long as we add a TODO here.",
+        "createdAt" : "2019-05-23T13:04:29Z",
+        "updatedAt" : "2019-05-23T15:32:37Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "721722b4-7518-465a-945e-f34eeb93f2df",
+        "parentId" : "0a3f447f-a90c-4305-81e9-c15e41a0e2f9",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "@cloud-fan, adding an additional argument to the `createTable` method is a poor choice because it forces Spark to depend on sources to implement consistent behavior. Consistency and reliability is a problem in Spark that we are trying to address by making Spark handle these cases.\r\n\r\nThat's why not adding a flag to `createTable` is the right choice. It keeps the API simpler for implementers and guarantees consistent behavior.",
+        "createdAt" : "2019-05-23T15:24:22Z",
+        "updatedAt" : "2019-05-23T15:32:37Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "18ebca56-2fad-4c39-8e6c-2f9b021ecaf0",
+        "parentId" : "0a3f447f-a90c-4305-81e9-c15e41a0e2f9",
+        "authorId" : "806aa501-9ea7-4cec-b017-a84d9a1602d8",
+        "body" : "The question is if the downstream source has different behavior from what Spark wants to enforce if the `ignoreIfExists` flag is passed to the source vs. Spark deciding how to handle it. So I can imagine there being a discrepancy if the user gets different behavior from running the `IF NOT EXISTS` query directly on the Hive / SQL DB vs. running it through Spark.\r\n\r\nI think it's better to keep Spark consistent across sources, which does leave a concession for us being inconsistent in the above way. We should document the behavior of the SQL queries where they may deviate from the behavior of the underlying source where appropriate.",
+        "createdAt" : "2019-05-23T18:30:31Z",
+        "updatedAt" : "2019-05-23T18:30:31Z",
+        "lastEditedBy" : "806aa501-9ea7-4cec-b017-a84d9a1602d8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3ee488c6-63d0-4ec8-9a6b-48ba4e53441b",
+        "parentId" : "0a3f447f-a90c-4305-81e9-c15e41a0e2f9",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "Thanks, @mccheah! I talked with Wenchen this morning and I think we are all in agreement now that we should guarantee consistency.",
+        "createdAt" : "2019-05-23T18:41:42Z",
+        "updatedAt" : "2019-05-23T18:41:43Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9664638d65d496f560286261a3f90cfe1c53ab87",
+    "line" : 43,
+    "diffHunk" : "@@ -1,1 +41,45 @@    if (!catalog.tableExists(identifier)) {\n      try {\n        catalog.createTable(identifier, tableSchema, partitioning.toArray, tableProperties.asJava)\n      } catch {\n        case _: TableAlreadyExistsException if ignoreIfExists =>"
+  }
+]

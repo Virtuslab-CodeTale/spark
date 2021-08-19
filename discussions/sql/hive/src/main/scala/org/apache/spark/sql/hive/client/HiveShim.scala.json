@@ -845,5 +845,115 @@
     "commit" : "e92c93fc0002f0a2c6d14fe3ebc9563e356d4663",
     "line" : 74,
     "diffHunk" : "@@ -1,1 +848,852 @@\n  override def getDatabaseOwnerName(db: Database): String = {\n    Option(getDatabaseOwnerNameMethod.invoke(db)).map(_.asInstanceOf[String]).getOrElse(\"\")\n  }\n"
+  },
+  {
+    "id" : "97d2c7b6-6d93-4c28-8100-a2504ad83b08",
+    "prId" : 24685,
+    "prUrl" : "https://github.com/apache/spark/pull/24685#pullrequestreview-242198209",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "824b8034-121e-45e0-a637-9c1a872404be",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "can't we simply do `case attr: Attribute if attr.dataType == StringType`?",
+        "createdAt" : "2019-05-27T08:09:17Z",
+        "updatedAt" : "2019-05-27T08:59:59Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "650397b4-cb61-4504-9b90-e07e9a397a32",
+        "parentId" : "824b8034-121e-45e0-a637-9c1a872404be",
+        "authorId" : "b6393788-12cc-4066-9294-857f4baec092",
+        "body" : "I used to test that, but it can't pass some tests in `PartitionedTablePerfStatsSuite`.\r\nIt seems that such as `p1 = '0'` (p1 is a Int partition key and  '0' is an Integer) can filter some partitions, but `p1 = \"0\"` (p1 is a Int partition key and \"0\" is a String) can't be pushed down.\r\nSo, I add the prediction here to judge whether it has a castToString operation.",
+        "createdAt" : "2019-05-27T08:50:05Z",
+        "updatedAt" : "2019-05-27T08:59:59Z",
+        "lastEditedBy" : "b6393788-12cc-4066-9294-857f4baec092",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "77b2e97e-f954-47a9-a5ab-1553ed295c2b",
+        "parentId" : "824b8034-121e-45e0-a637-9c1a872404be",
+        "authorId" : "b6393788-12cc-4066-9294-857f4baec092",
+        "body" : "I will remove the `!partitionKeys.contains(attr.name)`,  it is false always. \r\nI did't have a good understanding about this.",
+        "createdAt" : "2019-05-27T08:57:20Z",
+        "updatedAt" : "2019-05-27T08:59:59Z",
+        "lastEditedBy" : "b6393788-12cc-4066-9294-857f4baec092",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "300e2b98-6825-418d-9477-1e603df40754",
+        "parentId" : "824b8034-121e-45e0-a637-9c1a872404be",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "can you point to the problematic test cases?",
+        "createdAt" : "2019-05-27T09:05:18Z",
+        "updatedAt" : "2019-05-27T09:05:18Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "767f55d2-2871-41ad-b828-5d3bc9cc9a5a",
+        "parentId" : "824b8034-121e-45e0-a637-9c1a872404be",
+        "authorId" : "b6393788-12cc-4066-9294-857f4baec092",
+        "body" : "Such as(PartitionedTablePerfStatsSuite) :\r\n```\r\ngenericTest(\"lazy partition pruning reads only necessary partition data\")\r\n```\r\nRelative query  is( partCol1 is an Int type partition key):\r\n```\r\n          spark.sql(\"select * from test where partCol1 = 999\").count()\r\n          assert(HiveCatalogMetrics.METRIC_PARTITIONS_FETCHED.getCount() == 0)\r\n\r\n```\r\nThe relative log is \r\n```\r\n5 did not equal 0\r\nScalaTestFailureLocation: org.apache.spark.sql.hive.PartitionedTablePerfStatsSuite at (PartitionedTablePerfStatsSuite.scala:139)\r\nExpected :0\r\nActual   :5\r\n<Click to see difference>\r\n\r\norg.scalatest.exceptions.TestFailedException: 5 did not equal 0\r\n```",
+        "createdAt" : "2019-05-27T09:14:25Z",
+        "updatedAt" : "2019-05-27T09:35:50Z",
+        "lastEditedBy" : "b6393788-12cc-4066-9294-857f4baec092",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a17a9a74-d5bc-4f61-b2eb-3a157204f20c",
+        "parentId" : "824b8034-121e-45e0-a637-9c1a872404be",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Now I'm a little confused. Seems hive does support to filter non-string-type partition columns. ",
+        "createdAt" : "2019-05-27T09:41:27Z",
+        "updatedAt" : "2019-05-27T09:41:28Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2b0f3406-dddc-45df-8cc0-c0e5670c6a2c",
+        "parentId" : "824b8034-121e-45e0-a637-9c1a872404be",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "seems we need to revisit https://github.com/apache/spark/pull/19602",
+        "createdAt" : "2019-05-27T09:44:31Z",
+        "updatedAt" : "2019-05-27T09:44:32Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9f53871b-9ead-4d84-8d27-63d2acf2abce",
+        "parentId" : "824b8034-121e-45e0-a637-9c1a872404be",
+        "authorId" : "b6393788-12cc-4066-9294-857f4baec092",
+        "body" : "But if you execute a sql likes \r\n```\r\nsql(\"SELECT c1 FROM t1 WHERE CAST(p1 as STRING) = '5'\").show\r\n```\r\nIt will throw an exception:\r\n```\r\nCaused by: java.lang.reflect.InvocationTargetException\r\n\tat sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)\r\n\tat sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)\r\n\tat sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)\r\n\tat java.lang.reflect.Method.invoke(Method.java:498)\r\n\tat org.apache.spark.sql.hive.client.Shim_v0_13.getPartitionsByFilter(HiveShim.scala:759)\r\n\t... 57 more\r\nCaused by: MetaException(message:Filtering is supported only on partition keys of type string)\r\n```",
+        "createdAt" : "2019-05-27T09:48:35Z",
+        "updatedAt" : "2019-05-27T09:52:28Z",
+        "lastEditedBy" : "b6393788-12cc-4066-9294-857f4baec092",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f609057a-51c7-4978-9d38-e6a9f18ad513",
+        "parentId" : "824b8034-121e-45e0-a637-9c1a872404be",
+        "authorId" : "b6393788-12cc-4066-9294-857f4baec092",
+        "body" : "ok.",
+        "createdAt" : "2019-05-27T10:00:01Z",
+        "updatedAt" : "2019-05-27T10:00:01Z",
+        "lastEditedBy" : "b6393788-12cc-4066-9294-857f4baec092",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "19b9f6b449e306a9432c7a46812103e89cf4ba7e",
+    "line" : 9,
+    "diffHunk" : "@@ -1,1 +680,684 @@      def unapply(expr: Expression): Option[Attribute] = {\n        expr match {\n          case attr: Attribute\n              if (!castToStr || attr.dataType == StringType) =>\n            castToStr = false"
   }
 ]

@@ -2352,5 +2352,126 @@
     "commit" : "1dc9aa73bf4077bf7de6ab46c7227f09d7d4ffdb",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +2323,2327 @@    val attrs = this.logicalPlan.output\n    val colsAfterDrop = attrs.filter { attr =>\n      !attr.semanticEquals(expression)\n    }.map(attr => Column(attr))\n    select(colsAfterDrop : _*)"
+  },
+  {
+    "id" : "bef1ec16-8819-4d7e-b041-4507a07d2104",
+    "prId" : 24677,
+    "prUrl" : "https://github.com/apache/spark/pull/24677#pullrequestreview-245581023",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "af03d4b6-23ac-45b8-9c30-c8c167e4d2e9",
+        "parentId" : null,
+        "authorId" : "0c293c45-22a6-4358-8a40-adbf7c470575",
+        "body" : "I'm wondering if this and the code below should be in a finally block?",
+        "createdAt" : "2019-05-30T00:28:37Z",
+        "updatedAt" : "2019-05-30T00:30:40Z",
+        "lastEditedBy" : "0c293c45-22a6-4358-8a40-adbf7c470575",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cd3a57a7-7750-4811-9cbc-947994fef61f",
+        "parentId" : "af03d4b6-23ac-45b8-9c30-c8c167e4d2e9",
+        "authorId" : "e5821ab5-ed30-4285-b919-301e171bb4f8",
+        "body" : "If we put it into a finally block but only catch `SparkException` then that would be wrong: If a different exception gets thrown then we would go into `case None`, end the stream as if nothing happened and only get partial, incorrect data on the python side.\r\nIf we want to put this into a finally block then we should catch all exceptions but I figured I'd do the same as in https://github.com/apache/spark/pull/24070/files#r279589039\r\n\r\nIt should be fine as is, if any exception that isn't a `SparkException` gets thrown then we will never reach this code. Instead the `OutputStream` just gets closed and we get an `EofError` on the python side (like we do right now for all Exceptions).",
+        "createdAt" : "2019-05-30T13:19:20Z",
+        "updatedAt" : "2019-05-30T13:19:20Z",
+        "lastEditedBy" : "e5821ab5-ed30-4285-b919-301e171bb4f8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ecdd5b62-3910-47c9-846b-bca58263c081",
+        "parentId" : "af03d4b6-23ac-45b8-9c30-c8c167e4d2e9",
+        "authorId" : "e5821ab5-ed30-4285-b919-301e171bb4f8",
+        "body" : "Any more thoughts on this @BryanCutler ?",
+        "createdAt" : "2019-06-04T16:41:21Z",
+        "updatedAt" : "2019-06-04T16:41:21Z",
+        "lastEditedBy" : "e5821ab5-ed30-4285-b919-301e171bb4f8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d37dc908-f60f-4b27-b4e3-f2180def7042",
+        "parentId" : "af03d4b6-23ac-45b8-9c30-c8c167e4d2e9",
+        "authorId" : "0c293c45-22a6-4358-8a40-adbf7c470575",
+        "body" : "Yeah, I think this is fine",
+        "createdAt" : "2019-06-04T17:05:37Z",
+        "updatedAt" : "2019-06-04T17:05:37Z",
+        "lastEditedBy" : "0c293c45-22a6-4358-8a40-adbf7c470575",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ccfeb9e408b3fd804c0f68308da7ca0adf3094b5",
+    "line" : 32,
+    "diffHunk" : "@@ -1,1 +3327,3331 @@\n        // After processing all partitions, end the batch stream\n        batchWriter.end()\n        sparkException match {\n          case Some(exception) =>"
+  },
+  {
+    "id" : "c4481802-0705-4509-a141-1f7c8f9d12f6",
+    "prId" : 24677,
+    "prUrl" : "https://github.com/apache/spark/pull/24677#pullrequestreview-247424003",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b7f63a93-c2a1-4f99-bcca-3fb0b215703e",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Sorry for late response, @BryanCutler \r\n\r\nYea, I had the same question https://github.com/apache/spark/pull/24677#issuecomment-494879041. Thanks for details at https://github.com/apache/spark/pull/24677#issuecomment-494884105. It would have been better if those are commented since at least two committers raised the same questions :-).\r\n\r\n> @HyukjinKwon do you think would it make sense to patch branch-2.4 with a manual fix?\r\n\r\nYea, I don't mind backporting it (don't strongly feel we should do too).",
+        "createdAt" : "2019-06-10T01:11:28Z",
+        "updatedAt" : "2019-06-10T01:11:28Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ccfeb9e408b3fd804c0f68308da7ca0adf3094b5",
+    "line" : 43,
+    "diffHunk" : "@@ -1,1 +3332,3336 @@            // Signal failure and write error message\n            out.writeInt(-1)\n            PythonRDD.writeUTF(exception.getMessage, out)\n          case None =>\n            // Write batch order indices"
+  },
+  {
+    "id" : "0016ff81-23fc-4704-8022-339f1acd8fcc",
+    "prId" : 24619,
+    "prUrl" : "https://github.com/apache/spark/pull/24619#pullrequestreview-238632011",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c2f51bc0-34c3-41e3-8f61-5560244928eb",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "This is good because this prevents the exception type change. I'm wondering if we need to propagate `cause` here  because previously we didn't. And, for the other instance in this PR, the exception messages are not the same.",
+        "createdAt" : "2019-05-16T16:25:51Z",
+        "updatedAt" : "2019-05-16T17:51:26Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "763b6827-2eb5-4bbf-8026-deb24d1ed013",
+        "parentId" : "c2f51bc0-34c3-41e3-8f61-5560244928eb",
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "> I'm wondering if we need to propagate `cause` here because previously we didn't.\r\n\r\nPreviously it was just a `null` return value and there was no `cause`. Since we now get a `cause`, it's better to propagate it so that the error will be clearer.\r\n\r\n> And, for the other instance in this PR, the exception messages are not the same.\r\n\r\nThis is something we need to pay to unify all usages. At least, the exception type doesn't change.",
+        "createdAt" : "2019-05-16T17:50:35Z",
+        "updatedAt" : "2019-05-16T17:51:26Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "58518d57-fe15-463b-96c1-f1fe536f6e81",
+        "parentId" : "c2f51bc0-34c3-41e3-8f61-5560244928eb",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Got it. Thanks!",
+        "createdAt" : "2019-05-16T20:52:36Z",
+        "updatedAt" : "2019-05-16T20:52:36Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6e4b73332137fe81d285707f15d43bbcc9432763",
+    "line" : 12,
+    "diffHunk" : "@@ -1,1 +702,706 @@          throw new AnalysisException(\n            s\"Unable to parse time delay '$delayThreshold'\",\n            cause = Some(e))\n      }\n    require(parsedDelay.milliseconds >= 0 && parsedDelay.months >= 0,"
   }
 ]

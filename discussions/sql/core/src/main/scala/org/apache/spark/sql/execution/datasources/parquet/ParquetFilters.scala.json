@@ -218,5 +218,71 @@
     "commit" : "5e632dfda94a7b657900f9d5ef9e8a0879663670",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +592,596 @@          if pushDownStartWith && canMakeFilterOn(name, prefix) =>\n        Option(prefix).map { v =>\n          FilterApi.userDefined(binaryColumn(nameToParquetField(name).fieldName),\n            new UserDefinedPredicate[Binary] with Serializable {\n              private val strToBinary = Binary.fromReusedByteArray(v.getBytes)"
+  },
+  {
+    "id" : "2f4b4510-0baf-4650-b690-157d7bdab94f",
+    "prId" : 24598,
+    "prUrl" : "https://github.com/apache/spark/pull/24598#pullrequestreview-238139907",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a35e9822-994d-47be-80c4-414d2e44cc72",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "The rule is correct, but it looks a little dangerous to set `true` blindly without considering the given parameter `canPartialPushDownConjuncts`. Could you add a test case for that complex example like `OR` under `NOT` in the deep predicate tree?\r\n\r\nAlso, it would be great to add more higher level test case in `SQLQuerySuite.scala` to show the benefit of this additional predicate pushdown `a1 OR b1`. Could you add that, too?",
+        "createdAt" : "2019-05-15T07:11:23Z",
+        "updatedAt" : "2019-05-17T00:35:02Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7b353011-e840-4e76-8b6a-157f6074564d",
+        "parentId" : "a35e9822-994d-47be-80c4-414d2e44cc72",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "> The rule is correct, but it looks a little dangerous to set true blindly without considering the given parameter canPartialPushDownConjuncts. Could you add a test case for that complex example like OR under NOT in the deep predicate tree?\r\n\r\n@dongjoon-hyun nice catch. However, here the `Not` predicate won't have a child as `Or` or `And` predicate because of `BooleanSimplification` optimization rule.\r\nI have updated the code, but a new test case seems unnecessary.  `Not(a Or b)` can be converted as `Not(a) And Not(b)`\r\nAlso, I have created a PR for pushing down `Not` operator before(for double insurance), but seems the PR made thing too complex: https://github.com/apache/spark/pull/22687\r\n\r\n> Also, it would be great to add more higher level test case in SQLQuerySuite.scala to show the benefit of this additional predicate pushdown a1 OR b1. Could you add that, too?\r\n\r\nHow can we verify the predicate is pushed down? Match the `OrcScan` and check the `pushedFilters`? Only Orc V2 can be checked in this way currently.",
+        "createdAt" : "2019-05-15T07:30:29Z",
+        "updatedAt" : "2019-05-17T00:35:02Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f190510e-f4ee-456d-85a2-6f5e4136fd27",
+        "parentId" : "a35e9822-994d-47be-80c4-414d2e44cc72",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "The conversion from `(a1 AND a2) OR (b1 AND b2)` to`(a1 OR b1) AND (a1 OR b2) AND (a2 OR b1) AND (a2 OR b2)` always works no matter it's a top level boolean expression or not.",
+        "createdAt" : "2019-05-15T12:02:39Z",
+        "updatedAt" : "2019-05-17T00:35:02Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8a4fd915-64d7-42d9-ad0f-e3889b421f1d",
+        "parentId" : "a35e9822-994d-47be-80c4-414d2e44cc72",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "@gengliangwang . You can use  `explain` with `Console.withOut`. What we need is to check `PushedFilters: ` in the plan.\r\n\r\n> How can we verify the predicate is pushed down? Match the OrcScan and check the pushedFilters? Only Orc V2 can be checked in this way currently.\r\n\r\n@cloud-fan and @gengliangwang . Yes. Of course, I already agreed that the rule is correct. I want to have a test case in a complete end-to-end query form which shows the new benefit clearly. Could you please add a real use case you met?",
+        "createdAt" : "2019-05-15T17:33:22Z",
+        "updatedAt" : "2019-05-17T00:35:02Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cadd0301-af37-48d7-9252-bee99606746d",
+        "parentId" : "a35e9822-994d-47be-80c4-414d2e44cc72",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "+1 for an end-to-end test",
+        "createdAt" : "2019-05-16T01:14:35Z",
+        "updatedAt" : "2019-05-17T00:35:02Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "90b0b697246251b1e0b8acfe07f53f1153aefe45",
+    "line" : 13,
+    "diffHunk" : "@@ -1,1 +537,541 @@        // a1 and b1 is convertible, while a2 and b2 is not.\n        // The predicate can be converted as\n        // (a1 OR b1) AND (a1 OR b2) AND (a2 OR b1) AND (a2 OR b2)\n        // As per the logical in And predicate, we can push down (a1 OR b1).\n        for {"
   }
 ]

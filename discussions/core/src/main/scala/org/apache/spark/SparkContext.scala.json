@@ -1736,5 +1736,71 @@
     "commit" : "f3915856344f7b260397b5582d6738accf319619",
     "line" : 131,
     "diffHunk" : "@@ -1,1 +2729,2733 @@            s\"(exec = ${execAmount}, task = ${taskReq.amount}) will result in wasted \" +\n            s\"resources due to resource ${limitingResourceName} limiting the number of \" +\n            s\"runnable tasks per executor to: ${numSlots}. Please adjust your configuration.\"\n          if (Utils.isTesting) {\n            throw new SparkException(message)"
+  },
+  {
+    "id" : "02796f36-a8cd-4ed3-86c7-abcfdfebe70c",
+    "prId" : 24615,
+    "prUrl" : "https://github.com/apache/spark/pull/24615#pullrequestreview-241255113",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a2d3ecc1-ff34-493f-8cdb-80444ae5fbd1",
+        "parentId" : null,
+        "authorId" : "0c812942-02cb-4975-9748-394d1387affa",
+        "body" : "It is possible that some resources have addresses passed in while some other resources require discovery script. So it is not one or the other.",
+        "createdAt" : "2019-05-21T18:51:17Z",
+        "updatedAt" : "2019-05-23T14:59:29Z",
+        "lastEditedBy" : "0c812942-02cb-4975-9748-394d1387affa",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1dd14481-e278-41ec-84e3-0828b5d6dd75",
+        "parentId" : "a2d3ecc1-ff34-493f-8cdb-80444ae5fbd1",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "in what case are you thinking?   The address config is really an internal config meant for standalone mode.  \r\nThe only case I can think of is if a user requests a resource the standalone mode worker handles but then asks for another resource that it doesn't and thus needs discoveryScript.   But that means that they are on their own for handling isolation and assignment. I kind of question whether we want to allow this but I also haven't seen the standalone implemnetation",
+        "createdAt" : "2019-05-21T19:16:13Z",
+        "updatedAt" : "2019-05-23T14:59:29Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4c812a21-ab97-4403-89a6-900dc6e7d12e",
+        "parentId" : "a2d3ecc1-ff34-493f-8cdb-80444ae5fbd1",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "also note this matches the way the executor does it as well. For the executor, either the worker in standalone mode passes in a resources file with what it has allocated per executor or it doesn't pass a file and we use the discovery scripts.  Yarn and k8s I don't expect to have issues with this as they will always use discovery Script.  If we want to be able to support both ways we should update both places.   I don't run standalone mode much so if you have a usecase this makes sense we can certainly change it.",
+        "createdAt" : "2019-05-21T19:33:02Z",
+        "updatedAt" : "2019-05-23T14:59:29Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c8e42936-223d-4c2d-acb7-ee8869b455d5",
+        "parentId" : "a2d3ecc1-ff34-493f-8cdb-80444ae5fbd1",
+        "authorId" : "0c812942-02cb-4975-9748-394d1387affa",
+        "body" : "It is fine to have that assumption. But we should check and throw when `resourcesWithAddrsInConfs.nonEmpty` but there are remaining resources that require discovery. In the current implementation, it is silently ignored.",
+        "createdAt" : "2019-05-22T15:35:16Z",
+        "updatedAt" : "2019-05-23T14:59:29Z",
+        "lastEditedBy" : "0c812942-02cb-4975-9748-394d1387affa",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f7471c13-d2a8-490d-a38a-d641f0842a1a",
+        "parentId" : "a2d3ecc1-ff34-493f-8cdb-80444ae5fbd1",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "we can support both ways, lets do this with the abstraction layer changes though",
+        "createdAt" : "2019-05-23T14:48:46Z",
+        "updatedAt" : "2019-05-23T14:59:29Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "768392ca83c29a2ef6b3ecb2d175cccd20ffa0ab",
+    "line" : 40,
+    "diffHunk" : "@@ -1,1 +383,387 @@      SparkConf.getConfigsWithSuffix(allDriverResourceConfs, SPARK_RESOURCE_ADDRESSES_SUFFIX)\n\n    _resources = if (resourcesWithAddrsInConfs.nonEmpty) {\n      resourcesWithAddrsInConfs.map { case (rName, addrString) =>\n        val addrsArray = addrString.split(\",\").map(_.trim())"
   }
 ]

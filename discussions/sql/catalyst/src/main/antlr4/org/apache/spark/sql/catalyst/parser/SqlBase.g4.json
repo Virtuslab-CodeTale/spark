@@ -2583,5 +2583,126 @@
     "commit" : "bd7d8c8f7c6a2c378deba5927c96a8eb4dc6ef54",
     "line" : 30,
     "diffHunk" : "@@ -1,1 +136,140 @@        (TYPE dataType)? (COMMENT comment=STRING)? colPosition?        #alterTableColumn\n    | ALTER TABLE tableIdentifier partitionSpec?\n        CHANGE COLUMN? identifier colType colPosition?                 #changeColumn\n    | ALTER TABLE tableIdentifier (partitionSpec)?\n        SET SERDE STRING (WITH SERDEPROPERTIES tablePropertyList)?     #setTableSerDe"
+  },
+  {
+    "id" : "3835e6d8-c3ee-46d1-84f5-0f60417c5bff",
+    "prId" : 24686,
+    "prUrl" : "https://github.com/apache/spark/pull/24686#pullrequestreview-243902622",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "967cf9db-c996-46f5-8323-82e8b7a17656",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "do we have view support in DS v2? This is surprising to me, as I thought we may treat table/view differently in DS v2. Personally I think it's a bad idea that hive unifies table and view, it's weird to see the `sqlText` field in Hive `Table` class.",
+        "createdAt" : "2019-05-30T00:24:16Z",
+        "updatedAt" : "2019-05-30T03:06:36Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0749e1d6-60ca-409a-a635-0ca4b7aa986a",
+        "parentId" : "967cf9db-c996-46f5-8323-82e8b7a17656",
+        "authorId" : "f5b3f57a-75a6-496c-af94-c32580ada13a",
+        "body" : "Echo your sentiment towards Hive view handling. That is why I separated visitDropView from visitDropTable and added DropView operator in preparation for enhancements, possibly even view catalog.",
+        "createdAt" : "2019-05-30T01:36:50Z",
+        "updatedAt" : "2019-05-30T03:07:31Z",
+        "lastEditedBy" : "f5b3f57a-75a6-496c-af94-c32580ada13a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "626af800-28f4-410f-83d4-d277fe9405ac",
+        "parentId" : "967cf9db-c996-46f5-8323-82e8b7a17656",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Are you going to add `DropView` operator in this PR? If not I think it's better to not add `DropViewStatement` in this PR. We can have a separated PR to add the view support.\r\n\r\nI think we haven't reached a consensus that DROP VIEW is implemented via `TableCatalog.dropTable`.",
+        "createdAt" : "2019-05-30T03:33:59Z",
+        "updatedAt" : "2019-05-30T03:33:59Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4b502e61-4b9d-4936-b456-67b733d7298b",
+        "parentId" : "967cf9db-c996-46f5-8323-82e8b7a17656",
+        "authorId" : "f5b3f57a-75a6-496c-af94-c32580ada13a",
+        "body" : "I see, separate visitDropView makes it possible to delay moving DropView to catalyst. I am ok either way.",
+        "createdAt" : "2019-05-30T04:29:35Z",
+        "updatedAt" : "2019-05-30T04:29:35Z",
+        "lastEditedBy" : "f5b3f57a-75a6-496c-af94-c32580ada13a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fc7b7686-a993-48a1-8bd9-cb0642ebb59a",
+        "parentId" : "967cf9db-c996-46f5-8323-82e8b7a17656",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "I think since these were mixed together originally, it makes sense to move both statements to create parsed plans at the same time. We are going to need to do this eventually anyway.\r\n\r\nWhy change to use a separate `visitDropView`, but not also move it to Catalyst and use a parsed plan? Is there value in keeping it that way?",
+        "createdAt" : "2019-05-30T15:52:50Z",
+        "updatedAt" : "2019-05-30T15:52:50Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4f246ffd-7375-4e4f-89a2-7a49d7a99e6c",
+        "parentId" : "967cf9db-c996-46f5-8323-82e8b7a17656",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Yes Hive mixes DROP TABLE and DROP VIEW, but it doesn't mean we have to follow it in data source v2. At least this needs to be discussed.\r\n\r\nIt seems weird to me that we forward the DROP VIEW request to `TableCatalog` implementations, without official view support in data source v2.",
+        "createdAt" : "2019-05-30T16:05:08Z",
+        "updatedAt" : "2019-05-30T16:05:08Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c09d1d84-7408-4b99-aefe-435470e63b52",
+        "parentId" : "967cf9db-c996-46f5-8323-82e8b7a17656",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "@cloud-fan, that's not what this PR does. This PR moves parsing into Catalyst by introducing a parsed plan, `DropViewStatement`, for `DROP VIEW`. We can still convert that to a `DropTable` in the analyzer if we choose to later, like we do for v1. (But I think it makes much more sense to use a `ViewCatalog`.)\r\n\r\nThe important thing is that we want to keep moving parsing code into Catalyst using parsed plans to separate the implementation (DataSource logical plans) from the parsing logic so that the parser isn't tightly coupled to DataSource v1.",
+        "createdAt" : "2019-05-30T16:11:55Z",
+        "updatedAt" : "2019-05-30T16:11:56Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0dd9074c-bdac-4ec2-bee2-bfbe0a22011a",
+        "parentId" : "967cf9db-c996-46f5-8323-82e8b7a17656",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "ah you are right! sorry I read the PR too fast",
+        "createdAt" : "2019-05-30T16:45:53Z",
+        "updatedAt" : "2019-05-30T16:45:53Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d5b0d4ad5f276a9f9fd52154c782418b8fa80a28",
+    "line" : 7,
+    "diffHunk" : "@@ -1,1 +141,145 @@    | ALTER TABLE tableIdentifier RECOVER PARTITIONS                   #recoverPartitions\n    | DROP TABLE (IF EXISTS)? multipartIdentifier PURGE?               #dropTable\n    | DROP VIEW (IF EXISTS)? multipartIdentifier                       #dropView\n    | CREATE (OR REPLACE)? (GLOBAL? TEMPORARY)?\n        VIEW (IF NOT EXISTS)? tableIdentifier"
+  },
+  {
+    "id" : "c1ce26a8-9780-4b49-8c2c-6fb4e3c30db2",
+    "prId" : 24624,
+    "prUrl" : "https://github.com/apache/spark/pull/24624#pullrequestreview-238377356",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "41a25dcf-e4c4-470e-b10f-930ef37f1d6b",
+        "parentId" : null,
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "Do we need to recreate the data after changing the bucket info?",
+        "createdAt" : "2019-05-16T13:05:00Z",
+        "updatedAt" : "2019-05-16T13:05:00Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ead21674251cef4b1058efb5c36a2ecf7e812a14",
+    "line" : 4,
+    "diffHunk" : "@@ -1,1 +139,143 @@    | ALTER TABLE tableIdentifier partitionSpec? SET locationSpec      #setTableLocation\n    | ALTER TABLE tableIdentifier RECOVER PARTITIONS                   #recoverPartitions\n    | ALTER TABLE tableIdentifier bucketSpec                           #updateTableBucket\n    | DROP TABLE (IF EXISTS)? tableIdentifier PURGE?                   #dropTable\n    | DROP VIEW (IF EXISTS)? tableIdentifier                           #dropTable"
   }
 ]

@@ -174,5 +174,126 @@
     "commit" : "b0b298e2d42785c54b1ffb10125741bce7e217e8",
     "line" : 81,
     "diffHunk" : "@@ -1,1 +89,93 @@   * type coercion. However, that would require more refactoring of the codebase.\n   */\n  def inputTypes: Seq[AbstractDataType] = {\n    inputEncoders.map { encoderOpt =>\n      if (encoderOpt.isDefined) {"
+  },
+  {
+    "id" : "1dd57da8-4dff-4664-bc2a-b500e96ad20b",
+    "prId" : 24636,
+    "prUrl" : "https://github.com/apache/spark/pull/24636#pullrequestreview-239222422",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9ddcdde5-489a-4fa3-8a90-f904e377b49c",
+        "parentId" : null,
+        "authorId" : "a11722a8-ecfa-4827-88e3-4d708f023846",
+        "body" : "Out of curiosity, why do we need this extra `convertedTerm` for the boxing? Could you instead do\r\n\r\n```\r\nObject $argTerm = ${eval.isNull} ? null : ${eval.value};\r\n```\r\n\r\nand avoid the use of an extra variable name? Or if you want more typechecking, do\r\n\r\n```\r\n${CodeGenerator.boxedType(dt)} $argTerm = ${eval.isNull} ? null : ${eval.value};\r\n```\r\n\r\nand used the boxed type as `$argTerm`'s type?\r\n\r\nTo avoid repetition and more tightly scope the conditional part of the argument convert logic, we even might consider something like this\r\n\r\n```scala\r\nval boxedType = CodeGenerator.boxedType(dt)\r\nval maybeConverted = if (CatalystTypeConverters.isPrimitive(dt)) {\r\n  eval.value\r\n} else {\r\n  \"$convertersTerm[$i].apply(${eval.value})\"\r\n}\r\ns\"$boxedType $argTerm = ${eval.isNull} ? null : $maybeConverted;\"\r\n```\r\n\r\n",
+        "createdAt" : "2019-05-18T16:11:03Z",
+        "updatedAt" : "2019-05-22T08:30:46Z",
+        "lastEditedBy" : "a11722a8-ecfa-4827-88e3-4d708f023846",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1925c222-cf19-4956-8f35-943cf604da6e",
+        "parentId" : "9ddcdde5-489a-4fa3-8a90-f904e377b49c",
+        "authorId" : "24e1dd39-ae3f-4bbb-a391-f60afb62d075",
+        "body" : "Well, actually my first trial was exactly what you are suggesting here, but it didn't work: indeed it can cause compilation error (the error message is something like `no common type for void and int`). Then, I also tried:\r\n```\r\nval boxedType = CodeGenerator.boxedType(dt)\r\nval maybeConverted = if (CatalystTypeConverters.isPrimitive(dt)) {\r\n  s\"(${boxedType}) eval.value\"\r\n} else {\r\n  \"$convertersTerm[$i].apply(${eval.value})\"\r\n}\r\ns\"$boxedType $argTerm = ${eval.isNull} ? null : $maybeConverted;\"\r\n```\r\nbut this fails too with a confusing error message. Honestly, I am not sure why this 2nd solution doesn't work, since I tried taking the code and compiling it with jdk and it worked. My best guess is that it is a janino bug which doesn't support it.\r\nI did several trials but I haven't found any better alternative as this seemed the only syntax working with janino.",
+        "createdAt" : "2019-05-18T19:29:59Z",
+        "updatedAt" : "2019-05-22T08:30:46Z",
+        "lastEditedBy" : "24e1dd39-ae3f-4bbb-a391-f60afb62d075",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "965a7fd0-59a2-473c-8b18-c322a180b096",
+        "parentId" : "9ddcdde5-489a-4fa3-8a90-f904e377b49c",
+        "authorId" : "a11722a8-ecfa-4827-88e3-4d708f023846",
+        "body" : "Interesting!\r\n\r\nI've filed a bug against Janino to report this issue: https://github.com/janino-compiler/janino/issues/90",
+        "createdAt" : "2019-05-19T06:12:51Z",
+        "updatedAt" : "2019-05-22T08:30:46Z",
+        "lastEditedBy" : "a11722a8-ecfa-4827-88e3-4d708f023846",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "010b3d449403a2d215a18b425722810470147ad6",
+    "line" : 15,
+    "diffHunk" : "@@ -1,1 +1010,1014 @@          val convertedTerm = ctx.freshName(\"conv\")\n          s\"\"\"\n             |${CodeGenerator.boxedType(dt)} $convertedTerm = ${eval.value};\n             |Object $argTerm = ${eval.isNull} ? null : $convertedTerm;\n           \"\"\".stripMargin"
+  },
+  {
+    "id" : "144a5332-a5c4-4da7-9be3-76d93fef28a0",
+    "prId" : 24636,
+    "prUrl" : "https://github.com/apache/spark/pull/24636#pullrequestreview-239251548",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "01f6dc96-8818-431f-a8c4-825ab4cdb555",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Use `CodeGenerator.isPrimitiveType`? We can save the change to `CatalystTypeConverters`.",
+        "createdAt" : "2019-05-19T01:40:19Z",
+        "updatedAt" : "2019-05-22T08:30:46Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "284b4fa9-c388-49d1-a874-10516ae7cd26",
+        "parentId" : "01f6dc96-8818-431f-a8c4-825ab4cdb555",
+        "authorId" : "24e1dd39-ae3f-4bbb-a391-f60afb62d075",
+        "body" : "it doesn't work, you can see the UT failures. For types like timestamp it is not the same.",
+        "createdAt" : "2019-05-19T19:30:06Z",
+        "updatedAt" : "2019-05-22T08:30:46Z",
+        "lastEditedBy" : "24e1dd39-ae3f-4bbb-a391-f60afb62d075",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "010b3d449403a2d215a18b425722810470147ad6",
+    "line" : 12,
+    "diffHunk" : "@@ -1,1 +1007,1011 @@      case ((eval, i), dt) =>\n        val argTerm = ctx.freshName(\"arg\")\n        val initArg = if (CatalystTypeConverters.isPrimitive(dt)) {\n          val convertedTerm = ctx.freshName(\"conv\")\n          s\"\"\""
+  },
+  {
+    "id" : "f658fbed-7e2e-495f-9027-b20bcdb4c020",
+    "prId" : 24636,
+    "prUrl" : "https://github.com/apache/spark/pull/24636#pullrequestreview-241823473",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "04f5153a-db07-4a17-b0f1-32b419448d86",
+        "parentId" : null,
+        "authorId" : "99e31844-a5b3-48a2-af71-412edb607a13",
+        "body" : "Can we remove `${eval.isNull} ? ...` if `${eval.isNull}` is compile-time constant?",
+        "createdAt" : "2019-05-24T10:26:46Z",
+        "updatedAt" : "2019-05-24T10:26:46Z",
+        "lastEditedBy" : "99e31844-a5b3-48a2-af71-412edb607a13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "39c63bed-9853-49ba-9b47-2da575a0a11c",
+        "parentId" : "04f5153a-db07-4a17-b0f1-32b419448d86",
+        "authorId" : "a11722a8-ecfa-4827-88e3-4d708f023846",
+        "body" : "IMO maybe we can do this in a separate PR? \r\n\r\nI wouldn't be surprised if there's other places in Spark (beyond this method / file) where we could apply similar fixes (and if we're going to apply this in a _lot_ of places then it might even be nice to write some sort of helper for generating / managing null checks.\r\n\r\nDoes this PR look good to you otherwise?",
+        "createdAt" : "2019-05-24T14:59:49Z",
+        "updatedAt" : "2019-05-24T14:59:49Z",
+        "lastEditedBy" : "a11722a8-ecfa-4827-88e3-4d708f023846",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "776c0c2f-41b8-4011-b0c4-724d03ff2123",
+        "parentId" : "04f5153a-db07-4a17-b0f1-32b419448d86",
+        "authorId" : "24e1dd39-ae3f-4bbb-a391-f60afb62d075",
+        "body" : "I agree with @JoshRosen . It would be better to define a generic approach for addressing this and there are several instances of it. I can create another JIRA and start a PR for that if you're ok with it.",
+        "createdAt" : "2019-05-24T16:00:10Z",
+        "updatedAt" : "2019-05-24T16:00:10Z",
+        "lastEditedBy" : "24e1dd39-ae3f-4bbb-a391-f60afb62d075",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "010b3d449403a2d215a18b425722810470147ad6",
+    "line" : 16,
+    "diffHunk" : "@@ -1,1 +1011,1015 @@          s\"\"\"\n             |${CodeGenerator.boxedType(dt)} $convertedTerm = ${eval.value};\n             |Object $argTerm = ${eval.isNull} ? null : $convertedTerm;\n           \"\"\".stripMargin\n        } else {"
   }
 ]

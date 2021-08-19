@@ -152,5 +152,192 @@
     "commit" : "5ff1905b511512c29e7225a87ae4dd75c685baa1",
     "line" : 19,
     "diffHunk" : "@@ -1,1 +75,79 @@        cachedPartitionSpec = userSpecifiedPartitionSpec.get\n      } else {\n        cachedPartitionSpec = inferPartitioning()\n      }\n    }"
+  },
+  {
+    "id" : "a15ea823-3f61-44c7-b8a9-c8612f861de9",
+    "prId" : 24672,
+    "prUrl" : "https://github.com/apache/spark/pull/24672#pullrequestreview-240439909",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2c8cf5b2-a446-4859-93e2-345b8fce97c2",
+        "parentId" : null,
+        "authorId" : "a11722a8-ecfa-4827-88e3-4d708f023846",
+        "body" : "FYI, over at https://github.com/apache/spark/pull/24668 I'm proposing a change to the `FileNotFoundException` handling logic here: after my patch's changes, we'll only ignore `FileNotFoundException` if  we are not listing the root directory of the table (i.e. we are listing a subfolder) _and_ the `ignoreMissingFiles` setting has not been set.\r\n\r\nDoes that change have any implications for this PR?",
+        "createdAt" : "2019-05-22T05:53:32Z",
+        "updatedAt" : "2019-05-22T05:53:59Z",
+        "lastEditedBy" : "a11722a8-ecfa-4827-88e3-4d708f023846",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "097a6779-44f6-4e7b-a073-15d145485e84",
+        "parentId" : "2c8cf5b2-a446-4859-93e2-345b8fce97c2",
+        "authorId" : "b636c5db-fb7c-43dd-afa5-7b84717a9c28",
+        "body" : "I believe that should not matter here as I tried to preserve the original logic (which would be your new logic now) when using listStatus which has that issue. The only real change here is using the DistributedFileSystem.listLocatedStatus and there should be no case where FileNotFoundException happens when using that as they will all be LocatedFileStatus that are returned in the array.",
+        "createdAt" : "2019-05-22T05:57:34Z",
+        "updatedAt" : "2019-05-22T05:57:34Z",
+        "lastEditedBy" : "b636c5db-fb7c-43dd-afa5-7b84717a9c28",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e0e58ef6-cf9f-4185-bedd-d62abec31616",
+        "parentId" : "2c8cf5b2-a446-4859-93e2-345b8fce97c2",
+        "authorId" : "a11722a8-ecfa-4827-88e3-4d708f023846",
+        "body" : "Ah, I think I get it now: I was originally confused by the comment, but on re-read it sounds like you're saying that we _could_, in principle, just call `listLocatedStatus()` in all cases, except that there's no performance benefit for non `DistributedFileSystem` subclasses and we lose more granular error handling.\r\n\r\nIn fact, the granular error handling could be really important in order to preserve the behavior before my changes in #24668 (a.k.a. the new behavior when `ignoreMissingFiles = true`): previously, the deletion of a leaf file after a directory listing but before listing the file status would cause _only that file_ to be ignored, whereas using `listLocatedStatus` for non-`DistributedFileSystem` subclasses would allow that `FileNotFoundException` to trigger the dropping of _all_ files from the listing (even ones whose statuses could be retrieved).\r\n\r\nI feel like `DistributedFileSystem` must be having some sort of internal \"atomicity\"-type guarantee for this to be safe, though (that it if it sees a file then it's able to also see its status).",
+        "createdAt" : "2019-05-22T06:25:22Z",
+        "updatedAt" : "2019-05-22T06:25:23Z",
+        "lastEditedBy" : "a11722a8-ecfa-4827-88e3-4d708f023846",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "99abe156-4f0d-4877-831f-cd50857a4d70",
+        "parentId" : "2c8cf5b2-a446-4859-93e2-345b8fce97c2",
+        "authorId" : "b636c5db-fb7c-43dd-afa5-7b84717a9c28",
+        "body" : "Yeah these were my thoughts exactly. My first version of this removed error handling logic and just used listLocatedStatus instead but when i inspected the source I realized we'd definitely run into issues with discarding the entire directory with 1 file not found when its not a DistributedFileSystem. And I assume the some for the atomicity of getting it from the namenode.",
+        "createdAt" : "2019-05-22T06:32:59Z",
+        "updatedAt" : "2019-05-22T06:35:40Z",
+        "lastEditedBy" : "b636c5db-fb7c-43dd-afa5-7b84717a9c28",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c34161ad-c11d-45d0-9423-c0a66a3d9d27",
+        "parentId" : "2c8cf5b2-a446-4859-93e2-345b8fce97c2",
+        "authorId" : "a11722a8-ecfa-4827-88e3-4d708f023846",
+        "body" : "👍 \r\n\r\nBased on this discussion I've strengthened my test assertions to guard against this problem: https://github.com/apache/spark/pull/24668/commits/42e8b9881d2654150a92bbc7fc341904f4862900. The tests will now fail in case `listLocatedStatus()` is always unconditionally used.",
+        "createdAt" : "2019-05-22T06:59:38Z",
+        "updatedAt" : "2019-05-22T06:59:38Z",
+        "lastEditedBy" : "a11722a8-ecfa-4827-88e3-4d708f023846",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "40830175b983e71354dfcea79ea02ab7dca1e43e",
+    "line" : 18,
+    "diffHunk" : "@@ -1,1 +281,285 @@        // to retrieve the file status with the file block location. The reason to still fallback\n        // to listStatus is because the default implementation would potentially throw a\n        // FileNotFoundException which is better handled by doing the lookups manually below.\n        case _: DistributedFileSystem =>\n          val remoteIter = fs.listLocatedStatus(path)"
+  },
+  {
+    "id" : "fa26df21-55bb-4e0b-8d62-840ff2119672",
+    "prId" : 24672,
+    "prUrl" : "https://github.com/apache/spark/pull/24672#pullrequestreview-241426832",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "daab1a19-9f47-42ac-863a-f266e2b50378",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Why do you need to wrap the iterator? Should be able to use JavaConversions at worst to make it .asScala.toArray",
+        "createdAt" : "2019-05-23T17:55:04Z",
+        "updatedAt" : "2019-05-23T17:55:15Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fc05dedb-d183-48e5-a2e2-0d1681c0640d",
+        "parentId" : "daab1a19-9f47-42ac-863a-f266e2b50378",
+        "authorId" : "b636c5db-fb7c-43dd-afa5-7b84717a9c28",
+        "body" : "It's not a real iterator unfortunately its a RemoteIterator which which doesn't actually extend the Iterator interface due to throwing IOExceptions.",
+        "createdAt" : "2019-05-23T18:12:40Z",
+        "updatedAt" : "2019-05-23T18:18:58Z",
+        "lastEditedBy" : "b636c5db-fb7c-43dd-afa5-7b84717a9c28",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "360aeef2-205a-47f0-923e-fdc06f12057c",
+        "parentId" : "daab1a19-9f47-42ac-863a-f266e2b50378",
+        "authorId" : "b636c5db-fb7c-43dd-afa5-7b84717a9c28",
+        "body" : "This seemed cleaner to me than a while loop and an array buffer which is another way to do it. I could do it that way if its preferred or I'm also open to other suggestions",
+        "createdAt" : "2019-05-23T18:25:00Z",
+        "updatedAt" : "2019-05-23T18:25:00Z",
+        "lastEditedBy" : "b636c5db-fb7c-43dd-afa5-7b84717a9c28",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0c639e0a-b311-45fc-8abd-42bfc0869c69",
+        "parentId" : "daab1a19-9f47-42ac-863a-f266e2b50378",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "I see, makes sense then. ",
+        "createdAt" : "2019-05-23T20:13:40Z",
+        "updatedAt" : "2019-05-23T20:13:40Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "40830175b983e71354dfcea79ea02ab7dca1e43e",
+    "line" : 21,
+    "diffHunk" : "@@ -1,1 +284,288 @@        case _: DistributedFileSystem =>\n          val remoteIter = fs.listLocatedStatus(path)\n          new Iterator[LocatedFileStatus]() {\n            def next(): LocatedFileStatus = remoteIter.next\n            def hasNext(): Boolean = remoteIter.hasNext"
+  },
+  {
+    "id" : "83dffd54-1029-4315-9c5a-704238a81c1f",
+    "prId" : 24672,
+    "prUrl" : "https://github.com/apache/spark/pull/24672#pullrequestreview-242827696",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c2de0f9e-6841-41a7-9024-e341bcb51fad",
+        "parentId" : null,
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "@melin Are you hitting a perf regression? Do we need an internal SQLConf? \r\n\r\ncc @JoshRosen ",
+        "createdAt" : "2019-05-27T05:18:34Z",
+        "updatedAt" : "2019-05-27T05:18:55Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6fc22648-331d-4a5f-bcf4-7816f072d4ba",
+        "parentId" : "c2de0f9e-6841-41a7-9024-e341bcb51fad",
+        "authorId" : "a11722a8-ecfa-4827-88e3-4d708f023846",
+        "body" : "Unless I'm misunderstanding something, I don't think that @melin's posted benchmark is an apples-to-apples comparison: `listLocatedStatus` is going to be slower than `listStatus` because it's doing more work in order to get location information. In order for this to be a fair performance comparison you'd want to compare `listStatus + getBlockLocations` to `listLocatedStatus` (because we'd end up having to call `getBlockLocations` further down if we didn't compute the locations as part of `listLocatedStatus`).\r\n\r\nThe direct comparison is only useful in cases where we're never going to make use of the location information and to my knowledge we currently do not have a flag to bypass locality fetching in `InMemoryFileIndex` (so the location-free performance isn't relevant).",
+        "createdAt" : "2019-05-27T05:45:27Z",
+        "updatedAt" : "2019-05-27T05:46:56Z",
+        "lastEditedBy" : "a11722a8-ecfa-4827-88e3-4d708f023846",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8baad113-9b57-4c65-a283-ace45eaa7405",
+        "parentId" : "c2de0f9e-6841-41a7-9024-e341bcb51fad",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "I'm +1 for @JoshRosen 's comment.\r\nAnd, Yep. Of course, if there is a corner case, we had better have conf for this. For now, it looks like we need more description about what he is hitting. SPARK JIRA would be good for that.",
+        "createdAt" : "2019-05-27T05:48:01Z",
+        "updatedAt" : "2019-05-27T05:52:27Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e98c9cbd-2f4c-4ecf-b891-cc4bfcc6e681",
+        "parentId" : "c2de0f9e-6841-41a7-9024-e341bcb51fad",
+        "authorId" : "b636c5db-fb7c-43dd-afa5-7b84717a9c28",
+        "body" : "Before coming up with this change I was actually wondering why there was no conf options to ignore locality and why it was required to do those extra lookups. In situations where the spark job is running on a small set of servers out of a big HDFS cluster, locality is a bit useless as the hit rate is super low, the time to get block locations was getting out of control for us and locality wait per task was slowing down the jobs. \r\n\r\nI think this change to get the blocks from the namenode is good enough for us now but I can definitely see the benefit of having a conf option to disable locality entirely which would turn off fetching of getFileBlockLocations and also use listStatus always instead of my optimization to use listLocatedStatus. ",
+        "createdAt" : "2019-05-28T17:43:56Z",
+        "updatedAt" : "2019-05-28T17:43:56Z",
+        "lastEditedBy" : "b636c5db-fb7c-43dd-afa5-7b84717a9c28",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f078d748-61aa-46e7-9da7-6a3843cc5b48",
+        "parentId" : "c2de0f9e-6841-41a7-9024-e341bcb51fad",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Please file a JIRA for the further discussions on new `conf` if it's not filed yet. (I didn't search it, but might be exist in some other context.)\r\n> having a conf option to disable locality entirely which would turn off fetching of getFileBlockLocations",
+        "createdAt" : "2019-05-28T17:52:13Z",
+        "updatedAt" : "2019-05-28T17:52:13Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "40830175b983e71354dfcea79ea02ab7dca1e43e",
+    "line" : 19,
+    "diffHunk" : "@@ -1,1 +282,286 @@        // to listStatus is because the default implementation would potentially throw a\n        // FileNotFoundException which is better handled by doing the lookups manually below.\n        case _: DistributedFileSystem =>\n          val remoteIter = fs.listLocatedStatus(path)\n          new Iterator[LocatedFileStatus]() {"
   }
 ]

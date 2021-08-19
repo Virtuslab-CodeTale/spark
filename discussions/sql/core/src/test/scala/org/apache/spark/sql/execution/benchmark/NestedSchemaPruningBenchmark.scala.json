@@ -1,0 +1,134 @@
+[
+  {
+    "id" : "f7a4a448-f41a-4a73-8415-9c0f25cbe5b2",
+    "prId" : 24599,
+    "prUrl" : "https://github.com/apache/spark/pull/24599#pullrequestreview-247779822",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0a8b6d79-3754-4eac-ab07-3d04bcd03d23",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "@dongjoon-hyun New benchmark case was added. Benchmark result will be added later.",
+        "createdAt" : "2019-06-10T15:26:12Z",
+        "updatedAt" : "2019-06-12T00:54:38Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e77d46dd-0fe7-41d4-98d5-e604771a265e",
+        "parentId" : "0a8b6d79-3754-4eac-ab07-3d04bcd03d23",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Thanks!",
+        "createdAt" : "2019-06-10T18:46:47Z",
+        "updatedAt" : "2019-06-12T00:54:38Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3aab8bf953fab5e26ebe83f252efb63a9a10d469",
+    "line" : 9,
+    "diffHunk" : "@@ -1,1 +37,41 @@  // col3 ARRAY<STRUCT<_1: BIGINT, _2: STRING>>` as a test schema.\n  // col1, col2._1 and col3._1 are used for comparision. col2._2 and col3._2 mimics the burden\n  // for the other columns\n  private val df = spark\n    .range(N * 10)"
+  },
+  {
+    "id" : "44859851-68e7-4a71-acb9-39c89f53b77b",
+    "prId" : 24599,
+    "prUrl" : "https://github.com/apache/spark/pull/24599#pullrequestreview-248348497",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "18516ef5-c86c-4dbb-83dc-e26ca9ccc731",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "I can help benchmark. But, this seems to have a side-effect on the `Nested column`, too. I'm not sure the reason. I ran the test at AS-IS PR. The following is the result of `OrcNestedSchemaPruningBenchmark`.\r\n\r\n**PREVIOUS**\r\n```\r\nOpenJDK 64-Bit Server VM 1.8.0_201-b09 on Linux 3.10.0-862.3.2.el7.x86_64\r\nIntel(R) Xeon(R) CPU E5-2670 v2 @ 2.50GHz\r\nSelection:                                Best Time(ms)   Avg Time(ms)   Stdev(ms)    Rate(M/s)   Per Row(ns)   Relative\r\n------------------------------------------------------------------------------------------------------------------------\r\nTop-level column                                    131            150          25          7.7         130.6       1.0X\r\nNested column                                       922            954          21          1.1         922.2       0.1X\r\n```\r\n\r\n**THIS PR**\r\n```\r\nOpenJDK 64-Bit Server VM 1.8.0_212-b04 on Linux 3.10.0-862.3.2.el7.x86_64\r\nIntel(R) Xeon(R) CPU E5-2670 v2 @ 2.50GHz\r\nSelection:                                Best Time(ms)   Avg Time(ms)   Stdev(ms)    Rate(M/s)   Per Row(ns)   Relative\r\n------------------------------------------------------------------------------------------------------------------------\r\nTop-level column                                    137            160          23          7.3         136.5       1.0X\r\nNested column                                      1211           1243          27          0.8        1210.5       0.1X\r\nNested column in array                            11210          11292          39          0.1       11209.6       0.0X\r\n```\r\n\r\nAlso, the array seems to be too heavy. For that test case in a single benchmark, it took about 2 min.\r\n```\r\n[info] Running benchmark: Selection\r\n[info]   Running case: Top-level column\r\n[info]   Stopped after 13 iterations, 2080 ms\r\n[info]   Running case: Nested column\r\n[info]   Stopped after 10 iterations, 12428 ms\r\n[info]   Running case: Nested column in array\r\n[info]   Stopped after 10 iterations, 112917 ms\r\n```",
+        "createdAt" : "2019-06-11T06:03:38Z",
+        "updatedAt" : "2019-06-12T00:54:38Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "61984cb5-cb04-4ac4-a3e9-ade40c62234c",
+        "parentId" : "18516ef5-c86c-4dbb-83dc-e26ca9ccc731",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Ur, could you rebase to the master?",
+        "createdAt" : "2019-06-11T06:09:10Z",
+        "updatedAt" : "2019-06-12T00:54:38Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d97567a4-c7aa-4fd5-833b-f25eba151148",
+        "parentId" : "18516ef5-c86c-4dbb-83dc-e26ca9ccc731",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Thanks @dongjoon-hyun. I made the array less heavy. \r\n\r\nBtw, previously the test creates temp views `t1`, `t2` for benchmark cases, individually. The added case reused `t2`, but I think it is better to follow with previous cases, so created `t3` now.\r\n\r\nAlso compared the query plans from previous and this PR. They are actually the same locally. (nested column pruned)\r\n\r\nPrevious:\r\n```\r\n[info] == Physical Plan ==                                                                                                                             \r\n[info] *(1) Project [col2#26._1 AS _1#239L]                                                                                                            \r\n[info] +- *(1) FileScan orc [col2#26] Batched: false, DataFilters: [], Format: ORC, Location: InMemoryFileIndex[file:/spark/target/tmp/spark-3e4433f7-c92e-4017-9efb-3bbd2..., PartitionFilters: [], PushedFilters: [], ReadSchema: struct<col2:struct<_1:bigint>>              \r\n```\r\n\r\nThis PR:\r\n```\r\n[info] == Physical Plan ==                                                                                                                             \r\n[info] *(1) Project [col2#26._1 AS _1#231L]                                                                                                            \r\n[info] +- *(1) FileScan orc [col2#26] Batched: false, DataFilters: [], Format: ORC, Location: InMemoryFileIndex[file:/spark/target/tmp/spark-11a5c59b-5b37-4eff-8fdd-398c7..., PartitionFilters: [], PushedFilters: [], ReadSchema: struct<col2:struct<_1:bigint>>                       \r\n```\r\n\r\nThe benchmark results don't differ in local test.\r\n\r\nPrevious:\r\n```\r\n[info] Java HotSpot(TM) 64-Bit Server VM 1.8.0_202-b08 on Mac OS X 10.14.5                                                                             \r\n[info] Intel(R) Core(TM) i7-8750H CPU @ 2.20GHz                                                                                                        \r\n[info] Selection:                                Best Time(ms)   Avg Time(ms)   Stdev(ms)    Rate(M/s)   Per Row(ns)   Relative                        \r\n[info] ------------------------------------------------------------------------------------------------------------------------                        \r\n[info] Top-level column                                     86            120          48         11.6          86.4       1.0X                        \r\n[info] Nested column                                      1081           1097           9          0.9        1080.9       0.1X        \r\n```\r\n\r\nThis PR:\r\n```\r\n[info] Java HotSpot(TM) 64-Bit Server VM 1.8.0_202-b08 on Mac OS X 10.14.5                                                                             \r\n[info] Intel(R) Core(TM) i7-8750H CPU @ 2.20GHz                                                                                                        \r\n[info] Selection:                                Best Time(ms)   Avg Time(ms)   Stdev(ms)    Rate(M/s)   Per Row(ns)   Relative                        \r\n[info] ------------------------------------------------------------------------------------------------------------------------                        \r\n[info] Top-level column                                     80             89          10         12.5          79.9       1.0X                        \r\n[info] Nested column                                      1038           1052           9          1.0        1038.4       0.1X                        \r\n[info] Nested column in array                             2576           2603          18          0.4        2575.7       0.0X              \r\n```",
+        "createdAt" : "2019-06-11T07:48:29Z",
+        "updatedAt" : "2019-06-12T00:54:38Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f361c5d7-f575-4210-90c4-48408b828fc4",
+        "parentId" : "18516ef5-c86c-4dbb-83dc-e26ca9ccc731",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Thanks. Yes. Let me check that tomorrow again.",
+        "createdAt" : "2019-06-11T08:01:54Z",
+        "updatedAt" : "2019-06-12T00:54:38Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7acec921-9938-4c58-89b7-7e58d3d88fcb",
+        "parentId" : "18516ef5-c86c-4dbb-83dc-e26ca9ccc731",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "The regression is on master branch. For Parquet, it looks good. But ORC, I got the following. \r\n```\r\n Nested Schema Pruning Benchmark For ORC v1\r\n ================================================================================================\r\n\r\n-OpenJDK 64-Bit Server VM 1.8.0_201-b09 on Linux 3.10.0-862.3.2.el7.x86_64\r\n+OpenJDK 64-Bit Server VM 1.8.0_212-b04 on Linux 3.10.0-862.3.2.el7.x86_64\r\n Intel(R) Xeon(R) CPU E5-2670 v2 @ 2.50GHz\r\n Selection:                                Best Time(ms)   Avg Time(ms)   Stdev(ms)    Rate(M/s)   Per Row(ns)   Relative\r\n ------------------------------------------------------------------------------------------------------------------------\r\n-Top-level column                                    131            150          25          7.7         130.6       1.0X\r\n-Nested column                                       922            954          21          1.1         922.2       0.1X\r\n+Top-level column                                    125            162          23          8.0         125.5       1.0X\r\n+Nested column                                      1210           1272          92          0.8        1209.9       0.1X\r\n\r\n-OpenJDK 64-Bit Server VM 1.8.0_201-b09 on Linux 3.10.0-862.3.2.el7.x86_64\r\n+OpenJDK 64-Bit Server VM 1.8.0_212-b04 on Linux 3.10.0-862.3.2.el7.x86_64\r\n Intel(R) Xeon(R) CPU E5-2670 v2 @ 2.50GHz\r\n Limiting:                                 Best Time(ms)   Avg Time(ms)   Stdev(ms)    Rate(M/s)   Per Row(ns)   Relative\r\n ------------------------------------------------------------------------------------------------------------------------\r\n-Top-level column                                    446            477          50          2.2         445.5       1.0X\r\n-Nested column                                      1328           1366          44          0.8        1328.4       0.3X\r\n+Top-level column                                    432            468          30          2.3         432.1       1.0X\r\n+Nested column                                      1632           1685          77          0.6        1631.5       0.3X\r\n```",
+        "createdAt" : "2019-06-11T16:21:40Z",
+        "updatedAt" : "2019-06-12T00:54:38Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1b863cbb-fb8b-47cc-ba31-4ab815405c43",
+        "parentId" : "18516ef5-c86c-4dbb-83dc-e26ca9ccc731",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Please ignore the above.",
+        "createdAt" : "2019-06-11T18:05:37Z",
+        "updatedAt" : "2019-06-12T00:54:38Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3aab8bf953fab5e26ebe83f252efb63a9a10d469",
+    "line" : 18,
+    "diffHunk" : "@@ -1,1 +44,48 @@      val col3 = (0 until 5).map(i => (x + i, s\"$x\" * 5))\n      (x, (x, s\"$x\" * 100), col3)\n    }.toDF(\"col1\", \"col2\", \"col3\")\n\n  private def addCase(benchmark: Benchmark, name: String, sql: String): Unit = {"
+  },
+  {
+    "id" : "3eca4945-9975-4c06-a014-3891e8f4624e",
+    "prId" : 24599,
+    "prUrl" : "https://github.com/apache/spark/pull/24599#pullrequestreview-248346477",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "fe4f8ab7-5f59-4307-86aa-80189bc27b79",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Thanks!",
+        "createdAt" : "2019-06-11T18:01:44Z",
+        "updatedAt" : "2019-06-12T00:54:38Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3aab8bf953fab5e26ebe83f252efb63a9a10d469",
+    "line" : 27,
+    "diffHunk" : "@@ -1,1 +56,60 @@      val path = dir.getCanonicalPath\n\n      Seq(1, 2, 3).foreach { i =>\n        df.write.format(dataSourceName).save(path + s\"/$i\")\n        spark.read.format(dataSourceName).load(path + s\"/$i\").createOrReplaceTempView(s\"t$i\")"
+  }
+]

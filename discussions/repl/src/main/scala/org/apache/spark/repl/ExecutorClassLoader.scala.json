@@ -1,0 +1,112 @@
+[
+  {
+    "id" : "eceacb96-a4d7-4716-84f1-3807dbb1dcc4",
+    "prId" : 24683,
+    "prUrl" : "https://github.com/apache/spark/pull/24683#pullrequestreview-242047120",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4e4ad030-d3a9-40cb-b0bb-c547b305f52e",
+        "parentId" : null,
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "This fixes an issue in the current ExecutorClassLoader: it doesn't encode the path.\r\n\r\nBefore this PR, when we try to fetch some class that contains special characters, it will always throw `URISyntaxException: Illegal character in path ...` which will be converted to `ClassNotFoundException` at last.",
+        "createdAt" : "2019-05-22T21:59:39Z",
+        "updatedAt" : "2019-05-26T16:38:32Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7118587f-d6d3-43dd-82e6-987daa8e059b",
+        "parentId" : "4e4ad030-d3a9-40cb-b0bb-c547b305f52e",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "It would be good to cover this with a test.",
+        "createdAt" : "2019-05-23T15:31:56Z",
+        "updatedAt" : "2019-05-26T16:38:32Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "40af33db-cabb-4d28-8631-422d6fe7435e",
+        "parentId" : "4e4ad030-d3a9-40cb-b0bb-c547b305f52e",
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "It's covered by `create encoder in executors`. Reverting this line would cause this test fail..",
+        "createdAt" : "2019-05-26T16:39:26Z",
+        "updatedAt" : "2019-05-26T16:39:26Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "0b5cb4880b1793152f0ef2e4e664e6ebe7a82d4d",
+    "line" : 37,
+    "diffHunk" : "@@ -1,1 +132,136 @@\n  private def getClassFileInputStreamFromSparkRPC(path: String): InputStream = {\n    val channel = env.rpcEnv.openChannel(s\"$classUri/${urlEncode(path)}\")\n    new FilterInputStream(Channels.newInputStream(channel)) {\n"
+  },
+  {
+    "id" : "a79475ad-799d-4e0f-a08d-52f3c3c70912",
+    "prId" : 24683,
+    "prUrl" : "https://github.com/apache/spark/pull/24683#pullrequestreview-242047224",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f5676bf7-a41f-4187-906b-28b577fb9c96",
+        "parentId" : null,
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "Since this exists in `TransportRequestHandler` + here as well and the test mocked it I think nobody will ever realize the problem if the message in `TransportRequestHandler` changed (only on cluster).",
+        "createdAt" : "2019-05-23T15:34:21Z",
+        "updatedAt" : "2019-05-26T16:38:32Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "71d26a5c-e558-4621-a36d-18effe089d45",
+        "parentId" : "f5676bf7-a41f-4187-906b-28b577fb9c96",
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "`nonexistent class and transient errors should cause different errors` doesn't mock `TransportRequestHandler`. It would fail if someone changed the error message.\r\n\r\n\r\n\r\n> I think nobody will ever realize the problem if the message in `TransportRequestHandler` changed (only on cluster).\r\n\r\nGood point. I added a comment near the error message so that people can notice the error message string is used here.",
+        "createdAt" : "2019-05-26T16:42:55Z",
+        "updatedAt" : "2019-05-26T16:42:56Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "0b5cb4880b1793152f0ef2e4e664e6ebe7a82d4d",
+    "line" : 33,
+    "diffHunk" : "@@ -1,1 +129,133 @@\n  // See org.apache.spark.network.server.TransportRequestHandler.processStreamRequest.\n  private val STREAM_NOT_FOUND_REGEX = s\"Stream '.*' was not found.\".r.pattern\n\n  private def getClassFileInputStreamFromSparkRPC(path: String): InputStream = {"
+  },
+  {
+    "id" : "bffd6ae6-7315-43fe-b743-dafb72e66381",
+    "prId" : 24683,
+    "prUrl" : "https://github.com/apache/spark/pull/24683#pullrequestreview-242047170",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ceafe000-48dd-468c-b7d4-fdc00e3b340a",
+        "parentId" : null,
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "What was the decision point making this `Error` instead of `Exception`? `Error` is more like an unrecoverable problem to me.",
+        "createdAt" : "2019-05-23T15:51:34Z",
+        "updatedAt" : "2019-05-26T16:38:32Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "82fc3051-586d-4e8d-bd64-b93539b02f00",
+        "parentId" : "ceafe000-48dd-468c-b7d4-fdc00e3b340a",
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "`RemoteClassLoaderError` wraps both Error and Exception. It's better to make it an Error to not convert an Error to an Exception. In addition, since in Spark, most of codes use `NonFatal` so this new Error will still be caught and handled.",
+        "createdAt" : "2019-05-26T16:40:47Z",
+        "updatedAt" : "2019-05-26T16:40:48Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "0b5cb4880b1793152f0ef2e4e664e6ebe7a82d4d",
+    "line" : 58,
+    "diffHunk" : "@@ -1,1 +150,154 @@            throw new ClassNotFoundException(path, e)\n          case NonFatal(e) =>\n            // scalastyle:off throwerror\n            throw new RemoteClassLoaderError(path, e)\n            // scalastyle:on throwerror"
+  }
+]

@@ -1,0 +1,79 @@
+[
+  {
+    "id" : "a7b24ffa-277a-4d91-8bd4-4df147ec5771",
+    "prId" : 24630,
+    "prUrl" : "https://github.com/apache/spark/pull/24630#pullrequestreview-239182309",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d42be6a9-e318-4862-9cd4-66634b692510",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Can we avoid this assumption? You had better get the default value of `DRIVER_CORES` and compare with that.",
+        "createdAt" : "2019-05-17T03:32:27Z",
+        "updatedAt" : "2019-05-18T03:13:34Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2c4b1f81-0dee-425d-b889-10e8afaabbc9",
+        "parentId" : "d42be6a9-e318-4862-9cd4-66634b692510",
+        "authorId" : "2b63989f-222d-4980-8397-b22b16e4c4cc",
+        "body" : "IIUC, as per the existing [logic](https://github.com/apache/spark/blob/master/resource-managers/kubernetes/core/src/main/scala/org/apache/spark/deploy/k8s/features/BasicDriverFeatureStep.scala#L46) the default value would be \"1\" if `spark.driver.cores` is not set and not the default value of `spark.driver.cores` which also happens to be 1. I did not want to change that logic.",
+        "createdAt" : "2019-05-17T17:07:17Z",
+        "updatedAt" : "2019-05-18T03:13:34Z",
+        "lastEditedBy" : "2b63989f-222d-4980-8397-b22b16e4c4cc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "481a4bb5-77bd-4909-a17a-b4c7f6371341",
+        "parentId" : "d42be6a9-e318-4862-9cd4-66634b692510",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "@arunmahadevan . What I meant was this constant assertion, `=== \"1\"`. If we change the default value of that configuration, this test will fails. We had better get and use the default value from the conf.",
+        "createdAt" : "2019-05-17T18:48:07Z",
+        "updatedAt" : "2019-05-18T03:13:34Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8f633d06-5ad5-4771-a963-5b8e47d608ad",
+        "parentId" : "d42be6a9-e318-4862-9cd4-66634b692510",
+        "authorId" : "2b63989f-222d-4980-8397-b22b16e4c4cc",
+        "body" : "@dongjoon-hyun , the logic in BasicDriverFeatureStep\r\n`private val driverCpuCores = conf.get(DRIVER_CORES.key, \"1\")`\r\n, sets the value of `driverCpuCores` to \"1\" if `spark.driver.cores` is not set in the spark conf. i.e. we don't use the `DRIVER_CORES.defaultValue` there. Let me know if my understanding is correct. \r\nIf so I cannot do something like `assert(requests1(\"cpu\").getAmount === DRIVER_CORES.defaultValue)` here (assume this is what you are suggesting).",
+        "createdAt" : "2019-05-17T19:08:59Z",
+        "updatedAt" : "2019-05-18T03:13:34Z",
+        "lastEditedBy" : "2b63989f-222d-4980-8397-b22b16e4c4cc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6ffcc9b6-7126-48e9-b9e5-66bc7f5c5a71",
+        "parentId" : "d42be6a9-e318-4862-9cd4-66634b692510",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "That should be the following because we should not have a magic number in the code.\r\n```scala\r\n-  private val driverCpuCores = conf.get(DRIVER_CORES.key, \"1\")\r\n+  private val driverCpuCores = conf.get(DRIVER_CORES)\r\n```\r\n\r\n```scala\r\n     val driverCpuQuantity = new QuantityBuilder(false)\r\n-      .withAmount(driverCpuCores)\r\n+      .withAmount(driverCpuCores.toString)\r\n```\r\n\r\nPlease fix like the above. And don't use magic numbers.",
+        "createdAt" : "2019-05-18T02:44:39Z",
+        "updatedAt" : "2019-05-18T03:13:34Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5503dfe8-7a91-4fdf-a6e7-83dd15ebf66f",
+        "parentId" : "d42be6a9-e318-4862-9cd4-66634b692510",
+        "authorId" : "2b63989f-222d-4980-8397-b22b16e4c4cc",
+        "body" : "updated.",
+        "createdAt" : "2019-05-18T03:14:33Z",
+        "updatedAt" : "2019-05-18T03:14:34Z",
+        "lastEditedBy" : "2b63989f-222d-4980-8397-b22b16e4c4cc",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ff688c23de7c716cd0d9484846cbd39cafc17a21",
+    "line" : 15,
+    "diffHunk" : "@@ -1,1 +129,133 @@      .container.getResources\n      .getRequests.asScala\n    assert(requests1(\"cpu\").getAmount === \"1\")\n\n    // if spark.driver.cores is set it should be used"
+  }
+]

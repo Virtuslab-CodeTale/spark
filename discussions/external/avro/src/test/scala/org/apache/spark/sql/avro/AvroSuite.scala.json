@@ -262,5 +262,214 @@
     "commit" : "58a4a07c50fd0ef54ca55fe1883d228eeb8464b2",
     "line" : 28,
     "diffHunk" : "@@ -1,1 +1515,1519 @@      .set(SQLConf.USE_V1_SOURCE_LIST, \"\")\n\n  test(\"Avro source v2: support partition pruning\") {\n    withTempPath { dir =>\n      Seq((\"a\", 1, 2), (\"b\", 1, 2), (\"c\", 2, 1))"
+  },
+  {
+    "id" : "a8b46617-e1a1-4a56-aa66-7fef5a2a6cc0",
+    "prId" : 24682,
+    "prUrl" : "https://github.com/apache/spark/pull/24682#pullrequestreview-241014250",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2568c5b8-2ab8-466f-8bfd-50ba6cc438f9",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "does parquet/orc have the same behavior? It seems better to forbid this at the beginning, otherwise we need to do null check at runtime, which may fail a long-running query middle away.",
+        "createdAt" : "2019-05-23T00:39:19Z",
+        "updatedAt" : "2019-05-24T21:02:37Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "18331403-e73a-4370-87c3-78bf8f0d8a02",
+        "parentId" : "2568c5b8-2ab8-466f-8bfd-50ba6cc438f9",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "cc @dongjoon-hyun @gengliangwang ",
+        "createdAt" : "2019-05-23T00:39:36Z",
+        "updatedAt" : "2019-05-24T21:02:37Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8f7ca82a-e825-4802-9454-138b1a451228",
+        "parentId" : "2568c5b8-2ab8-466f-8bfd-50ba6cc438f9",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "For `.schema()` option, we always enforce `nullable` by using `dataSchema.asNullable` in `FileTable`. For me, this is a special support for `.option(\"avroSchema\", \"\")`.",
+        "createdAt" : "2019-05-23T03:29:01Z",
+        "updatedAt" : "2019-05-24T21:02:37Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f57edad7-9f18-4993-b314-9a54a3b80597",
+        "parentId" : "2568c5b8-2ab8-466f-8bfd-50ba6cc438f9",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "@cloud-fan I think this is fine. Otherwise, there is no way for users to write with a non-nullable schema.\r\nBut should we show warning messages for such case? So that users can be aware of the risk.",
+        "createdAt" : "2019-05-23T03:39:23Z",
+        "updatedAt" : "2019-05-24T21:02:37Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "885462cc-1cda-499a-824d-99f90b9f3080",
+        "parentId" : "2568c5b8-2ab8-466f-8bfd-50ba6cc438f9",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Sounds good to have warning messages for the case. So can let users know they're actually writing from nullable catalyst schema into non-nullable avro schema.",
+        "createdAt" : "2019-05-23T04:45:13Z",
+        "updatedAt" : "2019-05-24T21:02:37Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b7efa13b-d6be-4ca0-8e82-2fb1114b7dad",
+        "parentId" : "2568c5b8-2ab8-466f-8bfd-50ba6cc438f9",
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "Adding warning message is good idea for me.\r\n\r\nIf we want to forbid this, we need to load the Avro with correct schema from the beginning. Currently, all the avro files will be loaded as `nullable == true` in catalyst schema even it's not nullable in the original avro schema. The round-trip of the loading and writing can result different schemas. This is the only workaround to write a non-nullable schema in avro easily to maintain the same schema.",
+        "createdAt" : "2019-05-23T06:47:21Z",
+        "updatedAt" : "2019-05-24T21:02:37Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "09197e66a53df33c5cc135012658f3f8ddaac4a2",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +932,936 @@\n  test(\"support user provided non-nullable avro schema \" +\n    \"for nullable catalyst schema without any null record\") {\n    withTempPath { tempDir =>\n      val catalystSchema ="
+  },
+  {
+    "id" : "700f7f9a-ea54-4119-834a-cb3f53c3633f",
+    "prId" : 24682,
+    "prUrl" : "https://github.com/apache/spark/pull/24682#pullrequestreview-241339801",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2c4baada-1fbb-4397-bdbc-abaa40648696",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "This doesn't quite make sense to me. Looks if the catalyst schema is nullable, it should reject non-nullable avro schema",
+        "createdAt" : "2019-05-23T03:24:13Z",
+        "updatedAt" : "2019-05-24T21:02:37Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b9d43c02-ba38-4db3-91a1-244df7fd61e2",
+        "parentId" : "2c4baada-1fbb-4397-bdbc-abaa40648696",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "BTW, note that we don't currently support non-nullable schema in file format sources because they are turned to be nullable in SQL batch code path.\r\nNon-nullable is able to be set in SS tho. Both codes paths should be matched - it's a long standing issue.",
+        "createdAt" : "2019-05-23T03:26:38Z",
+        "updatedAt" : "2019-05-24T21:02:37Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3517e242-2c60-4195-9b70-46a5b4129aba",
+        "parentId" : "2c4baada-1fbb-4397-bdbc-abaa40648696",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "`catalyst` schema is always nullable when we read from the file. This is a special support for `.option(\"avroSchema\", ...)` for Avro.",
+        "createdAt" : "2019-05-23T03:30:13Z",
+        "updatedAt" : "2019-05-24T21:02:37Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e9593d8f-37fd-4ce5-a2d9-523a062a1b45",
+        "parentId" : "2c4baada-1fbb-4397-bdbc-abaa40648696",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Have we documented `avroSchema` about this the behavior?",
+        "createdAt" : "2019-05-23T04:46:15Z",
+        "updatedAt" : "2019-05-24T21:02:37Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a2547f23-8bc7-4c71-8bed-3e133caa12bf",
+        "parentId" : "2c4baada-1fbb-4397-bdbc-abaa40648696",
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "In my opinion, we should fix and support non-nullable in file format sources, and this can help to speed up some queries.\r\n\r\n@viirya we can have a log as a warning. ",
+        "createdAt" : "2019-05-23T06:49:29Z",
+        "updatedAt" : "2019-05-24T21:02:37Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "728061ca-1c9e-4028-8bf4-0f54c2033c06",
+        "parentId" : "2c4baada-1fbb-4397-bdbc-abaa40648696",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "@dongjoon-hyun, \r\n\r\n> catalyst schema is always nullable when we read from the file.\r\n\r\nThis is the current status. I don't think this is expected behaviour.",
+        "createdAt" : "2019-05-23T17:17:07Z",
+        "updatedAt" : "2019-05-24T21:02:37Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "09197e66a53df33c5cc135012658f3f8ddaac4a2",
+    "line" : 13,
+    "diffHunk" : "@@ -1,1 +931,935 @@  }\n\n  test(\"support user provided non-nullable avro schema \" +\n    \"for nullable catalyst schema without any null record\") {\n    withTempPath { tempDir =>"
+  },
+  {
+    "id" : "b4b65567-c48a-47d3-9f70-ef80ce5760a7",
+    "prId" : 24635,
+    "prUrl" : "https://github.com/apache/spark/pull/24635#pullrequestreview-239768838",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1cc7c610-c438-402e-b93f-b87102ffeee0",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "`enum` type name and the field name (of that `enum` type) can be different. We should not assume that this line is equal to the line 697.",
+        "createdAt" : "2019-05-18T02:35:33Z",
+        "updatedAt" : "2019-05-20T23:26:22Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8cc613ed-fd49-44f6-90bb-cb4dd21da745",
+        "parentId" : "1cc7c610-c438-402e-b93f-b87102ffeee0",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "In the original test case, the avro schema is `enum: union`, while the catalyst schema is `StructType(Seq(StructField(\"Suit\", StringType, true)))`. Thus the field names can't match with each other.\r\nWe should fix such case.",
+        "createdAt" : "2019-05-18T03:03:27Z",
+        "updatedAt" : "2019-05-20T23:26:22Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "511673ba-1f13-40e9-b3d3-6d5361a4c42d",
+        "parentId" : "1cc7c610-c438-402e-b93f-b87102ffeee0",
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "There are two names in Avro enum type. The first one is the field name used in catalyst, and the second one is the enum type name which is never read in catalyst format. I made the test case clearer to distinguish those two cases.\r\n\r\nAs a result, I'll argue that in the original code, the test case has a bug, and the test passes just because we never check if the field names are matching. ",
+        "createdAt" : "2019-05-20T23:29:55Z",
+        "updatedAt" : "2019-05-20T23:29:56Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1c9f9539-95ce-4f42-8c4c-51f980e8a68d",
+        "parentId" : "1cc7c610-c438-402e-b93f-b87102ffeee0",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Ya. The newly updated test code looks more clear.",
+        "createdAt" : "2019-05-20T23:42:20Z",
+        "updatedAt" : "2019-05-20T23:42:20Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4e831933f0172cd5a8a53893de852f70a063be35",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +693,697 @@          |  \"name\" : \"test_schema\",\n          |  \"fields\" : [{\n          |    \"name\": \"Suit\",\n          |    \"type\": [{ \"type\": \"enum\",\n          |              \"name\": \"SuitEnumType\","
   }
 ]

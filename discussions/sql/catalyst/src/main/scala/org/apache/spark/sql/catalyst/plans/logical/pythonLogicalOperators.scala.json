@@ -20,5 +20,104 @@
     "commit" : "d15dabbf71ad3007ea0c37e71c997e6fa1799e51",
     "line" : 11,
     "diffHunk" : "@@ -1,1 +47,51 @@                                  output: Seq[Attribute],\n                                  left: LogicalPlan,\n                                  right: LogicalPlan) extends BinaryNode {\n  override val producedAttributes = AttributeSet(output)\n}"
+  },
+  {
+    "id" : "4bbca21b-3c00-4de4-bb7d-a55548a4a720",
+    "prId" : 24675,
+    "prUrl" : "https://github.com/apache/spark/pull/24675#pullrequestreview-241064735",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d46b67e8-1e88-46cc-bfea-15f9b6e044fc",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "to work with the `ColumnPruning` and `PushDownPredicate` rule, we must correctly implement the `references` method. `resultAttrs` are definitely not references.",
+        "createdAt" : "2019-05-22T07:37:44Z",
+        "updatedAt" : "2019-05-22T12:45:41Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a8b4cf97-864f-4c58-8cd3-3b0427f69b38",
+        "parentId" : "d46b67e8-1e88-46cc-bfea-15f9b6e044fc",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "If `references` only cover references in `udfs`, will some output attributes from child that aren't referred by `udfs` be pruned from `BaseEvalPython`?",
+        "createdAt" : "2019-05-23T05:55:45Z",
+        "updatedAt" : "2019-05-23T05:55:45Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "17bdd780-8459-4bf2-a437-2838f9b42b7b",
+        "parentId" : "d46b67e8-1e88-46cc-bfea-15f9b6e044fc",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Yea, and this is \"column pruning\".",
+        "createdAt" : "2019-05-23T08:47:17Z",
+        "updatedAt" : "2019-05-23T08:47:17Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "636b603836a3e272dc1d1cad3d4063e9e4e8f7d8",
+    "line" : 22,
+    "diffHunk" : "@@ -1,1 +48,52 @@  override def output: Seq[Attribute] = child.output ++ resultAttrs\n\n  override def references: AttributeSet = AttributeSet(udfs.flatMap(_.references))\n}\n"
+  },
+  {
+    "id" : "df946b7f-c957-4b04-adaa-3558f336e872",
+    "prId" : 24675,
+    "prUrl" : "https://github.com/apache/spark/pull/24675#pullrequestreview-240455224",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c2fc93fe-fe18-41c2-814a-6b1f97acbc66",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "to work with the `ColumnPruning` rule, the python-eval node should be able to dynamically update its output if the child's output updated.",
+        "createdAt" : "2019-05-22T07:39:14Z",
+        "updatedAt" : "2019-05-22T12:45:41Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "636b603836a3e272dc1d1cad3d4063e9e4e8f7d8",
+    "line" : 20,
+    "diffHunk" : "@@ -1,1 +46,50 @@  def resultAttrs: Seq[Attribute]\n\n  override def output: Seq[Attribute] = child.output ++ resultAttrs\n\n  override def references: AttributeSet = AttributeSet(udfs.flatMap(_.references))"
+  },
+  {
+    "id" : "a69d01e4-00aa-4fcc-942d-6598b37fcd33",
+    "prId" : 24675,
+    "prUrl" : "https://github.com/apache/spark/pull/24675#pullrequestreview-241069249",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e0d25d41-b635-4f2b-9971-3da2f08d404b",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Is `producedAttributes` missing from this? Previously, `BatchEvalPython` and `ArrowEvalPython` have it defined.",
+        "createdAt" : "2019-05-23T05:58:49Z",
+        "updatedAt" : "2019-05-23T05:58:50Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cb74c154-9520-4013-a4f9-ee9ec2e9519f",
+        "parentId" : "e0d25d41-b635-4f2b-9971-3da2f08d404b",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "This is a problem I want to address later. I think `producedAttributes` makes no sense. It's only used to define `missingInput`, but we can overwrite `reference` to do the same thing.\r\n\r\nMore specifically, if `reference` is wrongly implemented, column pruning will be broken. If `producedAttributes` is not implemented, nothing serious will happen.",
+        "createdAt" : "2019-05-23T08:55:37Z",
+        "updatedAt" : "2019-05-23T08:56:06Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "636b603836a3e272dc1d1cad3d4063e9e4e8f7d8",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +40,44 @@}\n\ntrait BaseEvalPython extends UnaryNode {\n\n  def udfs: Seq[PythonUDF]"
   }
 ]
