@@ -1,0 +1,134 @@
+[
+  {
+    "id" : "61633291-3241-43f3-8926-1866241d524a",
+    "prId" : 24307,
+    "prUrl" : "https://github.com/apache/spark/pull/24307#pullrequestreview-223549426",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "464bcd14-dc84-400c-8b40-382ee8e42ce5",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Only this part is changed. \r\n@mallman . I'm happy that you are back. Please update your PR. Then, I'll close this one!",
+        "createdAt" : "2019-04-06T17:30:34Z",
+        "updatedAt" : "2019-04-08T03:30:04Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b5d00609-cf62-4f99-bd8b-a152b3e69951",
+        "parentId" : "464bcd14-dc84-400c-8b40-382ee8e42ce5",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Ah, also, there are some line switch and indentations changes, too.\r\nPlease do diff after rebasing it. If you rebase your PR, your PR will test against both ORC and Parquet.",
+        "createdAt" : "2019-04-06T17:31:39Z",
+        "updatedAt" : "2019-04-08T03:30:04Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "95e1c630ac32922704900207909e1adef1190b73",
+    "line" : 116,
+    "diffHunk" : "@@ -1,1 +360,364 @@            } else {\n              intersectParquetGroups(field1, field2.asGroupType)\n            }\n          case field1 => Some(field1)\n        }"
+  },
+  {
+    "id" : "d094f40f-e2c7-471b-85e0-51baf655f78a",
+    "prId" : 24307,
+    "prUrl" : "https://github.com/apache/spark/pull/24307#pullrequestreview-223613570",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0d25e653-d28e-49f2-b2a9-127c9bad1e1b",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Why do we log the same thing twice?",
+        "createdAt" : "2019-04-08T00:51:23Z",
+        "updatedAt" : "2019-04-08T03:30:04Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "30891c9f-6133-42a9-b3ac-615b52633f58",
+        "parentId" : "0d25e653-d28e-49f2-b2a9-127c9bad1e1b",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Yep. It came from the first PR for debuggability. I'll remove the subset one (prepareForRead).",
+        "createdAt" : "2019-04-08T01:08:03Z",
+        "updatedAt" : "2019-04-08T03:30:04Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "95e1c630ac32922704900207909e1adef1190b73",
+    "line" : 61,
+    "diffHunk" : "@@ -1,1 +99,103 @@    }\n    logDebug(\n      s\"\"\"Going to read the following fields from the Parquet file with the following schema:\n         |Parquet file schema:\n         |$parquetFileSchema"
+  },
+  {
+    "id" : "e1c8ecee-987f-4e16-9ed8-8af2e32ba2d3",
+    "prId" : 24307,
+    "prUrl" : "https://github.com/apache/spark/pull/24307#pullrequestreview-223624112",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "167c8322-5b3a-47a0-9647-7466ab394d6c",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "So, am I understanding currently as below?\r\n\r\n```\r\nParquet file schema:\r\nmessage spark_schema {\r\n  required int32 id;\r\n  optional group name {\r\n    optional binary first (UTF8);\r\n    optional binary last (UTF8);\r\n  }\r\n  optional binary address (UTF8);\r\n}\r\n```\r\n\r\n```\r\nParquet clipped schema:\r\nmessage spark_schema {\r\n  optional group name {\r\n    optional binary middle (UTF8);\r\n  }\r\n  optional binary address (UTF8);\r\n}\r\n```\r\n```\r\nParquet requested schema:\r\nmessage spark_schema {\r\n  optional binary address (UTF8);\r\n}\r\n```\r\n```\r\nCatalyst requested schema:\r\nroot\r\n-- name: struct (nullable = true)\r\n    |-- middle: string (nullable = true)\r\n-- address: string (nullable = true)\r\n```\r\n\r\nParquet MR does not support access to the nested non-existent field (`name.middle`), so we does not request `name` at all and permissively produce `null` in Spark side?\r\n\r\nIf so, I think technically this is what Parquet library should support since Parquet library made a design decision to produce `null` for non-existent fields.\r\n\r\nIf those are all correct, I am fine with going ahead with it as a workaround for a Parquet side issue (should be good to file an issue in Parquet side).",
+        "createdAt" : "2019-04-08T02:28:15Z",
+        "updatedAt" : "2019-04-08T03:30:04Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7b05af98-78f7-47e2-bee8-e1c9afdf1b4a",
+        "parentId" : "167c8322-5b3a-47a0-9647-7466ab394d6c",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Yep. That's correct, @HyukjinKwon . That's the status and the idea of this PR.",
+        "createdAt" : "2019-04-08T02:36:00Z",
+        "updatedAt" : "2019-04-08T03:30:04Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "95e1c630ac32922704900207909e1adef1190b73",
+    "line" : 104,
+    "diffHunk" : "@@ -1,1 +348,352 @@   * while parquet library does support to read the non-existent field by regular field access.\n   */\n  private def intersectParquetGroups(\n      groupType1: GroupType, groupType2: GroupType): Option[GroupType] = {\n    val fields ="
+  },
+  {
+    "id" : "3897cd15-2f53-4684-a481-6ebc4f1448e0",
+    "prId" : 24307,
+    "prUrl" : "https://github.com/apache/spark/pull/24307#pullrequestreview-223631305",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "156ef268-6beb-4b0c-bc66-68b50e38bef3",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "It would be great that we mention this is because parquet library does not support the nested field access to non-existent field while parquet library does support to read the non-existent field by regular field access.",
+        "createdAt" : "2019-04-08T02:38:30Z",
+        "updatedAt" : "2019-04-08T03:30:04Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "885daaa5-aa14-4b8f-a7e6-96b14b036f79",
+        "parentId" : "156ef268-6beb-4b0c-bc66-68b50e38bef3",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "I added like that.",
+        "createdAt" : "2019-04-08T03:30:15Z",
+        "updatedAt" : "2019-04-08T03:30:15Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "95e1c630ac32922704900207909e1adef1190b73",
+    "line" : 99,
+    "diffHunk" : "@@ -1,1 +343,347 @@\n  /**\n   * Computes the structural intersection between two Parquet group types.\n   * This is used to create a requestedSchema for ReadContext of Parquet-MR reader.\n   * Parquet-MR reader does not support the nested field access to non-existent field"
+  }
+]

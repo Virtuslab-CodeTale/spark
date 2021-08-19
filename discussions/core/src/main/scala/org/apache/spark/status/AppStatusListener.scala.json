@@ -647,5 +647,71 @@
     "commit" : "46715b3d2c52acd97fdca2e2034393f7e49e1b4f",
     "line" : 41,
     "diffHunk" : "@@ -1,1 +120,124 @@      kvstore.view(classOf[StageDataWrapper]).asScala\n        .filter { stageData =>\n          stageData.info.status == v1.StageStatus.PENDING ||\n            stageData.info.status == v1.StageStatus.ACTIVE ||\n            (stageData.info.numActiveTasks > 0 && stageData.info.status != v1.StageStatus.SKIPPED)"
+  },
+  {
+    "id" : "5eac97c8-ca1f-46a8-90ee-53e21cd828d4",
+    "prId" : 24303,
+    "prUrl" : "https://github.com/apache/spark/pull/24303#pullrequestreview-223355543",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c8324164-4190-4802-a057-2718b0d961d5",
+        "parentId" : null,
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Hmm... in the bug you mention that job-level data is not being updated. Is that the only case? Because if that's it, then this looks like overkill. You could e.g. update the jobs in the code that handles `event.accumUpdates` above, or even just flush jobs specifically, instead of everything.\r\n\r\nDoing a full flush here seems like overkill and a little expensive when you think about many heartbeats arriving in a short period (even when considering `lastFlushTimeNs`).",
+        "createdAt" : "2019-04-04T23:33:21Z",
+        "updatedAt" : "2019-04-08T22:25:03Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d710c1d2-6d83-4793-8985-c7dcf54e3ea5",
+        "parentId" : "c8324164-4190-4802-a057-2718b0d961d5",
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "> Hmm... in the bug you mention that job-level data is not being updated. Is that the only case?\r\n\r\nI also noticed that executor active tasks sometimes could be wrong. That's why I decided to flush everything to make sure we don't miss any places. It's also hard to maintain if we need to manually flush in every place.\r\n\r\nIdeally, we should flush periodically so that it doesn't depend on receiving a Spark event. But then I will need to add a new event type and post to the listener bus. That's overkilled.\r\n\r\n> when you think about many heartbeats arriving in a short period\r\n\r\nAt least there will be at least 100ms between each flush. As long as we process heart beats very fast, most of them won't trigger the flush.",
+        "createdAt" : "2019-04-05T00:02:47Z",
+        "updatedAt" : "2019-04-08T22:25:03Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2d8e038d-d700-4a60-8db5-b8a180ca02ce",
+        "parentId" : "c8324164-4190-4802-a057-2718b0d961d5",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "If the goal is to use the hearbeats as some trigger for flushing, how about using some ratio of the heartbeat period instead of `liveUpdatePeriodNs` to control whether to flush everything?\r\n\r\nReally large apps can get a little backed up when processing hearbeats from lots and lots of busy executors, and this would make it a little worse.",
+        "createdAt" : "2019-04-05T00:11:33Z",
+        "updatedAt" : "2019-04-08T22:25:03Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f6f6aa8d-7418-4b40-8398-6cfc3e6165b4",
+        "parentId" : "c8324164-4190-4802-a057-2718b0d961d5",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "The update only happens in live UI, which should be fine in general.  For real large apps, will it help by setting `LIVE_ENTITY_UPDATE_PERIOD` to a larger value? Setting a ratio of heartbeat period seems a bit complex.",
+        "createdAt" : "2019-04-05T05:37:36Z",
+        "updatedAt" : "2019-04-08T22:25:03Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b47f1310-f063-4f78-8402-f301687621f4",
+        "parentId" : "c8324164-4190-4802-a057-2718b0d961d5",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "> only happens in live UI\r\n\r\nThe \"don't write to the store all the time\" thing was added specifically to speed up live UIs, because copying + writing the data (even to the memory store) becomes really expensive when you have event storms (think thousands of tasks starting and stopping in a very short period).\r\n\r\n>  setting LIVE_ENTITY_UPDATE_PERIOD to a larger value\r\n\r\nWe should avoid requiring configuration tweaks for things not to break, when possible.",
+        "createdAt" : "2019-04-05T15:59:13Z",
+        "updatedAt" : "2019-04-08T22:25:03Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "1c5307161c1731112b8d7b096778d0f56101d04b",
+    "line" : 41,
+    "diffHunk" : "@@ -1,1 +846,850 @@    // `max(heartbeat interval, liveUpdateMinFlushPeriod)`.\n    if (now - lastFlushTimeNs > liveUpdateMinFlushPeriod) {\n      flush(maybeUpdate(_, now))\n      // Re-get the current system time because `flush` may be slow and `now` is stale.\n      lastFlushTimeNs = System.nanoTime()"
   }
 ]

@@ -1,0 +1,57 @@
+[
+  {
+    "id" : "d6e84329-1d9e-44b9-bf96-1f7356a40c75",
+    "prId" : 24385,
+    "prUrl" : "https://github.com/apache/spark/pull/24385#pullrequestreview-228922035",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "646f61fa-5555-4640-a748-55a0f6d60d96",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "One minor concern about this is that the raw SQL string approach might look confusing in case of the multi-line queries. For example, I can make the following. The surrounding comments and whitespaces are removed, but the comment and newlines in the statement survive as expected.\r\n\r\n```scala\r\nscala> sql(\"EXPLAIN EXTENDED DESC /* this is gone */ SELECT 1\\n /* this survives */ \\nFROM /* last */\\n VALUES(1) /* this is removed, too */\").show(false)\r\n\r\n|== Parsed Logical Plan ==\r\nDescribeQueryCommand SELECT 1\r\n /* this survives */\r\nFROM /* last */\r\n VALUES(1)\r\n\r\n== Analyzed Logical Plan ==\r\ncol_name: string, data_type: string, comment: string\r\nDescribeQueryCommand SELECT 1\r\n /* this survives */\r\nFROM /* last */\r\n VALUES(1)\r\n\r\n== Optimized Logical Plan ==\r\nDescribeQueryCommand SELECT 1\r\n /* this survives */\r\nFROM /* last */\r\n VALUES(1)\r\n\r\n== Physical Plan ==\r\nExecute DescribeQueryCommand\r\n   +- DescribeQueryCommand SELECT 1\r\n /* this survives */\r\nFROM /* last */\r\n VALUES(1)\r\n|\r\n```",
+        "createdAt" : "2019-04-19T16:34:19Z",
+        "updatedAt" : "2019-04-20T00:00:11Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9661bd8f-1e9c-4a6b-b426-3dd7f1d3a4ad",
+        "parentId" : "646f61fa-5555-4640-a748-55a0f6d60d96",
+        "authorId" : "a2fcc15e-a51a-42f0-87a6-137048a28e30",
+        "body" : "@dongjoon-hyun Oh.. i hadn't tried with surrounding comments. Thanks for finding it. Would you have any suggestion here ? ",
+        "createdAt" : "2019-04-19T16:50:54Z",
+        "updatedAt" : "2019-04-20T00:00:11Z",
+        "lastEditedBy" : "a2fcc15e-a51a-42f0-87a6-137048a28e30",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "77019770-a15f-42d9-a7e8-fc1722de75ae",
+        "parentId" : "646f61fa-5555-4640-a748-55a0f6d60d96",
+        "authorId" : "a2fcc15e-a51a-42f0-87a6-137048a28e30",
+        "body" : "@dongjoon-hyun I thought about this some more. Actually i think there is an ambiguity whether the \"surrounding\" comments are part of the explain statement or the query. In order to verify, i tried the following : \r\n```sql\r\nspark-sql> create view vtest as /* leading */ select /* embeded */ 1 FROM VALUES(1) /* trailing */;\r\nspark-sql> show table extended  like 'vtest';\r\ndefault\tvtest\tfalse\tDatabase: default\r\nTable: vtest\r\nOwner: dbiswal\r\nCreated Time: Fri Apr 19 14:36:32 PDT 2019\r\nLast Access: Wed Dec 31 16:00:00 PST 1969\r\nCreated By: Spark 3.0.0-SNAPSHOT\r\nType: VIEW\r\nView Text: select /* embeded */ 1 FROM VALUES(1)\r\nView Original Text: select /* embeded */ 1 FROM VALUES(1)\r\nView Default Database: default\r\nView Query Output Columns: [1]\r\nTable Properties: [transient_lastDdlTime=1555709792, view.query.out.col.0=1, view.query.out.numCols=1, view.default.database=default]\r\nSerde Library: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe\r\nInputFormat: org.apache.hadoop.mapred.SequenceFileInputFormat\r\nOutputFormat: org.apache.hadoop.hive.ql.io.HiveSequenceFileOutputFormat\r\nStorage Properties: [serialization.format=1]\r\nSchema: root\r\n |-- 1: integer (nullable = false)\r\n```\r\nAs we see here the original query does not contain the surrounding comments. Given this, i think we would be okay in dropping the surrounding comments and preserving the embedded comments. What do you think ? ",
+        "createdAt" : "2019-04-19T21:46:20Z",
+        "updatedAt" : "2019-04-20T01:28:56Z",
+        "lastEditedBy" : "a2fcc15e-a51a-42f0-87a6-137048a28e30",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "926b1285-1ccf-43b7-8977-5b82d23f3ec5",
+        "parentId" : "646f61fa-5555-4640-a748-55a0f6d60d96",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "+1 for the reasoning, @dilipbiswal . Thanks.",
+        "createdAt" : "2019-04-21T18:19:47Z",
+        "updatedAt" : "2019-04-21T18:19:47Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "85fd9e451346aa60a12d5dc698978787b01f6190",
+    "line" : 42,
+    "diffHunk" : "@@ -1,1 +181,185 @@== Physical Plan ==\nExecute DescribeQueryCommand\n   +- DescribeQueryCommand WITH s AS (SELECT 'hello' as col1) SELECT * FROM s\n\n"
+  }
+]

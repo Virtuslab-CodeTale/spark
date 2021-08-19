@@ -185,5 +185,71 @@
     "commit" : "b342610cc53b888a62c0520c635a8f523271c2d4",
     "line" : 23,
     "diffHunk" : "@@ -1,1 +237,241 @@                                    object OuterLevelWithVeryVeryVeryLongClassName18 {\n                                      object OuterLevelWithVeryVeryVeryLongClassName19 {\n                                        object OuterLevelWithVeryVeryVeryLongClassName20 {\n                                          case class MalformedNameExample(x: Int)\n                                        }}}}}}}}}}}}}}}}}}}}"
+  },
+  {
+    "id" : "fbb9bb15-5020-403c-95a3-90d503c85367",
+    "prId" : 24367,
+    "prUrl" : "https://github.com/apache/spark/pull/24367#pullrequestreview-228733521",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1485cc8c-1e2f-4d5d-b6f3-04039004cdc3",
+        "parentId" : null,
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "I tried and the test case failed:\r\n```\r\nCan't compare maps!\r\norg.apache.avro.AvroRuntimeException: Can't compare maps!\r\n\tat org.apache.avro.generic.GenericData.compare(GenericData.java:984)\r\n\tat org.apache.avro.specific.SpecificData.compare(SpecificData.java:333)\r\n\tat org.apache.avro.generic.GenericData.compare(GenericData.java:961)\r\n\tat org.apache.avro.specific.SpecificData.compare(SpecificData.java:333)\r\n\tat org.apache.avro.generic.GenericData.compare(GenericData.java:946)\r\n\tat org.apache.avro.specific.SpecificRecordBase.compareTo(SpecificRecordBase.java:81)\r\n\tat org.apache.avro.specific.SpecificRecordBase.compareTo(SpecificRecordBase.java:30)\r\n\tat org.apache.spark.sql.catalyst.encoders.ExpressionEncoderSuite.$anonfun$encodeDecodeTest$1(ExpressionEncoderSuite.scala:442)\r\n\r\n```",
+        "createdAt" : "2019-04-19T12:55:18Z",
+        "updatedAt" : "2019-05-18T08:23:50Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6f7a0f11-6227-4b06-898a-65e6393d391f",
+        "parentId" : "1485cc8c-1e2f-4d5d-b6f3-04039004cdc3",
+        "authorId" : "238d8924-263e-475c-84d6-504d8ececcd8",
+        "body" : "The issue here is how the `input` and the `convertedBack` objects are compared\r\n\r\nif we replace the check, in line ExpressionEncoderSuite.scala:442,\r\n\r\n`left.asInstanceOf[Comparable[Any]].compareTo(right) == 0`\r\nBy\r\n`left.asInstanceOf[Comparable[Any]].equals(right) == 0`\r\n\r\nthe test for Avro encoder passes, but unfortunately other tests fail\r\n\r\nEquality of objects is tricky.\r\n\r\nThe GenericData `compare` function \r\n```\r\n  /** Comparison implementation.  When equals is true, only checks for equality,\r\n   * not for order. */\r\n  @SuppressWarnings(value=\"unchecked\")\r\n  protected int compare(Object o1, Object o2, Schema s, boolean equals) {\r\n```\r\nfails to compare Maps when the parameter `equals` is `false`\r\n\r\n\r\nI propose the following\r\n\r\nreplace ExpressionEncoderSuite:434:444 lines\r\n\r\n```\r\n      val isCorrect = (input, convertedBack) match {\r\n        case (b1: Array[Byte], b2: Array[Byte]) => Arrays.equals(b1, b2)\r\n        case (b1: Array[Int], b2: Array[Int]) => Arrays.equals(b1, b2)\r\n        case (b1: Array[Array[_]], b2: Array[Array[_]]) =>\r\n          Arrays.deepEquals(b1.asInstanceOf[Array[AnyRef]], b2.asInstanceOf[Array[AnyRef]])\r\n        case (b1: Array[_], b2: Array[_]) =>\r\n          Arrays.equals(b1.asInstanceOf[Array[AnyRef]], b2.asInstanceOf[Array[AnyRef]])\r\n        case (left: Comparable[_], right: Comparable[_]) =>\r\n          left.asInstanceOf[Comparable[Any]].compareTo(right) == 0\r\n        case _ => input == convertedBack\r\n      }\r\n```\r\n\r\nby \r\n\r\n```\r\n      val convertedBackRow = encoder.toRow(convertedBack)\r\n      val isCorrect = row == convertedBackRow\r\n```\r\n\r\nWith the proposed modification all the tests in ExpressionEncoderSuite passes\r\n\r\n~~I think this makes sense, the check should not depend on how the foreign objects implement~~ `equality`  (see next comment)",
+        "createdAt" : "2019-04-19T14:22:06Z",
+        "updatedAt" : "2019-05-18T08:23:50Z",
+        "lastEditedBy" : "238d8924-263e-475c-84d6-504d8ececcd8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "74bc61df-5fb5-44d0-90c1-1125dfde66c4",
+        "parentId" : "1485cc8c-1e2f-4d5d-b6f3-04039004cdc3",
+        "authorId" : "238d8924-263e-475c-84d6-504d8ececcd8",
+        "body" : "we must compare `input` and `convertedBack` ;  the equality `row==convertedBackRow` does not guarantee that the encoder is correct; indeed a buggy encoder may create a row with missing fields such that `row==convertedBackRow`  is true while `input==convertedBack` is false.\r\n\r\nFor the avro encoder test the test `input == convertedBack` is true when the encoder is correct, thus we propose the following modification:\r\n\r\n```\r\n      val isCorrect = input == convertedBack || ((input, convertedBack) match {\r\n        case (b1: Array[Byte], b2: Array[Byte]) => Arrays.equals(b1, b2)\r\n        case (b1: Array[Int], b2: Array[Int]) => Arrays.equals(b1, b2)\r\n        case (b1: Array[Array[_]], b2: Array[Array[_]]) =>\r\n          Arrays.deepEquals(b1.asInstanceOf[Array[AnyRef]], b2.asInstanceOf[Array[AnyRef]])\r\n        case (b1: Array[_], b2: Array[_]) =>\r\n          Arrays.equals(b1.asInstanceOf[Array[AnyRef]], b2.asInstanceOf[Array[AnyRef]])\r\n        case (left: Comparable[_], right: Comparable[_]) =>\r\n          left.asInstanceOf[Comparable[Any]].compareTo(right) == 0\r\n        case _ => false\r\n      })\r\n```\r\n\r\nWith this modification all the tests pass\r\n",
+        "createdAt" : "2019-04-19T15:40:42Z",
+        "updatedAt" : "2019-05-18T08:23:50Z",
+        "lastEditedBy" : "238d8924-263e-475c-84d6-504d8ececcd8",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2574e3d90f4d9de2de7b4b4a55eade668f495729",
+    "line" : 12,
+    "diffHunk" : "@@ -1,1 +310,314 @@  encodeDecodeTest(Option.empty[String], \"empty option of string\")\n\n  encodeDecodeTest(\n    AvroExample1.newBuilder()\n      .setMyarray(List(\"Foo\", \"Bar\").asJava)"
+  },
+  {
+    "id" : "b98b5297-1c26-4fdc-9267-932e0978ccad",
+    "prId" : 24299,
+    "prUrl" : "https://github.com/apache/spark/pull/24299#pullrequestreview-225407989",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "67007ec6-ebe9-4635-a92e-a5a28135b720",
+        "parentId" : null,
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "Thanks @bdrillard for the summary of previous work.\r\n\r\nSeems #22878 covered this scenario? Please correct me if I missing something. https://github.com/apache/spark/pull/22878/files#diff-24ca7610c9c163779104e6c797713431R327",
+        "createdAt" : "2019-04-11T08:57:01Z",
+        "updatedAt" : "2019-05-18T08:27:08Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b8653a87fb6e7d306114c840ffccdfe894bc8157",
+    "line" : 12,
+    "diffHunk" : "@@ -1,1 +310,314 @@  encodeDecodeTest(Option.empty[String], \"empty option of string\")\n\n  encodeDecodeTest(\n    AvroExample1.newBuilder()\n      .setMyarray(List(\"Foo\", \"Bar\").asJava)"
   }
 ]

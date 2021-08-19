@@ -845,5 +845,71 @@
     "commit" : "f5b4f4805e494d95311d7c46d6635bec6cfeef8b",
     "line" : 12,
     "diffHunk" : "@@ -1,1 +444,448 @@    // NOTE: the preferredLocality order: PROCESS_LOCAL, NODE_LOCAL, NO_PREF, RACK_LOCAL, ANY\n    for (taskSet <- sortedTaskSets) {\n      val availableSlots = availableCpus.map(c => c / CPUS_PER_TASK).sum\n      // Skip the barrier taskSet if the available slots are less than the number of pending tasks.\n      if (taskSet.isBarrier && availableSlots < taskSet.numTasks) {"
+  },
+  {
+    "id" : "3edbe0e1-3786-4db7-9260-0adb635362d8",
+    "prId" : 24374,
+    "prUrl" : "https://github.com/apache/spark/pull/24374#pullrequestreview-244350034",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0138bc42-366f-47eb-8b2a-bf7a2278a96a",
+        "parentId" : null,
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "I think its a bit out of place that we are decrementing the addresses  available in the resourceOffer function since everything else does its bookkeeping right here.  I don't think that is a blocker for this though and the way ",
+        "createdAt" : "2019-05-23T21:52:53Z",
+        "updatedAt" : "2019-06-04T21:38:24Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e41a56e5-1880-4f64-82bf-e40271647b9d",
+        "parentId" : "0138bc42-366f-47eb-8b2a-bf7a2278a96a",
+        "authorId" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "body" : "I just feel if we only bookkeep by count here and actually allocate the addresses in SchedulerBackend then we need to pay slightly more attention to ensure these two places are synchronized. After all I'm neutral here and would be happy to go another way if someone feels strongly about this.",
+        "createdAt" : "2019-05-23T23:48:02Z",
+        "updatedAt" : "2019-06-04T21:38:24Z",
+        "lastEditedBy" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "94606c9d-668e-4e6a-8104-58bac7c8bd2a",
+        "parentId" : "0138bc42-366f-47eb-8b2a-bf7a2278a96a",
+        "authorId" : "0c812942-02cb-4975-9748-394d1387affa",
+        "body" : "I like @tgravescs 's proposal or at least putting an inline comment after L352 saying where we update the addresses.",
+        "createdAt" : "2019-05-24T06:16:35Z",
+        "updatedAt" : "2019-06-04T21:38:24Z",
+        "lastEditedBy" : "0c812942-02cb-4975-9748-394d1387affa",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c4d59549-9c95-4af4-9f85-ebfd3d8daec6",
+        "parentId" : "0138bc42-366f-47eb-8b2a-bf7a2278a96a",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "I'd be ok with a comment for now.  I wasn't suggesting only book keeping by count, I meant do the actual acquire addresses here, but you would have to make other changes for that to happen.  \r\nOne thing we could do is make a separate function in TaskSchedulerImpl for the resource (including cpu's) accounting and then have TaskSetManager.resourceOffer call into that to acquire the resources.\r\nAnother option is to have the TaskSetManager get some addresses but only do the actual accounting to remove them from the available here.",
+        "createdAt" : "2019-05-24T14:21:36Z",
+        "updatedAt" : "2019-06-04T21:38:24Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5a0bd919-eed3-4e44-aaca-b9ce8cd1ea31",
+        "parentId" : "0138bc42-366f-47eb-8b2a-bf7a2278a96a",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "Add the comment here about accounting of resources done inside TaskSetManager.resourceOffer",
+        "createdAt" : "2019-05-31T16:03:17Z",
+        "updatedAt" : "2019-06-04T21:38:24Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "82cd1e35bdc7caaddb4122060d8fd6b98893cbb6",
+    "line" : 39,
+    "diffHunk" : "@@ -1,1 +346,350 @@            tasks(i) += task\n            val tid = task.taskId\n            taskIdToTaskSetManager.put(tid, taskSet)\n            taskIdToExecutorId(tid) = execId\n            executorIdToRunningTaskIds(execId).add(tid)"
   }
 ]

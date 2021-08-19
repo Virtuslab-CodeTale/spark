@@ -130,5 +130,71 @@
     "commit" : "b207612abbad8e5b64dd2b7d65f990e643ace6f0",
     "line" : 7,
     "diffHunk" : "@@ -1,1 +89,93 @@   * Returns true when an expression contains a non-scalar subquery\n   */\n  def hasNonScalarSubquery(e: Expression): Boolean = {\n    e.find {\n      case _: ScalarSubquery => false"
+  },
+  {
+    "id" : "deeff9d8-2365-4fa0-9b0b-5307210b8b97",
+    "prId" : 24344,
+    "prUrl" : "https://github.com/apache/spark/pull/24344#pullrequestreview-228188491",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "45cf0f7d-af16-4599-9a7d-ae3554404078",
+        "parentId" : null,
+        "authorId" : "4db0fc8e-ae25-4ad9-989f-2fb7198f797a",
+        "body" : "`ListQuery` should be nullable, because `InSubquery`'s nullability depends on both left values and the subquery. If the subquery has nullable columns, `InSubquery` could be null.",
+        "createdAt" : "2019-04-18T07:08:38Z",
+        "updatedAt" : "2019-05-22T07:43:45Z",
+        "lastEditedBy" : "4db0fc8e-ae25-4ad9-989f-2fb7198f797a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "15d1681c-d70d-4391-942c-97cce5f7be5f",
+        "parentId" : "45cf0f7d-af16-4599-9a7d-ae3554404078",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "I might miss it, but as we don't execute `ListQuery` directly, do we need this?",
+        "createdAt" : "2019-04-18T08:48:55Z",
+        "updatedAt" : "2019-05-22T07:43:45Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "54dc3780-4247-476e-ac00-cc23da732f14",
+        "parentId" : "45cf0f7d-af16-4599-9a7d-ae3554404078",
+        "authorId" : "4db0fc8e-ae25-4ad9-989f-2fb7198f797a",
+        "body" : "It works in the optimizer. Example:\r\n```\r\nselect *\r\nfrom t1\r\nwhere (3 in (select a from t2)) is null\r\n``` \r\n\r\nIf we don't change this, the filter will be eliminated because `3 in (select a from t2)` is not nullable.\r\n",
+        "createdAt" : "2019-04-18T09:06:27Z",
+        "updatedAt" : "2019-05-22T07:43:45Z",
+        "lastEditedBy" : "4db0fc8e-ae25-4ad9-989f-2fb7198f797a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "996f801c-aba4-47a7-862d-302a500beb0b",
+        "parentId" : "45cf0f7d-af16-4599-9a7d-ae3554404078",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Is an existing issue or related to this change?",
+        "createdAt" : "2019-04-18T09:28:59Z",
+        "updatedAt" : "2019-05-22T07:43:45Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "724f4f93-9eeb-4759-98dc-bd6a55617903",
+        "parentId" : "45cf0f7d-af16-4599-9a7d-ae3554404078",
+        "authorId" : "4db0fc8e-ae25-4ad9-989f-2fb7198f797a",
+        "body" : "Related to this change, because we rewrite it as join before so the nullability of ListQuery was not used.",
+        "createdAt" : "2019-04-18T09:33:32Z",
+        "updatedAt" : "2019-05-22T07:43:45Z",
+        "lastEditedBy" : "4db0fc8e-ae25-4ad9-989f-2fb7198f797a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "86f6c9deb99fcf4eb28b29a1dfe6beea68bedb38",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +300,304 @@  }\n  override lazy val resolved: Boolean = childrenResolved && plan.resolved && childOutputs.nonEmpty\n  override def nullable: Boolean = plan.schema.fields.exists(_.nullable)\n  override def withNewPlan(plan: LogicalPlan): ListQuery = copy(plan = plan)\n  override def toString: String = s\"list#${exprId.id} $conditionString\""
   }
 ]

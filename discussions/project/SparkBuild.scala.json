@@ -911,5 +911,82 @@
     "commit" : "fd17fdc8d10b961833a1666156bc80617f676924",
     "line" : 6,
     "diffHunk" : "@@ -1,1 +982,986 @@    javaOptions in Test += \"-ea\",\n    // SPARK-29282 This is for consistency between JDK8 and JDK11.\n    javaOptions in Test ++= \"-Xmx4g -Xss4m -XX:+UseParallelGC -XX:-UseDynamicNumberOfGCThreads\"\n      .split(\" \").toSeq,\n    javaOptions += \"-Xmx3g\","
+  },
+  {
+    "id" : "a6502dfc-f572-493b-b878-57fabd0c0ce8",
+    "prId" : 24373,
+    "prUrl" : "https://github.com/apache/spark/pull/24373#pullrequestreview-226727490",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f82334f6-ef4d-48dd-8588-b98302e2ad8d",
+        "parentId" : null,
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "@srowen It is hard to successfully run test cases in parallel. See the comment here.  E.g, it possible that multiple test cases use the same table location `spark-warehouse/t` for a temporary table.",
+        "createdAt" : "2019-04-15T14:23:45Z",
+        "updatedAt" : "2019-04-18T11:49:37Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "008e94f9-f528-49f0-9850-b238e60206be",
+        "parentId" : "f82334f6-ef4d-48dd-8588-b98302e2ad8d",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "I get it, but this won't help the Maven build and is kind of brittle. Is it really hard to just set temp dirs differently for different suites?\r\n\r\nCan a suite run suites in scalatest? and parallelize suites that way?",
+        "createdAt" : "2019-04-15T14:38:53Z",
+        "updatedAt" : "2019-04-18T11:49:37Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6367e2e7-b68c-4475-85d9-cf61dce5e58d",
+        "parentId" : "f82334f6-ef4d-48dd-8588-b98302e2ad8d",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "> I get it, but this won't help the Maven build and is kind of brittle. \r\n\r\nFrom the Jenkins log, I can see that we are using SBT for test PRs. And I can see that the test time of this PR is about 106 minutes from the email notification, which is much better now (before changes it takes around 3.5 hours from https://amplab.cs.berkeley.edu/jenkins/job/SparkPullRequestBuilder/104580/testReport/history/)\r\n\r\n> Is it really hard to just set temp dirs differently for different suites?\r\n\r\nI think fixing that problem would be a huge amount of work for limited payoff in most cases because most test suites are short-running.\r\n\r\n> Can a suite run suites in scalatest? and parallelize suites that way?\r\n\r\nDo you mean run all test suite in parallel?  We can enable `parallelExecution in Test` (http://www.scalatest.org/user_guide/using_scalatest_with_sbt). But we still face the problem of colliding warehouse paths. \r\n",
+        "createdAt" : "2019-04-15T15:41:36Z",
+        "updatedAt" : "2019-04-18T11:49:37Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4b61d0aa499256364259cbb6f2fd01b12ea9dd78",
+    "line" : 22,
+    "diffHunk" : "@@ -1,1 +449,453 @@  //       metastores can be very slow so creating a fresh warehouse per suite is inefficient.\n  //\n  //    2. When parallelizing within a project we need to give each forked JVM a different tmpdir\n  //       so that the metastore warehouses do not collide. Unfortunately, it seems that there are\n  //       some tests which have an overly tight dependency on the default tmpdir, so those fragile"
+  },
+  {
+    "id" : "55dd3399-dc87-4649-8cb0-ed3633d26a71",
+    "prId" : 24373,
+    "prUrl" : "https://github.com/apache/spark/pull/24373#pullrequestreview-227165502",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6f23f3dc-2e85-4a51-aa16-3b678aff53f8",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "how do we come up with this list?",
+        "createdAt" : "2019-04-16T10:07:40Z",
+        "updatedAt" : "2019-04-18T11:49:37Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f5b323ee-1c51-48bc-8aac-7fa431fe2843",
+        "parentId" : "6f23f3dc-2e85-4a51-aa16-3b678aff53f8",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "Test suites that:\r\n1.  duration > 1min\r\n2. doesn't collide with other suites in the warehouse locations.\r\n\r\nThis is a preliminary list.",
+        "createdAt" : "2019-04-16T12:39:23Z",
+        "updatedAt" : "2019-04-18T11:49:37Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4b61d0aa499256364259cbb6f2fd01b12ea9dd78",
+    "line" : 44,
+    "diffHunk" : "@@ -1,1 +471,475 @@    \"org.apache.spark.ml.classification.LogisticRegressionSuite\",\n    \"org.apache.spark.ml.classification.LinearSVCSuite\",\n    \"org.apache.spark.sql.SQLQueryTestSuite\"\n  )\n"
   }
 ]

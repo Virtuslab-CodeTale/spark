@@ -20,5 +20,159 @@
     "commit" : "21d03e75f9b669ac2cbb42af3315944fb780b2c8",
     "line" : 37,
     "diffHunk" : "@@ -1,1 +161,165 @@  }\n\n  override def close(): Unit = {\n    writer.close(errorOrNull)\n  }"
+  },
+  {
+    "id" : "2091f17d-adaa-464f-bff9-0a009df39cad",
+    "prId" : 24382,
+    "prUrl" : "https://github.com/apache/spark/pull/24382#pullrequestreview-270259022",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ac365f42-d918-4b9d-9131-10dad1a3691d",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "It looks to me that `abort` should know the exception, so that it knows why the task failed and how to do the clean up. What do you think? @rdblue ",
+        "createdAt" : "2019-07-31T16:07:14Z",
+        "updatedAt" : "2019-08-18T07:22:10Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "439324ee-09a6-4d29-95b3-8cc37ab68ca7",
+        "parentId" : "ac365f42-d918-4b9d-9131-10dad1a3691d",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "What is the use case for passing the exception to the writer? Shouldn't the writer always take the same action on abort, no matter what the reason to abort was?",
+        "createdAt" : "2019-07-31T20:44:31Z",
+        "updatedAt" : "2019-08-18T07:22:10Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "60cc05b7-3c1e-49f9-a187-1fc9152c1b82",
+        "parentId" : "ac365f42-d918-4b9d-9131-10dad1a3691d",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "This issue is fixing a regression bug introduced by migration ForeachSink to DSv2, we need to pass the exception to the writer in the whole iteration process, just like the original behavior [here](https://github.com/apache/spark/pull/20951/files#diff-98acda846a9dd63efc42e0957594e05dL57). As current logic, we can only get the exception in `writer.process`.",
+        "createdAt" : "2019-08-01T00:13:21Z",
+        "updatedAt" : "2019-08-18T07:22:10Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "da82a151-a89d-48f3-9721-1e4b3b26abf0",
+        "parentId" : "ac365f42-d918-4b9d-9131-10dad1a3691d",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "@xuanyuanking, what is the exception used for? I'm trying to understand why the abort would behave differently depending on the exception.",
+        "createdAt" : "2019-08-01T00:29:45Z",
+        "updatedAt" : "2019-08-18T07:22:10Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a85ad708-c854-4db5-8122-a106432d20b3",
+        "parentId" : "ac365f42-d918-4b9d-9131-10dad1a3691d",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "In this case, we need to call `writer.close` in `abort`, the exception is necessary for the close API. https://github.com/apache/spark/blob/b3ffd8be14779cbb824d14b409f0a6eab93444ba/sql/core/src/main/scala/org/apache/spark/sql/ForeachWriter.scala#L129-L141",
+        "createdAt" : "2019-08-01T03:15:03Z",
+        "updatedAt" : "2019-08-18T07:22:10Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e692c695-5e8e-41b0-8b2e-93db62e6e289",
+        "parentId" : "ac365f42-d918-4b9d-9131-10dad1a3691d",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "I can see that the exception is passed to close. My question is: what does the writer do differently based on the exception? If this is to satisfy an API and you can pass any exception, then I don't think it matters. There's effort required to get the exception to pass through and without a reasonable use case I'm wondering why it is necessary to do it.",
+        "createdAt" : "2019-08-01T04:51:31Z",
+        "updatedAt" : "2019-08-18T07:22:10Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fac81e46-2c1b-45aa-b24a-17247710a158",
+        "parentId" : "ac365f42-d918-4b9d-9131-10dad1a3691d",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "Ah I see, thanks for your explanation Ryan.\r\nGives a scenario of `DataWritingSparkTask`, both dataWriter.wirte, dataWriter.commit, and Spark task self could throw different exceptions. In the close API of DataWriter, I think `CommitDeniedException` and the exception threw by `writer.commit` can deal with separately. Please correct me if I'm wrong, Thanks.",
+        "createdAt" : "2019-08-01T06:02:11Z",
+        "updatedAt" : "2019-08-18T07:22:10Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "79bb319f-430c-4c71-bdab-b035f1c8e6e1",
+        "parentId" : "ac365f42-d918-4b9d-9131-10dad1a3691d",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "> I think CommitDeniedException and the exception threw by writer.commit can deal with separately\r\n\r\nSure, but what is done differently in close? For example, is the underlying not closed in one path for some reason? I can't think of anything reasonable for close to do differently, so I'd like to know what the specific use case you're support is.",
+        "createdAt" : "2019-08-01T17:53:36Z",
+        "updatedAt" : "2019-08-18T07:22:10Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2ec9297b-46ad-4c2e-8f8e-eb84c3eb3423",
+        "parentId" : "ac365f42-d918-4b9d-9131-10dad1a3691d",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "The idea is brought up at https://github.com/apache/spark/pull/13342#discussion_r64843903 , but there is no concrete use cases mentioned at that time. cc @tdas ",
+        "createdAt" : "2019-08-02T04:05:03Z",
+        "updatedAt" : "2019-08-18T07:22:10Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e9119025-1608-4205-a375-dec9eef357d9",
+        "parentId" : "ac365f42-d918-4b9d-9131-10dad1a3691d",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "If there isn't a use case, then I'm very reluctant to change the way v2 works.",
+        "createdAt" : "2019-08-02T15:50:38Z",
+        "updatedAt" : "2019-08-18T07:22:10Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b237009671fda5728353ee19a9fe90be8e6c1ba3",
+    "line" : 33,
+    "diffHunk" : "@@ -1,1 +154,158 @@  }\n\n  override def abort(): Unit = {\n    closeWriter(new SparkException(\"Foreach writer has been aborted due to a task failure\"))\n  }"
+  },
+  {
+    "id" : "2c202c6b-a51f-41a6-9bf7-d55a8ee81698",
+    "prId" : 24382,
+    "prUrl" : "https://github.com/apache/spark/pull/24382#pullrequestreview-270519121",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2955c92d-8478-41d0-b52f-36c340c9ade9",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "so we close the writer twice: once when write fails, once when call `abort`. Instead of having the `private var closeCalled: Boolean = false`, shall we have a `private var ex: Throwable = null` and only close the writer in `abort`?",
+        "createdAt" : "2019-08-02T04:08:45Z",
+        "updatedAt" : "2019-08-18T07:22:10Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "27fe1a2d-84db-4b65-920f-ec15ad086805",
+        "parentId" : "2955c92d-8478-41d0-b52f-36c340c9ade9",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "It could be moved to `abort`, but we can't remove `closeCalled` since `commit` method could also throw exception and `abort` will be called finally. We shouldn't call `writer.close()` twice in any case, as python app will hang (that's what I fixed in this PR).",
+        "createdAt" : "2019-08-04T23:19:07Z",
+        "updatedAt" : "2019-08-18T07:22:10Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b237009671fda5728353ee19a9fe90be8e6c1ba3",
+    "line" : 21,
+    "diffHunk" : "@@ -1,1 +144,148 @@    } catch {\n      case t: Throwable =>\n        closeWriter(t)\n        throw t\n    }"
   }
 ]
