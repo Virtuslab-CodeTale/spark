@@ -1,0 +1,145 @@
+[
+  {
+    "id" : "db452e54-337b-482f-84ab-e4a24891968a",
+    "prId" : 25007,
+    "prUrl" : "https://github.com/apache/spark/pull/25007#pullrequestreview-262089162",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "04bf9598-6061-44f8-a874-3ee54b8bc033",
+        "parentId" : null,
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "I'd add that this stores bytes for one (mapper, reducer) pair, which corresponds to one ShuffleBlock",
+        "createdAt" : "2019-07-16T01:12:30Z",
+        "updatedAt" : "2019-07-30T18:18:01Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7dceec971784049442ec3d4cb71ddaa225e1e21f",
+    "line" : 28,
+    "diffHunk" : "@@ -1,1 +26,30 @@/**\n * :: Private ::\n * An interface for opening streams to persist partition bytes to a backing data store.\n * <p>\n * This writer stores bytes for one (mapper, reducer) pair, corresponding to one shuffle"
+  },
+  {
+    "id" : "1f27c260-ac0b-407d-a516-f50c7fe0f5c1",
+    "prId" : 25007,
+    "prUrl" : "https://github.com/apache/spark/pull/25007#pullrequestreview-263908074",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f1f88e4b-058b-4706-87ca-55d12a645766",
+        "parentId" : null,
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "I think we need to say more here about the lifecycle of this outputstream.  In particular, that (a) the framework will only keep one of these outputstreams open at a time per map task (b) the framework ensures that the outputstreams are closed, even if there are any exceptions and (c) if an individual implementation wants to keep all the output for one map task together (like the index / data file organization of local shuffle output), then they may want to reuse the the real underlying outputstream across all `ShufflePartitionWriter`s of one `ShuffleMapOutputWriter`",
+        "createdAt" : "2019-07-16T02:34:46Z",
+        "updatedAt" : "2019-07-30T18:18:01Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "27595a07-c6d5-427f-91f0-dea5eed78ef7",
+        "parentId" : "f1f88e4b-058b-4706-87ca-55d12a645766",
+        "authorId" : "806aa501-9ea7-4cec-b017-a84d9a1602d8",
+        "body" : "I added more docs.",
+        "createdAt" : "2019-07-18T21:07:04Z",
+        "updatedAt" : "2019-07-30T18:18:02Z",
+        "lastEditedBy" : "806aa501-9ea7-4cec-b017-a84d9a1602d8",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7dceec971784049442ec3d4cb71ddaa225e1e21f",
+    "line" : 55,
+    "diffHunk" : "@@ -1,1 +53,57 @@   * {@link ShuffleMapOutputWriter#abort(Throwable)}.\n   */\n  OutputStream openStream() throws IOException;\n\n  /**"
+  },
+  {
+    "id" : "185f0c6d-f536-4e15-b903-6ab980f47d88",
+    "prId" : 25007,
+    "prUrl" : "https://github.com/apache/spark/pull/25007#pullrequestreview-270427167",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f31992fd-90b8-442b-9e22-f2f0c247342b",
+        "parentId" : null,
+        "authorId" : "c52c39ef-2b7f-4855-a2f1-2a2e50a719ae",
+        "body" : "This class delegates writing to OutputStream by openStream(). Will getNumBytesWritten() in this class access internal state inside that OutputStream? How about let OutputStream track the number of bytes written so this class does not need to access OutputStream? One possible solution is to add a subclass of OutputStream to track number of bytes. Something like existing TimeTrackingOutputStream class in Spark which extends OutputStream.",
+        "createdAt" : "2019-07-29T18:21:48Z",
+        "updatedAt" : "2019-07-30T18:18:02Z",
+        "lastEditedBy" : "c52c39ef-2b7f-4855-a2f1-2a2e50a719ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d13ca5b5-4124-43ab-88c1-b7ef32567b7c",
+        "parentId" : "f31992fd-90b8-442b-9e22-f2f0c247342b",
+        "authorId" : "806aa501-9ea7-4cec-b017-a84d9a1602d8",
+        "body" : "The idea is that if the implementation also supports creating a custom `WritableByteChannel`, then the number of bytes written would be from that of the channel, not the output stream. One could see us having both a custom output stream and an added method on `WritableByteChannelWrapper`.",
+        "createdAt" : "2019-07-29T19:25:06Z",
+        "updatedAt" : "2019-07-30T18:18:02Z",
+        "lastEditedBy" : "806aa501-9ea7-4cec-b017-a84d9a1602d8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "79e37a50-c31b-4685-8953-c23a7ef27076",
+        "parentId" : "f31992fd-90b8-442b-9e22-f2f0c247342b",
+        "authorId" : "806aa501-9ea7-4cec-b017-a84d9a1602d8",
+        "body" : "Ah I also remember why we didn't attach it to the output stream - it's particularly because of the lifecycle. If we have an output stream for the partition that pads bytes upon closing the stream, it's unclear that one will continue to call methods on the output stream object after it has been closed. That's why we have the contract:\r\n\r\n1. Open stream for writing bytes.\r\n2. Write bytes\r\n3. Close stream\r\n4. Get written bytes for that partition, accounting for the fact that the above step closed the stream.",
+        "createdAt" : "2019-07-29T20:07:25Z",
+        "updatedAt" : "2019-07-30T18:18:02Z",
+        "lastEditedBy" : "806aa501-9ea7-4cec-b017-a84d9a1602d8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a49fe265-26b4-482e-a26c-034972ff34dd",
+        "parentId" : "f31992fd-90b8-442b-9e22-f2f0c247342b",
+        "authorId" : "c52c39ef-2b7f-4855-a2f1-2a2e50a719ae",
+        "body" : "In this case, the OutputStream returned by openStream() is tightly coupled with ShufflePartitionWriter. Could we merge them together into one class, e.g.\r\n\r\n```\r\nShufflePartitionWriterStream extends OutputStream {\r\n  open();\r\n  getNumBytesWritten();\r\n}\r\n```\r\n",
+        "createdAt" : "2019-07-30T18:13:30Z",
+        "updatedAt" : "2019-07-30T18:18:02Z",
+        "lastEditedBy" : "c52c39ef-2b7f-4855-a2f1-2a2e50a719ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e6c56da1-6982-4fce-90a2-33a27c540d5d",
+        "parentId" : "f31992fd-90b8-442b-9e22-f2f0c247342b",
+        "authorId" : "806aa501-9ea7-4cec-b017-a84d9a1602d8",
+        "body" : "An `OutputStream` instance is considered opened as soon as the object exists, which is why `OutputStream` extends `Closeable`. As soon as I have a reference to the `OutputStream` object I can call `write` on it to push bytes to the sink. So having a separate `open` method doesn't make sense.\r\n\r\nThe `open` method belongs in the `ShufflePartitionWriter` API, which is effectively what we have with `openStream` and `openChannel`.",
+        "createdAt" : "2019-07-30T18:19:48Z",
+        "updatedAt" : "2019-07-30T18:19:48Z",
+        "lastEditedBy" : "806aa501-9ea7-4cec-b017-a84d9a1602d8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d9e14b2d-4fe3-4e90-8a49-a8a208e2ff41",
+        "parentId" : "f31992fd-90b8-442b-9e22-f2f0c247342b",
+        "authorId" : "c52c39ef-2b7f-4855-a2f1-2a2e50a719ae",
+        "body" : "Oh, I mean the OutputStream returned by openStream() is tightly coupled with ShufflePartitionWriter, thus suggest merging them together. for example, rename ShufflePartitionWriter to ShufflePartitionWriterStream which extends OutputStream:\r\n\r\nShufflePartitionWriterStream extends OutputStream {\r\n  void open();\r\n  long getNumBytesWritten();\r\n}\r\n\r\nIn this case, user do not need to create a ShufflePartitionWriter and then call its openStream() method to get an OutputStream. Instead, user will create ShufflePartitionWriterStream, which is already an OutputStream.\r\n",
+        "createdAt" : "2019-08-01T17:57:55Z",
+        "updatedAt" : "2019-08-01T17:57:55Z",
+        "lastEditedBy" : "c52c39ef-2b7f-4855-a2f1-2a2e50a719ae",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8ec64bdc-d212-41b0-ad93-ecfd1b4aba37",
+        "parentId" : "f31992fd-90b8-442b-9e22-f2f0c247342b",
+        "authorId" : "806aa501-9ea7-4cec-b017-a84d9a1602d8",
+        "body" : "But again, do we call `getNumBytesWritten` before or after calling `close` on this object? If before, does it include the bytes that might be padded in `close`-ing the stream? If after, are we going to be invoking methods on a closed resource, and is that reasonable?",
+        "createdAt" : "2019-08-02T23:11:28Z",
+        "updatedAt" : "2019-08-02T23:11:28Z",
+        "lastEditedBy" : "806aa501-9ea7-4cec-b017-a84d9a1602d8",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7dceec971784049442ec3d4cb71ddaa225e1e21f",
+    "line" : 97,
+    "diffHunk" : "@@ -1,1 +95,99 @@   * data store.\n   */\n  long getNumBytesWritten();\n}"
+  }
+]

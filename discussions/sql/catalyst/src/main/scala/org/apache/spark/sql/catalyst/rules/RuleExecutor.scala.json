@@ -97,5 +97,115 @@
     "commit" : "bff75bc6e2e877c08113062dc471458caa5cb996",
     "line" : 45,
     "diffHunk" : "@@ -1,1 +177,181 @@              s\"$endingMsg\"\n            if (Utils.isTesting || batch.strategy.errorOnExceed) {\n              throw new TreeNodeException(curPlan, message, null)\n            } else {\n              logWarning(message)"
+  },
+  {
+    "id" : "e1687e6b-9ff3-4c48-8e89-2772f71697ef",
+    "prId" : 25039,
+    "prUrl" : "https://github.com/apache/spark/pull/25039#pullrequestreview-257668169",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9bbfa3d3-7be5-415e-a54f-a53cfc716e79",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "now we have both `Once` and `Idempotent`, we should pick which one in which cases?",
+        "createdAt" : "2019-07-03T06:51:32Z",
+        "updatedAt" : "2019-07-15T19:48:15Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9863f10d-1145-4f9c-9621-270811f92aaf",
+        "parentId" : "9bbfa3d3-7be5-415e-a54f-a53cfc716e79",
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "I would suggest to use `Once` in the test suites only. \r\n \r\nIn the unit tests of optimizer rules, we have many batches that are using `Once`. The expected result of the optimized plan is based on the Once policy. These batches are not expected to be idempotent. ",
+        "createdAt" : "2019-07-03T07:05:54Z",
+        "updatedAt" : "2019-07-15T19:48:15Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4e6379f6-6c23-4fdd-83a5-d2e1298b9956",
+        "parentId" : "9bbfa3d3-7be5-415e-a54f-a53cfc716e79",
+        "authorId" : "88f0c774-9c59-4485-885d-f6aee36efcea",
+        "body" : "To be clear, `Once` means a batch should be run only once, but does not guarantee anything for multiple runs. On the other hand, `Idempotent` means that a batch should be run once, but multiple runs should yield the same result of a single run.",
+        "createdAt" : "2019-07-03T07:10:03Z",
+        "updatedAt" : "2019-07-15T19:48:15Z",
+        "lastEditedBy" : "88f0c774-9c59-4485-885d-f6aee36efcea",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "672820ab-a506-43b8-8db9-c047b404c6b1",
+        "parentId" : "9bbfa3d3-7be5-415e-a54f-a53cfc716e79",
+        "authorId" : "88f0c774-9c59-4485-885d-f6aee36efcea",
+        "body" : "Basically if a batch is marked as `Idempotent`, the idempotence contract is enforced by running an additional checker.",
+        "createdAt" : "2019-07-03T07:11:55Z",
+        "updatedAt" : "2019-07-15T19:48:15Z",
+        "lastEditedBy" : "88f0c774-9c59-4485-885d-f6aee36efcea",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8303879d-36bb-4372-94ab-f7143f5a30cc",
+        "parentId" : "9bbfa3d3-7be5-415e-a54f-a53cfc716e79",
+        "authorId" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "body" : "After we make sure all rules are idempotent, `Once` would be for test only and the names would all seem weird and confusing.\r\nOne way is to use `Once` for the semantics of idempotent, and add a test-only `OnceUnchecked` for all the catalyst rule tests (I don't suppose we should use this anywhere else).\r\nAnother option is to add another ENV variable, similar to `SPARK_TESTING` (sth. like `SPARK_RULE_TESTING`) for the `RuleExecutor` to skip the check.\r\n",
+        "createdAt" : "2019-07-03T16:29:15Z",
+        "updatedAt" : "2019-07-15T19:48:15Z",
+        "lastEditedBy" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8d101ba7-2a9a-4f3f-bfb6-5eff96decf1e",
+        "parentId" : "9bbfa3d3-7be5-415e-a54f-a53cfc716e79",
+        "authorId" : "88f0c774-9c59-4485-885d-f6aee36efcea",
+        "body" : "See `RuleExecutorSuite`, `Once` *was* supposed to run only once (and does not necessarily have to  pass the sanity check).",
+        "createdAt" : "2019-07-03T16:33:23Z",
+        "updatedAt" : "2019-07-15T19:48:15Z",
+        "lastEditedBy" : "88f0c774-9c59-4485-885d-f6aee36efcea",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1fb14baa-889d-4611-b061-05024cb79e2d",
+        "parentId" : "9bbfa3d3-7be5-415e-a54f-a53cfc716e79",
+        "authorId" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "body" : "I know what you are saying, @yeshengm. All I meant was all we need is `Idempotent` and `FixedPoint` except for the occasions that @gatorsmile worried about in our catalyst rule tests where really `FixedPoint` should be used but it was mistakenly put as `Once`.\r\n\r\nNow I remember last time I worked the experimental branch, there wasn't a whole lot of such places, so let's just change those false `Once` to `FixedPoint` in our tests, and we'll need `Once` only (which is checked under testing mode).",
+        "createdAt" : "2019-07-03T16:48:02Z",
+        "updatedAt" : "2019-07-15T19:48:15Z",
+        "lastEditedBy" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a44f00cd-b986-4c6b-a0bb-11889d08be35",
+        "parentId" : "9bbfa3d3-7be5-415e-a54f-a53cfc716e79",
+        "authorId" : "88f0c774-9c59-4485-885d-f6aee36efcea",
+        "body" : "@maryannxue We can definitely change that. But that means we also have to change tests in `RuleExecutorSuite`. So you are suggesting that we only have `Once` with idempotence semantics & `FixedPoint` right?",
+        "createdAt" : "2019-07-03T17:01:51Z",
+        "updatedAt" : "2019-07-15T19:48:15Z",
+        "lastEditedBy" : "88f0c774-9c59-4485-885d-f6aee36efcea",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0007877a-b7d9-4c8e-a80d-79024bb24403",
+        "parentId" : "9bbfa3d3-7be5-415e-a54f-a53cfc716e79",
+        "authorId" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "body" : "Yep.",
+        "createdAt" : "2019-07-03T18:31:47Z",
+        "updatedAt" : "2019-07-15T19:48:15Z",
+        "lastEditedBy" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "304b2c23d6edfea6860a091bd19391d27a8ccbf9",
+    "line" : 8,
+    "diffHunk" : "@@ -1,1 +52,56 @@\n  /** A strategy that only runs once. */\n  case object Once extends Strategy { val maxIterations = 1 }\n\n  /** A strategy that runs until fix point or maxIterations times, whichever comes first. */"
   }
 ]

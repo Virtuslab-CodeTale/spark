@@ -42,5 +42,335 @@
     "commit" : "edad25e70cb07319acc4235b603fc5cd16ed2433",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +32,36 @@  def convert(interval: String): Long = {\n    val cal = IntervalUtils.fromString(interval)\n    if (cal.months != 0) {\n      throw new IllegalArgumentException(s\"Doesn't support month or year interval: $interval\")\n    }"
+  },
+  {
+    "id" : "3c64b70a-1842-4961-bc45-84b88f802367",
+    "prId" : 24996,
+    "prUrl" : "https://github.com/apache/spark/pull/24996#pullrequestreview-259225306",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "49135c53-87fa-4fe0-af86-27000a8f0652",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Later we could make this non-private, but it seems like the intent is to expose through `Trigger.ProcessingTime` despite the fact that `OneTimeTrigger` is not private. Looks OK to me.",
+        "createdAt" : "2019-07-02T14:32:39Z",
+        "updatedAt" : "2019-07-11T02:42:49Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ac482a66-a641-4c20-99fa-e4d81cfa9d06",
+        "parentId" : "49135c53-87fa-4fe0-af86-27000a8f0652",
+        "authorId" : "9cd657f0-37cd-41bd-908a-f2c996b95a7a",
+        "body" : "Just a flyby comment (apologies if i am missing any prior context or conversation). I do not think it make sense to have both `OnTimeTrigger/ProcessingTimeTrigger` and `Trigger.OneTime/ProcessingTime` be public. The reason I had deprecated `ProcessingTime` constructor is so that we can reduce the number of public classes and move towards having everything through the `Trigger` class using`Trigger.ProcessingTime`. If we are indeed doing that, then we should have `Trigger.ProcessingTime` as the only public method and make `ProcessingTimeTrigger` private/hidden.\r\n\r\n",
+        "createdAt" : "2019-07-08T22:45:16Z",
+        "updatedAt" : "2019-07-11T02:42:49Z",
+        "lastEditedBy" : "9cd657f0-37cd-41bd-908a-f2c996b95a7a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a2029c43-0ea3-41a8-999a-d2269bca157b",
+        "parentId" : "49135c53-87fa-4fe0-af86-27000a8f0652",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Yeah it fits on my understanding (assumption, actually) of deprecation - let end users only know \r\n about `Trigger.xxx` and use these methods instead of instantiating Trigger implementation by theirselves. Thanks for making it clear!",
+        "createdAt" : "2019-07-09T01:00:55Z",
+        "updatedAt" : "2019-07-11T02:42:49Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f42e3b5a4e41b1068d891f0c467cda93cd0d0b0c",
+    "line" : 48,
+    "diffHunk" : "@@ -1,1 +61,65 @@}\n\nprivate[sql] object ProcessingTimeTrigger {\n  import Triggers._\n"
+  },
+  {
+    "id" : "9ad0b63f-5b88-4c9b-a5df-39d57bfdb329",
+    "prId" : 24996,
+    "prUrl" : "https://github.com/apache/spark/pull/24996#pullrequestreview-260118989",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2bad66f2-5ce3-4829-b8a0-2d57cd355fca",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Could you put this into another file like `ContinuousTrigger.scala` and the previous `ProcessingTime.scala`?\r\nIf possible, please do `git mv` for renaming `ProcessingTime` to `ProcessingTimeTrigger`. Then, update the new file.",
+        "createdAt" : "2019-07-05T23:50:26Z",
+        "updatedAt" : "2019-07-11T02:42:49Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3b345ead-b276-44e6-8af2-595e107192f0",
+        "parentId" : "2bad66f2-5ce3-4829-b8a0-2d57cd355fca",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "I moved this as @srowen's suggestion (https://github.com/apache/spark/pull/24996#discussion_r299221473) as OneTimeTrigger is there without its own file.\r\n\r\nI'm still not sure, but if the intention of deprecation is hiding implementations to end users, actually I'd also like to move ContinuousTrigger to Triggers.scala, as they can be controlled together.\r\n\r\nIf we change the mind to have file per implementation, Triggers.scala would be better to be renamed as OneTimeTrigger.scala too.",
+        "createdAt" : "2019-07-05T23:58:42Z",
+        "updatedAt" : "2019-07-11T02:42:49Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5ec99f46-4ff6-4f11-bdd7-a5701570f7e8",
+        "parentId" : "2bad66f2-5ce3-4829-b8a0-2d57cd355fca",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Ya. `Moving ContinuousTrigger to Triggers.scala` is also a possible way to be consistent.",
+        "createdAt" : "2019-07-06T00:43:41Z",
+        "updatedAt" : "2019-07-11T02:42:49Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "aa66f14e-6f79-4d39-b9e2-62155ec1faee",
+        "parentId" : "2bad66f2-5ce3-4829-b8a0-2d57cd355fca",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "We might need to keep original class as we haven't deprecated it yet, and to allow end users to only create Trigger implementations as `Trigger.xxx`, we may also want to deprecated some more classes as well.\r\n\r\nThe change may look like below commit:\r\nhttps://github.com/HeartSaVioR/spark/commit/f8488cfb0a045806e125215b933fc10931b1b431\r\n\r\nIMHO this could be considered as another issue as more deprecations are happening. WDYT?",
+        "createdAt" : "2019-07-06T02:21:05Z",
+        "updatedAt" : "2019-07-11T02:42:49Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4055093f-b106-499b-98c2-07e491b3f5cd",
+        "parentId" : "2bad66f2-5ce3-4829-b8a0-2d57cd355fca",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Ur, moving looks okay, but the new deprecation of `OneTimeTrigger` there is unexpected one for me.\r\n```\r\n@deprecated(\"use Trigger.Once()\", \"3.0.0\")\r\n// NOTE: In later release, we can change this to `private[sql]` and remove deprecated.\r\ncase object OneTimeTrigger extends Trigger\r\n```\r\nPlease make another PR for the deprecation of `OneTimeTrigger` if we really need that.\r\n\r\nIf the PR has multiple themes unexpectedly, we cannot merge it.",
+        "createdAt" : "2019-07-06T18:26:21Z",
+        "updatedAt" : "2019-07-11T02:42:49Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bd8f3e32-c36c-4f79-9667-2923bca8fb30",
+        "parentId" : "2bad66f2-5ce3-4829-b8a0-2d57cd355fca",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "OK I'll make another PR for deprecation of OneTimeTrigger, and change the topic of this PR to \"places all Trigger implementations to Triggers.scala\". Just pushed the new commit.",
+        "createdAt" : "2019-07-06T23:45:56Z",
+        "updatedAt" : "2019-07-11T02:42:49Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "be33f9f2-73f8-445e-a851-8a82bde380c5",
+        "parentId" : "2bad66f2-5ce3-4829-b8a0-2d57cd355fca",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "I think you are moving toward the opposite direction from the way I recommended. Now, you add a new deprecate in this PR.\r\n```\r\n@deprecated(\"use Trigger.Continuous(intervalMs)\", \"3.0.0\")\r\n// NOTE: In later release, we can remove this.\r\n```\r\n\r\nWhy do you add that here?",
+        "createdAt" : "2019-07-07T00:42:14Z",
+        "updatedAt" : "2020-11-16T00:30:55Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2c5af0db-0de2-4285-8b34-c72733bd9742",
+        "parentId" : "2bad66f2-5ce3-4829-b8a0-2d57cd355fca",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "First of all, you recommended opposite direction what I got from @srowen, as I commented earlier, so I just would like to keep this as it is. Let's avoid contributors to do back and forth because of conflict between reviewers.\r\n\r\nSecond, the new commit reflects your comment like above:\r\n\r\n> Moving ContinuousTrigger to Triggers.scala is also a possible way to be consistent.\r\n\r\nand I also provided commit and ask for confirmation, and you confirmed.\r\n\r\nhttps://github.com/apache/spark/pull/24996#discussion_r300817205\r\n\r\nIn confirmation comment I guess you were only concerning changing OneTimeTrigger together, so I excluded it.\r\n\r\nDid I miss something?",
+        "createdAt" : "2019-07-07T01:05:18Z",
+        "updatedAt" : "2019-07-11T02:42:49Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "81f9a008-891c-4baa-be9f-dc05f5070520",
+        "parentId" : "2bad66f2-5ce3-4829-b8a0-2d57cd355fca",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Got it. Please follow PMC's opinion, @HeartSaVioR . Sorry if you feel uncomfortable. I wanted to help and merge this PR, but it seems that it doesn't help you. I'll leave this PR to @srowen fully.\r\n> First of all, you recommended opposite direction what I got from @srowen, as I commented earlier, so I just would like to keep this as it is. Let's avoid contributors to do back and forth because of conflict between reviewers.",
+        "createdAt" : "2019-07-07T01:19:35Z",
+        "updatedAt" : "2019-07-11T02:42:49Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fdbacd53-7760-464f-8a86-4237ee0eab1b",
+        "parentId" : "2bad66f2-5ce3-4829-b8a0-2d57cd355fca",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "@dongjoon-hyun I don't particularly care where the implementations live, I'm just looking for consistency. It's not terribly consistent to begin with. I think putting the private implementations in `Triggers.scala` is a step in the right direction, given that this file exists at all. I think this change is OK as-is. I don't think we have to move other implementations, though, anything that improves consistency is OK.",
+        "createdAt" : "2019-07-08T03:12:30Z",
+        "updatedAt" : "2019-07-11T02:42:49Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a33f64f4-f62c-4dd3-b300-55adae09189d",
+        "parentId" : "2bad66f2-5ce3-4829-b8a0-2d57cd355fca",
+        "authorId" : "9cd657f0-37cd-41bd-908a-f2c996b95a7a",
+        "body" : "Building on the comment I made in a different [thread](https://github.com/apache/spark/pull/24996/files#r299514393), I agree things were not very consistent. Since we are refactoring this, lets make sure things move in the right direction and improve consistency. My opinion on where we should ideally be is \r\n- Minimize number of public classes that the user needs to know about. That means that ideally there NOT should be multiple public classes and ways for specifying a type of trigger. So there is should be only `Trigger.ProcessingTime` and `ProcessingTimeTrigger` should be hidden.\r\n- Classes that we dont want public visibility should not be visible in Java as well. Making it `public[sql]` still keeps it visible as a top-level in Java API docs. Either move the implementation inside the Trigger class, or move the `ProcessingTimeTrigger` into `sql/execution` package which is explicitly hidden from API docs.\r\n\r\nMy apologies for missing prior context and conversation. This is just my two cents. I am sure I am probably missing some aspect of the conversation. ",
+        "createdAt" : "2019-07-08T22:52:44Z",
+        "updatedAt" : "2019-07-11T02:42:49Z",
+        "lastEditedBy" : "9cd657f0-37cd-41bd-908a-f2c996b95a7a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d1301f38-42f0-4443-be40-a6980646bc35",
+        "parentId" : "2bad66f2-5ce3-4829-b8a0-2d57cd355fca",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Could we define the boundary of the PR - I guess if we want to address @tdas suggestion, it is going to be more than https://github.com/HeartSaVioR/spark/commit/f8488cfb0a045806e125215b933fc10931b1b431 , including moving `OneTimeTrigger` to `Triggers.scala` (with deprecating origin).\r\n\r\nJust wanted to be clear how much we want to do in this PR.\r\n\r\nAnd one more question, `Triggers.scala` belongs to `org.apache.spark.sql.execution.streaming` package - would these implementations inside `Triggers.scala` be hidden from API docs?",
+        "createdAt" : "2019-07-09T01:04:53Z",
+        "updatedAt" : "2019-07-11T02:42:49Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "94773780-8784-496e-839b-b9728bf19e1f",
+        "parentId" : "2bad66f2-5ce3-4829-b8a0-2d57cd355fca",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "My suggestion is we follow the comment above by moving `OneTimeTrigger` too, and leave it there. That's more consistent, and consistent with the intent. This leaves the class potentially 'public' in the bytecode, but it was before, and that's true of lots of `private[spark]` classes anyway. While I wouldn't argue with further moving things to `sql/execution`, I think that just putting the implementations in their natural home right now sounds coherent and an improvement, and doesn't expand the change much.",
+        "createdAt" : "2019-07-09T14:56:55Z",
+        "updatedAt" : "2019-07-11T02:42:49Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e2970e1d-21c5-40fc-b51a-0ad3d76a7a0c",
+        "parentId" : "2bad66f2-5ce3-4829-b8a0-2d57cd355fca",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Sorry I guess I mixed up. My bad, not moving OneTimeTrigger but moving ContinuousTrigger. Let me enumerate necessary changes from what I understand:\r\n\r\n* `OneTimeTrigger` is already in `Triggers.scala` but it's open to `public`, so need to add deprecation and plan to hide it.\r\n  * I guess adding `private[sql]` would work since Triggers.scala is already in `sql.execution.streaming` package. Not sure exact package of `sql.execution` will be hidden.\r\n  * Otherwise we can add replacement as same as what we do for ProcessingTime, but requires bigger changeset.\r\n* Move `ContinuousTrigger` to `Triggers.scala` with `private[sql]` scope, and deprecate origin.\r\n\r\nI guess both moving and deprecating make the changeset looking verbose, but I guess even in major release we may not want to remove public classes which haven't been deprecated.\r\n\r\nI guess my commit (https://github.com/HeartSaVioR/spark/commit/f8488cfb0a045806e125215b933fc10931b1b431) mentioned above already covered it, so please take a look at the commit. If we are OK to go or would like to continue reviewing under the commit, I'll add the commit to the PR.",
+        "createdAt" : "2019-07-09T15:54:01Z",
+        "updatedAt" : "2019-07-11T02:42:49Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8ff7a84d-7c3f-4f5d-9396-2e2db20cb9e0",
+        "parentId" : "2bad66f2-5ce3-4829-b8a0-2d57cd355fca",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Oops I misspoke, I mean \"move the implementations to Triggers.scala\". \r\nI'm personally OK with not even deprecating, just moving, as it's a major release and a small detail, but, OK with deprecation too.",
+        "createdAt" : "2019-07-09T15:58:50Z",
+        "updatedAt" : "2019-07-11T02:42:49Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "07fb3d83-aa24-4060-bd79-229c135762fb",
+        "parentId" : "2bad66f2-5ce3-4829-b8a0-2d57cd355fca",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Yeah either is fine for me too. If we would like to have simpler one, skipping deprecation would work. If we would like to have safer one (possibly user facing API), deprecation would work. I'd like to ask the decision for committers/PMC members, as it seems like related to some policy on the project.",
+        "createdAt" : "2019-07-09T16:08:40Z",
+        "updatedAt" : "2019-07-11T02:42:49Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "54535095-16e5-4732-b338-eb0854c5c202",
+        "parentId" : "2bad66f2-5ce3-4829-b8a0-2d57cd355fca",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "To move this forward, I suggest we just move the class and skip deprecation. A note in the Spark 3.0 migration guide about streaming would be good, as we're removing a deprecated class anyway. ",
+        "createdAt" : "2019-07-10T14:09:30Z",
+        "updatedAt" : "2019-07-11T02:42:49Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f42e3b5a4e41b1068d891f0c467cda93cd0d0b0c",
+    "line" : 44,
+    "diffHunk" : "@@ -1,1 +57,61 @@ */\n@Evolving\nprivate[sql] case class ProcessingTimeTrigger(intervalMs: Long) extends Trigger {\n  Triggers.validate(intervalMs)\n}"
+  },
+  {
+    "id" : "90d869fe-a4dc-4d93-8343-1ad5c068d866",
+    "prId" : 24996,
+    "prUrl" : "https://github.com/apache/spark/pull/24996#pullrequestreview-428520895",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c2bd4f5c-0f3e-40ef-98e0-4daceb60c532",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Shall we remove the annotations? it's `private` but the annotations say it's an API.",
+        "createdAt" : "2020-06-09T04:07:14Z",
+        "updatedAt" : "2020-06-09T04:07:14Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a24b7bae-7b1f-4017-9d46-2214b2f44b16",
+        "parentId" : "c2bd4f5c-0f3e-40ef-98e0-4daceb60c532",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Oh right. These classes are now not intended to expose so should remove annotations. Thanks for finding it out!  ",
+        "createdAt" : "2020-06-10T20:38:55Z",
+        "updatedAt" : "2020-06-10T20:38:55Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f0a35fbe-f689-4d60-be4b-d7840d3c3c12",
+        "parentId" : "c2bd4f5c-0f3e-40ef-98e0-4daceb60c532",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Well... in reality that was done in #25200. Let's make sure we check the latest code (not the code diff) while doing post-hoc review after long delay.",
+        "createdAt" : "2020-06-10T21:53:24Z",
+        "updatedAt" : "2020-06-10T21:53:34Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7eeb92cb-2d3d-40dd-a61a-adba56f80796",
+        "parentId" : "c2bd4f5c-0f3e-40ef-98e0-4daceb60c532",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Ah, sure. Thanks :D.",
+        "createdAt" : "2020-06-11T00:48:38Z",
+        "updatedAt" : "2020-06-11T00:48:39Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f42e3b5a4e41b1068d891f0c467cda93cd0d0b0c",
+    "line" : 35,
+    "diffHunk" : "@@ -1,1 +49,53 @@ */\n@Experimental\n@Evolving\nprivate[sql] case object OneTimeTrigger extends Trigger\n"
+  },
+  {
+    "id" : "7c6fe4e3-6421-4691-8724-f7bfb51fa868",
+    "prId" : 24996,
+    "prUrl" : "https://github.com/apache/spark/pull/24996#pullrequestreview-428411154",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "928f4f11-3eeb-4347-b5a7-a7dca71ac864",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Also, let's don't have `private[sql]` since execution package is already private per SPARK-16964",
+        "createdAt" : "2020-06-09T04:09:22Z",
+        "updatedAt" : "2020-06-09T04:09:22Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9572dac6-ba8f-4999-a49b-4b88b38e0f2b",
+        "parentId" : "928f4f11-3eeb-4347-b5a7-a7dca71ac864",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "OK will fix. The practice seems to be really easy to miss IMHO though.",
+        "createdAt" : "2020-06-10T20:40:22Z",
+        "updatedAt" : "2020-06-10T20:40:22Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f42e3b5a4e41b1068d891f0c467cda93cd0d0b0c",
+    "line" : 37,
+    "diffHunk" : "@@ -1,1 +50,54 @@@Experimental\n@Evolving\nprivate[sql] case object OneTimeTrigger extends Trigger\n\n/**"
   }
 ]

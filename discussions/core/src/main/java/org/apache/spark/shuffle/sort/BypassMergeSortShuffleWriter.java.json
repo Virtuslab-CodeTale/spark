@@ -64,5 +64,115 @@
     "commit" : "6e9bab29be47b1479a5893c108dc8d0ca47a97ea",
     "line" : 7,
     "diffHunk" : "@@ -1,1 +131,135 @@    assert (partitionWriters == null);\n    ShuffleMapOutputWriter mapOutputWriter = shuffleExecutorComponents.createMapOutputWriter(\n        shuffleId, -1, mapId, mapTaskAttemptId, numPartitions);\n    try {\n      if (!records.hasNext()) {"
+  },
+  {
+    "id" : "7ea3c4a2-f2e2-4fa1-bddb-66f578741eb8",
+    "prId" : 25007,
+    "prUrl" : "https://github.com/apache/spark/pull/25007#pullrequestreview-264379821",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "13c5249b-65de-445d-af83-43eb698a5cd3",
+        "parentId" : null,
+        "authorId" : "34f85564-3e6b-4cb5-99f3-d5e383ee52fa",
+        "body" : "This is a new parameter, I remember there is interesting discussion around this in SPIP doc, about why this should be explicitly concerned in the new API, could we explain this? Maybe in `createMapOutputWriter`?",
+        "createdAt" : "2019-07-19T08:46:27Z",
+        "updatedAt" : "2019-07-30T18:18:02Z",
+        "lastEditedBy" : "34f85564-3e6b-4cb5-99f3-d5e383ee52fa",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "acbede05-c918-4964-9ebe-2f1975880bd6",
+        "parentId" : "13c5249b-65de-445d-af83-43eb698a5cd3",
+        "authorId" : "806aa501-9ea7-4cec-b017-a84d9a1602d8",
+        "body" : "Added javadoc",
+        "createdAt" : "2019-07-19T18:56:34Z",
+        "updatedAt" : "2019-07-30T18:18:02Z",
+        "lastEditedBy" : "806aa501-9ea7-4cec-b017-a84d9a1602d8",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7dceec971784049442ec3d4cb71ddaa225e1e21f",
+    "line" : 52,
+    "diffHunk" : "@@ -1,1 +108,112 @@      BypassMergeSortShuffleHandle<K, V> handle,\n      int mapId,\n      long mapTaskAttemptId,\n      SparkConf conf,\n      ShuffleWriteMetricsReporter writeMetrics,"
+  },
+  {
+    "id" : "d77f1d49-8ee6-4b90-9e2f-ec7d5219db20",
+    "prId" : 25007,
+    "prUrl" : "https://github.com/apache/spark/pull/25007#pullrequestreview-265761378",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "60a39b19-e40a-4260-bda8-250cdb67f7d1",
+        "parentId" : null,
+        "authorId" : "34f85564-3e6b-4cb5-99f3-d5e383ee52fa",
+        "body" : "I think the range this `try`(line 133) encloses is too large, shouldn't it just enclose line 171 & 172? The scope before 171 is still preparing data for `mapOutputWriter`, so even if there is failure, `mapOutputWriter` doesn't know anything to do",
+        "createdAt" : "2019-07-23T02:49:39Z",
+        "updatedAt" : "2019-07-30T18:18:02Z",
+        "lastEditedBy" : "34f85564-3e6b-4cb5-99f3-d5e383ee52fa",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3abd2c03-ef99-4db5-b021-1575ff15ec53",
+        "parentId" : "60a39b19-e40a-4260-bda8-250cdb67f7d1",
+        "authorId" : "806aa501-9ea7-4cec-b017-a84d9a1602d8",
+        "body" : "The map output writer is opened on line 131, so anything that fails after that point should tell the map output writer to clean up. Should we be opening the map output writer further down after the first intermediate record write?",
+        "createdAt" : "2019-07-23T22:35:53Z",
+        "updatedAt" : "2019-07-30T18:18:02Z",
+        "lastEditedBy" : "806aa501-9ea7-4cec-b017-a84d9a1602d8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4a24b8b4-9073-4b60-9d64-43a78a46f0e1",
+        "parentId" : "60a39b19-e40a-4260-bda8-250cdb67f7d1",
+        "authorId" : "806aa501-9ea7-4cec-b017-a84d9a1602d8",
+        "body" : "Ah but the problem is that we commit the partitions immediately if there are no records (line 136) so we have to open it first thing. So the scope of the try...catch is correct because if anything fails after opening the writer, the writer must be aborted.\r\n\r\nThe writer doesn't have to write any records to have intermediate state to clean up. For example, it could have opened an output stream to the destination spot, or created folders.",
+        "createdAt" : "2019-07-23T22:37:17Z",
+        "updatedAt" : "2019-07-30T18:18:02Z",
+        "lastEditedBy" : "806aa501-9ea7-4cec-b017-a84d9a1602d8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fdf01a61-5027-46c7-bc73-70a670241996",
+        "parentId" : "60a39b19-e40a-4260-bda8-250cdb67f7d1",
+        "authorId" : "34f85564-3e6b-4cb5-99f3-d5e383ee52fa",
+        "body" : "Thanks, it makes sense!",
+        "createdAt" : "2019-07-24T02:11:01Z",
+        "updatedAt" : "2019-07-30T18:18:02Z",
+        "lastEditedBy" : "34f85564-3e6b-4cb5-99f3-d5e383ee52fa",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7dceec971784049442ec3d4cb71ddaa225e1e21f",
+    "line" : 157,
+    "diffHunk" : "@@ -1,1 +171,175 @@\n      partitionLengths = writePartitionedData(mapOutputWriter);\n      mapOutputWriter.commitAllPartitions();\n      mapStatus = MapStatus$.MODULE$.apply(blockManager.shuffleServerId(), partitionLengths);\n    } catch (Exception e) {"
+  },
+  {
+    "id" : "4734e097-0c31-4ba8-a5e9-bba610fe9420",
+    "prId" : 25007,
+    "prUrl" : "https://github.com/apache/spark/pull/25007#pullrequestreview-415162019",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d2701d01-c64c-4ea6-90c8-e2b011131634",
+        "parentId" : null,
+        "authorId" : "34f85564-3e6b-4cb5-99f3-d5e383ee52fa",
+        "body" : "@mccheah  Sorry to bring up such an old PR lol.\r\nBut why didn't we make this taken care of by specific plugin? This is not spill.",
+        "createdAt" : "2020-05-20T09:38:25Z",
+        "updatedAt" : "2020-05-20T09:38:26Z",
+        "lastEditedBy" : "34f85564-3e6b-4cb5-99f3-d5e383ee52fa",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7dceec971784049442ec3d4cb71ddaa225e1e21f",
+    "line" : 125,
+    "diffHunk" : "@@ -1,1 +151,155 @@        final BlockId blockId = tempShuffleBlockIdPlusFile._1();\n        partitionWriters[i] =\n            blockManager.getDiskWriter(blockId, file, serInstance, fileBufferSize, writeMetrics);\n      }\n      // Creating the file to write to and creating a disk writer both involve interacting with"
   }
 ]

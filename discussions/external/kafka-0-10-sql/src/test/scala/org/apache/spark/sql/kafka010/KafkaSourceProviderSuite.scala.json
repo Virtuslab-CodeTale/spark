@@ -31,5 +31,148 @@
     "commit" : "82f1520246f9a3304288f7f873967635b3fbe5ee",
     "line" : 4,
     "diffHunk" : "@@ -1,1 +34,38 @@  private val maxOffsetsPerTriggerMethod = PrivateMethod[Option[Long]]('maxOffsetsPerTrigger)\n\n  override protected def beforeEach(): Unit = {\n    val sparkEnv = mock(classOf[SparkEnv])\n    when(sparkEnv.conf).thenReturn(new SparkConf())"
+  },
+  {
+    "id" : "dea038b8-2da2-446c-b6a0-8102dde18e6e",
+    "prId" : 24999,
+    "prUrl" : "https://github.com/apache/spark/pull/24999#pullrequestreview-257260513",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "08aaa7ac-6d7a-42c3-a876-7e0851688b8d",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Shall we remove this function since this is used once?",
+        "createdAt" : "2019-07-03T04:30:53Z",
+        "updatedAt" : "2019-07-04T02:50:58Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bad7845b-6b46-4071-b5ed-906ebef1e7d6",
+        "parentId" : "08aaa7ac-6d7a-42c3-a876-7e0851688b8d",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "#24967 is planned to reuse this and some more methods being introduced here, as similar tests are required to be added there. @gaborgsomogyi and I discussed to bring methods in this PR. I'm happy to add UT to this patch which #24967 is about to bring after merging this patch, if we want to see how these methods will be reused.",
+        "createdAt" : "2019-07-03T04:46:42Z",
+        "updatedAt" : "2019-07-04T02:50:58Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fca3b2fd-9835-4062-ad99-aeb74bc8d9fe",
+        "parentId" : "08aaa7ac-6d7a-42c3-a876-7e0851688b8d",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "I'm not sure if #24967 is merged or not. But, I got it. ",
+        "createdAt" : "2019-07-03T04:58:32Z",
+        "updatedAt" : "2019-07-04T02:50:58Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "04b937433662fef8ceaea4714ed5d6cd6638417a",
+    "line" : 94,
+    "diffHunk" : "@@ -1,1 +92,96 @@  }\n\n  private def getKafkaDataSourceScan(options: CaseInsensitiveStringMap): Scan = {\n    val provider = new KafkaSourceProvider()\n    provider.getTable(options).newScanBuilder(options).build()"
+  },
+  {
+    "id" : "fa54a8c3-5af8-40a6-9c3a-01c2f772bdaf",
+    "prId" : 24999,
+    "prUrl" : "https://github.com/apache/spark/pull/24999#pullrequestreview-257257128",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "52161b5a-7dc1-487a-9b2b-2efe13720dd8",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "If we remove `getKafkaDataSourceScan`, we can remove this, too.",
+        "createdAt" : "2019-07-03T04:40:13Z",
+        "updatedAt" : "2019-07-04T02:50:58Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "04b937433662fef8ceaea4714ed5d6cd6638417a",
+    "line" : 28,
+    "diffHunk" : "@@ -1,1 +26,30 @@\nimport org.apache.spark.{SparkConf, SparkEnv, SparkFunSuite}\nimport org.apache.spark.sql.sources.v2.reader.Scan\nimport org.apache.spark.sql.util.CaseInsensitiveStringMap\n"
+  },
+  {
+    "id" : "5ca0dda4-43cf-4dd7-a42d-3744cc8b2b9f",
+    "prId" : 24999,
+    "prUrl" : "https://github.com/apache/spark/pull/24999#pullrequestreview-257273742",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7e2acf57-57c4-42f9-8c5c-088e6ec03df1",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Like the following, let's reduce the repetition in this test function and remove `buildCaseInsensitiveStringMap`, too.\r\n```scala\r\n  test(\"SPARK-28142 - continuous mode - options should be handled case-insensitively\") {\r\n    // we're trying to read the value of \"pollTimeout\" to see whether option is handled correctly\r\n    val option = KafkaSourceProvider.CONSUMER_POLL_TIMEOUT\r\n    val expectedValue = 1000\r\n    Seq(option.toUpperCase(Locale.ROOT), option.toLowerCase(Locale.ROOT)).foreach { name =>\r\n      val map = new CaseInsensitiveStringMap(Map(\r\n        \"kafka.bootstrap.servers\" -> \"dummy\",\r\n        \"subscribe\" -> \"dummy\",\r\n        name -> expectedValue.toString).asJava)\r\n      assert(expectedValue === getFieldFromContinuousStream(map, pollTimeoutMsMethod))\r\n    }\r\n  }\r\n```",
+        "createdAt" : "2019-07-03T05:01:27Z",
+        "updatedAt" : "2019-07-04T02:50:58Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5f4fd416-d489-49a7-bee8-96923c4fcb07",
+        "parentId" : "7e2acf57-57c4-42f9-8c5c-088e6ec03df1",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Same here. I guess I would just add test here to ensure they are being reused. Maybe the test would fail given #24967 is a patch for that, but we can comment here and in #24967 we can uncomment. Let me update the PR.",
+        "createdAt" : "2019-07-03T05:04:04Z",
+        "updatedAt" : "2019-07-04T02:50:58Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ba81c568-b1f8-44f2-846d-8ed336a33011",
+        "parentId" : "7e2acf57-57c4-42f9-8c5c-088e6ec03df1",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "? What is the same here? At least you should remove the repeatition.",
+        "createdAt" : "2019-07-03T05:07:28Z",
+        "updatedAt" : "2019-07-04T02:50:58Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6022fa72-4820-4a3c-a93e-05b321946ec5",
+        "parentId" : "7e2acf57-57c4-42f9-8c5c-088e6ec03df1",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "I'm sorry I missed to get the point. Looks like the point is reducing code for testing uppercase and lowercase. Thanks for the great suggestion. Addressed.",
+        "createdAt" : "2019-07-03T06:01:08Z",
+        "updatedAt" : "2019-07-04T02:50:58Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "04b937433662fef8ceaea4714ed5d6cd6638417a",
+    "line" : 66,
+    "diffHunk" : "@@ -1,1 +64,68 @@  }\n\n  test(\"SPARK-28142 - continuous mode - options should be handled as case-insensitive\") {\n    def verifyFieldsInContinuousStream(\n        options: CaseInsensitiveStringMap,"
+  },
+  {
+    "id" : "ec98a38b-7a3a-4c22-9a49-ef8fd6056658",
+    "prId" : 24999,
+    "prUrl" : "https://github.com/apache/spark/pull/24999#pullrequestreview-257726148",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1847c02a-b012-448b-954a-411f210ea681",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Let's not forget to call `super.afterEach` for safety.",
+        "createdAt" : "2019-07-03T20:44:16Z",
+        "updatedAt" : "2019-07-04T02:50:58Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "04b937433662fef8ceaea4714ed5d6cd6638417a",
+    "line" : 37,
+    "diffHunk" : "@@ -1,1 +35,39 @@\n  override protected def afterEach(): Unit = {\n    SparkEnv.set(null)\n    super.afterEach()\n  }"
   }
 ]

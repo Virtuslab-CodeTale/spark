@@ -295,5 +295,225 @@
     "commit" : "ebd337b9250b9a1426232fe16d5eda92e16b23c8",
     "line" : 14,
     "diffHunk" : "@@ -1,1 +31,35 @@  def apply(plan: LogicalPlan): LogicalPlan = {\n    val isLegacy = SQLConf.get.getConf(LEGACY_CTE_PRECEDENCE_ENABLED)\n    if (isLegacy.isEmpty) {\n      assertNoNameConflictsInCTE(plan, inTraverse = false)\n      traverseAndSubstituteCTE(plan, inTraverse = false)"
+  },
+  {
+    "id" : "ac3b0d78-d261-4968-a895-36e74acd3277",
+    "prId" : 25029,
+    "prUrl" : "https://github.com/apache/spark/pull/25029#pullrequestreview-258960768",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "216c864f-73b3-4312-853a-629dfce764ed",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "It seems this line has an issue about type inferences... could you check again?",
+        "createdAt" : "2019-07-07T03:28:57Z",
+        "updatedAt" : "2019-07-12T10:14:11Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2eecde28-8821-4174-85cf-4f36ec60d0e3",
+        "parentId" : "216c864f-73b3-4312-853a-629dfce764ed",
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "This is a bit strange, because it compiles, but my InteliJ also complains about it. If I force `val traversedChild: LogicalPlan` the issue disappears.",
+        "createdAt" : "2019-07-08T14:56:15Z",
+        "updatedAt" : "2019-07-12T10:14:12Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7d9d96f6f6e6e41eb6d25d03e4dc9a9fd93728ad",
+    "line" : 111,
+    "diffHunk" : "@@ -1,1 +109,113 @@            // multiple times we use a lazy construct with call-by-name parameter passing.\n            lazy val substitutedCTEPlan = traverseAndSubstituteCTE(ctePlan, true)\n            substituteCTE(currentPlan, cteName, substitutedCTEPlan)\n        }\n"
+  },
+  {
+    "id" : "09bce4ec-8b9a-4f96-8a31-b3cd63f8be60",
+    "prId" : 25029,
+    "prUrl" : "https://github.com/apache/spark/pull/25029#pullrequestreview-260500844",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0cb7d925-c859-4cac-b8f5-c87e13646226",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "we need this lazy? It seems all the tests below passes without this lazy...",
+        "createdAt" : "2019-07-07T03:46:21Z",
+        "updatedAt" : "2019-07-12T10:14:11Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d67f6065-3119-492b-98db-18685bb13e58",
+        "parentId" : "0cb7d925-c859-4cac-b8f5-c87e13646226",
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "lazy is just a minor optimization here to make sure that `traverseAndSubstituteCTE(ctePlan, true)` runs only once even if `substituteCTE(...)` encounters `cteName` multiple times.",
+        "createdAt" : "2019-07-08T14:20:32Z",
+        "updatedAt" : "2019-07-12T10:14:12Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c3e6593a-8759-45e6-94bb-3ccdd5327b3a",
+        "parentId" : "0cb7d925-c859-4cac-b8f5-c87e13646226",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "We cannot do like this?\r\n```\r\n  private def substituteCTE(\r\n      plan: LogicalPlan,\r\n      cteName: String,\r\n      ctePlan: LogicalPlan)\r\n```\r\nAnyway, I feel it is hard to read around here... ",
+        "createdAt" : "2019-07-11T01:28:20Z",
+        "updatedAt" : "2019-07-12T10:14:12Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "46042b66-6a51-4354-a824-3261af547a09",
+        "parentId" : "0cb7d925-c859-4cac-b8f5-c87e13646226",
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "Unfortunately, if I remove call by name parameter passing from `substituteCTE` then `lazy val substitutedCTEPlan` will be evaluated before calling `substituteCTE` with it.\r\nI think both call by name passing of `ctePlan` and `lazy val substitutedCTEPlan` is required to make sure that:\r\n- if `cteName` is never used then `traverseAndSubstituteCTE(ctePlan, true)` shouldn't run\r\n- if `cteName` is used one or more times then `traverseAndSubstituteCTE(ctePlan, true)` should run only once\r\n\r\nI added some comments to `traverseAndSubstituteCTE` to explain the logic there. ",
+        "createdAt" : "2019-07-11T06:35:04Z",
+        "updatedAt" : "2019-07-12T10:14:12Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "711b6dd2-7585-437d-a4e2-4f3194058544",
+        "parentId" : "0cb7d925-c859-4cac-b8f5-c87e13646226",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Which test does fail if we remove the call-by-name parameter?",
+        "createdAt" : "2019-07-11T06:47:18Z",
+        "updatedAt" : "2019-07-12T10:14:12Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "73e9c49b-10c0-4d9e-964d-d74ae2960abe",
+        "parentId" : "0cb7d925-c859-4cac-b8f5-c87e13646226",
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "None of the tests fail actually, but both lazy and call-by-name are part of the optimization.",
+        "createdAt" : "2019-07-11T06:59:23Z",
+        "updatedAt" : "2019-07-12T10:14:12Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7d9d96f6f6e6e41eb6d25d03e4dc9a9fd93728ad",
+    "line" : 110,
+    "diffHunk" : "@@ -1,1 +108,112 @@            // computation if it is not used and to avoid multiple recomputation if it is used\n            // multiple times we use a lazy construct with call-by-name parameter passing.\n            lazy val substitutedCTEPlan = traverseAndSubstituteCTE(ctePlan, true)\n            substituteCTE(currentPlan, cteName, substitutedCTEPlan)\n        }"
+  },
+  {
+    "id" : "7f5c560d-5036-4b74-9c83-852d0b307cc7",
+    "prId" : 25029,
+    "prUrl" : "https://github.com/apache/spark/pull/25029#pullrequestreview-260503023",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8aab241b-8202-425a-94e1-aa3220a5e301",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Why we need `inTraverse`? Some tests fail without this flag?",
+        "createdAt" : "2019-07-07T04:35:10Z",
+        "updatedAt" : "2019-07-12T10:14:12Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b326d011-14e7-4501-b372-54565f7c7bc4",
+        "parentId" : "8aab241b-8202-425a-94e1-aa3220a5e301",
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "This is another minor optimization here so it is not necessary. In this example query:\r\n```\r\nSELECT (\r\n  WITH t AS (SELECT 1)\r\n  SELECT * FROM t\r\n)\r\n```\r\nwhen `traverseAndSubstituteCTE` is called for the outer SELECT query with `inTraverse = false`, `inTraverse` helps to avoid eager CTE substitution in the subquery expression (`CTESubstitution` will be executed on the subquery a bit later anyway.)\r\n\r\n",
+        "createdAt" : "2019-07-08T15:10:28Z",
+        "updatedAt" : "2019-07-12T10:14:12Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "79a552a0-8e7e-4e0a-b293-d9202aaf35bf",
+        "parentId" : "8aab241b-8202-425a-94e1-aa3220a5e301",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "aha, ok. could you leave a comment here, too?",
+        "createdAt" : "2019-07-11T06:49:01Z",
+        "updatedAt" : "2019-07-12T10:14:12Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5b9947bd-e9be-45b9-9afd-68c4546f5aba",
+        "parentId" : "8aab241b-8202-425a-94e1-aa3220a5e301",
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "sure, I've added it",
+        "createdAt" : "2019-07-11T07:05:17Z",
+        "updatedAt" : "2019-07-12T10:14:12Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7d9d96f6f6e6e41eb6d25d03e4dc9a9fd93728ad",
+    "line" : 116,
+    "diffHunk" : "@@ -1,1 +114,118 @@      // CTE name collision can occur only when inTraverse is true, it helps to avoid eager CTE\n      // substitution in a subquery expression.\n      case other if inTraverse =>\n        other.transformExpressions {\n          case e: SubqueryExpression => e.withNewPlan(traverseAndSubstituteCTE(e.plan, true))"
+  },
+  {
+    "id" : "3abd8af1-6d66-4fe3-8c0e-3a1b74d9d84f",
+    "prId" : 25029,
+    "prUrl" : "https://github.com/apache/spark/pull/25029#pullrequestreview-399388859",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e9f6a3db-3351-4de0-a6c4-d845df385c31",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "The subquery expression seems not correctly handled.\r\n\r\n`with t1 as (select 1 i) select * from t1 where i in (with t1 as (select 2 i) select * from t1)` returns 1 in Spark, but empty row in pgsql.",
+        "createdAt" : "2020-04-23T13:09:02Z",
+        "updatedAt" : "2020-04-23T13:09:02Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5da2eb60-979f-4abd-99fd-579b76c012e4",
+        "parentId" : "e9f6a3db-3351-4de0-a6c4-d845df385c31",
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "Yes, it probably should be `transformAllExpressions`. Will look into it soon...",
+        "createdAt" : "2020-04-23T13:43:05Z",
+        "updatedAt" : "2020-04-23T13:43:05Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4d89e8e1-8014-45e0-a9c7-41433392f65c",
+        "parentId" : "e9f6a3db-3351-4de0-a6c4-d845df385c31",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Oh. Thanks, @cloud-fan .",
+        "createdAt" : "2020-04-23T17:10:58Z",
+        "updatedAt" : "2020-04-23T17:10:58Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7bf62362-361b-4aaa-ad98-e333befc0922",
+        "parentId" : "e9f6a3db-3351-4de0-a6c4-d845df385c31",
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "I've opened https://github.com/apache/spark/pull/28318 to fix it.",
+        "createdAt" : "2020-04-23T18:58:21Z",
+        "updatedAt" : "2020-04-23T18:58:22Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7d9d96f6f6e6e41eb6d25d03e4dc9a9fd93728ad",
+    "line" : 98,
+    "diffHunk" : "@@ -1,1 +96,100 @@        // in child first\n        val traversedChild: LogicalPlan = child transformExpressions {\n          case e: SubqueryExpression => e.withNewPlan(traverseAndSubstituteCTE(e.plan, true))\n        }\n"
   }
 ]

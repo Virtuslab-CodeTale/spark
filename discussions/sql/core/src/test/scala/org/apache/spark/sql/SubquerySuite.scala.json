@@ -108,5 +108,38 @@
     "commit" : "fd296776b826f6ce041a52cdc4dce4e278d3d786",
     "line" : 146,
     "diffHunk" : "@@ -1,1 +1527,1531 @@\n    val pythonTestUDF = TestPythonUDF(name = \"udf\")\n    registerTestUDF(pythonTestUDF, spark)\n\n    checkAnswer("
+  },
+  {
+    "id" : "4dc4872b-8df7-46f9-af8a-4f9449c2ee0a",
+    "prId" : 25008,
+    "prUrl" : "https://github.com/apache/spark/pull/25008#pullrequestreview-259785836",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1e1f6bda-852a-4376-8f2b-9711dc619278",
+        "parentId" : null,
+        "authorId" : "0f2e4443-2e01-4589-9e1c-17979892188b",
+        "body" : "Ok, so `ColumnarToRowExec` is here because `InputAdapter` may `supportColumnar`, right? Why is `InputAdapter` getting added here?",
+        "createdAt" : "2019-07-09T17:34:12Z",
+        "updatedAt" : "2019-07-10T15:36:54Z",
+        "lastEditedBy" : "0f2e4443-2e01-4589-9e1c-17979892188b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a0128bb9-d141-478d-a118-512189f731cd",
+        "parentId" : "1e1f6bda-852a-4376-8f2b-9711dc619278",
+        "authorId" : "b19fe247-920f-40ae-83e7-6b8ec9979f6b",
+        "body" : "WholeStageCodeGen marks the end of a code generation stage.  InputAdapter marks the beginning of a code generation stage.  So what we had before was a WholeStageCodeGen that had it's first entry a FileSourceScanExec because before this change FileSourceScanExec supported code generation to convert ColumnarBatchs into rows.  The InputAdapter would logically have been a child of FileSourceScanExec, but it has no children so it is not there.\r\n\r\nAfter this change ColumnarToRowExec is the only thing in the code generation stage, so it is flanked by the WholeStageCodegenExec and the InputAdaptor.  FileSourceScanExec is returning batches and is not doing code gen because it is not needed any longer.",
+        "createdAt" : "2019-07-09T22:10:30Z",
+        "updatedAt" : "2019-07-10T15:36:54Z",
+        "lastEditedBy" : "b19fe247-920f-40ae-83e7-6b8ec9979f6b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2cce2fa9e057cb379e628fe01ea2cef280a9b198",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +1294,1298 @@      // need to execute the query before we can examine fs.inputRDDs()\n      assert(df.queryExecution.executedPlan match {\n        case WholeStageCodegenExec(ColumnarToRowExec(InputAdapter(\n            fs @ FileSourceScanExec(_, _, _, partitionFilters, _, _, _), _))) =>\n          partitionFilters.exists(ExecSubqueryExpression.hasSubquery) &&"
   }
 ]

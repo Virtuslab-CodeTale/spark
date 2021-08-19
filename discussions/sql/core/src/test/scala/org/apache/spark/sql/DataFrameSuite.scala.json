@@ -713,5 +713,126 @@
     "commit" : "4c0978e409e234317f8bb72159f62c6fd51077b0",
     "line" : 4,
     "diffHunk" : "@@ -1,1 +2205,2209 @@  }\n\n  test(\"groupByRelationKey\") {\n    val df1 = Seq((1, 2, 3), (2, 3, 4)).toDF(\"a\", \"b\", \"c\")\n      .repartition($\"a\", $\"b\").sortWithinPartitions(\"a\", \"b\")"
+  },
+  {
+    "id" : "29649c6c-5562-4dfe-9974-617391e1bdb2",
+    "prId" : 25055,
+    "prUrl" : "https://github.com/apache/spark/pull/25055#pullrequestreview-264518337",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "283fef39-7a47-4348-99ea-788c6365d994",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "wait, it seems this test is not related to this pr?\r\nyou just wanted to do like this?\r\n```\r\n  test(\"SPARK-28189 drop column using drop with column reference with case-insensitive names\") {\r\n    var caseInsensitiveCol: Column = null\r\n    withSQLConf(SQLConf.CASE_SENSITIVE.key -> \"false\") {\r\n      caseInsensitiveCol = testData(\"KEY\")\r\n    }\r\n\r\n    Seq(\"true\", \"false\").foreach { isCaseSensitive =>\r\n      withSQLConf(SQLConf.CASE_SENSITIVE.key -> isCaseSensitive) {\r\n        val df = testData.drop(caseInsensitiveCol)\r\n        checkAnswer(df, testData.selectExpr(\"value\"))\r\n        assert(df.schema.map(_.name) === Seq(\"value\"))\r\n      }\r\n    }\r\n  }\r\n```",
+        "createdAt" : "2019-07-07T05:26:31Z",
+        "updatedAt" : "2019-07-07T23:11:42Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e5e947b3-ab4d-40a3-a273-1e308dad77c8",
+        "parentId" : "283fef39-7a47-4348-99ea-788c6365d994",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "? @maropu . In your example, the following will fail in the same way because `testData` only has `key` and `value`.\r\n```\r\n      withSQLConf(SQLConf.CASE_SENSITIVE.key -> isCaseSensitive) {\r\n        caseInsensitiveCol = testData(\"KEY\")\r\n```\r\nFor me, the test case looked okay because `caseSensitive` mode doesn't allow that kind of unmatched column from the beginning.",
+        "createdAt" : "2019-07-07T17:45:20Z",
+        "updatedAt" : "2019-07-07T17:45:20Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a747d1d5-d84b-46cf-9842-be0371edd0d7",
+        "parentId" : "283fef39-7a47-4348-99ea-788c6365d994",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "oh, sorry and my bad. That line wasn't needed and I updated the example above.\r\nAnyway, I just a bit worry about the behaivour change in the code flow below;\r\n```\r\nscala> val testData = Seq((\"a\", 1)).toDF(\"key\", \"value\")\r\n\r\nscala> sql(\"SET spark.sql.caseSensitive=false\")\r\nscala> val caseInsensitiveCol = testData(\"KEY\")\r\n\r\nscala> sql(\"SET spark.sql.caseSensitive=true\")\r\nscala> testData.drop(caseInsensitiveCol).show()\r\n// v2.4.3\r\n+---+-----+\r\n|key|value|\r\n+---+-----+\r\n|  a|    1|\r\n+---+-----+\r\n\r\n// master w/this pr\r\n+-----+\r\n|value|\r\n+-----+\r\n|    1|\r\n+-----+\r\n```",
+        "createdAt" : "2019-07-07T23:45:24Z",
+        "updatedAt" : "2019-07-07T23:45:24Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0d191ceb-4117-484a-bd1a-14b5081c43ef",
+        "parentId" : "283fef39-7a47-4348-99ea-788c6365d994",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "- First, it's not a correct(?) use-case to switch the case sensitivity between declaring the variable and using the variable. \r\n- Second, I merged this to `master` only with the similar concern. :)\r\nSince this is a bug fix, I think we don't need a documentation about this. And, 3.0.0 is a good place to change those behavior change due to the bug fix.",
+        "createdAt" : "2019-07-07T23:58:51Z",
+        "updatedAt" : "2019-07-07T23:59:33Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "692c1975-4dac-46b7-bf96-f58d72e0bf02",
+        "parentId" : "283fef39-7a47-4348-99ea-788c6365d994",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "ok, thanks for the check!\r\n",
+        "createdAt" : "2019-07-08T00:00:02Z",
+        "updatedAt" : "2019-07-08T00:00:02Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4ec1a003-d273-47df-8149-17b165d0b30b",
+        "parentId" : "283fef39-7a47-4348-99ea-788c6365d994",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Do you have any suggestion for your concern? Then, please share it with us~ You're welcome.",
+        "createdAt" : "2019-07-08T00:00:29Z",
+        "updatedAt" : "2019-07-08T00:00:29Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f8816709-c4cc-419d-b74f-4afdd9600af7",
+        "parentId" : "283fef39-7a47-4348-99ea-788c6365d994",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "NVM. I just a bit worry about not use cases but the test coverage.",
+        "createdAt" : "2019-07-08T00:02:29Z",
+        "updatedAt" : "2019-07-08T00:02:29Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "97a62b06-d00c-4097-9c42-02af5859b394",
+        "parentId" : "283fef39-7a47-4348-99ea-788c6365d994",
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "Yes. This test case of the second part (SQLConf.CASE_SENSITIVE.key -> \"true\") is weird to me. ",
+        "createdAt" : "2019-07-21T02:48:59Z",
+        "updatedAt" : "2019-07-21T02:48:59Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f70a72a1-6162-47bf-bf4c-66e04fd1cc43",
+        "parentId" : "283fef39-7a47-4348-99ea-788c6365d994",
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "Anyway, we can keep it unchanged. Ideally, we do not need the second part. ",
+        "createdAt" : "2019-07-21T02:55:45Z",
+        "updatedAt" : "2019-07-21T02:55:45Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "52ccad75-0de7-4b16-a6da-daa55d6ff677",
+        "parentId" : "283fef39-7a47-4348-99ea-788c6365d994",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "ok, I made a pr to drop that part: https://github.com/apache/spark/pull/25216\r\nanyway, thanks for the check!",
+        "createdAt" : "2019-07-21T03:18:04Z",
+        "updatedAt" : "2019-07-21T03:18:05Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "1dc9aa73bf4077bf7de6ab46c7227f09d7d4ffdb",
+    "line" : 21,
+    "diffHunk" : "@@ -1,1 +590,594 @@    withSQLConf(SQLConf.CASE_SENSITIVE.key -> \"true\") {\n      val e = intercept[AnalysisException] {\n        testData(\"KEY\")\n      }.getMessage\n      assert(e.contains(\"Cannot resolve column name\"))"
   }
 ]

@@ -75,5 +75,115 @@
     "commit" : "9ee448aba3d4adc907540fdd40af5e3712b3ade9",
     "line" : 9,
     "diffHunk" : "@@ -1,1 +369,373 @@   * Note that, if you switch current catalog/namespace in `f`, you should switch it back manually.\n   */\n  protected def withNamespace(namespaces: String*)(f: => Unit): Unit = {\n    Utils.tryWithSafeFinally(f) {\n      namespaces.foreach { name =>"
+  },
+  {
+    "id" : "f8fa7c4c-000f-40cb-a93c-752e481e772c",
+    "prId" : 25014,
+    "prUrl" : "https://github.com/apache/spark/pull/25014#pullrequestreview-256886624",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1298c750-434e-4aab-b220-6c7bc821c8da",
+        "parentId" : null,
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "Nit: we can use `f.toPath` so that we don't need to modify `DataSourceUtils`",
+        "createdAt" : "2019-07-01T13:14:46Z",
+        "updatedAt" : "2019-07-03T16:24:22Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "03946ebd-509e-4b8c-9dd5-b66344def190",
+        "parentId" : "1298c750-434e-4aab-b220-6c7bc821c8da",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "It's `java.nio.file.Path`, not `org.apache.hadoop.fs.Path`:\r\n![image](https://user-images.githubusercontent.com/5399861/60515505-543e9000-9d0e-11e9-863f-03f8a420bc19.png)\r\n",
+        "createdAt" : "2019-07-02T13:19:35Z",
+        "updatedAt" : "2019-07-03T16:24:22Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4cd62983b705f8d9f2c338e763f71fe583262cfe",
+    "line" : 18,
+    "diffHunk" : "@@ -1,1 +432,436 @@  def getLocalDirSize(file: File): Long = {\n    assert(file.isDirectory)\n    file.listFiles.filter(f => DataSourceUtils.isDataFile(f.getName)).map(_.length).sum\n  }\n}"
+  },
+  {
+    "id" : "2b6c815a-27b2-4ce3-899c-8197fe77da28",
+    "prId" : 25008,
+    "prUrl" : "https://github.com/apache/spark/pull/25008#pullrequestreview-267811412",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4a1bd40e-58a1-44ab-a3d4-682d7f3cfcf3",
+        "parentId" : null,
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "Why making this change in this PR?",
+        "createdAt" : "2019-07-25T23:12:18Z",
+        "updatedAt" : "2019-07-25T23:12:19Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0396607e-ff15-4d7b-9fa6-c7d34c1b9112",
+        "parentId" : "4a1bd40e-58a1-44ab-a3d4-682d7f3cfcf3",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Seems like the existing columnar logic within each plans have moved to `RowToColumnarExec` and `ColumnarToRowExec` to deduplicate but it's now dependent on `ApplyColumnarRulesAndInsertTransitions` rule, which, now, requires execution preparation (`QueryExecution.preparations`).\r\n\r\nHowever, per the doc, `executedPlan` should be only used for execution ideally. It could have been best to avoid. @revans2 even though it's too late, can you please describe what does this PR fixes in the PR description (presumably by listing each item)?\r\n\r\nI have no idea what this PR fixes from reading the PR description and JIRA.",
+        "createdAt" : "2019-07-26T02:44:40Z",
+        "updatedAt" : "2019-07-26T02:44:40Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e5dd4705-ca7d-4691-a35e-b91146b1c04a",
+        "parentId" : "4a1bd40e-58a1-44ab-a3d4-682d7f3cfcf3",
+        "authorId" : "b19fe247-920f-40ae-83e7-6b8ec9979f6b",
+        "body" : "This PR replaces ColumnarBatchScan with ColumnarToRowExec.  This involved changes to all subclasses of COlumnarBatchScan and to AdaptiveSparkPlanExec so it would also execute the needed columnar transition rules.  I also made any fixes needed for tests.  I preferred to keep the changes as small as possible for the tests, which is why I made a small change here in a test utility class.\r\n\r\nThe issue was that some tests were directly execution the plan returned by this function, which used to work for some very limited use cases, but did not work in all cases.  I am happy to try and fix issues with this approach for the tests, just let me know what is the correct way to do it? ",
+        "createdAt" : "2019-07-26T14:34:08Z",
+        "updatedAt" : "2019-07-26T14:34:08Z",
+        "lastEditedBy" : "b19fe247-920f-40ae-83e7-6b8ec9979f6b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ac678c09-2c03-4375-a4c6-76211ed7bc75",
+        "parentId" : "4a1bd40e-58a1-44ab-a3d4-682d7f3cfcf3",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "I don't know the correct way to fix it for now - it needs some investigations. Can you clarify why it didn't work well?\r\n\r\nThe problem seems like by the internal behaviour changes - we now rely on `ApplyColumnarRulesAndInsertTransitions`. Can we make some investigation to confirm that it doesn't affect anything, and list up what changes were made in this PR description?",
+        "createdAt" : "2019-07-26T15:14:05Z",
+        "updatedAt" : "2019-07-26T15:14:05Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5f1d3d59-63cf-48c7-b4ec-87c315f61b91",
+        "parentId" : "4a1bd40e-58a1-44ab-a3d4-682d7f3cfcf3",
+        "authorId" : "b19fe247-920f-40ae-83e7-6b8ec9979f6b",
+        "body" : "Yes that is exactly what it is.",
+        "createdAt" : "2019-07-29T13:38:25Z",
+        "updatedAt" : "2019-07-29T13:38:26Z",
+        "lastEditedBy" : "b19fe247-920f-40ae-83e7-6b8ec9979f6b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f7b5ad65-3614-43da-9c38-6c54e77ed189",
+        "parentId" : "4a1bd40e-58a1-44ab-a3d4-682d7f3cfcf3",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "@revans2, what I meant is like https://github.com/apache/spark/pull/25264 rather than  single line that describes what this PR proposes.",
+        "createdAt" : "2019-07-29T14:13:48Z",
+        "updatedAt" : "2019-07-29T14:13:49Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2cce2fa9e057cb379e628fe01ea2cef280a9b198",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +393,397 @@  protected def stripSparkFilter(df: DataFrame): DataFrame = {\n    val schema = df.schema\n    val withoutFilters = df.queryExecution.executedPlan.transform {\n      case FilterExec(_, child) => child\n    }"
   }
 ]

@@ -295,5 +295,126 @@
     "commit" : "af550303e0b929dc9f7436bcfb36438ff36b8208",
     "line" : 10,
     "diffHunk" : "@@ -1,1 +250,254 @@      } else {\n        // We use foreach since get gives us an option and we can skip the failures.\n        idToWorker.get(id).foreach(decommissionWorker)\n      }\n"
+  },
+  {
+    "id" : "4d4e496e-1c21-4b94-8080-932208dbdbdb",
+    "prId" : 25047,
+    "prUrl" : "https://github.com/apache/spark/pull/25047#pullrequestreview-267496866",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5bda1f20-7414-445c-bab4-dae8b5a6d97f",
+        "parentId" : null,
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "the logic here to keep adding cores to an executor is a bit odd to me, at first I didn't think it was handling the resources properly, but I guess its doing the same thing as memory right now, the first executor launch would require all memory and resources, but I guess in default case it only actually allocates 1 core at a time.  Is that correct?  I'm not seeing how the whole increase the number of cores worked though, I'll have to look in more detail",
+        "createdAt" : "2019-07-26T15:02:46Z",
+        "updatedAt" : "2019-08-09T02:27:38Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6cdd4872-a9b7-4511-b40c-401f73d4d224",
+        "parentId" : "5bda1f20-7414-445c-bab4-dae8b5a6d97f",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "`scheduleExecutorsOnWorkers()` currently has two modes: 1) one executor per worker 2) multiple executors per worker.  If we don't configured `coresPerExecutor`, then, we use mode 1. In mode 1, only one executor can be launched per worker and that executor grabs all cores on the worker. But, for memory and resources, it still respects to memoryPerExecutor and resourcesPerExecutor rather than requires all.",
+        "createdAt" : "2019-07-28T09:00:16Z",
+        "updatedAt" : "2019-08-09T02:27:38Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "15a9897131f06ec115b13d97e86c497ef36dace8",
+    "line" : 150,
+    "diffHunk" : "@@ -1,1 +708,712 @@          logWarning(s\"App ${app.id} requires more resource than any of Workers could have.\")\n        }\n        val assignedCores = scheduleExecutorsOnWorkers(app, usableWorkers, spreadOutApps)\n\n        // Now that we've decided how many cores to allocate on each worker, let's allocate them"
+  },
+  {
+    "id" : "33119f66-288b-41dd-922b-8b141e3daa9f",
+    "prId" : 25047,
+    "prUrl" : "https://github.com/apache/spark/pull/25047#pullrequestreview-272739676",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d7e8b7b4-f24c-4655-9192-e1ed980fc649",
+        "parentId" : null,
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "We have an issue here if no Workers have the resources required by the executor/task requirements, then it doesn't warn/error and it doesn't retry.  Basically I started a Worker without GPUs and then said I need gpus for my executor task and it end up hanging.  I suppose one could argue this is ok as someone could start another Worker that has the resources, but I think we at least need to Warn about it",
+        "createdAt" : "2019-08-07T21:54:26Z",
+        "updatedAt" : "2019-08-09T02:27:38Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d7aeec46-44ec-4137-8afe-670ad9eee4fd",
+        "parentId" : "d7e8b7b4-f24c-4655-9192-e1ed980fc649",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Actually, it does retry when other executors or drivers finish. But, we can warn if executor or driver requires more resources than any of workers could have. BTW, I'm thinking do we have the same issue for memory and cores ? For example, a Worker has 10 cores at most while an executor ask for 20 cores ?",
+        "createdAt" : "2019-08-08T15:17:16Z",
+        "updatedAt" : "2019-08-09T02:27:38Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a1419981-b0ef-4f66-b142-c51db4935460",
+        "parentId" : "d7e8b7b4-f24c-4655-9192-e1ed980fc649",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "Right if something changes (other app, other workers, etc) it retries, but if I'm the only app on the cluster its not clear why the app isn't launching.  The one thing I don't want is it to be to noisy though either. I thought about that before making the comment, because like you said if its just out of resources because other apps are running we don't really want to print anything.  I think for now we should just limit it to resources and perhaps just say no Workers are configured with the resources you requested.  If we can do that without much performance impact lets do it. If not maybe we just file a separate jira for it and look at it there",
+        "createdAt" : "2019-08-08T15:50:13Z",
+        "updatedAt" : "2019-08-09T02:27:38Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "642acec3-7d0d-48b5-b5fc-e24d691bb900",
+        "parentId" : "d7e8b7b4-f24c-4655-9192-e1ed980fc649",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "How about this way?\r\n\r\n```\r\nfor (app <- waitingApps) {\r\n   ...\r\n   val usableWorkers = workers.toArray.filter(_.state == WorkerState.ALIVE)\r\n     .filter(canLaunchExecutor(_, app.desc))\r\n     .sortBy(_.coresFree).reverse\r\n   if (waitingApps.size == 1 && usableWorkers.isEmpty) {\r\n    logWarn(\"The app requires more resources(mem, core, accelerator) than any of Workers could have.\") \r\n  }\r\n  ...\r\n}\r\n```\r\n\r\nTelling \"the Workers are not configured with the resources(I mean accelerator) as an app requested\" may require more changes. For example, you may need to traversal workers again to judge whether it's due to resources(I mean accelerator) or memory or cores. Or, you need to refactor `canLaunchExecutor` to tell more details.",
+        "createdAt" : "2019-08-08T16:24:04Z",
+        "updatedAt" : "2019-08-09T02:27:38Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d7b7c12e-f819-4a0b-b424-523ade8163ef",
+        "parentId" : "d7e8b7b4-f24c-4655-9192-e1ed980fc649",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "that sounds good for now.  Lets also leave it called resource since that is what its called everywhere right now.  just leave off the (mem, core, accelerator) part. ",
+        "createdAt" : "2019-08-08T17:54:52Z",
+        "updatedAt" : "2019-08-09T02:27:38Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "15a9897131f06ec115b13d97e86c497ef36dace8",
+    "line" : 146,
+    "diffHunk" : "@@ -1,1 +704,708 @@        val usableWorkers = workers.toArray.filter(_.state == WorkerState.ALIVE)\n          .filter(canLaunchExecutor(_, app.desc))\n          .sortBy(_.coresFree).reverse\n        if (waitingApps.length == 1 && usableWorkers.isEmpty) {\n          logWarning(s\"App ${app.id} requires more resource than any of Workers could have.\")"
+  },
+  {
+    "id" : "46336f0f-b037-44af-8600-a8b61caf1ab2",
+    "prId" : 25047,
+    "prUrl" : "https://github.com/apache/spark/pull/25047#pullrequestreview-272252741",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ac54110b-b9cf-43f5-b7d6-11185585d5a5",
+        "parentId" : null,
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "I'm assuming driver could also not launch if worker doesn't have any GPUs and it requests them, may want to warn here as well",
+        "createdAt" : "2019-08-07T22:01:07Z",
+        "updatedAt" : "2019-08-09T02:27:38Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "15a9897131f06ec115b13d97e86c497ef36dace8",
+    "line" : 212,
+    "diffHunk" : "@@ -1,1 +800,804 @@        if (canLaunchDriver(worker, driver.desc)) {\n          val allocated = worker.acquireResources(driver.desc.resourceReqs)\n          driver.withResources(allocated)\n          launchDriver(worker, driver)\n          waitingDrivers -= driver"
   }
 ]

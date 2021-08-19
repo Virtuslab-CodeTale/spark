@@ -53,5 +53,71 @@
     "commit" : "59a0595c8177ff801d0f7cbcc1fe6c458bcb844c",
     "line" : 3,
     "diffHunk" : "@@ -1,1 +76,80 @@    logInfo(\"Shutting down local Spark cluster.\")\n    // Stop the workers before the master so they don't get upset that it disconnected\n    workerRpcEnvs.foreach(_.shutdown())\n    workerRpcEnvs.foreach(_.awaitTermination())\n    masterRpcEnvs.foreach(_.shutdown())"
+  },
+  {
+    "id" : "ce2f43ad-95f2-43b3-a088-c85cb51f776f",
+    "prId" : 25047,
+    "prUrl" : "https://github.com/apache/spark/pull/25047#pullrequestreview-272231596",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "cffa1925-d8b7-49fd-9323-d38d58b2f6de",
+        "parentId" : null,
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "this seems a big odd to me in local mode since all workers would get the same file.  The intent was really to have the cluster admin pass them in different resource per worker but that goes with my general comment.  If we want to keep this way then perhaps we just need to make sure to document it.\r\n\r\nIf the cluster admin does basically split the resources themselves between the Workers, then we have no need for the acquireResources and locking, so I definitely think we should put in a config to turn that off and we can document the different ways it can be setup.",
+        "createdAt" : "2019-07-26T14:09:30Z",
+        "updatedAt" : "2019-08-09T02:27:38Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "aac33e84-6d84-4106-95d8-d37299860bd8",
+        "parentId" : "cffa1925-d8b7-49fd-9323-d38d58b2f6de",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Using the same resources file for different workers (whether local cluster or real cluster) really doesn't make sense if resources file is intent to have the cluster admin config with different resources. We can just pass None and only use discovery script for LocalSparkCluster since it is only used for test purpose. \r\n\r\nAnd for a real cluster, how about this: \r\n\r\nWhen user configs a resources file(even a discovery script configured concurrently), we just acquire resources from it and do not go through acquireResources() any more with the assuming that user has already configured different resources across workers. If not, then, we use discovery script and calls acquireResources() to make sure we get different  resources compare to others.\r\n\r\nAnd we don't introduce a new configuration here, but just document more specific and rely on those file existence to decide which way we wanna go to. \r\n\r\nWDYT ?",
+        "createdAt" : "2019-07-28T09:43:02Z",
+        "updatedAt" : "2019-08-09T02:27:38Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f5a98228-f07e-4db7-9f1f-760561130f68",
+        "parentId" : "cffa1925-d8b7-49fd-9323-d38d58b2f6de",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "we could do that, but then again a cluster admin could write a discovery script to make sure different workers get different resources. Then they don't have to manually create the resourcesFile.    I also think there are some weird cases like you mention where you have both resources file and discovery script that wouldn't be obvious to the user what happens. one resource they separated but then another the discovery script didn't.  I realize these are corner cases but with a config it would be obvious exactly what is going to happen.\r\n\r\nIf we don't do the config then I think we should leave it as is and just document that the resourcesfile/discovery script for Workers/Driver in Standalone mode needs to have all the node resources or they need to configure a different resources Dir for each.",
+        "createdAt" : "2019-07-29T15:44:12Z",
+        "updatedAt" : "2019-08-09T02:27:38Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "da4a9aea-e336-45d9-ba01-8d4b4ac7021e",
+        "parentId" : "cffa1925-d8b7-49fd-9323-d38d58b2f6de",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "> but then again a cluster admin could write a discovery script to make sure different workers get different resources. \r\n\r\nI don't know whether it is easy for admin to do this within a script. But I agree that it would be better to have a separate config option if we do expect a admin would do this.\r\n\r\nSo, let me add it later.",
+        "createdAt" : "2019-07-31T15:45:57Z",
+        "updatedAt" : "2019-08-09T02:27:38Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "51e0dcf6-330c-479b-a177-3a61a02507ea",
+        "parentId" : "cffa1925-d8b7-49fd-9323-d38d58b2f6de",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "I kind of forgot about this, we should probably document the fact you can't use separate resource file or discovery script so only way to do this  properly is with the coordination. I added an item to https://issues.apache.org/jira/browse/SPARK-27492 to make sure to document. ",
+        "createdAt" : "2019-08-07T21:10:34Z",
+        "updatedAt" : "2019-08-09T02:27:38Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "15a9897131f06ec115b13d97e86c497ef36dace8",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +66,70 @@      val workerEnv = Worker.startRpcEnvAndEndpoint(localHostname, 0, 0, coresPerWorker,\n        memoryPerWorker, masters, null, Some(workerNum), _conf,\n        conf.get(config.Worker.SPARK_WORKER_RESOURCE_FILE))\n      workerRpcEnvs += workerEnv\n    }"
   }
 ]

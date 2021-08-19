@@ -64,5 +64,49 @@
     "commit" : "77958880245cca238bd976900e57715f6f96a3c4",
     "line" : 19,
     "diffHunk" : "@@ -1,1 +153,157 @@    nullOnOverflow: Boolean) extends UnaryExpression {\n\n  override def nullable: Boolean = true\n\n  override def eval(input: InternalRow): Any = {"
+  },
+  {
+    "id" : "36529c5e-b10e-4253-ba3a-208d3b56526a",
+    "prId" : 25010,
+    "prUrl" : "https://github.com/apache/spark/pull/25010#pullrequestreview-256044459",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "238e9482-d99e-484f-929b-9a4941196047",
+        "parentId" : null,
+        "authorId" : "a11722a8-ecfa-4827-88e3-4d708f023846",
+        "body" : "Is it safe to skip the assignment to `${ev.isNull}` in the `nullable = false` branch? \r\n\r\nI'm concerned about what would happen when the underlying variable that the `${ev.isNull} = ` updates has already been initialized (possibly to a default value): I _guess_ that's okay because then then when `nullable == false` the `isNull` variable already has the correct value (`false`).\r\n\r\nI was just curious whether there's existing precedence for this in codegen.\r\n\r\nShould we limit scope and keep the `isNull` assignment as we had it before (deferring this additional optimization)? Or should we keep this additional optimization citing precedence? (I'm not a codegen expert; mostly asking for my own curiousity, plus general conservatism about reducing number of branches / cases to review).",
+        "createdAt" : "2019-06-29T16:41:52Z",
+        "updatedAt" : "2019-06-29T19:19:20Z",
+        "lastEditedBy" : "a11722a8-ecfa-4827-88e3-4d708f023846",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8c9fb0e1-b9cc-467a-a8d6-869402a979f4",
+        "parentId" : "238e9482-d99e-484f-929b-9a4941196047",
+        "authorId" : "24e1dd39-ae3f-4bbb-a391-f60afb62d075",
+        "body" : "Not only it is safe, but it doesn't even compile to make that assignment in the nullable case. If a variable is not nullable, its `isNull` variable is just the constant `false`: so no assignment has to be done (please see the code in `nullSafeCodeGen`).\r\n\r\n> I was just curious whether there's existing precedence for this in codegen.\r\n\r\nYou can find similar patterns in `collectionOperations.scala`\r\n",
+        "createdAt" : "2019-06-29T17:05:43Z",
+        "updatedAt" : "2019-06-29T19:19:20Z",
+        "lastEditedBy" : "24e1dd39-ae3f-4bbb-a391-f60afb62d075",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "85e2f957-9c29-4336-b4b4-f238cf0eb8f4",
+        "parentId" : "238e9482-d99e-484f-929b-9a4941196047",
+        "authorId" : "a11722a8-ecfa-4827-88e3-4d708f023846",
+        "body" : "TIL! Thanks for clarifying.",
+        "createdAt" : "2019-06-29T17:17:50Z",
+        "updatedAt" : "2019-06-29T19:19:20Z",
+        "lastEditedBy" : "a11722a8-ecfa-4827-88e3-4d708f023846",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4928330c928e988f71002a5f5f17ae9283232e2a",
+    "line" : 38,
+    "diffHunk" : "@@ -1,1 +71,75 @@        \"set\"\n      }\n      val setNull = if (nullable) {\n        s\"${ev.isNull} = ${ev.value} == null;\"\n      } else {"
   }
 ]

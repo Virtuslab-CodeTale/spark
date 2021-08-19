@@ -273,5 +273,93 @@
     "commit" : "b0ddd1c7f807339bb3b959a4b503ce5877d5d292",
     "line" : 32,
     "diffHunk" : "@@ -1,1 +928,932 @@\n      val conf = new SparkConf()\n        .setMaster(\"local-cluster[3, 1, 1024]\")\n        .setAppName(\"test-cluster\")\n        .set(WORKER_GPU_ID.amountConf, \"3\")"
+  },
+  {
+    "id" : "0e8195e0-1bf5-4837-a4fb-b7b28be46383",
+    "prId" : 25047,
+    "prUrl" : "https://github.com/apache/spark/pull/25047#pullrequestreview-267202457",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4f06a979-d355-4288-9bd8-2e5bf4e978ec",
+        "parentId" : null,
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "I think one of these was intentionally this way as it is allowed to find more resources then requested.  Perhaps put this back and add comment.",
+        "createdAt" : "2019-07-16T16:40:31Z",
+        "updatedAt" : "2019-08-09T02:27:38Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1e63ee85-e8a9-4f8c-9acf-c34b4561b26c",
+        "parentId" : "4f06a979-d355-4288-9bd8-2e5bf4e978ec",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "The problem is, what does `sparkContext.resources()` should mean when we get Standalone resources scheduling in ? discovered resources or assigned resources ?  This changed to '3', otherwise it failed on:\r\n\r\n`assert(sc.resources.get(GPU).get.addresses === Array(\"0\", \"1\", \"8\"))` \r\n\r\nat L784.",
+        "createdAt" : "2019-07-18T13:32:19Z",
+        "updatedAt" : "2019-08-09T02:27:38Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c325ba7d-b034-45e3-97d7-9df4498bfb4c",
+        "parentId" : "4f06a979-d355-4288-9bd8-2e5bf4e978ec",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "ah I see.  ok  lets leave this.  STandalone mode right now its assigned.",
+        "createdAt" : "2019-07-26T16:34:12Z",
+        "updatedAt" : "2019-08-09T02:27:38Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "15a9897131f06ec115b13d97e86c497ef36dace8",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +784,788 @@        .setMaster(\"local-cluster[1, 1, 1024]\")\n        .setAppName(\"test-cluster\")\n      conf.set(DRIVER_GPU_ID.amountConf, \"3\")\n      conf.set(DRIVER_GPU_ID.discoveryScriptConf, scriptPath)\n"
+  },
+  {
+    "id" : "1ea2a6a3-3d9a-4e6f-82eb-5d76324f1d3f",
+    "prId" : 25047,
+    "prUrl" : "https://github.com/apache/spark/pull/25047#pullrequestreview-267202457",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9ee466f3-e5ca-494c-aac4-6a0b972fa500",
+        "parentId" : null,
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "why was this changed?",
+        "createdAt" : "2019-07-16T16:40:55Z",
+        "updatedAt" : "2019-08-09T02:27:38Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6cf53481-01ba-461b-b227-0e0c330642c6",
+        "parentId" : "9ee466f3-e5ca-494c-aac4-6a0b972fa500",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Previously, this discoveryScript was used for those 3 executors directly. And now, when we get Standalone resources scheduling in, this discoveryScript should be used by Worker, otherwise executor can't be launched due to no confined resources for worker.  As a result, we need to prepare 9 isolated resource addresses for 3 workers in the same host  in order to launch 3 executor.",
+        "createdAt" : "2019-07-18T13:36:53Z",
+        "updatedAt" : "2019-08-09T02:27:38Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "90f773ef-c5c0-441a-9f0e-75adc2d0221c",
+        "parentId" : "9ee466f3-e5ca-494c-aac4-6a0b972fa500",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "ok",
+        "createdAt" : "2019-07-26T16:34:48Z",
+        "updatedAt" : "2019-08-09T02:27:38Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "15a9897131f06ec115b13d97e86c497ef36dace8",
+    "line" : 23,
+    "diffHunk" : "@@ -1,1 +851,855 @@    withTempDir { dir =>\n      val discoveryScript = createTempScriptWithExpectedOutput(dir, \"resourceDiscoveryScript\",\n        \"\"\"{\"name\": \"gpu\",\"addresses\":[\"0\", \"1\", \"2\", \"3\", \"4\", \"5\", \"6\", \"7\", \"8\"]}\"\"\")\n\n      val conf = new SparkConf()"
   }
 ]

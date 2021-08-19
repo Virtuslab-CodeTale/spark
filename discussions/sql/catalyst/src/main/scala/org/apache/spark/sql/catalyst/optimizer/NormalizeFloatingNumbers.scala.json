@@ -317,5 +317,60 @@
     "commit" : "4dc641393de0458b3fe4cfa980c8a8b2c3327ea0",
     "line" : 1,
     "diffHunk" : "@@ -1,1 +54,58 @@ * new joins(the subquery rewrite) and new join conditions(the join reorder).\n */\nobject NormalizeFloatingNumbers extends Rule[LogicalPlan] {\n\n  def apply(plan: LogicalPlan): LogicalPlan = plan match {"
+  },
+  {
+    "id" : "61741870-0293-42f5-9e84-0765dca01c3f",
+    "prId" : 25080,
+    "prUrl" : "https://github.com/apache/spark/pull/25080#pullrequestreview-259790989",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "382c0e50-a35f-4bb2-aca0-58a11fab52e4",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Hm, from my understanding, we didn't quite like such approach though like analysis barrier. Scope here is small so might be fine but this doesn't particularly look like a good fix. ",
+        "createdAt" : "2019-07-09T03:30:22Z",
+        "updatedAt" : "2019-07-09T06:27:48Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0f5479f5-9d87-4ad7-bde7-f6d97242a374",
+        "parentId" : "382c0e50-a35f-4bb2-aca0-58a11fab52e4",
+        "authorId" : "88f0c774-9c59-4485-885d-f6aee36efcea",
+        "body" : "The problem is from `TransformArray`, since we can't easily tell whether a `TransformArray` is for FP normalization or not.  Otherwise we can just check for `NormalizeNaNAndZero`.",
+        "createdAt" : "2019-07-09T03:38:46Z",
+        "updatedAt" : "2019-07-09T06:27:48Z",
+        "lastEditedBy" : "88f0c774-9c59-4485-885d-f6aee36efcea",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "93116392-a7a4-4b3b-9041-c9e4cb3c5bdb",
+        "parentId" : "382c0e50-a35f-4bb2-aca0-58a11fab52e4",
+        "authorId" : "88f0c774-9c59-4485-885d-f6aee36efcea",
+        "body" : "And we don't want to add a new kind of `TransformArray` node in the final logical plan either (and related logic)... I can't really think of an elegant approach.",
+        "createdAt" : "2019-07-09T03:42:20Z",
+        "updatedAt" : "2019-07-09T06:27:48Z",
+        "lastEditedBy" : "88f0c774-9c59-4485-885d-f6aee36efcea",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "58ef9f4c-ec17-4be9-8452-6eba994571a9",
+        "parentId" : "382c0e50-a35f-4bb2-aca0-58a11fab52e4",
+        "authorId" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "body" : "This has a much less impact than the `AnalysisBarrier` -- this only applies to expressions whereas the `AnalysisBarrier` applied to plans.\r\nWe'd to leave markers in place in case a plan gets re-optimized after the initial optimization, and we have to have something that provides such information persisted in the plan.\r\n\r\nThe alternative for providing this information would be something like having a new dedicated expression type for floating point array normalization, which would also be disruptive to the expression tree structure. In terms of code reuse and semantic clarity, I'd say Yesheng's current design strikes the best balance.",
+        "createdAt" : "2019-07-09T22:26:56Z",
+        "updatedAt" : "2019-07-09T22:26:57Z",
+        "lastEditedBy" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f255c8ed5f22fa10acdf12994867303596ee696e",
+    "line" : 56,
+    "diffHunk" : "@@ -1,1 +125,129 @@\n    case _ if expr.dataType == FloatType || expr.dataType == DoubleType =>\n      KnownFloatingPointNormalized(NormalizeNaNAndZero(expr))\n\n    case _ if expr.dataType.isInstanceOf[StructType] =>"
   }
 ]

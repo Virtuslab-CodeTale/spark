@@ -42,5 +42,104 @@
     "commit" : "622ac1c245e0918d9c99af2c0cb69671284ee7ac",
     "line" : 54,
     "diffHunk" : "@@ -1,1 +530,534 @@      case agg: ScalaAggregator[_, _, _] =>\n        agg.copy(\n          inputEncoder = agg.inputEncoder.resolveAndBind(),\n          bufferEncoder = agg.bufferEncoder.resolveAndBind())\n    }"
+  },
+  {
+    "id" : "d7c0b395-b532-4e5f-96fb-a4f0eae094b0",
+    "prId" : 25024,
+    "prUrl" : "https://github.com/apache/spark/pull/25024#pullrequestreview-338409411",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f1250161-12f7-4b87-8f82-58ff487daa41",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "we should resolve with `childrenSchema.toAttributes`",
+        "createdAt" : "2020-01-04T04:57:10Z",
+        "updatedAt" : "2020-01-07T17:11:50Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c8b2fb91-270a-408e-a273-cc89cb7e27db",
+        "parentId" : "f1250161-12f7-4b87-8f82-58ff487daa41",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "ah wait, just realized we miss an important feature: type check. If the aggregator accepts int input, but the actual input column is string, what shall we do?\r\n\r\nLooking at `ScalaUDAF`, we implement `ImplicitCastInputTypes` and define the expected input types. I think we should do the same thing for `ScalaAggregator`, and add tests for it.",
+        "createdAt" : "2020-01-04T05:24:36Z",
+        "updatedAt" : "2020-01-07T17:11:50Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3b970a00-2d11-4948-ab0a-3298199fbff7",
+        "parentId" : "f1250161-12f7-4b87-8f82-58ff487daa41",
+        "authorId" : "4c995a1a-1668-4460-9df8-b8244472ae24",
+        "body" : "It already implements `ImplicitCastInputTypes` but I'll look at `childrenSchema.toAttributes` - maybe that would also help with the projection?",
+        "createdAt" : "2020-01-04T16:04:23Z",
+        "updatedAt" : "2020-01-07T17:11:50Z",
+        "lastEditedBy" : "4c995a1a-1668-4460-9df8-b8244472ae24",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "69382281-d1fd-4acd-98e4-c7c89389d90a",
+        "parentId" : "f1250161-12f7-4b87-8f82-58ff487daa41",
+        "authorId" : "4c995a1a-1668-4460-9df8-b8244472ae24",
+        "body" : "Resolving with `childrenSchema.toAttributes` actually also caused several unit tests to fail. Combining this with bypassing the `inputProjection` also failed testing. My reading of the unit testing failures is that this change was breaking the `ImplicitCastInputTypes` functionality and/or aggregation on expressions. My take is we should leave it as-is, at least for the purposes of this PR.",
+        "createdAt" : "2020-01-05T16:22:57Z",
+        "updatedAt" : "2020-01-07T17:11:50Z",
+        "lastEditedBy" : "4c995a1a-1668-4460-9df8-b8244472ae24",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "eb959984353dbd8ecb41d696adc4717c06f8a45d",
+    "line" : 41,
+    "diffHunk" : "@@ -1,1 +470,474 @@  with Logging {\n\n  private[this] lazy val inputEncoder = inputEncoderNR.resolveAndBind()\n  private[this] lazy val bufferEncoder =\n    agg.bufferEncoder.asInstanceOf[ExpressionEncoder[BUF]].resolveAndBind()"
+  },
+  {
+    "id" : "736f7c34-c8cc-48b5-b6aa-fe85b14b09b4",
+    "prId" : 25024,
+    "prUrl" : "https://github.com/apache/spark/pull/25024#pullrequestreview-442515237",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4e3ea531-225a-402a-9e68-cb8f0416d9b3",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I think this is the problem. We shouldn't keep the encoder unresolved in the query plan, and resolve it in the executor side. We can follow `ResolveEncodersInUDF`: add a rule to resolve the encoders in `ScalaAggregator` at driver side.\r\n\r\ncc @viirya @dongjoon-hyun ",
+        "createdAt" : "2020-07-03T09:01:39Z",
+        "updatedAt" : "2020-07-03T09:01:39Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "908cb83b-0fa9-4f9c-b884-04885b92cbac",
+        "parentId" : "4e3ea531-225a-402a-9e68-cb8f0416d9b3",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Yea, this defers resolving encoder to executors, we should resolve it on the driver.",
+        "createdAt" : "2020-07-03T15:40:03Z",
+        "updatedAt" : "2020-07-03T15:40:03Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3d4055f5-510c-4385-81a2-0de93ebcb505",
+        "parentId" : "4e3ea531-225a-402a-9e68-cb8f0416d9b3",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Thank you for pinging me, @cloud-fan .",
+        "createdAt" : "2020-07-03T17:19:56Z",
+        "updatedAt" : "2020-07-03T17:19:56Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "eb959984353dbd8ecb41d696adc4717c06f8a45d",
+    "line" : 41,
+    "diffHunk" : "@@ -1,1 +470,474 @@  with Logging {\n\n  private[this] lazy val inputEncoder = inputEncoderNR.resolveAndBind()\n  private[this] lazy val bufferEncoder =\n    agg.bufferEncoder.asInstanceOf[ExpressionEncoder[BUF]].resolveAndBind()"
   }
 ]
