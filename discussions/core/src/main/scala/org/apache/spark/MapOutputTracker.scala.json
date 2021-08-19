@@ -1450,5 +1450,192 @@
     "commit" : "e5acdbf46098d7e8d08f8db87f6646409dc4460a",
     "line" : 101,
     "diffHunk" : "@@ -1,1 +904,908 @@    val out = new ApacheByteArrayOutputStream()\n    out.write(DIRECT)\n    val codec = CompressionCodec.createCodec(conf, \"zstd\")\n    val objOut = new ObjectOutputStream(codec.compressedOutputStream(out))\n    Utils.tryWithSafeFinally {"
+  },
+  {
+    "id" : "06993bf5-37db-48c0-81c0-8a979350ebc8",
+    "prId" : 26085,
+    "prUrl" : "https://github.com/apache/spark/pull/26085#pullrequestreview-300964537",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "09ec7100-3ec7-4a7c-bd2a-730d29638247",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Is the default compress level good for us?",
+        "createdAt" : "2019-10-11T20:53:45Z",
+        "updatedAt" : "2019-10-18T22:25:48Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b18af0e2-479c-4667-9760-b46ce8331e60",
+        "parentId" : "09ec7100-3ec7-4a7c-bd2a-730d29638247",
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "Better than the gzip. We can tune it later.",
+        "createdAt" : "2019-10-11T23:21:57Z",
+        "updatedAt" : "2019-10-18T22:25:48Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "08c8fb2d79f499b074578991dc217a61d1633bb6",
+    "line" : 53,
+    "diffHunk" : "@@ -1,1 +911,915 @@\n    val arr: Array[Byte] = {\n      val zos = new ZstdOutputStream(compressedOut)\n      Utils.tryWithSafeFinally {\n        compressedOut.write(DIRECT)"
+  },
+  {
+    "id" : "8d61d289-c641-4520-a9e4-2ded8b6a71e0",
+    "prId" : 26085,
+    "prUrl" : "https://github.com/apache/spark/pull/26085#pullrequestreview-304164961",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a7127062-0845-4178-b782-439d2374c3aa",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "This comment is out-of-dated now. Can be removed or updated, I think.",
+        "createdAt" : "2019-10-16T23:05:35Z",
+        "updatedAt" : "2019-10-18T22:25:48Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "438a42cb-a3ea-41a5-b63b-336f870fddb6",
+        "parentId" : "a7127062-0845-4178-b782-439d2374c3aa",
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "We are still calling toByteArray; thus, compressedOut can be reused.",
+        "createdAt" : "2019-10-18T21:55:24Z",
+        "updatedAt" : "2019-10-18T22:25:48Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2a3ffa36-276c-4ddb-aecc-6d3edddd5248",
+        "parentId" : "a7127062-0845-4178-b782-439d2374c3aa",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "this is super nit: toByteArray is called on  compressedOut, instead of out. this comment is a bit misleading.",
+        "createdAt" : "2019-10-18T22:31:37Z",
+        "updatedAt" : "2019-10-18T22:31:37Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "08c8fb2d79f499b074578991dc217a61d1633bb6",
+    "line" : 68,
+    "diffHunk" : "@@ -1,1 +926,930 @@      // Important arr(0) is the tag == DIRECT, ignore that while deserializing !\n      val bcast = broadcastManager.newBroadcast(arr, isLocal)\n      // toByteArray creates copy, so we can reuse out\n      out.reset()\n      val oos = new ObjectOutputStream(out)"
+  },
+  {
+    "id" : "80ce22aa-1eb6-49ce-8e50-d5baaf865ba5",
+    "prId" : 26085,
+    "prUrl" : "https://github.com/apache/spark/pull/26085#pullrequestreview-340934919",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "991ac2ed-6bfb-46be-87ad-82f1793f4561",
+        "parentId" : null,
+        "authorId" : "8e87861a-4202-49a2-baf7-6d51f6aaa5a2",
+        "body" : "Hi, @dbtsai , I am back-porting this into our internal repo. Looks like this compression is unnecessary since `arr` is already compressed by zstd. Compress again with already compressed byte[] is a waste of cpu time. WDYT?",
+        "createdAt" : "2020-01-09T06:25:02Z",
+        "updatedAt" : "2020-01-09T06:25:03Z",
+        "lastEditedBy" : "8e87861a-4202-49a2-baf7-6d51f6aaa5a2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4f14d0e4-d261-4e5f-8141-fef1e9c230be",
+        "parentId" : "991ac2ed-6bfb-46be-87ad-82f1793f4561",
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "The actually value of the data (which is already compressed) will not be in the serialized form of  `out.writeTo(zos)` as it's transient. Here, we are just serializing the reference to the actual data, and the actual data will be broadcast through `TorrentBroadcast`. See the next log, `\"Broadcast mapstatuses size = \" + outArr.length + \", actual size = \" + arr.length` for your real data. The broadcast one is very small.",
+        "createdAt" : "2020-01-10T00:18:47Z",
+        "updatedAt" : "2020-01-10T00:18:48Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "42616067-7d08-4894-bfd9-1dab22636346",
+        "parentId" : "991ac2ed-6bfb-46be-87ad-82f1793f4561",
+        "authorId" : "8e87861a-4202-49a2-baf7-6d51f6aaa5a2",
+        "body" : "Thanks for your clarification. It's indeed not including the compressed data.",
+        "createdAt" : "2020-01-10T03:11:13Z",
+        "updatedAt" : "2020-01-10T03:11:13Z",
+        "lastEditedBy" : "8e87861a-4202-49a2-baf7-6d51f6aaa5a2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "08c8fb2d79f499b074578991dc217a61d1633bb6",
+    "line" : 83,
+    "diffHunk" : "@@ -1,1 +936,940 @@      val outArr = {\n        compressedOut.reset()\n        val zos = new ZstdOutputStream(compressedOut)\n        Utils.tryWithSafeFinally {\n          compressedOut.write(BROADCAST)"
+  },
+  {
+    "id" : "8f953860-9546-4a3d-b870-19dca8456e12",
+    "prId" : 26017,
+    "prUrl" : "https://github.com/apache/spark/pull/26017#pullrequestreview-297244059",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0f183155-8058-4ace-9b04-38279050dd0e",
+        "parentId" : null,
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "This is the part where we expect the largest decrease in lock contention right?",
+        "createdAt" : "2019-10-03T21:16:35Z",
+        "updatedAt" : "2019-10-03T22:20:11Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1bd28855-2924-4199-b689-20128cd42a5f",
+        "parentId" : "0f183155-8058-4ace-9b04-38279050dd0e",
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "The largest decrease is in serializing the large map status which I'll address in another PR. ",
+        "createdAt" : "2019-10-04T02:59:06Z",
+        "updatedAt" : "2019-10-04T02:59:06Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f84efaf3deb2090da081eae00c8c07b4f08dc726",
+    "line" : 118,
+    "diffHunk" : "@@ -1,1 +196,200 @@    var result: Array[Byte] = null\n\n    withReadLock {\n      if (cachedSerializedMapStatus != null) {\n        result = cachedSerializedMapStatus"
+  },
+  {
+    "id" : "62fec243-5ded-4f52-b976-01de62cd8147",
+    "prId" : 26017,
+    "prUrl" : "https://github.com/apache/spark/pull/26017#pullrequestreview-297244566",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e084e2ae-4c63-42e2-b0bc-26fd1e1ec858",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "We don't need `withWriteLock` here because `removeOutputsByFilter` is already wrapped `withWriteLock`.",
+        "createdAt" : "2019-10-03T23:05:49Z",
+        "updatedAt" : "2019-10-03T23:05:50Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2d1a1375-67ed-444a-90aa-2f34e2b40ff6",
+        "parentId" : "e084e2ae-4c63-42e2-b0bc-26fd1e1ec858",
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "Since it's reentrant lock, I prefer to have it in all the methods in case someone adds something without guarding by lock.",
+        "createdAt" : "2019-10-04T03:02:03Z",
+        "updatedAt" : "2019-10-04T03:02:03Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f84efaf3deb2090da081eae00c8c07b4f08dc726",
+    "line" : 67,
+    "diffHunk" : "@@ -1,1 +137,141 @@   * outputs which are served by an external shuffle server (if one exists).\n   */\n  def removeOutputsOnHost(host: String): Unit = withWriteLock {\n    removeOutputsByFilter(x => x.host == host)\n  }"
   }
 ]

@@ -1,0 +1,90 @@
+[
+  {
+    "id" : "1dffa702-a42f-4cc2-9724-ebb8076a5701",
+    "prId" : 26001,
+    "prUrl" : "https://github.com/apache/spark/pull/26001#pullrequestreview-298360305",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4ec1ffe0-e281-4461-8de3-8cdacd8a93db",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Now we check the options at the physical plan phase, so this should not be `AnalysisException` anymore.",
+        "createdAt" : "2019-10-03T08:51:15Z",
+        "updatedAt" : "2019-10-03T08:51:15Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ff42ff63-debb-4325-b2b8-28a272e33507",
+        "parentId" : "4ec1ffe0-e281-4461-8de3-8cdacd8a93db",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "If this is unacceptable, then we may need to have analysis time write info and runtime write info. `Table.newWriteBuilder` takes analysis time write info and `WriteBuilder.build` takes runtime write info.\r\n\r\nI'm not sure if it's worth this complexity.",
+        "createdAt" : "2019-10-03T15:12:38Z",
+        "updatedAt" : "2019-10-03T15:12:38Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8b589e5f-fefe-4749-9349-2a4db0abecfb",
+        "parentId" : "4ec1ffe0-e281-4461-8de3-8cdacd8a93db",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "Should it be SparkException? I think the last time we discussed these, it wasn't clear what type of exception to use after analysis. Maybe we need new exception types?",
+        "createdAt" : "2019-10-03T16:59:12Z",
+        "updatedAt" : "2019-10-03T16:59:12Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1e864b2a-8eac-44ca-b125-fbc78a161cdb",
+        "parentId" : "4ec1ffe0-e281-4461-8de3-8cdacd8a93db",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "We can use `SparkException` as well. `IllegalArgumentException` is a standard java exception which indicates invalid input, I think it's OK to use it even after analysis.",
+        "createdAt" : "2019-10-04T08:10:16Z",
+        "updatedAt" : "2019-10-04T08:10:17Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2e686ddc-9b07-405b-bab1-ce825ffd26e2",
+        "parentId" : "4ec1ffe0-e281-4461-8de3-8cdacd8a93db",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "I think we typically want to always raise SparkException because all exception types inherit from it. Unless we are throwing an exception from a method where there is an illegal argument, but that's not what is happening here.",
+        "createdAt" : "2019-10-04T19:07:45Z",
+        "updatedAt" : "2019-10-04T19:07:45Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1f223952-73cf-4633-8651-85983ad14d7f",
+        "parentId" : "4ec1ffe0-e281-4461-8de3-8cdacd8a93db",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "> I think we typically want to always raise SparkException because all exception types inherit from it.\r\n\r\nIn Spark SQL no exceptions inherit from it. In fact SparkException was rarely used in Spark SQL before we adding the v2 commands. `SparkException` is defined in spark core and usually used when Spark fails to run a task.\r\n\r\nIn Spark SQL, AnalysisException and standard Java exceptions are more widely used.",
+        "createdAt" : "2019-10-07T04:48:03Z",
+        "updatedAt" : "2019-10-07T04:48:04Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "18f6729b-82a6-47bc-a83f-a879d396ba0b",
+        "parentId" : "4ec1ffe0-e281-4461-8de3-8cdacd8a93db",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "Sorry, I thought that AnalysisException inherited from SparkException. Looks like I was wrong.",
+        "createdAt" : "2019-10-07T19:32:48Z",
+        "updatedAt" : "2019-10-07T19:32:48Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "79f94f59c1298c021f71b65acfdb850161075545",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +51,55 @@    schema.find(_.name == TOPIC_ATTRIBUTE_NAME).getOrElse(\n      if (topic.isEmpty) {\n        throw new IllegalArgumentException(s\"topic option required when no \" +\n          s\"'$TOPIC_ATTRIBUTE_NAME' attribute is present. Use the \" +\n          s\"${KafkaSourceProvider.TOPIC_OPTION_KEY} option for setting a topic.\")"
+  }
+]

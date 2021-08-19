@@ -416,5 +416,291 @@
     "commit" : "2f901894eb24d7deec31947708b9afdaae2a4866",
     "line" : 20,
     "diffHunk" : "@@ -1,1 +40,44 @@  }\n\n  public CalendarInterval(int months, int days, long microseconds) {\n    this.months = months;\n    this.days = days;"
+  },
+  {
+    "id" : "41a8f42b-01b1-4a1d-8d67-2674d164f221",
+    "prId" : 26079,
+    "prUrl" : "https://github.com/apache/spark/pull/26079#pullrequestreview-300044883",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "24468f86-2ae2-4c07-8023-b5acc7e210e1",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Is it the only place we parse interval string? I thought we parse it with antlr parser.",
+        "createdAt" : "2019-10-10T11:25:35Z",
+        "updatedAt" : "2019-10-12T08:32:17Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "66a68f48-cc90-493b-8e3e-dd5df21754c8",
+        "parentId" : "24468f86-2ae2-4c07-8023-b5acc7e210e1",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "antlr parser does this as well but [it parses sql elements](https://github.com/apache/spark/blob/f2ead4d0b50715e3dec79ce762c31f145d46a5b5/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/parser/AstBuilder.scala#L1907-L1961) like\r\n```sql\r\nspark-sql> select interval 10 days 1 second;\r\ninterval 1 weeks 3 days 1 seconds\r\n```\r\nhere is only the place where we parse string values:\r\n```sql\r\nspark-sql> select interval 'interval 10 days 1 second';\r\ninterval 1 weeks 3 days 1 seconds\r\n```",
+        "createdAt" : "2019-10-10T11:36:43Z",
+        "updatedAt" : "2019-10-12T08:32:17Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5c04098b-7fd8-4685-aa75-cd641afb0beb",
+        "parentId" : "24468f86-2ae2-4c07-8023-b5acc7e210e1",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "This looks duplicated. Shall we add a `parseInterval` method to the `ParserInterface` interface and call the parser here? ",
+        "createdAt" : "2019-10-10T11:45:16Z",
+        "updatedAt" : "2019-10-12T08:32:17Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d6d00827-7e1e-49f1-8a39-d0d5f9aa1fc8",
+        "parentId" : "24468f86-2ae2-4c07-8023-b5acc7e210e1",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "Maybe something has been duplicated, and can be reused but this is heavy refactoring for this PR. \r\n\r\nFor instance, `AstBuilder.visitInterval` gets already split interval units but `CalendarInterval.fromString()` uses regular expression to parse & split: https://github.com/apache/spark/blob/b10344956d672fca495d0684b351ab5cf9f210d8/common/unsafe/src/main/java/org/apache/spark/unsafe/types/CalendarInterval.java#L50-L53\r\n\r\nIf you don't mind, I would try to do that in a separate PR.",
+        "createdAt" : "2019-10-10T12:06:35Z",
+        "updatedAt" : "2019-10-12T08:32:17Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "faedba3d-d0b6-4f78-8343-81374d1877da",
+        "parentId" : "24468f86-2ae2-4c07-8023-b5acc7e210e1",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "This PR introduced code duplication https://github.com/apache/spark/pull/8034 for your code https://github.com/apache/spark/pull/7355 5 years ago.",
+        "createdAt" : "2019-10-10T12:12:38Z",
+        "updatedAt" : "2019-10-12T08:32:17Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "290ce90c-a13d-4291-b296-2a9a85c953d0",
+        "parentId" : "24468f86-2ae2-4c07-8023-b5acc7e210e1",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "And your regexp is not tolerant to the order of interval units, see:\r\n```sql\r\nspark-sql> select interval 'interval 1 microsecond 2 months';\r\nNULL\r\nspark-sql> select interval 1 microsecond 2 months;\r\ninterval 2 months 1 microseconds\r\n```",
+        "createdAt" : "2019-10-10T12:16:35Z",
+        "updatedAt" : "2019-10-12T08:32:17Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7c83a318-9f25-42b4-bf1b-a5b2f0748b15",
+        "parentId" : "24468f86-2ae2-4c07-8023-b5acc7e210e1",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "Let's keep them separate so far. And I will try to write flexible and common code in the near future for parsing string intervals that could handle other features found in https://github.com/apache/spark/pull/26055",
+        "createdAt" : "2019-10-10T12:18:49Z",
+        "updatedAt" : "2019-10-12T08:32:17Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5a482db2-cf28-4137-9656-63ffb087dc26",
+        "parentId" : "24468f86-2ae2-4c07-8023-b5acc7e210e1",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "SGTM",
+        "createdAt" : "2019-10-10T12:57:53Z",
+        "updatedAt" : "2019-10-12T08:32:17Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e2c1352c66ca8a74d74e154513fe4b9546fc7537",
+    "line" : 43,
+    "diffHunk" : "@@ -1,1 +87,91 @@   * @throws IllegalArgumentException if the string is not a valid internal.\n   */\n  public static CalendarInterval fromCaseInsensitiveString(String s) {\n    if (s == null) {\n      throw new IllegalArgumentException(\"Interval cannot be null\");"
+  },
+  {
+    "id" : "6cb2e97d-550c-474f-be35-79c17242325e",
+    "prId" : 26079,
+    "prUrl" : "https://github.com/apache/spark/pull/26079#pullrequestreview-300058793",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e3b7005d-7c5d-46e9-96dc-a7ba83a25ddf",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "what does this condition mean?",
+        "createdAt" : "2019-10-10T12:59:59Z",
+        "updatedAt" : "2019-10-12T08:32:17Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b96ec7f0-3b03-4da4-b0fb-9fc07f7ba1eb",
+        "parentId" : "e3b7005d-7c5d-46e9-96dc-a7ba83a25ddf",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "I added comments about this.",
+        "createdAt" : "2019-10-10T13:18:48Z",
+        "updatedAt" : "2019-10-12T08:32:17Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e2c1352c66ca8a74d74e154513fe4b9546fc7537",
+    "line" : 61,
+    "diffHunk" : "@@ -1,1 +98,102 @@    String intervalStr = trimmed;\n    // Checks the given interval string does not start with the `interval` prefix\n    if (!intervalStr.regionMatches(true, 0, prefix, 0, prefix.length())) {\n      // Prepend `interval` if it does not present because\n      // the regular expression strictly require it."
+  },
+  {
+    "id" : "0effddb3-4e13-46c2-8f12-e17386a9b064",
+    "prId" : 26079,
+    "prUrl" : "https://github.com/apache/spark/pull/26079#pullrequestreview-301394625",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "dc9f72d7-7585-45b0-8bbf-d0e0cbeac795",
+        "parentId" : null,
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "I have not figured out how to modify the regular expression to make the `interval` prefix optional.",
+        "createdAt" : "2019-10-10T13:20:18Z",
+        "updatedAt" : "2019-10-12T08:32:17Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f855302d-44ce-470b-86c0-7f33dc948c94",
+        "parentId" : "dc9f72d7-7585-45b0-8bbf-d0e0cbeac795",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "Probably, this needs this feature https://www.regular-expressions.info/branchreset.html which Java's regexps doesn't have.",
+        "createdAt" : "2019-10-10T13:23:58Z",
+        "updatedAt" : "2019-10-12T08:32:17Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "04bde68f-6cdc-412e-aef1-2c1aaf5f5e78",
+        "parentId" : "dc9f72d7-7585-45b0-8bbf-d0e0cbeac795",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "How about something like\r\n```\r\nString intervalStr = trimmed.toLowerCase();\r\nif (intervalStr.startsWith(\"interval\")) {\r\n  intervalStr = intervalStr.drop(8)\r\n}\r\n// parse the interval string assuming there is no leading \"interval\"\r\n```",
+        "createdAt" : "2019-10-10T14:44:22Z",
+        "updatedAt" : "2019-10-12T08:32:17Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c97f98f1-52d3-4016-9c2c-bea7e1562052",
+        "parentId" : "dc9f72d7-7585-45b0-8bbf-d0e0cbeac795",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "> String intervalStr = trimmed.toLowerCase();\r\n\r\nYour code is more expensive because you lower case whole input string.\r\n\r\n> // parse the interval string assuming there is no leading \"interval\"\r\n\r\nHere there is a problem with current regexp when you delete the anchor `\"interval\"`. Without this anchor, it cannot match to valid inputs:\r\n```scala\r\nscala> import java.util.regex._\r\nimport java.util.regex._\r\n\r\nscala> def unitRegex(unit: String) = \"(?:\\\\s+(-?\\\\d+)\\\\s+\" + unit + \"s?)?\"\r\nunitRegex: (unit: String)String\r\n\r\nscala> val p = Pattern.compile(unitRegex(\"year\") + unitRegex(\"month\") +\r\n     |     unitRegex(\"week\") + unitRegex(\"day\") + unitRegex(\"hour\") + unitRegex(\"minute\") +\r\n     |     unitRegex(\"second\") + unitRegex(\"millisecond\") + unitRegex(\"microsecond\"),\r\n     |     Pattern.CASE_INSENSITIVE)\r\np: java.util.regex.Pattern = (?:\\s+(-?\\d+)\\s+years?)?(?:\\s+(-?\\d+)\\s+months?)?(?:\\s+(-?\\d+)\\s+weeks?)?(?:\\s+(-?\\d+)\\s+days?)?(?:\\s+(-?\\d+)\\s+hours?)?(?:\\s+(-?\\d+)\\s+minutes?)?(?:\\s+(-?\\d+)\\s+seconds?)?(?:\\s+(-?\\d+)\\s+milliseconds?)?(?:\\s+(-?\\d+)\\s+microseconds?)?\r\n\r\nscala> val m = p.matcher(\"1 month 1 second\")\r\nm: java.util.regex.Matcher = java.util.regex.Matcher[pattern=(?:\\s+(-?\\d+)\\s+years?)?(?:\\s+(-?\\d+)\\s+months?)?(?:\\s+(-?\\d+)\\s+weeks?)?(?:\\s+(-?\\d+)\\s+days?)?(?:\\s+(-?\\d+)\\s+hours?)?(?:\\s+(-?\\d+)\\s+minutes?)?(?:\\s+(-?\\d+)\\s+seconds?)?(?:\\s+(-?\\d+)\\s+milliseconds?)?(?:\\s+(-?\\d+)\\s+microseconds?)? region=0,16 lastmatch=]\r\n\r\nscala> m.matches()\r\nres7: Boolean = false\r\n```\r\nIf we added it back:\r\n```scala\r\nscala> val p = Pattern.compile(\"interval\" + unitRegex(\"year\") + unitRegex(\"month\") +\r\n     |     unitRegex(\"week\") + unitRegex(\"day\") + unitRegex(\"hour\") + unitRegex(\"minute\") +\r\n     |     unitRegex(\"second\") + unitRegex(\"millisecond\") + unitRegex(\"microsecond\"),\r\n     |     Pattern.CASE_INSENSITIVE)\r\np: java.util.regex.Pattern = interval(?:\\s+(-?\\d+)\\s+years?)?(?:\\s+(-?\\d+)\\s+months?)?(?:\\s+(-?\\d+)\\s+weeks?)?(?:\\s+(-?\\d+)\\s+days?)?(?:\\s+(-?\\d+)\\s+hours?)?(?:\\s+(-?\\d+)\\s+minutes?)?(?:\\s+(-?\\d+)\\s+seconds?)?(?:\\s+(-?\\d+)\\s+milliseconds?)?(?:\\s+(-?\\d+)\\s+microseconds?)?\r\n\r\nscala> val m = p.matcher(\"interval 1 month 1 second\")\r\nm: java.util.regex.Matcher = java.util.regex.Matcher[pattern=interval(?:\\s+(-?\\d+)\\s+years?)?(?:\\s+(-?\\d+)\\s+months?)?(?:\\s+(-?\\d+)\\s+weeks?)?(?:\\s+(-?\\d+)\\s+days?)?(?:\\s+(-?\\d+)\\s+hours?)?(?:\\s+(-?\\d+)\\s+minutes?)?(?:\\s+(-?\\d+)\\s+seconds?)?(?:\\s+(-?\\d+)\\s+milliseconds?)?(?:\\s+(-?\\d+)\\s+microseconds?)? region=0,25 lastmatch=]\r\n\r\nscala> m.matches()\r\nres8: Boolean = true\r\n```\r\nit can match now. That's why I had to add the `interval` prefix instead of removing it.",
+        "createdAt" : "2019-10-10T15:13:08Z",
+        "updatedAt" : "2019-10-12T08:32:17Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9522dfea-1740-48c5-9790-69023ee180d6",
+        "parentId" : "dc9f72d7-7585-45b0-8bbf-d0e0cbeac795",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Can you just start the regex with `(interval)?`? then the first matching group is either null or \"interval\", and the rest should match the same way?",
+        "createdAt" : "2019-10-14T15:37:23Z",
+        "updatedAt" : "2019-10-14T15:37:23Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "778f5155-558f-49af-b4d1-d8bd673b7ab6",
+        "parentId" : "dc9f72d7-7585-45b0-8bbf-d0e0cbeac795",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "As far as I remember I tried this regex, and it didn't work. Have you tried it?",
+        "createdAt" : "2019-10-14T15:42:05Z",
+        "updatedAt" : "2019-10-14T15:42:05Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0a6d2c94-ba32-4aee-bc94-e672522af233",
+        "parentId" : "dc9f72d7-7585-45b0-8bbf-d0e0cbeac795",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "I have checked, it doesn't work:\r\n```scala\r\nscala> def unitRegex(unit: String) = \"(?:\\\\s+(-?\\\\d+)\\\\s+\" + unit + \"s?)?\"\r\nunitRegex: (unit: String)String\r\n\r\nscala> val p = Pattern.compile(\"(interval)?\" + unitRegex(\"year\") + unitRegex(\"month\") +\r\n     |     unitRegex(\"week\") + unitRegex(\"day\") + unitRegex(\"hour\") + unitRegex(\"minute\") +\r\n     |     unitRegex(\"second\") + unitRegex(\"millisecond\") + unitRegex(\"microsecond\"),\r\n     |     Pattern.CASE_INSENSITIVE)\r\np: java.util.regex.Pattern = (interval)?(?:\\s+(-?\\d+)\\s+years?)?(?:\\s+(-?\\d+)\\s+months?)?(?:\\s+(-?\\d+)\\s+weeks?)?(?:\\s+(-?\\d+)\\s+days?)?(?:\\s+(-?\\d+)\\s+hours?)?(?:\\s+(-?\\d+)\\s+minutes?)?(?:\\s+(-?\\d+)\\s+seconds?)?(?:\\s+(-?\\d+)\\s+milliseconds?)?(?:\\s+(-?\\d+)\\s+microseconds?)?\r\n\r\nscala> val m = p.matcher(\"1 month 1 second\")\r\nm: java.util.regex.Matcher = java.util.regex.Matcher[pattern=(interval)?(?:\\s+(-?\\d+)\\s+years?)?(?:\\s+(-?\\d+)\\s+months?)?(?:\\s+(-?\\d+)\\s+weeks?)?(?:\\s+(-?\\d+)\\s+days?)?(?:\\s+(-?\\d+)\\s+hours?)?(?:\\s+(-?\\d+)\\s+minutes?)?(?:\\s+(-?\\d+)\\s+seconds?)?(?:\\s+(-?\\d+)\\s+milliseconds?)?(?:\\s+(-?\\d+)\\s+microseconds?)? region=0,16 lastmatch=]\r\n\r\nscala> m.matches()\r\nres0: Boolean = false\r\n```",
+        "createdAt" : "2019-10-14T15:46:16Z",
+        "updatedAt" : "2019-10-14T15:46:16Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f822f690-9e42-4175-aefe-13661a886b21",
+        "parentId" : "dc9f72d7-7585-45b0-8bbf-d0e0cbeac795",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "I tried simply `\"(interval)?(.+)\".r` and it worked as expected on inputs like `\"abc\"` and `\"interval abc\"`. It's a toy example and not sure if it interacts unexpectedly with the rest of the matching. no big deal, just leave it.",
+        "createdAt" : "2019-10-14T15:50:58Z",
+        "updatedAt" : "2019-10-14T15:50:58Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e2c1352c66ca8a74d74e154513fe4b9546fc7537",
+    "line" : 63,
+    "diffHunk" : "@@ -1,1 +100,104 @@    if (!intervalStr.regionMatches(true, 0, prefix, 0, prefix.length())) {\n      // Prepend `interval` if it does not present because\n      // the regular expression strictly require it.\n      intervalStr = prefix + \" \" + trimmed;\n    } else if (intervalStr.length() == prefix.length()) {"
+  },
+  {
+    "id" : "db28170b-8749-47c7-97a2-c88028209060",
+    "prId" : 26079,
+    "prUrl" : "https://github.com/apache/spark/pull/26079#pullrequestreview-301366614",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0e1902c3-5c20-43a7-84ef-b4207f418d22",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Why not just call `trimmed.toLowerCase.startsWith(\"interval\")`? For perf reasons?",
+        "createdAt" : "2019-10-14T14:56:41Z",
+        "updatedAt" : "2019-10-14T14:56:41Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2b398f4d-a18c-41f8-8f45-e62d5e117c1e",
+        "parentId" : "0e1902c3-5c20-43a7-84ef-b4207f418d22",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "Yes, don't want to lower case the **entire string** and allocate memory for new one to only compare small prefix.",
+        "createdAt" : "2019-10-14T15:05:06Z",
+        "updatedAt" : "2019-10-14T15:05:07Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e2c1352c66ca8a74d74e154513fe4b9546fc7537",
+    "line" : 60,
+    "diffHunk" : "@@ -1,1 +97,101 @@    String prefix = \"interval\";\n    String intervalStr = trimmed;\n    // Checks the given interval string does not start with the `interval` prefix\n    if (!intervalStr.regionMatches(true, 0, prefix, 0, prefix.length())) {\n      // Prepend `interval` if it does not present because"
+  },
+  {
+    "id" : "cda5196d-a014-4ab1-be80-c0a309e16732",
+    "prId" : 26010,
+    "prUrl" : "https://github.com/apache/spark/pull/26010#pullrequestreview-297813640",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ca2acb9c-34a4-4e8f-8a31-a31574929afb",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "This change the description without changing the function body. This means the previous function descriptions wrong. However, for example, the function body still has case-sensitive function like `s.equals(\"interval\")`. For me, the previous function description is correct and new one is incorrect. ~Let's recover this comment change.~ Or, could you change the remaining part?\r\n\r\nBTW, this discussion means the lack of test coverage for this part. Could you add a test coverage for that code path?",
+        "createdAt" : "2019-10-06T00:32:11Z",
+        "updatedAt" : "2019-10-06T06:24:57Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c7e09a150e37d4ecf26673a52e600b76a7199da9",
+    "line" : 15,
+    "diffHunk" : "@@ -1,1 +71,75 @@  /**\n   * Convert a string to CalendarInterval. Return null if the input string is not a valid interval.\n   * This method is case-insensitive.\n   */\n  public static CalendarInterval fromString(String s) {"
   }
 ]

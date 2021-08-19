@@ -64,5 +64,93 @@
     "commit" : "f1e31ed4dd729a277e5e4290b27b2613c473e750",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +57,61 @@    .flatMap { case (addr, available) =>\n      (0 until available).map(_ => addr)\n    }.toSeq.sorted\n\n  /**"
+  },
+  {
+    "id" : "df8f5747-8ce7-4c86-beb1-b58569a1360c",
+    "prId" : 26078,
+    "prUrl" : "https://github.com/apache/spark/pull/26078#pullrequestreview-305245371",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e96c14a4-fd1e-42b9-a031-74625d9126d1",
+        "parentId" : null,
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "can you add comment saying can see the same addr multiple times when slotsPeraddress > 1",
+        "createdAt" : "2019-10-22T14:39:52Z",
+        "updatedAt" : "2019-11-01T21:58:00Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d579c5d50ee793a09eebbb94f7998012ec81aa1e",
+    "line" : 39,
+    "diffHunk" : "@@ -1,1 +60,64 @@\n  /**\n   * Sequence of currently assigned resource addresses.\n   *\n   * With [[slotsPerAddress]] greater than 1, [[assignedAddrs]] can contain duplicate addresses"
+  },
+  {
+    "id" : "58ab93af-cf02-4178-9ef6-ba8ebadb02fa",
+    "prId" : 26078,
+    "prUrl" : "https://github.com/apache/spark/pull/26078#pullrequestreview-312823454",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8eabee05-25a6-419a-9f43-9f588040d04e",
+        "parentId" : null,
+        "authorId" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "body" : "Does it worth add `synchronized` to the `addressAvailabilityMap` to ensure thread safe?",
+        "createdAt" : "2019-10-29T21:49:18Z",
+        "updatedAt" : "2019-11-01T21:58:00Z",
+        "lastEditedBy" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0196dba8-b849-4339-853c-e573ef451c39",
+        "parentId" : "8eabee05-25a6-419a-9f43-9f588040d04e",
+        "authorId" : "0f2e4443-2e01-4589-9e1c-17979892188b",
+        "body" : "`ResourceAllocator` _should_ only used from a single thread (it is documented that way).\r\n\r\nFor its public interface, here is the access pattern:\r\n\r\n- `CoarseGrainedSchedulerBackend` and `Master` event loop are calling into `acquire` and `release`. They are also using `availableAddrs`, and are calling `toBuffer` on it before handing off that state. This is a single thread pattern.\r\n\r\n- A class extending `ResourceAllocator` (`WorkerResourceInfo`), has some potential issues: The `WorkerInfo` class is calling into `availableAddrs` and `assignedAddrs` but those calls appear to be coming from the UI (looking at the `resourcesInfo*` functions), e.g. `JsonProtocol` and `MasterPage` call this. There are other calls to the `resourceInfo*` functions, but those are from the event loop. Is this what you were worried about @jiangxb1987?\r\n\r\nNote this issue is not directly related to this PR, as this PR didn't change that access pattern, or the datastructure. That said, I do believe that a request from the UI could result in at least an exception (if not worse). Let me know and I can handle here, or open another PR that would address it.",
+        "createdAt" : "2019-11-01T20:46:31Z",
+        "updatedAt" : "2019-11-01T21:58:00Z",
+        "lastEditedBy" : "0f2e4443-2e01-4589-9e1c-17979892188b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "be967669-49d7-44f5-9f1f-01c28df9bc4f",
+        "parentId" : "8eabee05-25a6-419a-9f43-9f588040d04e",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "yeah I think the only issue here are with UI accessing, and I probably missed this in the reviews for the standalone support. I was thinking it was just read but its doing a flatMap in there.\r\nBut I do think we should protect that. That said it is a separate issue not introduced by this so I think we should file a separate jira for it, @jiangxb1987 are you ok with that?",
+        "createdAt" : "2019-11-04T14:53:31Z",
+        "updatedAt" : "2019-11-04T14:53:31Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d76d8dbc-1c6c-4b0d-b450-ff35dde13757",
+        "parentId" : "8eabee05-25a6-419a-9f43-9f588040d04e",
+        "authorId" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "body" : "sure, it worth a separate jira.",
+        "createdAt" : "2019-11-05T06:33:27Z",
+        "updatedAt" : "2019-11-05T06:33:28Z",
+        "lastEditedBy" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0db37ca8-3f8c-447f-842f-7627b28093e5",
+        "parentId" : "8eabee05-25a6-419a-9f43-9f588040d04e",
+        "authorId" : "0f2e4443-2e01-4589-9e1c-17979892188b",
+        "body" : "https://issues.apache.org/jira/browse/SPARK-29780",
+        "createdAt" : "2019-11-06T23:25:20Z",
+        "updatedAt" : "2019-11-06T23:25:20Z",
+        "lastEditedBy" : "0f2e4443-2e01-4589-9e1c-17979892188b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d579c5d50ee793a09eebbb94f7998012ec81aa1e",
+    "line" : 70,
+    "diffHunk" : "@@ -1,1 +105,109 @@      val isAvailable = addressAvailabilityMap(address)\n      if (isAvailable < slotsPerAddress) {\n        addressAvailabilityMap(address) = addressAvailabilityMap(address) + 1\n      } else {\n        throw new SparkException(s\"Try to release an address that is not assigned. $resourceName \" +"
   }
 ]

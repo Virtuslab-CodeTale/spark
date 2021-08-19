@@ -1,0 +1,233 @@
+[
+  {
+    "id" : "cff4b9fa-274f-4290-9d6c-60eebdab283b",
+    "prId" : 26013,
+    "prUrl" : "https://github.com/apache/spark/pull/26013#pullrequestreview-301382357",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0fb177f4-3db6-4e4e-8ae8-4dc0e04804bf",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "@hvanhovell, how about reusing `JacksonGenerator` in our JSON datasource?",
+        "createdAt" : "2019-10-04T08:10:30Z",
+        "updatedAt" : "2019-10-14T15:30:55Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8ac15bea-fb4a-4d15-906b-8a95fd674724",
+        "parentId" : "0fb177f4-3db6-4e4e-8ae8-4dc0e04804bf",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "There's `pretty` option for `prettyJson` too.",
+        "createdAt" : "2019-10-04T08:11:14Z",
+        "updatedAt" : "2019-10-14T15:30:55Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3775af04-fb35-4127-a309-2c1a1dbd0ca1",
+        "parentId" : "0fb177f4-3db6-4e4e-8ae8-4dc0e04804bf",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Ah, right, schema can be unknown .. ",
+        "createdAt" : "2019-10-04T10:06:37Z",
+        "updatedAt" : "2019-10-14T15:30:55Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f89e1b24-db10-451a-a940-dfbb95af9cb9",
+        "parentId" : "0fb177f4-3db6-4e4e-8ae8-4dc0e04804bf",
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "Well you still need the schema. The main reason for not using Jackson generator is that we need to convert back to an internal row and this is super slow.",
+        "createdAt" : "2019-10-04T11:51:08Z",
+        "updatedAt" : "2019-10-14T15:30:55Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6da9421d-cab8-43be-8126-f84227ffb9e2",
+        "parentId" : "0fb177f4-3db6-4e4e-8ae8-4dc0e04804bf",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Hm, this API looks already pretty slow though, and I suspect this API should not be called in a critical path .. ?\r\nIf it's supposed to be used in a critical path, we might rather have to provide a API to make a convert function given schema (so that we avoid type dispatch for every row).\r\n\r\nOne rather minor concern is that the JSON representation for a row seems different comparing to JSON datasource. e.g.)  https://github.com/apache/spark/pull/26013/files#r331463832 and https://github.com/apache/spark/pull/26013/files#diff-78ce4e47d137bbb0d4350ad732b48d5bR576-R578\r\n\r\nand here a bit duplicates the codes ..\r\n",
+        "createdAt" : "2019-10-04T13:22:20Z",
+        "updatedAt" : "2019-10-14T15:30:55Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f908c6db-9f1b-41f3-9d15-9ed6e5bd8708",
+        "parentId" : "0fb177f4-3db6-4e4e-8ae8-4dc0e04804bf",
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "So two things to consider here.\r\n\r\nI want to use this in StreamingQueryProgress right? All the JSON serialization there is based on the json4s AST and not strings (which is what JacksonGenerator produces). \r\n\r\nThere is a difference between it being slow, and what you are suggesting. The latter being crazy inefficient. Let's break that down:\r\n- Row to InternalRow conversion. You will need to create a converter per row because there is currently no way we can safely cache a converter. You can either use `ScalaReflection` or `RowEncoder` here, the latter is particularly bad because it uses code generation (which takes in the order of mills and which is weakly cached on the driver).\r\n- Setting up the JacksonGenerator, again this is uncached and we need to set up the same thing for each tuple. \r\n- Generating the string.\r\n\r\nDo you see my point here? Or shall I write a benchmark?\r\n",
+        "createdAt" : "2019-10-07T18:56:12Z",
+        "updatedAt" : "2019-10-14T15:30:55Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8c846c03-8936-41c4-b90a-d262eaab7c80",
+        "parentId" : "0fb177f4-3db6-4e4e-8ae8-4dc0e04804bf",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "There's one API case we dropped performance improvement in `Row` as an example (see https://github.com/apache/spark/pull/23271).\r\n\r\n```scala\r\n  @deprecated(\"This method is deprecated and will be removed in future versions.\", \"3.0.0\")\r\n  def merge(rows: Row*): Row = {\r\n    // TODO: Improve the performance of this if used in performance critical part.\r\n    new GenericRow(rows.flatMap(_.toSeq).toArray)\r\n  }\r\n```\r\n\r\nDo you mind if I ask to add `@Unstable` or `@Private` for these new APIs instead just for future improvement in case, with `@since` in the Scaladoc?\r\n\r\n`Row` itself is marked as `@Stable` so it might better explicitly note that this can be changed in the future. With this LGTM.",
+        "createdAt" : "2019-10-10T00:15:56Z",
+        "updatedAt" : "2019-10-14T15:30:55Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1d9d32eb-f44a-41e7-a2db-3db304b9ede8",
+        "parentId" : "0fb177f4-3db6-4e4e-8ae8-4dc0e04804bf",
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "I will mark them as @Unstable. @Private is debatable, because it is not really meant as an internal only API.",
+        "createdAt" : "2019-10-14T15:30:17Z",
+        "updatedAt" : "2019-10-14T15:30:55Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "43c2d249614359e80f61c275b16e0a498abcb842",
+    "line" : 37,
+    "diffHunk" : "@@ -1,1 +520,524 @@   */\n  @Unstable\n  def json: String = compact(jsonValue)\n\n  /**"
+  },
+  {
+    "id" : "b4af51d0-b4cf-4a6e-8f5a-41457e37818b",
+    "prId" : 26013,
+    "prUrl" : "https://github.com/apache/spark/pull/26013#pullrequestreview-297996402",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8fea329a-b2fe-40b8-96a9-68221f32bb8b",
+        "parentId" : null,
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "Base64? Why do you need this special case?",
+        "createdAt" : "2019-10-04T11:53:07Z",
+        "updatedAt" : "2019-10-14T15:30:55Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7078e3f5-f1c0-48a7-98d6-7e210f0f07ec",
+        "parentId" : "8fea329a-b2fe-40b8-96a9-68221f32bb8b",
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "How else are you going to represent a binary in JSON?",
+        "createdAt" : "2019-10-04T11:55:36Z",
+        "updatedAt" : "2019-10-14T15:30:55Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "87ef27ff-2514-4ffc-9440-5c0336339e8b",
+        "parentId" : "8fea329a-b2fe-40b8-96a9-68221f32bb8b",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "JSON has the array type, right? it could be `[1, 2, 3]`.",
+        "createdAt" : "2019-10-04T17:11:49Z",
+        "updatedAt" : "2019-10-14T15:30:55Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "86a89bb8-d78e-4871-902a-6018c278ea0f",
+        "parentId" : "8fea329a-b2fe-40b8-96a9-68221f32bb8b",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "We need a way to distinguish binary type and byte array. They are 2 different types in Spark and we should display them differently in JSON.",
+        "createdAt" : "2019-10-07T09:06:37Z",
+        "updatedAt" : "2019-10-14T15:30:55Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9a6b91db-f10e-45f5-a5ae-12f3cb1b1da9",
+        "parentId" : "8fea329a-b2fe-40b8-96a9-68221f32bb8b",
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "In the current `JacksonGenerator` a `BinaryType` is emitted as a base64 encoded string. Arrays of bytes are treated differently and are emitted as a JSON array.",
+        "createdAt" : "2019-10-07T09:17:50Z",
+        "updatedAt" : "2019-10-14T15:30:55Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "43c2d249614359e80f61c275b16e0a498abcb842",
+    "line" : 81,
+    "diffHunk" : "@@ -1,1 +564,568 @@      case (s: String, _) => JString(s)\n      case (b: Array[Byte], BinaryType) =>\n        JString(Base64.getEncoder.encodeToString(b))\n      case (d: LocalDate, _) =>\n        JString(dateFormatter.format(DateTimeUtils.localDateToDays(d)))"
+  },
+  {
+    "id" : "9e3ee985-353b-4778-ab03-197db301a20f",
+    "prId" : 26013,
+    "prUrl" : "https://github.com/apache/spark/pull/26013#pullrequestreview-300320434",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "83dceb3b-5fea-4a11-9370-2e994adfd55b",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "is it really worth to have a special format for string-type-key map?",
+        "createdAt" : "2019-10-07T09:10:59Z",
+        "updatedAt" : "2019-10-14T15:30:55Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "51b1a34d-ea1f-43b1-8aa0-2f20451a18b3",
+        "parentId" : "83dceb3b-5fea-4a11-9370-2e994adfd55b",
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "The reason would that is emits more readable JSON. This is similar to the way StreamingQueryProgress is rendering maps. I can revert if you feel strongly about this.",
+        "createdAt" : "2019-10-07T09:23:59Z",
+        "updatedAt" : "2019-10-14T15:30:55Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ebc7130a-0b72-4e6c-9cc2-be083d9c8f08",
+        "parentId" : "83dceb3b-5fea-4a11-9370-2e994adfd55b",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Do we need to convert the JSON string back to a Row? If we do then I think it's better to keep the ser/de simply. If not I'm fine with the code here.",
+        "createdAt" : "2019-10-07T11:05:41Z",
+        "updatedAt" : "2019-10-14T15:30:55Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1ba46b41-9bd1-46dd-970c-b93047049cc6",
+        "parentId" : "83dceb3b-5fea-4a11-9370-2e994adfd55b",
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "In its current form it is not really meant to be converted back.",
+        "createdAt" : "2019-10-07T18:58:38Z",
+        "updatedAt" : "2019-10-14T15:30:55Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f6097af0-3418-419c-9a52-a6137d96afbf",
+        "parentId" : "83dceb3b-5fea-4a11-9370-2e994adfd55b",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Can other primitive types like Int be good for this format too?",
+        "createdAt" : "2019-10-10T20:06:50Z",
+        "updatedAt" : "2019-10-14T15:30:55Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "43c2d249614359e80f61c275b16e0a498abcb842",
+    "line" : 94,
+    "diffHunk" : "@@ -1,1 +577,581 @@      case (s: Seq[_], ArrayType(elementType, _)) =>\n        iteratorToJsonArray(s.iterator, elementType)\n      case (m: Map[String @unchecked, _], MapType(StringType, valueType, _)) =>\n        new JObject(m.toList.sortBy(_._1).map {\n          case (k, v) => k -> toJson(v, valueType)"
+  }
+]

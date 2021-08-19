@@ -119,5 +119,148 @@
     "commit" : "f9241beb4c0d369276d7da6883825c5fb6540afa",
     "line" : 2,
     "diffHunk" : "@@ -1,1 +197,201 @@\n      // register metrics on the block handler into the Node Manager's metrics system.\n      blockHandler.getAllMetrics().getMetrics().put(\"numRegisteredConnections\",\n          shuffleServer.getRegisteredConnections());\n      blockHandler.getAllMetrics().getMetrics().putAll(shuffleServer.getAllMetrics().getMetrics());"
+  },
+  {
+    "id" : "53831aa5-9ef3-445a-a579-56a6152e92b1",
+    "prId" : 26000,
+    "prUrl" : "https://github.com/apache/spark/pull/26000#pullrequestreview-297773086",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c1c8cc18-a00b-4d4b-aa89-17ccb917dfea",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Is this still hardcoded? Should we use configured SHUFFLE_SERVICE_NAME?",
+        "createdAt" : "2019-10-02T19:53:31Z",
+        "updatedAt" : "2019-10-11T14:26:44Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7f5c71d2-3855-47b2-9053-391c9dcf2530",
+        "parentId" : "c1c8cc18-a00b-4d4b-aa89-17ccb917dfea",
+        "authorId" : "8a6edd00-b7b1-4996-9273-c919a5c44db3",
+        "body" : "It _is_ still hardcoded. I haven't found a way to access Spark configuration from that constructor and `org.apache.hadoop.yarn.server.api.AuxiliaryService` requires the name. Do you have a suggestion of how that could be done?",
+        "createdAt" : "2019-10-02T20:12:30Z",
+        "updatedAt" : "2019-10-11T14:26:44Z",
+        "lastEditedBy" : "8a6edd00-b7b1-4996-9273-c919a5c44db3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6fbeedea-2180-4ad6-873a-0e95c0bc3d86",
+        "parentId" : "c1c8cc18-a00b-4d4b-aa89-17ccb917dfea",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "As I commented below https://github.com/apache/spark/pull/26000#discussion_r330742783, if this is just for yarn, put it in YarnShuffleService, like  \"spark.yarn.shuffle.stopOnFailure\"?\r\n",
+        "createdAt" : "2019-10-02T20:17:41Z",
+        "updatedAt" : "2019-10-11T14:26:44Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f403226f-3be1-4dd8-8efe-a75430edfec1",
+        "parentId" : "c1c8cc18-a00b-4d4b-aa89-17ccb917dfea",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "It is hardcoded here. Once the shuffle service name is configured, won't they mismatch? Will it cause problem?",
+        "createdAt" : "2019-10-04T15:34:47Z",
+        "updatedAt" : "2019-10-11T14:26:44Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "85a0a501-e821-4ef3-b25c-8db52b920ec9",
+        "parentId" : "c1c8cc18-a00b-4d4b-aa89-17ccb917dfea",
+        "authorId" : "8a6edd00-b7b1-4996-9273-c919a5c44db3",
+        "body" : "It *is* hardcoded *here*. HDP hardcodes another value though (`spark2_shuffle`). While vanilla Spark would keep working as is and would use the name `spark_shuffle`, the new configuration option would allow users to point Spark to non-vanilla shuffle service.\r\nThe changes to that class are done only to test that changing the name of the service and in the configuration play nicely together.",
+        "createdAt" : "2019-10-04T17:58:07Z",
+        "updatedAt" : "2019-10-11T14:26:44Z",
+        "lastEditedBy" : "8a6edd00-b7b1-4996-9273-c919a5c44db3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cdec9de3-b233-4cd9-ae26-c9a6b1c3b64c",
+        "parentId" : "c1c8cc18-a00b-4d4b-aa89-17ccb917dfea",
+        "authorId" : "8a6edd00-b7b1-4996-9273-c919a5c44db3",
+        "body" : "It seems impossible to register the service with the name passed in the configuration because the configuration is passed *after* the class is instantiated.",
+        "createdAt" : "2019-10-04T17:59:12Z",
+        "updatedAt" : "2019-10-11T14:26:44Z",
+        "lastEditedBy" : "8a6edd00-b7b1-4996-9273-c919a5c44db3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7bca3130-91a5-41b6-bc09-9bf86acb1b6b",
+        "parentId" : "c1c8cc18-a00b-4d4b-aa89-17ccb917dfea",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "I see. So this config can only be used to let Spark choose which service to connect. It cannot change the name of Shuffle Service.",
+        "createdAt" : "2019-10-04T20:40:23Z",
+        "updatedAt" : "2019-10-11T14:26:44Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6d228b57-9f08-4e4a-9286-06abe52f8a50",
+        "parentId" : "c1c8cc18-a00b-4d4b-aa89-17ccb917dfea",
+        "authorId" : "8a6edd00-b7b1-4996-9273-c919a5c44db3",
+        "body" : "Yes. I guess I could implement a workaround, which would get the config setting from the default `Configuration`, but that, at least theoretically, wouldn't guarantee that the exact configuration would be passed during service initialization.",
+        "createdAt" : "2019-10-05T03:29:27Z",
+        "updatedAt" : "2019-10-11T14:26:44Z",
+        "lastEditedBy" : "8a6edd00-b7b1-4996-9273-c919a5c44db3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "60795d4edd89aeddd4a864246fae845789be6345",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +137,141 @@\n  public YarnShuffleService() {\n    this(\"spark_shuffle\");\n  }\n"
+  },
+  {
+    "id" : "49dc8e6d-edaf-41d6-803a-a37f98da6f75",
+    "prId" : 26000,
+    "prUrl" : "https://github.com/apache/spark/pull/26000#pullrequestreview-328355918",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "03e8c1ce-571a-48e9-9b69-57d87084fd99",
+        "parentId" : null,
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "So the name by itself isn't going to be enough.  If you really want it configurable we are going to have to have the port configurable. For instance the config name for the port spark.shuffle.service.port needs to be able to be something like spark.shuffle.service.{serviceName}.port.  Otherwise all the spark shuffle servers will try to get the same port and fail.  The only other option will be to use 0 for ephemeral but ",
+        "createdAt" : "2019-10-10T19:15:57Z",
+        "updatedAt" : "2019-10-11T14:26:44Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6f2ae8e0-34c3-4232-a676-aefda9157f4f",
+        "parentId" : "03e8c1ce-571a-48e9-9b69-57d87084fd99",
+        "authorId" : "8a6edd00-b7b1-4996-9273-c919a5c44db3",
+        "body" : "The name specified here is actually useful only in tests. YARN's service instantiation logic wouldn't even pass the name of the service used in the config to instantiated service. I guess that's the main reason the names and ports are hardcoded or bound to non-namespaced configuration keys.\r\nThe way HDP overcomes that is by providing different classpaths with different implementations for different versions of the service (`spark_shuffle` for Spark 1.6.x and `spark2_shuffle` for Spark 2+). The only way I see it's possible to pass different parameters to the same implementation of the service is by providing different configs on the classpath.\r\n\r\nI will add a comment here stating that the name is actually only used for the tests, but otherwise would always be hardcoded to `spark_shuffle`.",
+        "createdAt" : "2019-10-11T14:07:10Z",
+        "updatedAt" : "2019-10-11T14:26:44Z",
+        "lastEditedBy" : "8a6edd00-b7b1-4996-9273-c919a5c44db3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "db672faf-56e9-4d45-af93-da1fbc8842bc",
+        "parentId" : "03e8c1ce-571a-48e9-9b69-57d87084fd99",
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "I think there are a few things getting muddled together here -- one is how you'd support running two shuffle services, and the other is how a client could choose which shuffle service it talks to.\r\n\r\nThe client can already set the port for the shuffle server with `spark.shuffle.service.port`, it just can't set the name used in the `ExecutorRunnable`.\r\n\r\nThe other thing to add about how the names of the shuffle servers matter in yarn is that the name goes into `yarn-site.xml` as described in the \"Configuring the External Shuffle Service\" in [`running-on-yarn.md`](https://github.com/apache/spark/blame/c1a5f94973213b1cad15388f3ef8a488424c34a7/docs/running-on-yarn.md#L660).",
+        "createdAt" : "2019-12-06T17:42:41Z",
+        "updatedAt" : "2019-12-06T17:53:10Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "60795d4edd89aeddd4a864246fae845789be6345",
+    "line" : 15,
+    "diffHunk" : "@@ -1,1 +146,150 @@   * When instantiated by YARN, constructor without arguments would be called.\n   */\n  protected YarnShuffleService(String serviceName) {\n    super(serviceName);\n    logger.info(\"Initializing YARN shuffle service \\\"{}\\\" for Spark\", serviceName);"
   }
 ]

@@ -185,5 +185,71 @@
     "commit" : "988a29dff1cfce61cc846a51c6105a484e164bdd",
     "line" : 7,
     "diffHunk" : "@@ -1,1 +815,819 @@  test(\"SPARK-31859 Thriftserver works with spark.sql.datetime.java8API.enabled=true\") {\n    withJdbcStatement() { statement =>\n      withJdbcStatement() { st =>\n        st.execute(\"set spark.sql.datetime.java8API.enabled=true\")\n        val rs = st.executeQuery(\"select date '2020-05-28', timestamp '2020-05-28 00:00:00'\")"
+  },
+  {
+    "id" : "00bce3e2-558f-4fc1-8a35-75ffc5c76654",
+    "prId" : 26014,
+    "prUrl" : "https://github.com/apache/spark/pull/26014#pullrequestreview-299488177",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e39610fc-f931-4807-b980-684566b47dd0",
+        "parentId" : null,
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "Could we change this  assert to?\r\n```scala\r\nrows.iterator.asScala.zip((start until end).iterator).foreach { case (row, v2) =>\r\n  assert(row(0).asInstanceOf[Long] === v2)\r\n}\r\n```",
+        "createdAt" : "2019-10-09T15:11:27Z",
+        "updatedAt" : "2019-10-10T15:12:03Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "62e1f98aa9ad92d958e85e7b499da6ab0ffd4119",
+    "line" : 28,
+    "diffHunk" : "@@ -1,1 +693,697 @@      rows.iterator.asScala.zip((start until end).iterator).foreach { case (row, v) =>\n        assert(row(0).asInstanceOf[Long] === v)\n      }\n    }\n"
+  },
+  {
+    "id" : "1c1ac9e0-8607-4c60-a744-07040c03baba",
+    "prId" : 26014,
+    "prUrl" : "https://github.com/apache/spark/pull/26014#pullrequestreview-300062624",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9b027426-f92c-477a-bf91-1090722899aa",
+        "parentId" : null,
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "The `startOffset` is `5` at this time. If we do FETCH_PRIOR one row, it is 4. But PostgreSQL returns `5`. Is this what we expect?\r\n\r\n```sql\r\npostgres=# begin;\r\nBEGIN\r\npostgres=# declare rf_cur scroll cursor for select * from generate_series(0, 9);\r\nDECLARE CURSOR\r\npostgres=# FETCH 5 from rf_cur;\r\n generate_series\r\n-----------------\r\n               0\r\n               1\r\n               2\r\n               3\r\n               4\r\n(5 rows)\r\n\r\npostgres=# FETCH 2 from rf_cur;\r\n generate_series\r\n-----------------\r\n               5\r\n               6\r\n(2 rows)\r\n\r\npostgres=# FETCH PRIOR from rf_cur;\r\n generate_series\r\n-----------------\r\n               5\r\n(1 row)\r\n\r\npostgres=# commit;\r\nCOMMIT\r\n```\r\n\r\nhttps://www.postgresql.org/docs/11/sql-fetch.html",
+        "createdAt" : "2019-10-10T02:48:48Z",
+        "updatedAt" : "2019-10-10T15:12:03Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "85b5bbdc-d2f3-44be-8b82-3a677896a426",
+        "parentId" : "9b027426-f92c-477a-bf91-1090722899aa",
+        "authorId" : "e5beb795-ac0e-4bd6-ad66-708215b8ae58",
+        "body" : "@wangyum this is expected.\r\n`FETCH_PRIOR` of the Thriftserver is not the same as FETCH PRIOR in the cursor of the client.\r\nFetch in Thriftserver operates in batches of rows, and the cursor in the client caches these batches and returns results row by row. Let's say it's batching by maxRows=100, and we returned row 99. The client has rows [0, 100) from the first batch and is at row 99. The next FETCH NEXT on the cursor will have to call FETCH_NEXT to the Thriftserver to get a batch of rows [100, 200) and return row 100 to the client. Another FETCH NEXT will return row 101 from the batch without having to call FETCH_NEXT on the Thriftserver. Another FETCH NEXT on the cursor will return row 102. Then FETCH PRIOR will return row 101 again. Then FETCH PRIOR will return row 100. Only then, another FETCH PRIOR should return row 99, but the cursor doesn't have its current batch. Then it has to call FETCH_PRIOR on Thriftserver to get rows [0, 99) again.",
+        "createdAt" : "2019-10-10T09:16:18Z",
+        "updatedAt" : "2019-10-10T15:12:03Z",
+        "lastEditedBy" : "e5beb795-ac0e-4bd6-ad66-708215b8ae58",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cb004f2b-35eb-4814-ba99-0f2d1c30d615",
+        "parentId" : "9b027426-f92c-477a-bf91-1090722899aa",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "Thank you @juliuszsompolski",
+        "createdAt" : "2019-10-10T13:24:07Z",
+        "updatedAt" : "2019-10-10T15:12:03Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "62e1f98aa9ad92d958e85e7b499da6ab0ffd4119",
+    "line" : 52,
+    "diffHunk" : "@@ -1,1 +717,721 @@      checkResult(rows, 5, 7) // fetched [5, 7)\n\n      // FETCH_PRIOR 3 rows\n      rows = client.fetchResults(\n        operationHandle, FetchOrientation.FETCH_PRIOR, 3, FetchType.QUERY_OUTPUT)"
   }
 ]

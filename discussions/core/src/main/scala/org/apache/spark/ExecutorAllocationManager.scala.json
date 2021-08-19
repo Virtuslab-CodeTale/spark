@@ -933,5 +933,104 @@
     "commit" : "3ea1175a4d7ccf71095a48945fa8946558b83c21",
     "line" : 76,
     "diffHunk" : "@@ -1,1 +630,634 @@              // mark the scheduler as backlogged again if it's not already marked as such\n              // (SPARK-8366)\n              allocationManager.onSchedulerBacklogged()\n            }\n            if (!taskEnd.taskInfo.speculative) {"
+  },
+  {
+    "id" : "1fe4dcd8-d02c-4dd0-a49d-69e3a724a62f",
+    "prId" : 26058,
+    "prUrl" : "https://github.com/apache/spark/pull/26058#pullrequestreview-301026326",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ff068ffe-887d-4ed8-a571-7c08fae5813e",
+        "parentId" : null,
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "System.nanoTime() is not monotonic across CPU cores. Are you sure that this value of `clock.nanoTime()` is not compared to `System.nanoTime()` from another thread? For instance, from `onSchedulerBacklogged()`.",
+        "createdAt" : "2019-10-08T18:57:50Z",
+        "updatedAt" : "2019-10-14T21:01:39Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "908e4853-2a1f-498c-9a1f-e2cda97c5843",
+        "parentId" : "ff068ffe-887d-4ed8-a571-7c08fae5813e",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Are you sure about that?\r\n\r\nThis is what the javadocs say:\r\n\r\n    The same origin is used by all invocations of this method in an instance of a Java virtual\r\n    machine; other virtual machine instances are likely to use a different origin. \r\n\r\n(Comment about \"other virtual machines\" aside.)\r\n\r\nThat seems to be corroborated by other sources, too (e.g. https://stackoverflow.com/questions/510462/is-system-nanotime-completely-useless). Seems in a long gone past there might have been issues, but not today.",
+        "createdAt" : "2019-10-08T19:14:32Z",
+        "updatedAt" : "2019-10-14T21:01:39Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "362c79d9-8667-415c-98c0-5fd5906eda95",
+        "parentId" : "ff068ffe-887d-4ed8-a571-7c08fae5813e",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Also, just wanted to point out that it's ok if `nanoTime` is not completely monotonic, as long as it's better than `getTimeMillis()`. After all, this code was working with a non-monotonic clock before.\r\n\r\nThe only problem is if different threads can have wildly different views of what `nanoTime` returns, so that comparing the values makes no sense. I don't believe that to be the case.",
+        "createdAt" : "2019-10-08T20:01:57Z",
+        "updatedAt" : "2019-10-14T21:01:39Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f1d60a33-e6ea-402c-9917-04e1f2c283f7",
+        "parentId" : "ff068ffe-887d-4ed8-a571-7c08fae5813e",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "`System.nanoTime()` can use `clock_gettime(CLOCK_MONOTONIC, ...)` on Linux: http://hg.openjdk.java.net/jdk8/jdk8/hotspot/file/tip/src/os/linux/vm/os_linux.cpp#l1453\r\n`CLOCK_MONOTONIC` is based on the Time Stamp Counter (https://en.wikipedia.org/wiki/Time_Stamp_Counter). Its synchronization across CPU cores depends on CPU architecture, for example: _\"AMD processors up to the K8 core always incremented the time-stamp counter every clock cycle.[6] Thus, power management features were able to change the number of increments per second, and the values could get out of sync between different cores or processors in the same system.\"_",
+        "createdAt" : "2019-10-08T20:04:23Z",
+        "updatedAt" : "2019-10-14T21:01:39Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "24daa430-9041-4ce1-81b9-3b9033f159c4",
+        "parentId" : "ff068ffe-887d-4ed8-a571-7c08fae5813e",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "That is interesting, but according to this:\r\n\r\nhttp://btorpey.github.io/blog/2014/02/18/clock-sources-in-linux/\r\n\r\n`CLOCK_MONOTONIC` uses RDTSC (or RDTSCP when available), which solves that problem. The preferred one (RDTSCP) seems to be available in all modern CPUs. So, `CLOCK_MONOTONIC` actually fulfills the requirements of the `nanoTime()` API (that the source of time is consistent).\r\n\r\n(The AMD K8 mentioned in your comment, which came out more than 10 years ago, is where RDTSCP was added.)",
+        "createdAt" : "2019-10-08T20:21:51Z",
+        "updatedAt" : "2019-10-14T21:01:39Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "863f8d20-2060-4c7d-a363-28f10d734e52",
+        "parentId" : "ff068ffe-887d-4ed8-a571-7c08fae5813e",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Probably worth to link directly to the following also (which is linked from the article above)\r\n\r\nhttps://stackoverflow.com/questions/10921210/cpu-tsc-fetch-operation-especially-in-multicore-multi-processor-environment",
+        "createdAt" : "2019-10-08T20:32:18Z",
+        "updatedAt" : "2019-10-14T21:01:39Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "64f2dd98-a7eb-41c7-a5ff-0ccae09efd59",
+        "parentId" : "ff068ffe-887d-4ed8-a571-7c08fae5813e",
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "this is a good discussion -- its really easy to get confused about the details here, especially as some googling can take you to old info.  Worth including a bit of this on the doc for `SystemClock.nanoTime()`?  Maybe at least just noting that this is dependable across cores as long as its Java7+.",
+        "createdAt" : "2019-10-11T18:13:52Z",
+        "updatedAt" : "2019-10-14T21:01:39Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a404f429-1232-4c72-ab3d-06e9db7e3817",
+        "parentId" : "ff068ffe-887d-4ed8-a571-7c08fae5813e",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "+1 for @squito 's comment. Also, could you summarize the above into the PR description a little bit please, @vanzin ?",
+        "createdAt" : "2019-10-12T23:39:14Z",
+        "updatedAt" : "2019-10-14T21:01:39Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "da6f156777a8e1572651b925c2884bb3688fd66d",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +289,293 @@\n    // Update executor target number only after initializing flag is unset\n    updateAndSyncNumExecutorsTarget(clock.nanoTime())\n    if (executorIdsToBeRemoved.nonEmpty) {\n      removeExecutors(executorIdsToBeRemoved)"
   }
 ]

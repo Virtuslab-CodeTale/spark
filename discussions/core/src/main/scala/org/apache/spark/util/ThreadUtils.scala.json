@@ -31,5 +31,126 @@
     "commit" : "2ed76c32f9cc387295d87fce9e7c364d9d724ee7",
     "line" : 19,
     "diffHunk" : "@@ -1,1 +313,317 @@        case _ => future.get(atMost._1, atMost._2)\n      }\n    } catch {\n      case e: SparkFatalException =>\n        throw e.throwable"
+  },
+  {
+    "id" : "292b3d56-8dcb-401c-90a4-175ba3738c33",
+    "prId" : 26077,
+    "prUrl" : "https://github.com/apache/spark/pull/26077#pullrequestreview-299750038",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "422c4991-37b4-4b4f-a55d-ae25580ea9cf",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Oh, I should be clear: `TraversableOnce` also doesn't exist in 2.13.\r\nI don't see the use case for returning the same collection, not in this limited utility method?",
+        "createdAt" : "2019-10-09T22:05:19Z",
+        "updatedAt" : "2019-10-09T22:05:19Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "81299be7-5878-4e7f-8283-6e0eecc61783",
+        "parentId" : "422c4991-37b4-4b4f-a55d-ae25580ea9cf",
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "Hm, `CanBuildFrom` doesn't exist in 2.13 either. Then we have to write two versions for 2.12 and 2.13. Hence, I'm okey to just use `Seq` instead. Adding `asInstanceOf` if necessary is better than two versions of codes.",
+        "createdAt" : "2019-10-09T22:43:03Z",
+        "updatedAt" : "2019-10-09T22:43:04Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "75dc47fb-0724-40a3-88ce-08e1fd3d3498",
+        "parentId" : "422c4991-37b4-4b4f-a55d-ae25580ea9cf",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Thank you for the investigation and the conclusion, @zsxwing and @srowen .",
+        "createdAt" : "2019-10-09T23:23:13Z",
+        "updatedAt" : "2019-10-09T23:23:13Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e0f808e2cac874fbf8a586d1904381e435b3b4b2",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +275,279 @@   *         applying the lambda function `f`.\n   */\n  def parmap[I, O, Col[X] <: TraversableOnce[X]]\n      (in: Col[I], prefix: String, maxThreads: Int)\n      (f: I => O)"
+  },
+  {
+    "id" : "d3d6e59d-591d-4632-a93b-05041c058312",
+    "prId" : 26072,
+    "prUrl" : "https://github.com/apache/spark/pull/26072#pullrequestreview-299718554",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e9f60594-4f23-41c0-9a7e-80eff1c373e2",
+        "parentId" : null,
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "This signature is much less flexible. It always returns `Seq`. It forces us to use `asInstanceOf` like this:\r\n```\r\nval l = List(1, 2, 3)\r\nl2 = parmap(l, ....)(...).asInstanceOf[List[...]]\r\n```",
+        "createdAt" : "2019-10-09T18:52:11Z",
+        "updatedAt" : "2019-10-09T18:52:12Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "51cbe0dd-76b0-486f-9307-a3c278975157",
+        "parentId" : "e9f60594-4f23-41c0-9a7e-80eff1c373e2",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "It seems that Apache Spark doesn't have those use cases yet. Was it for the future-proof?",
+        "createdAt" : "2019-10-09T20:03:19Z",
+        "updatedAt" : "2019-10-09T20:03:36Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c3dc0566-4d88-4ffb-8db0-a3fc0e6524d4",
+        "parentId" : "e9f60594-4f23-41c0-9a7e-80eff1c373e2",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Sure, but, do I necessarily have to get a List from a List? Seq -> Seq seems fine for all current usages.\r\nThat said, if there's any other way to write this that works in 2.12 and 2.13, definitely, open to that.",
+        "createdAt" : "2019-10-09T20:55:20Z",
+        "updatedAt" : "2019-10-09T20:55:21Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5e1e3bcb-a3fa-463c-8f43-5dfe8a9499b1",
+        "parentId" : "e9f60594-4f23-41c0-9a7e-80eff1c373e2",
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "@srowen I can give it a try. Does our build support 2.13 now?",
+        "createdAt" : "2019-10-09T21:02:39Z",
+        "updatedAt" : "2019-10-09T21:02:39Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "31a89a00-3d84-4bed-a026-d3febf60f386",
+        "parentId" : "e9f60594-4f23-41c0-9a7e-80eff1c373e2",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Heh, no, that's the hard part here. If you `./dev/change-scala-version.sh 2.13` after modifying it to accept that value, and tweak a few more things, and use `-Pscala-2.13` you can at least get to the point where there are still tons of compile errors including this one. There are a few things we can't fix now (i.e. deps that don't support 2.13) and are hard (i.e. things that will require multiple source trees). I'm fixing everything short of that that I can.\r\n\r\nIf you can write anything else in 2.12 that doesn't use TraversableLike, I can try it in my hacked up local build.",
+        "createdAt" : "2019-10-09T21:07:57Z",
+        "updatedAt" : "2019-10-09T21:07:57Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fafec119-93bb-401d-929b-baa5c803ef08",
+        "parentId" : "e9f60594-4f23-41c0-9a7e-80eff1c373e2",
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "This one works for 2.12: https://github.com/apache/spark/pull/26077 Could you try it with Scala 2.13?",
+        "createdAt" : "2019-10-09T21:49:26Z",
+        "updatedAt" : "2019-10-09T21:49:27Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8b22f7aeca2f0c9ebdd4da8d5aee5df86ec23ef6",
+    "line" : 19,
+    "diffHunk" : "@@ -1,1 +275,279 @@   *         applying the lambda function `f`.\n   */\n  def parmap[I, O](in: Seq[I], prefix: String, maxThreads: Int)(f: I => O): Seq[O] = {\n    val pool = newForkJoinPool(prefix, maxThreads)\n    try {"
   }
 ]
