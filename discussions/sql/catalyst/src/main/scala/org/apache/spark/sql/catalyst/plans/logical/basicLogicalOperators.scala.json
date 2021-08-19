@@ -768,5 +768,71 @@
     "commit" : "004c37ffd98df8b9f9b14c6f77d3d5abf7602ea5",
     "line" : 180,
     "diffHunk" : "@@ -1,1 +954,958 @@case class GlobalLimit(limitExpr: Expression, child: LogicalPlan) extends OrderPreservingUnaryNode {\n  @transient\n  override lazy val output: Seq[Attribute] = child.output\n  override def maxRows: Option[Long] = {\n    limitExpr match {"
+  },
+  {
+    "id" : "53ad8e5e-4c58-4a58-8ff1-58bffde27d0e",
+    "prId" : 24798,
+    "prUrl" : "https://github.com/apache/spark/pull/24798#pullrequestreview-263186180",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4b098968-20a4-410a-9f29-e44cce9f2ab1",
+        "parentId" : null,
+        "authorId" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "body" : "What is the behavior if `query` depends on the table being replaced?",
+        "createdAt" : "2019-07-11T21:19:43Z",
+        "updatedAt" : "2019-07-19T19:00:59Z",
+        "lastEditedBy" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e966cb65-0436-4d90-a88c-a21ed5da276b",
+        "parentId" : "4b098968-20a4-410a-9f29-e44cce9f2ab1",
+        "authorId" : "806aa501-9ea7-4cec-b017-a84d9a1602d8",
+        "body" : "Great question. I'm fairly certain that:\r\n- If non-atomic catalog is being used, the table will have been dropped, so loading the table for the query will result in an error\r\n- If the atomic catalog is being used, the drop part of the replace isn't committed yet, so the catalog should be able to load the table's contents before the write is committed.\r\n\r\n@rdblue - curious to hear your thoughts on the first situation. It makes a stronger case for trying to ban replacing tables without an atomic catalog.",
+        "createdAt" : "2019-07-11T21:40:03Z",
+        "updatedAt" : "2019-07-19T19:00:59Z",
+        "lastEditedBy" : "806aa501-9ea7-4cec-b017-a84d9a1602d8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6b920cf8-efe5-49f8-b8ca-7ac4772439d7",
+        "parentId" : "4b098968-20a4-410a-9f29-e44cce9f2ab1",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "I agree. If the drop happens first and is not atomic, then the create will fail.\r\n\r\nWe should be able to add a rule to check for this and fail the query in analysis if the table doesn't support atomic updates. @mccheah, can you open an issue for adding a rule like that?",
+        "createdAt" : "2019-07-11T22:19:46Z",
+        "updatedAt" : "2019-07-19T19:00:59Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7cf506b1-7abe-4ad6-ae41-4d59212b71d1",
+        "parentId" : "4b098968-20a4-410a-9f29-e44cce9f2ab1",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "+1, I think we should fail the query if atomic RTAS is not supported. It's a valid use case to access the table being replaced in RTAS,  Spark shouldn't throw table not found exception in this case, which is quite confusing.",
+        "createdAt" : "2019-07-17T12:48:12Z",
+        "updatedAt" : "2019-07-19T19:00:59Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cb827024-bbdb-4080-8456-c82c0a7beae0",
+        "parentId" : "4b098968-20a4-410a-9f29-e44cce9f2ab1",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "@cloud-fan, we discussed this in the DSv2 sync and decided that, in general, RTAS should be supported even if the source is not atomic. Just to clarify, this would be a rule to fail RTAS if it is not atomic when the query depends on the table being replaced. We don't want to drop a table and then find that we can't replace it because it was dropped.",
+        "createdAt" : "2019-07-17T16:51:44Z",
+        "updatedAt" : "2019-07-19T19:00:59Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "05a827df7094b07a492add875c6e649df52db41f",
+    "line" : 26,
+    "diffHunk" : "@@ -1,1 +464,468 @@ * If the table does not exist, and orCreate is false, then an exception will be thrown.\n */\ncase class ReplaceTableAsSelect(\n    catalog: TableCatalog,\n    tableName: Identifier,"
   }
 ]

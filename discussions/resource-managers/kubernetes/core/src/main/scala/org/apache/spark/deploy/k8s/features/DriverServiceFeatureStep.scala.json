@@ -1,0 +1,112 @@
+[
+  {
+    "id" : "0e6e7a73-c241-4c88-9831-d905d788e518",
+    "prId" : 24839,
+    "prUrl" : "https://github.com/apache/spark/pull/24839#pullrequestreview-248099952",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7b1a44c8-3dac-4fe4-a7c3-7d3f4fba5a1c",
+        "parentId" : null,
+        "authorId" : "63281e91-e961-4e6e-b0bb-6855587910d1",
+        "body" : "it should be falling back to some default name. It is not necessarily the shorter if the preferred is invalid.",
+        "createdAt" : "2019-06-11T10:24:23Z",
+        "updatedAt" : "2019-06-11T10:24:23Z",
+        "lastEditedBy" : "63281e91-e961-4e6e-b0bb-6855587910d1",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "13454b54-8535-4f20-920f-2dba77c958d8",
+        "parentId" : "7b1a44c8-3dac-4fe4-a7c3-7d3f4fba5a1c",
+        "authorId" : "97a1b66a-0ab6-4713-9a34-06eb4d6c53cc",
+        "body" : "This is only a method for dealing  with the invalid service name. If the name is invalid and we don't deal with it,  the job only has a driver pod. ",
+        "createdAt" : "2019-06-11T10:51:47Z",
+        "updatedAt" : "2019-06-11T10:51:47Z",
+        "lastEditedBy" : "97a1b66a-0ab6-4713-9a34-06eb4d6c53cc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bdb175f4-00e7-4ceb-952e-353f0f0536bf",
+        "parentId" : "7b1a44c8-3dac-4fe4-a7c3-7d3f4fba5a1c",
+        "authorId" : "63281e91-e961-4e6e-b0bb-6855587910d1",
+        "body" : "I am referring to the warning message could be made more specific and also the name of the variable `shorterServiceName` . Since it may be invalid and not shorter in some cases I would replace shorterServiceName with defaultServiceName. Anyway this is nit.",
+        "createdAt" : "2019-06-11T10:55:15Z",
+        "updatedAt" : "2019-06-11T10:56:40Z",
+        "lastEditedBy" : "63281e91-e961-4e6e-b0bb-6855587910d1",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "26059225-335b-4557-ac4c-e0206416450b",
+        "parentId" : "7b1a44c8-3dac-4fe4-a7c3-7d3f4fba5a1c",
+        "authorId" : "97a1b66a-0ab6-4713-9a34-06eb4d6c53cc",
+        "body" : "Oh，I got it!\r\n\r\n",
+        "createdAt" : "2019-06-11T10:57:53Z",
+        "updatedAt" : "2019-06-11T11:12:54Z",
+        "lastEditedBy" : "97a1b66a-0ab6-4713-9a34-06eb4d6c53cc",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7ed72cba7824cc682c3b74ca54e276ef91012518",
+    "line" : 15,
+    "diffHunk" : "@@ -1,1 +48,52 @@    logWarning(s\"Driver's hostname would preferably be $preferredServiceName, but this is \" +\n      s\"too long (must be <= $MAX_SERVICE_NAME_LENGTH characters) or is not a valid service name.\" +\n      s\"Falling back to use $shorterServiceName as the driver service's name.\")\n    shorterServiceName\n  }"
+  },
+  {
+    "id" : "1d2ed691-9257-4573-914f-e93fcfa176de",
+    "prId" : 24839,
+    "prUrl" : "https://github.com/apache/spark/pull/24839#pullrequestreview-288977343",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1b32d77f-0b44-4a5e-8654-151bcd0f1bb0",
+        "parentId" : null,
+        "authorId" : "63281e91-e961-4e6e-b0bb-6855587910d1",
+        "body" : "Is the svc name valid in all cases according to `com.google.common.net.InternetDomainName.isValid` as mentioned in the other PR?  It seems that the svc name which is up to 63 chars and has no dots in it matches a domain label (https://www.ietf.org/rfc/rfc3490.txt) so that method will cover the validation.",
+        "createdAt" : "2019-06-11T10:35:02Z",
+        "updatedAt" : "2019-06-11T10:48:25Z",
+        "lastEditedBy" : "63281e91-e961-4e6e-b0bb-6855587910d1",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "00fe22fd-0a2a-4dc2-ba1a-39b0a5f07c02",
+        "parentId" : "1b32d77f-0b44-4a5e-8654-151bcd0f1bb0",
+        "authorId" : "97a1b66a-0ab6-4713-9a34-06eb4d6c53cc",
+        "body" : "> Is the svc name valid in all cases according to `com.google.common.net.InternetDomainName.isValid` as mentioned in the other PR? As it is now it seems valid according to the spec: https://en.wikipedia.org/wiki/Domain_name.\r\n\r\nNow,  fabric8 API has some limitations，\r\n```java\r\n public class Service implements HasMetadata {\r\n    @NotNull\r\n    @JsonProperty(\"apiVersion\")\r\n    private String apiVersion = \"v1\";\r\n    @NotNull\r\n    @JsonProperty(\"kind\")\r\n    private String kind = \"Service\";\r\n    @JsonProperty(\"metadata\")\r\n    @Valid\r\n    @CheckObjectMeta(\r\n        regexp = \"^[a-z]([-a-z0-9]*[a-z0-9])?$\",\r\n        max = 63\r\n    )\r\n```\r\n\r\n`    @CheckObjectMeta(\r\n        regexp = \"^[a-z]([-a-z0-9]*[a-z0-9])?$\",\r\n        max = 63\r\n    )\r\n`",
+        "createdAt" : "2019-06-11T10:43:59Z",
+        "updatedAt" : "2019-06-11T10:43:59Z",
+        "lastEditedBy" : "97a1b66a-0ab6-4713-9a34-06eb4d6c53cc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "484958cb-7c28-450b-9f9c-20bb7d158b0b",
+        "parentId" : "1b32d77f-0b44-4a5e-8654-151bcd0f1bb0",
+        "authorId" : "63281e91-e961-4e6e-b0bb-6855587910d1",
+        "body" : "Yeah I saw that when digging into it. It should be ok from what I read: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/ \"Assume a Service named foo in the Kubernetes namespace bar. A Pod running in namespace bar can look up this service by simply doing a DNS query for foo. A Pod running in namespace quux can look up this service by doing a DNS query for foo.bar.\" so it matches the domain label, that is why there are these limitations. @liyinan926 can you verify this?",
+        "createdAt" : "2019-06-11T10:52:29Z",
+        "updatedAt" : "2019-06-11T10:55:59Z",
+        "lastEditedBy" : "63281e91-e961-4e6e-b0bb-6855587910d1",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "78434dae-449e-4b2c-bfbf-ba78ab83b48d",
+        "parentId" : "1b32d77f-0b44-4a5e-8654-151bcd0f1bb0",
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "I don't understand the purpose of  `Character.isLetter` here, we've already filtered this down to only allow `[a-z0-9]`",
+        "createdAt" : "2019-09-17T01:24:14Z",
+        "updatedAt" : "2019-09-17T01:30:45Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7ed72cba7824cc682c3b74ca54e276ef91012518",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +41,45 @@  private val preferredServiceName = s\"${kubernetesConf.resourceNamePrefix}$DRIVER_SVC_POSTFIX\"\n  private val resolvedServiceName = if (preferredServiceName.length <= MAX_SERVICE_NAME_LENGTH\n    && Character.isLetter(preferredServiceName.charAt(0))) {\n    preferredServiceName\n  } else {"
+  }
+]

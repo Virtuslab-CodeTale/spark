@@ -2033,5 +2033,93 @@
     "commit" : "6c590a0ea0a83bf39825e345341fc8815ed32f3f",
     "line" : 6,
     "diffHunk" : "@@ -1,1 +133,137 @@    case (DateType, TimestampType) => true\n    case (_: AtomicType, StringType) => true\n    case (_: CalendarIntervalType, StringType) => true\n\n    // Spark supports casting between long and timestamp, please see `longToTimestamp` and"
+  },
+  {
+    "id" : "9d89b8f6-9f28-4fa0-9b20-e58a6ff36aae",
+    "prId" : 24872,
+    "prUrl" : "https://github.com/apache/spark/pull/24872#pullrequestreview-250200929",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f2fcf3f2-a8fe-4d1a-911e-99fc45fed2f4",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "This will be a correct fix. Do we have a possibility of performance regression?",
+        "createdAt" : "2019-06-15T17:31:12Z",
+        "updatedAt" : "2019-06-18T00:46:07Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e0ae14b0f827e55f23b94b5ecc60d59c7a0b8bb1",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +434,438 @@    case StringType =>\n      val result = new LongWrapper()\n      buildCast[UTF8String](_, s => if (s.trim.toLong(result)) result.value else null)\n    case BooleanType =>\n      buildCast[Boolean](_, b => if (b) 1L else 0L)"
+  },
+  {
+    "id" : "078f9878-92c8-4e72-a0d5-fa907258d250",
+    "prId" : 24872,
+    "prUrl" : "https://github.com/apache/spark/pull/24872#pullrequestreview-250939904",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "444616f0-bcf8-44ee-91d2-e5c9dde27c64",
+        "parentId" : null,
+        "authorId" : "24e1dd39-ae3f-4bbb-a391-f60afb62d075",
+        "body" : "nit: `$c.trim().toString()` may be more efficient?",
+        "createdAt" : "2019-06-18T08:39:00Z",
+        "updatedAt" : "2019-06-18T08:42:27Z",
+        "lastEditedBy" : "24e1dd39-ae3f-4bbb-a391-f60afb62d075",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e0ae14b0f827e55f23b94b5ecc60d59c7a0b8bb1",
+    "line" : 68,
+    "diffHunk" : "@@ -1,1 +984,988 @@          code\"\"\"\n            try {\n              Decimal $tmp = Decimal.apply(new java.math.BigDecimal($c.toString().trim()));\n              ${changePrecision(tmp, target, evPrim, evNull, canNullSafeCast)}\n            } catch (java.lang.NumberFormatException e) {"
+  },
+  {
+    "id" : "fc265891-2cbb-4db9-845f-3fdc189fd580",
+    "prId" : 24806,
+    "prUrl" : "https://github.com/apache/spark/pull/24806#pullrequestreview-248962994",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "cd82c85b-793a-40ff-9bbd-59f44cface1d",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Why can't we upcast null to other nullable types? I think it's pretty common to write `INSERT INTO tbl VALUES (1, null)`",
+        "createdAt" : "2019-06-12T06:58:18Z",
+        "updatedAt" : "2019-06-12T07:26:18Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8dcd78d9-3bcd-47d9-8db1-5e7d5b6c734a",
+        "parentId" : "cd82c85b-793a-40ff-9bbd-59f44cface1d",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "Here we can't know the nullability of the `to` type. We should consider it is not nullable.\r\nFor the case you mentioned, it is handled in https://github.com/apache/spark/pull/24806/files#diff-86e655772e8f7cab055d2c2451b52275R134.",
+        "createdAt" : "2019-06-12T07:56:37Z",
+        "updatedAt" : "2019-06-12T07:56:37Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5f7c0ecf-7c12-469d-ad66-e8763058d841",
+        "parentId" : "cd82c85b-793a-40ff-9bbd-59f44cface1d",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "I agree with @cloud-fan that this should be allowed. Nullability is an additional check, but the types are compatible.",
+        "createdAt" : "2019-06-12T19:10:46Z",
+        "updatedAt" : "2019-06-12T19:10:47Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3e2949131a8a7579149a7dd4153650461f5b5da2",
+    "line" : 8,
+    "diffHunk" : "@@ -1,1 +132,136 @@\n    case (DateType, TimestampType) => true\n    case (NullType, _) => false\n    case (_, StringType) => true\n"
   }
 ]

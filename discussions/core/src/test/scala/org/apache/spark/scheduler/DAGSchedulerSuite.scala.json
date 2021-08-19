@@ -482,5 +482,93 @@
     "commit" : "b3ea90ff45cc5e3e4ab18a64b397bf4a05c02e01",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +2711,2715 @@  }\n\n  ignore(\"SPARK-23207: retry all the succeeding stages when the map stage is indeterminate\") {\n    val shuffleMapRdd1 = new MyRDD(sc, 2, Nil, indeterminate = true)\n"
+  },
+  {
+    "id" : "7ae40dd0-9c88-4d38-be67-76f4114bfda1",
+    "prId" : 24892,
+    "prUrl" : "https://github.com/apache/spark/pull/24892#pullrequestreview-256690073",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0ed67a8d-b89a-4f74-aeb5-05185467bc91",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "The code below is very similar to the next test, can we abstract out some common code?",
+        "createdAt" : "2019-06-27T08:00:41Z",
+        "updatedAt" : "2019-08-09T06:17:25Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ad7e9013-c8ea-4a09-ac36-ad79035ac549",
+        "parentId" : "0ed67a8d-b89a-4f74-aeb5-05185467bc91",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "Yep, thanks, done in 3ec15dc.",
+        "createdAt" : "2019-07-02T06:41:06Z",
+        "updatedAt" : "2019-08-09T06:17:25Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8873f111f5e1dcd6137396eeda06d7595ac2a72e",
+    "line" : 8,
+    "diffHunk" : "@@ -1,1 +2714,2718 @@    val shuffleMapRdd1 = new MyRDD(sc, 2, Nil, indeterminate = true)\n\n    val shuffleDep1 = new ShuffleDependency(shuffleMapRdd1, new HashPartitioner(2))\n    val shuffleId1 = shuffleDep1.shuffleId\n    val shuffleMapRdd2 = new MyRDD(sc, 2, List(shuffleDep1), tracker = mapOutputTracker)"
+  },
+  {
+    "id" : "5605619a-1b42-4733-85f0-5f8b776befb1",
+    "prId" : 24892,
+    "prUrl" : "https://github.com/apache/spark/pull/24892#pullrequestreview-257753189",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "aa175ff7-34e0-4828-b844-3c0bf29c416e",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Why stage 0 is not marked as failed?",
+        "createdAt" : "2019-07-03T07:42:06Z",
+        "updatedAt" : "2019-08-09T06:17:25Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fb8aaa1c-7adf-43bd-b774-59237d3a2314",
+        "parentId" : "aa175ff7-34e0-4828-b844-3c0bf29c416e",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "Because stage 0 succeeds, FetchFailed triggered the failed stage 1,2.\r\nIn this test, I use a combo of FetchFailed and removeOutputsOnHost to simulate executor lost and check all indeterminate stage will rerun. The scenario I want to test is, although the indeterminate stage 0 is not failed, just missing an output, but when its child stage reran, stage 0 will also whole stage reran.",
+        "createdAt" : "2019-07-03T21:58:13Z",
+        "updatedAt" : "2019-08-09T06:17:25Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8873f111f5e1dcd6137396eeda06d7595ac2a72e",
+    "line" : 139,
+    "diffHunk" : "@@ -1,1 +2860,2864 @@    mapOutputTracker.removeOutputsOnHost(\"hostB\")\n\n    assert(scheduler.failedStages.toSeq.map(_.id) == Seq(1, 2))\n    scheduler.resubmitFailedStages()\n"
+  },
+  {
+    "id" : "81ee08ad-10d0-4803-9176-ca6f18b1050d",
+    "prId" : 24892,
+    "prUrl" : "https://github.com/apache/spark/pull/24892#pullrequestreview-273686566",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5be11836-d601-4726-9ea5-728d63f88aeb",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "how about we make the `shuffleMapRdd3` deterministic? To prove that all parent stages need to rerun even if they are deterministic.",
+        "createdAt" : "2019-08-12T13:20:12Z",
+        "updatedAt" : "2019-08-12T13:20:13Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8873f111f5e1dcd6137396eeda06d7595ac2a72e",
+    "line" : 103,
+    "diffHunk" : "@@ -1,1 +2824,2828 @@\n  test(\"SPARK-25341: continuous indeterminate stage roll back\") {\n    // shuffleMapRdd1/2/3 are all indeterminate.\n    val shuffleMapRdd1 = new MyRDD(sc, 2, Nil, indeterminate = true)\n    val shuffleDep1 = new ShuffleDependency(shuffleMapRdd1, new HashPartitioner(2))"
   }
 ]

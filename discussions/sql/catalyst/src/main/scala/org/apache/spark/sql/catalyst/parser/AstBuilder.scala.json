@@ -2638,5 +2638,170 @@
     "commit" : "0c39fb2d449c91952cdeae759d4bbaaf2d35c1ee",
     "line" : 7,
     "diffHunk" : "@@ -1,1 +132,136 @@    val duplicates = ctes.groupBy(_._1).filter(_._2.size > 1).keys\n    if (duplicates.nonEmpty) {\n      throw new ParseException(\n        s\"CTE definition can't have duplicate names: ${duplicates.mkString(\"'\", \"', '\", \"'\")}.\",\n        ctx)"
+  },
+  {
+    "id" : "6453b683-7a83-44cd-90be-f8a2ac3cc079",
+    "prId" : 24832,
+    "prUrl" : "https://github.com/apache/spark/pull/24832#pullrequestreview-261498163",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8791eac8-5bdf-4451-836d-3a11e653f4ab",
+        "parentId" : null,
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "I think this needs to be updated to remove the `ParseException` thrown when `IF NOT EXISTS` is present and there are dynamic partitions. I think that is an analysis problem, not a parse problem.\r\n\r\nAlso, I don't see a reason why IF NOT EXISTS would not be supported with dynamic partitions. Wouldn't that fail if any partitions would be overwritten? It seems to make sense to me, but maybe there is a good reason why this is not allowed? @gatorsmile can you comment?",
+        "createdAt" : "2019-06-10T21:21:31Z",
+        "updatedAt" : "2019-07-25T16:05:47Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bab915d0-a154-43dd-adad-0a9b761d3873",
+        "parentId" : "8791eac8-5bdf-4451-836d-3a11e653f4ab",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "We discussed this in the DSv2 sync last night and decided to add a method to the write builder to pass this `IF NOT EXISTS` flag. This will be done in a follow-up to avoid over-complicating this commit.",
+        "createdAt" : "2019-06-27T16:10:48Z",
+        "updatedAt" : "2019-07-25T16:05:47Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c41febdd-afaf-459d-954c-aa5770279622",
+        "parentId" : "8791eac8-5bdf-4451-836d-3a11e653f4ab",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "Opened https://issues.apache.org/jira/browse/SPARK-28374",
+        "createdAt" : "2019-07-12T22:27:07Z",
+        "updatedAt" : "2019-07-25T16:05:47Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7f193ca074b7fd0dea9f7b28b4e1776819e6d512",
+    "line" : 67,
+    "diffHunk" : "@@ -1,1 +311,315 @@      ctx: InsertOverwriteTableContext): InsertTableParams = withOrigin(ctx) {\n    assert(ctx.OVERWRITE() != null)\n    val tableIdent = visitMultipartIdentifier(ctx.multipartIdentifier)\n    val partitionKeys = Option(ctx.partitionSpec).map(visitPartitionSpec).getOrElse(Map.empty)\n"
+  },
+  {
+    "id" : "17cb54c4-204d-4791-8603-21c0f79d0f02",
+    "prId" : 24832,
+    "prUrl" : "https://github.com/apache/spark/pull/24832#pullrequestreview-266725519",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f9dd97eb-1d29-40e1-88ee-37850b0b8431",
+        "parentId" : null,
+        "authorId" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "body" : "what's the point of adding this to the parser, if we're not going to support it?",
+        "createdAt" : "2019-07-25T03:37:07Z",
+        "updatedAt" : "2019-07-25T16:05:47Z",
+        "lastEditedBy" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fd520386-7a43-46d0-bc2c-3d2504ec2406",
+        "parentId" : "f9dd97eb-1d29-40e1-88ee-37850b0b8431",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "For a better error message that is testable. Before, there were no tests for this case and the error message listed expected symbols.",
+        "createdAt" : "2019-07-25T15:53:06Z",
+        "updatedAt" : "2019-07-25T16:05:47Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b67a0912-e4dd-442f-b406-0371548cf335",
+        "parentId" : "f9dd97eb-1d29-40e1-88ee-37850b0b8431",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "Also, since the PARTITION clause is optional for the above case, it shouldn't group the two together either. It is semantically incorrect because a write to a partitioned table is always a partitioned write.",
+        "createdAt" : "2019-07-25T15:54:54Z",
+        "updatedAt" : "2019-07-25T16:05:47Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7f193ca074b7fd0dea9f7b28b4e1776819e6d512",
+    "line" : 55,
+    "diffHunk" : "@@ -1,1 +298,302 @@    val partitionKeys = Option(ctx.partitionSpec).map(visitPartitionSpec).getOrElse(Map.empty)\n\n    if (ctx.EXISTS != null) {\n      operationNotAllowed(\"INSERT INTO ... IF NOT EXISTS\", ctx)\n    }"
+  },
+  {
+    "id" : "d198f593-9d7f-4534-b372-85678c43fabd",
+    "prId" : 24832,
+    "prUrl" : "https://github.com/apache/spark/pull/24832#pullrequestreview-266722781",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c8c1970d-8e5a-49a8-a367-f25e4c36bfd7",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "why do we change the error message here?",
+        "createdAt" : "2019-07-25T08:11:35Z",
+        "updatedAt" : "2019-07-25T16:05:47Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ebfd27a1-e651-46de-b348-f89c02c07c19",
+        "parentId" : "c8c1970d-8e5a-49a8-a367-f25e4c36bfd7",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "This uses `operationNotAllowed` instead of throwing a custom `ParseException`, like other methods that do not allow specific combinations. I think it's a good idea to standardize on the existing method. This also makes the error message like the others, where it states clear what is not allowed.",
+        "createdAt" : "2019-07-25T15:50:52Z",
+        "updatedAt" : "2019-07-25T16:05:47Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7f193ca074b7fd0dea9f7b28b4e1776819e6d512",
+    "line" : 74,
+    "diffHunk" : "@@ -1,1 +316,320 @@    val dynamicPartitionKeys: Map[String, Option[String]] = partitionKeys.filter(_._2.isEmpty)\n    if (ctx.EXISTS != null && dynamicPartitionKeys.nonEmpty) {\n      operationNotAllowed(\"IF NOT EXISTS with dynamic partitions: \" +\n        dynamicPartitionKeys.keys.mkString(\", \"), ctx)\n    }"
+  },
+  {
+    "id" : "1ea23540-4de5-4a2c-af29-e2bc11de3ca4",
+    "prId" : 24809,
+    "prUrl" : "https://github.com/apache/spark/pull/24809#pullrequestreview-246818812",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f6b9b58e-1345-4fea-a7cf-85f79078d632",
+        "parentId" : null,
+        "authorId" : "88f0c774-9c59-4485-885d-f6aee36efcea",
+        "body" : "Make these functions class methods since they are now reused in several other places.",
+        "createdAt" : "2019-06-06T21:13:04Z",
+        "updatedAt" : "2019-06-11T21:14:51Z",
+        "lastEditedBy" : "88f0c774-9c59-4485-885d-f6aee36efcea",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7b174e52b6f7bad2ea85f6fa844af3f1e1ffbbb1",
+    "line" : 150,
+    "diffHunk" : "@@ -1,1 +446,450 @@  }\n\n  override def visitNamedExpressionSeq(\n      ctx: NamedExpressionSeqContext): Seq[Expression] = {\n    Option(ctx).toSeq"
+  },
+  {
+    "id" : "6469e3aa-d341-4c11-bbb4-d9cf6a649f2a",
+    "prId" : 24809,
+    "prUrl" : "https://github.com/apache/spark/pull/24809#pullrequestreview-246819475",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ae5499c2-4ff0-4c1e-a3ea-6c4a8e15627f",
+        "parentId" : null,
+        "authorId" : "88f0c774-9c59-4485-885d-f6aee36efcea",
+        "body" : "The core method to generate the query plan for a query specification. These methods have multiple arguments because they need to be reused in both regular queries and hive-style queries. I can't think of an elegant way of handling this.",
+        "createdAt" : "2019-06-06T21:14:40Z",
+        "updatedAt" : "2019-06-11T21:15:54Z",
+        "lastEditedBy" : "88f0c774-9c59-4485-885d-f6aee36efcea",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7b174e52b6f7bad2ea85f6fa844af3f1e1ffbbb1",
+    "line" : 211,
+    "diffHunk" : "@@ -1,1 +474,478 @@  }\n\n  /**\n   * Add a hive-style transform (SELECT TRANSFORM/MAP/REDUCE) query specification to a logical plan.\n   */"
   }
 ]

@@ -20,5 +20,60 @@
     "commit" : "1b966fda46c5334cf7963bae0bece159c9568622",
     "line" : 27,
     "diffHunk" : "@@ -1,1 +43,47 @@    timeZoneId: String,\n    conf: Map[String, String])\n  extends BaseArrowPythonRunner[Iterator[InternalRow]](\n    funcs, evalType, argOffsets) {\n"
+  },
+  {
+    "id" : "9d59cb23-2707-4bc6-a4ef-710020731d46",
+    "prId" : 24826,
+    "prUrl" : "https://github.com/apache/spark/pull/24826#pullrequestreview-248341464",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "eae79ab2-2ae7-41bf-8130-cedbe9ea1b19",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Is this cap here not in SQL config definition because fallback of `BUFFER_SIZE`?",
+        "createdAt" : "2019-06-09T12:15:45Z",
+        "updatedAt" : "2019-06-11T01:03:02Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "73e455df-f704-4a28-9bfe-b23943716f9f",
+        "parentId" : "eae79ab2-2ae7-41bf-8130-cedbe9ea1b19",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Yea, I think it actually should be in `BUFFER_SIZE` ... I wonder in what case people will set the buffer lower than 4 bytes.\r\n\r\nCurrently, Python workers don't work when the buffer size is lower than 4 (`struct` package doesn't allow that) so I only applied this condition to Pandas UDF execution for now.\r\n\r\nActually, if it makes sense to all of us, I'd like to bring this condition to `spark.buffer.size` itself.\r\n",
+        "createdAt" : "2019-06-09T23:57:57Z",
+        "updatedAt" : "2019-06-11T01:03:02Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c4e3a5aa-bfba-4bd6-9883-f9327f1d3ce4",
+        "parentId" : "eae79ab2-2ae7-41bf-8130-cedbe9ea1b19",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "cc @vanzin too. Do you think it makes sense to just add the condition to `spark.buffer.size` that the buffer should be higher than 4 bytes? If we're not sure yet, I'll just keep this condition here.",
+        "createdAt" : "2019-06-10T00:16:56Z",
+        "updatedAt" : "2019-06-11T01:03:02Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ed684283-e09c-46c1-a9e0-3188d37a9bc0",
+        "parentId" : "eae79ab2-2ae7-41bf-8130-cedbe9ea1b19",
+        "authorId" : "0c293c45-22a6-4358-8a40-adbf7c470575",
+        "body" : "Would it be possible to just check internally if the buffer size is 0 and less than 4, then don't create a BufferedWriter in Scala at all? If someone really wants a buffer size that low, I think it makes sense to just turn off buffering.",
+        "createdAt" : "2019-06-11T17:52:49Z",
+        "updatedAt" : "2019-06-11T17:52:50Z",
+        "lastEditedBy" : "0c293c45-22a6-4358-8a40-adbf7c470575",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "614013e0b0e87ef71a082a7ac269244157025aad",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +52,56 @@  override val bufferSize: Int = SQLConf.get.pandasUDFBufferSize\n  require(\n    bufferSize >= 4,\n    \"Pandas execution requires more than 4 bytes. Please set higher buffer. \" +\n      s\"Please change '${SQLConf.PANDAS_UDF_BUFFER_SIZE.key}'.\")"
   }
 ]

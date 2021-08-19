@@ -658,5 +658,82 @@
     "commit" : "770a733bc66c8ac681f373ede94574dabc1d4cfe",
     "line" : 9,
     "diffHunk" : "@@ -1,1 +380,384 @@    // Resolve glob path for different resources.\n    val proxyUser = if (args.proxyUser != null) {\n      UserGroupInformation.createProxyUser(args.proxyUser, UserGroupInformation.getCurrentUser)\n    } else {\n      UserGroupInformation.getCurrentUser"
+  },
+  {
+    "id" : "5a3867a5-160b-4c37-a006-d13e561585c3",
+    "prId" : 24796,
+    "prUrl" : "https://github.com/apache/spark/pull/24796#pullrequestreview-245699648",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2b207dc0-c024-476f-971c-264a94d9de4f",
+        "parentId" : null,
+        "authorId" : "63281e91-e961-4e6e-b0bb-6855587910d1",
+        "body" : "no the best but at this point this is what is available (the alternative is to add it at the SparkContext side where SparkEnv provides the info if we are at the driver jvm).",
+        "createdAt" : "2019-06-04T20:58:28Z",
+        "updatedAt" : "2019-06-04T22:28:47Z",
+        "lastEditedBy" : "63281e91-e961-4e6e-b0bb-6855587910d1",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "affcb04b3e20a9b151668c5c82408b1dac6d6d72",
+    "line" : 7,
+    "diffHunk" : "@@ -1,1 +865,869 @@    // we need the driver check because spark-submit is used by mesos to launch\n    // executors (via the SparkLauncher)\n    val isExecutor = args.childArgs.contains(\"--executor-id\")\n    args.deployMode match {\n      case \"client\" | null if !isExecutor =>"
+  },
+  {
+    "id" : "c7882b26-aab3-4515-afeb-571db4a7216a",
+    "prId" : 24796,
+    "prUrl" : "https://github.com/apache/spark/pull/24796#pullrequestreview-246995211",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2ead0d89-f74e-44fd-a48f-ef10fa611051",
+        "parentId" : null,
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "I remember there was an argument that we should not set the default UncaughtExceptionHandler for driver is Spark doesn't control the whole driver JVM and we should not just help the user decide what should be done in this JVM. They may have their own `UncaughtExceptionHandler`.",
+        "createdAt" : "2019-06-05T20:09:59Z",
+        "updatedAt" : "2019-06-05T20:09:59Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5e36256e-9571-4a38-91d5-e3ed01c6165f",
+        "parentId" : "2ead0d89-f74e-44fd-a48f-ef10fa611051",
+        "authorId" : "63281e91-e961-4e6e-b0bb-6855587910d1",
+        "body" : "There should be documentation or something about what is provided (because Spark on K8s is affected for example) but even if the user adds a handler, there will be a deadlock here (could be fixed I guess). In general I dont see people setting one and what happens if the same code is implemented in python (which calls the jvm stuff behind the scenes) you need a default handler in that case I guess, my 2 cents.\r\n",
+        "createdAt" : "2019-06-05T23:41:40Z",
+        "updatedAt" : "2019-06-05T23:52:18Z",
+        "lastEditedBy" : "63281e91-e961-4e6e-b0bb-6855587910d1",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ea783d6d-2384-4d32-b98c-e5250d23a89d",
+        "parentId" : "2ead0d89-f74e-44fd-a48f-ef10fa611051",
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "Yeah, I was actually supporting this since if a Spark thread crashes, SparkContext and other components probably will not work correctly. Could not find the related PR or JIRA ticket though...\r\n\r\nOne alternative solution is just setting up UncaughtExceptionHandler for all Spark created threads. Then this will not impact any other user threads.",
+        "createdAt" : "2019-06-06T00:01:59Z",
+        "updatedAt" : "2019-06-06T00:02:18Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b1d20ecf-bb93-44a2-9d73-1399c56e708f",
+        "parentId" : "2ead0d89-f74e-44fd-a48f-ef10fa611051",
+        "authorId" : "63281e91-e961-4e6e-b0bb-6855587910d1",
+        "body" : "This is currently done only for the fsHistoryProvider (unrelated to spark core):\r\n```\r\n    initThread.setUncaughtExceptionHandler(errorHandler.getOrElse(\r\n      (_: Thread, e: Throwable) => {\r\n        logError(\"Error initializing FsHistoryProvider.\", e)\r\n        System.exit(1)\r\n      }))\r\n```\r\nI am not sure how this will help as we will have to exit from there anyway, no?",
+        "createdAt" : "2019-06-07T09:23:35Z",
+        "updatedAt" : "2019-06-07T09:23:54Z",
+        "lastEditedBy" : "63281e91-e961-4e6e-b0bb-6855587910d1",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "affcb04b3e20a9b151668c5c82408b1dac6d6d72",
+    "line" : 10,
+    "diffHunk" : "@@ -1,1 +868,872 @@    args.deployMode match {\n      case \"client\" | null if !isExecutor =>\n        Thread.setDefaultUncaughtExceptionHandler(\n          new SparkUncaughtExceptionHandler(isDriver = true))\n    }"
   }
 ]

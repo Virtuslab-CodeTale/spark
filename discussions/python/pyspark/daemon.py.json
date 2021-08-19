@@ -31,5 +31,93 @@
     "commit" : "86ca496f89e4ea2dc3fc281b83cd88b63c0e02cf",
     "line" : 6,
     "diffHunk" : "@@ -1,1 +102,106 @@        # Send SIGHUP to notify workers of shutdown\n        os.kill(0, SIGTERM)\n        sys.exit(code)\n\n    def handle_sigterm(*args):"
+  },
+  {
+    "id" : "ee1262b6-ac84-47e5-a4f1-71e17285477b",
+    "prId" : 24826,
+    "prUrl" : "https://github.com/apache/spark/pull/24826#pullrequestreview-247910691",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2e33f177-ec40-4823-901d-a9bff14204da",
+        "parentId" : null,
+        "authorId" : "99156419-7ce7-4671-b858-d0b5c4711f88",
+        "body" : "is `int(os.environ.get(\"SPARK_BUFFER_SIZE\", 65536))` going to return something sensible if `SPARK_BUFFER_SIZE` is set to something crazy like `-1`?",
+        "createdAt" : "2019-06-10T06:30:23Z",
+        "updatedAt" : "2019-06-11T01:03:02Z",
+        "lastEditedBy" : "99156419-7ce7-4671-b858-d0b5c4711f88",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ed8b6181-da02-473b-9f84-955fb5d77c82",
+        "parentId" : "2e33f177-ec40-4823-901d-a9bff14204da",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "I think so .... \r\n\r\n```python\r\n>>> int(\"-1\")\r\n-1\r\n>>> int(\"a\")\r\nTraceback (most recent call last):\r\n  File \"<stdin>\", line 1, in <module>\r\nValueError: invalid literal for int() with base 10: 'a'\r\n```",
+        "createdAt" : "2019-06-10T06:40:20Z",
+        "updatedAt" : "2019-06-11T01:03:02Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b8c8b353-4321-416c-a907-c4b5c5f18427",
+        "parentId" : "2e33f177-ec40-4823-901d-a9bff14204da",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "We can add sanity check to `spark.buffer.size`? At least preventing negative one?",
+        "createdAt" : "2019-06-10T09:06:16Z",
+        "updatedAt" : "2019-06-11T01:03:02Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "855e563a-a3d1-4d34-a2bc-6f61f88fb4f4",
+        "parentId" : "2e33f177-ec40-4823-901d-a9bff14204da",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Yea. Let me wait a bit to decide if I add 4 > or negative ones.",
+        "createdAt" : "2019-06-10T09:23:41Z",
+        "updatedAt" : "2019-06-11T01:03:02Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "625fe5ca-f4d7-422f-916d-20574e65d93a",
+        "parentId" : "2e33f177-ec40-4823-901d-a9bff14204da",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Let me add a negative checking for now.",
+        "createdAt" : "2019-06-11T01:01:01Z",
+        "updatedAt" : "2019-06-11T01:03:02Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "614013e0b0e87ef71a082a7ac269244157025aad",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +55,59 @@    # seems to be very slow; note that we need to dup() the file descriptor because\n    # otherwise writes also cause a seek that makes us miss data on the read side.\n    buffer_size = int(os.environ.get(\"SPARK_BUFFER_SIZE\", 65536))\n    infile = os.fdopen(os.dup(sock.fileno()), \"rb\", buffer_size)\n    outfile = os.fdopen(os.dup(sock.fileno()), \"wb\", buffer_size)"
+  },
+  {
+    "id" : "63ca6188-0828-47de-814e-7901baff7c7c",
+    "prId" : 24826,
+    "prUrl" : "https://github.com/apache/spark/pull/24826#pullrequestreview-247729513",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c2c96fbd-c2d7-4d3a-a239-d20b306170ee",
+        "parentId" : null,
+        "authorId" : "0c293c45-22a6-4358-8a40-adbf7c470575",
+        "body" : "Isn't it possible for the worker to be reused with the conf set to a different buffer size, that won't be used because the socket is already open?",
+        "createdAt" : "2019-06-10T17:06:11Z",
+        "updatedAt" : "2019-06-11T01:03:02Z",
+        "lastEditedBy" : "0c293c45-22a6-4358-8a40-adbf7c470575",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "614013e0b0e87ef71a082a7ac269244157025aad",
+    "line" : 8,
+    "diffHunk" : "@@ -1,1 +57,61 @@    buffer_size = int(os.environ.get(\"SPARK_BUFFER_SIZE\", 65536))\n    infile = os.fdopen(os.dup(sock.fileno()), \"rb\", buffer_size)\n    outfile = os.fdopen(os.dup(sock.fileno()), \"wb\", buffer_size)\n\n    if not authenticated:"
   }
 ]

@@ -504,5 +504,148 @@
     "commit" : "75091102d6bd64a61fb903c8df3edf9ca047e879",
     "line" : 108,
     "diffHunk" : "@@ -1,1 +427,431 @@          s\"count is now $newcount\")\n        new Tracker(resourceProfileId)\n      })\n    // if we had added executor before without knowing the resource profile id, fix it up\n    if (execTracker.resourceProfileId == UNKNOWN_RESOURCE_PROFILE_ID &&"
+  },
+  {
+    "id" : "1f8ba4b8-99cf-4f5f-8ecf-7b7ab091c540",
+    "prId" : 24817,
+    "prUrl" : "https://github.com/apache/spark/pull/24817#pullrequestreview-255334586",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7e0a22ce-c6ee-4108-b218-916dc51ac436",
+        "parentId" : null,
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "it is weird that this will be visible to all user listeners as well ...",
+        "createdAt" : "2019-06-21T21:39:37Z",
+        "updatedAt" : "2019-07-15T18:05:50Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "878bc7e7-abb1-45a4-bce6-0ffc36d02b87",
+        "parentId" : "7e0a22ce-c6ee-4108-b218-916dc51ac436",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Well, all listeners already have to deal with events they don't understand; that's the contract for `onOtherEvent`, since we're allowed to add new events (public or not).\r\n\r\nThe only odd thing here is that this event is not public, so you can't really handle it outside of Spark (without reflection), but I don't really see an easy way to solve this issue differently (outside of adding locking which I don't want to).",
+        "createdAt" : "2019-06-24T21:49:30Z",
+        "updatedAt" : "2019-07-15T18:05:50Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d1d4c6fc-962e-4c2d-b726-e98ff45eaea6",
+        "parentId" : "7e0a22ce-c6ee-4108-b218-916dc51ac436",
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "yeah, that's the weird part, you get this event with a class that is not public.\r\n\r\nThe only things I can think of are (1) to create a new event loop here, which just forwards the listener events and also this new event or (2) create a \"InternalListenerEvent\" which is automatically filtered from all non-internal listeners.  But both of those seem like overkill.",
+        "createdAt" : "2019-06-27T16:26:22Z",
+        "updatedAt" : "2019-07-15T18:05:50Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6154bf486e68dbb5a4c16dc9e71030cc20d8ca58",
+    "line" : 211,
+    "diffHunk" : "@@ -1,1 +354,358 @@    // Because this is called in a completely separate thread, we post a custom event to the\n    // listener bus so that the internal state is safely updated.\n    listenerBus.post(ShuffleCleanedEvent(shuffleId))\n  }\n"
+  },
+  {
+    "id" : "dc82de6e-52dd-49f1-9b09-a63fcf42fc77",
+    "prId" : 24817,
+    "prUrl" : "https://github.com/apache/spark/pull/24817#pullrequestreview-255465765",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "cba887f0-8e98-4910-964a-4464eba602c9",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Shall we add `hasActiveShuffle` in if condition or starts with `if (isIdle)` rather than `if (idleStart >= 0)` ?",
+        "createdAt" : "2019-06-27T02:39:49Z",
+        "updatedAt" : "2019-07-15T18:05:50Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f0f62414-cbe9-47d5-8b43-0c36385b1ede",
+        "parentId" : "cba887f0-8e98-4910-964a-4464eba602c9",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "This was intentional. The `hasActiveShuffle` tracking is not meant to change when the executor times out, just when it should not be removed.\r\n\r\nDoing that would mean that every time a job starts with a shuffle that this executor has data, its timeout would be reset, even if it ends up not running any tasks. (Which is unlikely, but well.)",
+        "createdAt" : "2019-06-27T20:35:32Z",
+        "updatedAt" : "2019-07-15T18:05:50Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6154bf486e68dbb5a4c16dc9e71030cc20d8ca58",
+    "line" : 276,
+    "diffHunk" : "@@ -1,1 +440,444 @@        val timeout = if (cachedBlocks.nonEmpty || (shuffleIds != null && shuffleIds.nonEmpty)) {\n          val _cacheTimeout = if (cachedBlocks.nonEmpty) storageTimeoutMs else Long.MaxValue\n          val _shuffleTimeout = if (shuffleIds != null && shuffleIds.nonEmpty) {\n            shuffleTimeoutMs\n          } else {"
+  },
+  {
+    "id" : "6eeec189-b643-4fdd-93db-9fdb2336563f",
+    "prId" : 24817,
+    "prUrl" : "https://github.com/apache/spark/pull/24817#pullrequestreview-255941847",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7c34b8b6-3a1b-42e4-911c-6593cad5f4ef",
+        "parentId" : null,
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "Here you're only grabbing the active shuffles of this job.  I don't think that is right, when you've got two concurrent jobs submitted with a distinct set of shuffles.  The first job will need shuffle A on executor X, and then this needs shuffle B on executor Y, and it would look like executor X does not have an active shuffle anymore.\r\n\r\nit might also help to rename `shuffleStages` --> `thisJobShuffleStage`.",
+        "createdAt" : "2019-06-27T16:14:42Z",
+        "updatedAt" : "2019-07-15T18:05:50Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "00c334f3-b734-4992-9043-79904335c1c4",
+        "parentId" : "7c34b8b6-3a1b-42e4-911c-6593cad5f4ef",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "While what you say is true in isolation, the check for `if (!exec.hasActiveShuffle) {` below makes sure the end result is correct. When the second jobs starts, executor X has an active shuffle, so this code would not change that state.",
+        "createdAt" : "2019-06-27T21:23:58Z",
+        "updatedAt" : "2019-07-15T18:05:50Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f351bdbc-1053-4480-8d57-3b91cb47e5ea",
+        "parentId" : "7c34b8b6-3a1b-42e4-911c-6593cad5f4ef",
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "my fault, you are right!",
+        "createdAt" : "2019-06-28T19:35:19Z",
+        "updatedAt" : "2019-07-15T18:05:50Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6154bf486e68dbb5a4c16dc9e71030cc20d8ca58",
+    "line" : 92,
+    "diffHunk" : "@@ -1,1 +181,185 @@\n    if (updateExecutors) {\n      val activeShuffleIds = shuffleStages.map(_._2).toSeq\n      var needTimeoutUpdate = false\n      val activatedExecs = new mutable.ArrayBuffer[String]()"
+  },
+  {
+    "id" : "012f76a5-3617-4703-8d6c-c919a2cd5402",
+    "prId" : 24817,
+    "prUrl" : "https://github.com/apache/spark/pull/24817#pullrequestreview-255334586",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8c1fb87b-d30e-4103-9ebd-9cba5fa11431",
+        "parentId" : null,
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "is it worthwhile to logdebug here too? (with similar comment to above for combining them)",
+        "createdAt" : "2019-06-27T16:20:38Z",
+        "updatedAt" : "2019-07-15T18:05:50Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6154bf486e68dbb5a4c16dc9e71030cc20d8ca58",
+    "line" : 148,
+    "diffHunk" : "@@ -1,1 +237,241 @@      executors.asScala.foreach { case (id, exec) =>\n        if (exec.hasActiveShuffle) {\n          exec.updateActiveShuffles(activeShuffles)\n          if (!exec.hasActiveShuffle) {\n            deactivatedExecs += id"
   }
 ]

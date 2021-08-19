@@ -1,0 +1,255 @@
+[
+  {
+    "id" : "fe4ba2fb-fc6c-4c99-ac6f-259d6ffe9676",
+    "prId" : 24881,
+    "prUrl" : "https://github.com/apache/spark/pull/24881#pullrequestreview-270321585",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6ae17272-d39c-4df6-85c9-d589e661af0f",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "null in PostgreSQL? https://github.com/postgres/postgres/blob/REL_12_BETA2/src/test/regress/expected/window.out#L3669",
+        "createdAt" : "2019-07-31T00:43:19Z",
+        "updatedAt" : "2019-09-07T15:04:47Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "46b47143-5d7d-4758-9168-7c4049a1a1ce",
+        "parentId" : "6ae17272-d39c-4df6-85c9-d589e661af0f",
+        "authorId" : "36bbfc8a-d8be-48af-9a36-3413dadd8525",
+        "body" : "Hmm you are correct, in PgSQL it shows a blank space instead of NaN. So, NaN in Spark is not the same thing as PgSQL blank space? Do you think that I should JIRA that?",
+        "createdAt" : "2019-07-31T13:27:59Z",
+        "updatedAt" : "2019-09-07T15:04:47Z",
+        "lastEditedBy" : "36bbfc8a-d8be-48af-9a36-3413dadd8525",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c4fa14d4-ebd8-41d1-b1b2-fc3328fe270f",
+        "parentId" : "6ae17272-d39c-4df6-85c9-d589e661af0f",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Can you first investigate why they are different? PostgreSQL prints NaN as NaN;\r\n```\r\npostgres=# select 'NaN'::float8;\r\n float8 \r\n--------\r\n    NaN\r\n(1 row)\r\n```",
+        "createdAt" : "2019-08-01T02:00:40Z",
+        "updatedAt" : "2019-09-07T15:04:47Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d98a6214-345e-4e98-b331-6814bbec22fb",
+        "parentId" : "6ae17272-d39c-4df6-85c9-d589e661af0f",
+        "authorId" : "36bbfc8a-d8be-48af-9a36-3413dadd8525",
+        "body" : "Ok, so after further investigation:\r\n- NULL in Spark can be seen as blank space in PgSQL\r\n- 'NaN' in Spark can be seen as 'NaN' in PgSQL\r\n- I found that in [this code](https://github.com/apache/spark/blob/26d03b62e20d053943d03b5c5573dd349e49654c/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/expressions/aggregate/CentralMomentAgg.scala#L174) Spark actually tries to use 'NaN' instead of NULL for a specific reason. Although it isn't compatible with PgSQL behaviour, looks like a better behaviour. Do you think that I should JIRA that?",
+        "createdAt" : "2019-08-01T13:55:19Z",
+        "updatedAt" : "2019-09-07T15:04:47Z",
+        "lastEditedBy" : "36bbfc8a-d8be-48af-9a36-3413dadd8525",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4ba5aa9d-7c25-4f08-87d7-6aa73155137a",
+        "parentId" : "6ae17272-d39c-4df6-85c9-d589e661af0f",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "oh, good catch! Thx!\r\n\r\n@srowen @dongjoon-hyun Do you know something about this difference?\r\n```\r\npostgres=# \\pset null 'NULL'\r\nNull display is \"NULL\".\r\n\r\npostgres=# select stddev_samp(d) from (values (1.0)) t(d);\r\n stddev_samp \r\n-------------\r\n        NULL\r\n\r\nscala> sql(\"\"\"select stddev_samp(d) from (values (1.0)) t(d)\"\"\").show\r\n+------------------------------+                                                \r\n|stddev_samp(CAST(d AS DOUBLE))|\r\n+------------------------------+\r\n|                           NaN|\r\n+------------------------------+\r\n```\r\n",
+        "createdAt" : "2019-08-02T00:02:37Z",
+        "updatedAt" : "2019-09-07T15:04:47Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c3da6540-32b1-48d9-b867-ff65ef3debd7",
+        "parentId" : "6ae17272-d39c-4df6-85c9-d589e661af0f",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "The result is certainly undefined. If you calculated it in a language you'd get NaN because you would divide by 0. I'm not familiar with how PostgreSQL or databases in general handle this. But NaN seems more correct than null, although they are both an 'invalid' double value, so, both are reasonable.",
+        "createdAt" : "2019-08-02T00:16:35Z",
+        "updatedAt" : "2019-09-07T15:04:47Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6d4c5d41-cf67-41de-b4af-00b9bb9777eb",
+        "parentId" : "6ae17272-d39c-4df6-85c9-d589e661af0f",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "thx for the answer!\r\n@DylanGuedes ok, so can you describe why they are different in the comment there? And, I think we need not to file jira.",
+        "createdAt" : "2019-08-02T00:20:43Z",
+        "updatedAt" : "2019-09-07T15:04:47Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "58bc4c5b-9272-46e7-a155-a36c4c3ce365",
+        "parentId" : "6ae17272-d39c-4df6-85c9-d589e661af0f",
+        "authorId" : "36bbfc8a-d8be-48af-9a36-3413dadd8525",
+        "body" : "Done. @srowen thank you for the clarification!",
+        "createdAt" : "2019-08-02T18:07:31Z",
+        "updatedAt" : "2019-09-07T15:04:47Z",
+        "lastEditedBy" : "36bbfc8a-d8be-48af-9a36-3413dadd8525",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "80f29158d67574b6a69924a2d606ebc2fd94ada8",
+    "line" : 2061,
+    "diffHunk" : "@@ -1,1 +2059,2063 @@164.7118696390761\n91.92388155425118\nNaN\n\n"
+  },
+  {
+    "id" : "07137e3e-abdd-492f-a43c-c0676ef30ce3",
+    "prId" : 24881,
+    "prUrl" : "https://github.com/apache/spark/pull/24881#pullrequestreview-272150265",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f9d88484-5fc9-4114-adde-e670346051af",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "different output from pg? https://github.com/postgres/postgres/blob/REL_12_BETA2/src/test/regress/expected/window.out#L2803",
+        "createdAt" : "2019-08-07T01:43:52Z",
+        "updatedAt" : "2019-09-07T15:04:47Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f3e86823-d303-46de-a28a-7ca18ce29db9",
+        "parentId" : "f9d88484-5fc9-4114-adde-e670346051af",
+        "authorId" : "36bbfc8a-d8be-48af-9a36-3413dadd8525",
+        "body" : "Currently, Spark does not have support for `groups` (I already created a JIRA for it). The problem here is: I thought that `groups` and `range` were the same thing, but they are not. [This link](https://blog.jooq.org/2018/07/05/postgresql-11s-support-for-sql-standard-groups-and-exclude-window-function-clauses/) has a nice explanation about the difference. I'll be reverting some other other queries that I remember changing `rows` to `groups`. Thank you!",
+        "createdAt" : "2019-08-07T18:29:58Z",
+        "updatedAt" : "2019-09-07T15:04:47Z",
+        "lastEditedBy" : "36bbfc8a-d8be-48af-9a36-3413dadd8525",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "80f29158d67574b6a69924a2d606ebc2fd94ada8",
+    "line" : 1509,
+    "diffHunk" : "@@ -1,1 +1507,1511 @@struct<x:bigint,sum(x) OVER (ORDER BY x ASC NULLS FIRST RANGE BETWEEN CAST((- 1) AS BIGINT) FOLLOWING AND CAST(1 AS BIGINT) FOLLOWING):bigint>\n-- !query 89 output\n1\t3\n1\t3\n1\t3"
+  },
+  {
+    "id" : "050b92f4-fd28-4ef5-9bea-28de2e63a076",
+    "prId" : 24881,
+    "prUrl" : "https://github.com/apache/spark/pull/24881#pullrequestreview-272151680",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "14df3e82-8d91-440e-b82c-d71e8b867ad0",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "different output from pg: https://github.com/postgres/postgres/blob/REL_12_BETA2/src/test/regress/expected/window.out#L2700",
+        "createdAt" : "2019-08-07T01:46:42Z",
+        "updatedAt" : "2019-09-07T15:04:47Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7c3504d9-1a10-4159-bead-7c84345debb5",
+        "parentId" : "14df3e82-8d91-440e-b82c-d71e8b867ad0",
+        "authorId" : "36bbfc8a-d8be-48af-9a36-3413dadd8525",
+        "body" : "ditto: the problem is the fact that I changed `groups` to `range` because I thought that they had the same behavior, which is not the case. I already reverted it.",
+        "createdAt" : "2019-08-07T18:32:33Z",
+        "updatedAt" : "2019-09-07T15:04:47Z",
+        "lastEditedBy" : "36bbfc8a-d8be-48af-9a36-3413dadd8525",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "80f29158d67574b6a69924a2d606ebc2fd94ada8",
+    "line" : 1439,
+    "diffHunk" : "@@ -1,1 +1437,1441 @@struct<x:bigint,sum(x) OVER (ORDER BY x ASC NULLS FIRST RANGE BETWEEN CAST((- 1) AS BIGINT) FOLLOWING AND CAST(1 AS BIGINT) FOLLOWING):bigint>\n-- !query 87 output\n1\t1\n11\t11\n13\t13"
+  },
+  {
+    "id" : "dbc765a3-5d5e-4d0a-b184-5269711aface",
+    "prId" : 24881,
+    "prUrl" : "https://github.com/apache/spark/pull/24881#pullrequestreview-271697736",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "db40e8f4-0aaa-41b5-9b52-2158712b34ba",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "ditto",
+        "createdAt" : "2019-08-07T02:05:41Z",
+        "updatedAt" : "2019-09-07T15:04:47Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "80f29158d67574b6a69924a2d606ebc2fd94ada8",
+    "line" : 1164,
+    "diffHunk" : "@@ -1,1 +1162,1166 @@9223372036854775805\tNULL\n9223372036854775806\tNULL\n\n\n-- !query 68"
+  },
+  {
+    "id" : "74fd43c9-6071-4afc-99f5-ba1747cb137e",
+    "prId" : 24881,
+    "prUrl" : "https://github.com/apache/spark/pull/24881#pullrequestreview-285174448",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0f102592-6efc-45a7-81d7-dab3925da1cd",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Why this failed? https://github.com/postgres/postgres/blob/REL_12_BETA2/src/test/regress/expected/window.out#L3791",
+        "createdAt" : "2019-08-26T05:39:01Z",
+        "updatedAt" : "2019-09-07T15:04:47Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "99181aca-b8a0-47f1-aedc-300bbbbacd5b",
+        "parentId" : "0f102592-6efc-45a7-81d7-dab3925da1cd",
+        "authorId" : "36bbfc8a-d8be-48af-9a36-3413dadd8525",
+        "body" : "Because Spark does not handle 'NaN' for inline tables. ",
+        "createdAt" : "2019-09-07T14:41:15Z",
+        "updatedAt" : "2019-09-07T15:04:47Z",
+        "lastEditedBy" : "36bbfc8a-d8be-48af-9a36-3413dadd8525",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "80f29158d67574b6a69924a2d606ebc2fd94ada8",
+    "line" : 2205,
+    "diffHunk" : "@@ -1,1 +2203,2207 @@struct<>\n-- !query 145 output\norg.apache.spark.sql.AnalysisException\nincompatible types found in column col2 for inline table; line 3 pos 6\n"
+  },
+  {
+    "id" : "1e0bbc39-e8e7-4478-9407-dd3fc8dd63fa",
+    "prId" : 24881,
+    "prUrl" : "https://github.com/apache/spark/pull/24881#pullrequestreview-285171433",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "46497432-a946-405a-a482-a764092d4b64",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "This error is not expected one: https://github.com/postgres/postgres/blob/REL_12_BETA2/src/test/regress/expected/window.out#L2982",
+        "createdAt" : "2019-08-26T06:04:14Z",
+        "updatedAt" : "2019-09-07T15:04:47Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a38f1a72-c86c-4d34-91db-53aa41b2eace",
+        "parentId" : "46497432-a946-405a-a482-a764092d4b64",
+        "authorId" : "36bbfc8a-d8be-48af-9a36-3413dadd8525",
+        "body" : "Although the message is misleading, I think that they represent the same: there's no existent `range` aggregated function. I should JIRA that? ",
+        "createdAt" : "2019-09-07T13:16:54Z",
+        "updatedAt" : "2019-09-07T15:04:47Z",
+        "lastEditedBy" : "36bbfc8a-d8be-48af-9a36-3413dadd8525",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "80f29158d67574b6a69924a2d606ebc2fd94ada8",
+    "line" : 1687,
+    "diffHunk" : "@@ -1,1 +1685,1689 @@-- !query 104 output\norg.apache.spark.sql.AnalysisException\nUndefined function: 'range'. This function is neither a registered temporary function nor a permanent function registered in the database 'default'.; line 1 pos 7\n\n"
+  }
+]

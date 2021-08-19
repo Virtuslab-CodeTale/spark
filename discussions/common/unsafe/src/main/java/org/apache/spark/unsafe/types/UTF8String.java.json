@@ -306,5 +306,71 @@
     "commit" : "f1a659468d0d2f7fed85389dc33112e4de7bfc91",
     "line" : 8,
     "diffHunk" : "@@ -1,1 +886,890 @@      // no padding at all, return the null\n      return null;\n    } else if (spaces <= 0) {\n      // no padding at all, return the substring of the current string\n      return substring(0, len);"
+  },
+  {
+    "id" : "4adabf5d-8bcf-426a-9adb-bb6401c90418",
+    "prId" : 24884,
+    "prUrl" : "https://github.com/apache/spark/pull/24884#pullrequestreview-250240950",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2184aa4f-7d08-4e6b-8a9e-1c18fd2a89d5",
+        "parentId" : null,
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "Can you avoid copying by changing `offset` if the string contains spaces at the left side, and changing `numBytes` for spaces at the right side?",
+        "createdAt" : "2019-06-16T15:29:26Z",
+        "updatedAt" : "2019-06-17T02:18:38Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "10b0c1ab-c9d5-4b8a-a886-e39afa51718e",
+        "parentId" : "2184aa4f-7d08-4e6b-8a9e-1c18fd2a89d5",
+        "authorId" : "99e31844-a5b3-48a2-af71-412edb607a13",
+        "body" : "It looks non-safe if the string is shared by others.",
+        "createdAt" : "2019-06-16T15:54:58Z",
+        "updatedAt" : "2019-06-17T02:18:38Z",
+        "lastEditedBy" : "99e31844-a5b3-48a2-af71-412edb607a13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "300d7453-fc10-4897-a2e9-8402270dafa1",
+        "parentId" : "2184aa4f-7d08-4e6b-8a9e-1c18fd2a89d5",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "I mean creating new instance of `UTF8String` by passing new value of `offset` or `numBytes`, and the same reference to `base`. Does `UTF8String` modify underlying base object somewhere in place?",
+        "createdAt" : "2019-06-16T16:16:17Z",
+        "updatedAt" : "2019-06-17T02:18:38Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d2c5d5c4-b6cb-45a9-b031-696a937c188b",
+        "parentId" : "2184aa4f-7d08-4e6b-8a9e-1c18fd2a89d5",
+        "authorId" : "99e31844-a5b3-48a2-af71-412edb607a13",
+        "body" : "I see. My interpretation of `avoid copying` was `to update fieild in this object`. It functionally works well.\r\n\r\nSuch an optimization was done in `String.substring` in [previous JDKs](http://java-performance.info/changes-to-string-java-1-7-0_06/).   \r\nPros:  Avoid copying characters when `trim()`\r\nCons: Cannot free a `UTF8String` object object even if the  `UTF8String` object, which was referenced by the `trim`ed `UTF8String`, is dead under the case that `trim`ed `UTF8String` is live.\r\n\r\nI think that the current implementation is preferable since it does not increase # of live `UTF8String` objects.\r\n",
+        "createdAt" : "2019-06-16T16:40:15Z",
+        "updatedAt" : "2019-06-17T02:18:38Z",
+        "lastEditedBy" : "99e31844-a5b3-48a2-af71-412edb607a13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b9a8f5a4-da9b-46b0-8bde-7010ab493261",
+        "parentId" : "2184aa4f-7d08-4e6b-8a9e-1c18fd2a89d5",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "What you're describing is kind of how the JVM implements \"compressed strings\". Interesting notes here on further optimizations in Java 9: https://www.baeldung.com/java-9-compact-string\r\nOne day we might revisit whether UTF8String is improving over String!",
+        "createdAt" : "2019-06-16T17:03:18Z",
+        "updatedAt" : "2019-06-17T02:18:38Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "81edf561309cae081d96e0171226c776314db90b",
+    "line" : 25,
+    "diffHunk" : "@@ -1,1 +550,554 @@      return this;\n    }\n    return copyUTF8String(s, e);\n  }\n"
   }
 ]

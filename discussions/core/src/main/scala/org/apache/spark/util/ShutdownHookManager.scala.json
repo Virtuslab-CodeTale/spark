@@ -20,5 +20,104 @@
     "commit" : "0c6846e9a885d8cd0a8f3ca45d5075922d609fd8",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +190,194 @@  }\n\n  def add(priority: Int, hook: () => Unit, hookName: String = \"Anonymous Hook\"): AnyRef = {\n    hooks.synchronized {\n      if (shuttingDown) {"
+  },
+  {
+    "id" : "0fe81802-5fd4-43db-9bb8-416cfc2d5962",
+    "prId" : 24796,
+    "prUrl" : "https://github.com/apache/spark/pull/24796#pullrequestreview-252927876",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f4123915-a2f3-4962-9507-062d82dae8cd",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "I'm still not so clear why you want to forget all the hooks that were registered -- what's the scenario where they prevent termination, and can we fix the hook? seems like we'd like them to try to complete",
+        "createdAt" : "2019-06-04T21:35:16Z",
+        "updatedAt" : "2019-06-04T22:28:47Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "43a7f7e2-82e8-489d-a191-b3750b4daafb",
+        "parentId" : "f4123915-a2f3-4962-9507-062d82dae8cd",
+        "authorId" : "63281e91-e961-4e6e-b0bb-6855587910d1",
+        "body" : "The scenario is described in the jira. I see a deadlock. The DAG event loop thread dies because it tries to schedule a big number of tasks it gets an OOM and gets unresponsive (never wakes from the interrupt). I can point to the full jstack output if we need to dig further into this.\r\nThen the shutdownhook blocks without the DAG scheduler being able to finish. The scheduler stop logic waits here https://github.com/apache/spark/blob/ecfdffcb3560e21ccd318de6a0c614fa0c3aabf5/core/src/main/scala/org/apache/spark/util/EventLoop.scala#L81\r\n\r\nIn general I am not confident we can predict the status of the jvm in case of an oom and what can go wrong in order to do a safe shutdown, that is why an immediate exit is one good option (maybe not the only one). ",
+        "createdAt" : "2019-06-04T22:23:34Z",
+        "updatedAt" : "2019-06-04T22:35:36Z",
+        "lastEditedBy" : "63281e91-e961-4e6e-b0bb-6855587910d1",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ba769d10-39de-46e5-94fb-d3c4b615721d",
+        "parentId" : "f4123915-a2f3-4962-9507-062d82dae8cd",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Is it a deadlock? I understand just exiting anyway from the driver if an uncaught exception happens, just not so clear why one would remove the hooks. If they execute, good, or are you saying they're the issue? if so, is there a fix for the hook instead? I'm not sure it's better to not execute them.",
+        "createdAt" : "2019-06-04T22:29:55Z",
+        "updatedAt" : "2019-06-04T22:29:56Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "17ae2706-2c9e-4561-b9b6-c5c13616b7d9",
+        "parentId" : "f4123915-a2f3-4962-9507-062d82dae8cd",
+        "authorId" : "63281e91-e961-4e6e-b0bb-6855587910d1",
+        "body" : "I tried to fix it but the Event loop thread will not get interrupted so it cannot complete the join (btw its a daemon thread). I will paste the jstack output shortly so you can have a look, that is my view so far. ",
+        "createdAt" : "2019-06-04T22:58:17Z",
+        "updatedAt" : "2019-06-04T22:59:28Z",
+        "lastEditedBy" : "63281e91-e961-4e6e-b0bb-6855587910d1",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c4811f7a-ad59-40ac-b6f7-35010dfa4c7c",
+        "parentId" : "f4123915-a2f3-4962-9507-062d82dae8cd",
+        "authorId" : "63281e91-e961-4e6e-b0bb-6855587910d1",
+        "body" : "@srowen here it is: https://gist.github.com/skonto/74181e434a727901d4f3323461c1050b\r\nI commented out the clear call. One other (indepedent) thing I noticed is that the main thread is also stuck here:\r\nhttps://github.com/apache/spark/blob/bfb3ffe9b33a403a1f3b6f5407d34a477ce62c85/core/src/main/scala/org/apache/spark/scheduler/DAGScheduler.scala#L736\r\nBlocking for ever there might be a problem if something goes wrong.\r\nNow if you check the output:\r\n\r\n```\r\n\"Thread-1\" #10 prio=5 os_prio=0 tid=0x000055d323902000 nid=0x7c in Object.wait() [0x00007fdccd08a000]\r\n   java.lang.Thread.State: WAITING (on object monitor)\r\n\tat java.lang.Object.wait(Native Method)\r\n\tat java.lang.Thread.join(Thread.java:1252)\r\n\t- locked <0x00000000ebe00e50> (a org.apache.spark.util.EventLoop$$anon$1)\r\n\tat java.lang.Thread.join(Thread.java:1326)\r\n\tat org.apache.spark.util.EventLoop.stop(EventLoop.scala:81)\r\n\tat org.apache.spark.scheduler.DAGScheduler.stop(DAGScheduler.scala:2100)\r\n```\r\nthis will never finish and it waits at the join(EventLoop.scala:81) for `dag-scheduler-event-loop`:\r\n```\r\n\"dag-scheduler-event-loop\" #45 daemon prio=5 os_prio=0 tid=0x000055d323a25000 nid=0x48 in Object.wait() [0x00007fdccd6d2000]\r\n   java.lang.Thread.State: WAITING (on object monitor)\r\n\tat java.lang.Object.wait(Native Method)\r\n\tat java.lang.Thread.join(Thread.java:1252)\r\n\t- locked <0x00000000eb4f3b58> (a org.apache.hadoop.util.ShutdownHookManager$1)\r\n\tat java.lang.Thread.join(Thread.java:1326)\r\n\tat java.lang.ApplicationShutdownHooks.runHooks(ApplicationShutdownHooks.java:107)\r\n\tat java.lang.ApplicationShutdownHooks$1.run(ApplicationShutdownHooks.java:46)\r\n\tat java.lang.Shutdown.runHooks(Shutdown.java:123)\r\n\tat java.lang.Shutdown.sequence(Shutdown.java:167)\r\n\tat java.lang.Shutdown.exit(Shutdown.java:212)\r\n\t- locked <0x00000000eb3848b8> (a java.lang.Class for java.lang.Shutdown)\r\n\tat java.lang.Runtime.exit(Runtime.java:109)\r\n\tat java.lang.System.exit(System.java:971)\r\n\tat org.apache.spark.util.SparkUncaughtExceptionHandler.sysExit(SparkUncaughtExceptionHandler.scala:35)\r\n\tat org.apache.spark.util.SparkUncaughtExceptionHandler.uncaughtException(SparkUncaughtExceptionHandler.scala:53)\r\n\tat java.lang.ThreadGroup.uncaughtException(ThreadGroup.java:1057)\r\n\tat java.lang.ThreadGroup.uncaughtException(ThreadGroup.java:1052)\r\n\tat java.lang.Thread.dispatchUncaughtException(Thread.java:1959)\r\n```\r\nwhich waits for the shutodwn hook to finish which is invoked by the oom which was created by itself. So its a deadlock. If you check the log oom comes for that thread which tries to submit 1M tasks ;).  dag-scheduler-event-loop -> shutdownHook -> calls join from the other thread and waits for dag-scheduler-event-loop (deadlock).",
+        "createdAt" : "2019-06-04T23:20:56Z",
+        "updatedAt" : "2019-06-04T23:41:12Z",
+        "lastEditedBy" : "63281e91-e961-4e6e-b0bb-6855587910d1",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d0d8962c-c7cf-41aa-9faa-670d9a198e02",
+        "parentId" : "f4123915-a2f3-4962-9507-062d82dae8cd",
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "> I tried to fix it but the Event loop thread will not get interrupted so it cannot complete the join (btw its a daemon thread). I will paste the jstack output shortly so you can have a look, that is my view so far.\r\n\r\nDo you know why the event loop thread won't get interrupted? I tried to reproduce the dead lock locally using this change https://github.com/zsxwing/spark/commit/b1aecf2e599422a1483718373838e9a4e801131a but I could not reproduce the following hang:\r\n\r\n```\r\n\"Thread-1\" #10 prio=5 os_prio=0 tid=0x000055d323902000 nid=0x7c in Object.wait() [0x00007fdccd08a000]\r\n   java.lang.Thread.State: WAITING (on object monitor)\r\n\tat java.lang.Object.wait(Native Method)\r\n\tat java.lang.Thread.join(Thread.java:1252)\r\n\t- locked <0x00000000ebe00e50> (a org.apache.spark.util.EventLoop$$anon$1)\r\n\tat java.lang.Thread.join(Thread.java:1326)\r\n\tat org.apache.spark.util.EventLoop.stop(EventLoop.scala:81)\r\n\tat org.apache.spark.scheduler.DAGScheduler.stop(DAGScheduler.scala:2100)\r\n```\r\n\r\nbut saw a different behavior: JVM just exits when reaching in `eventThread.join()` as I don't see any outputs after `eventThread.join()`. Here are all outputs I got:\r\n\r\n```\r\nscala> sc.parallelize(1 to 10).count()\r\n[Stage 0:>                                                          (0 + 8) / 8]19/06/05 12:52:00 ERROR SparkUncaughtExceptionHandler: Uncaught exception in thread Thread[dag-scheduler-event-loop,5,main]\r\njava.lang.OutOfMemoryError: foo\r\n\tat org.apache.spark.scheduler.DAGScheduler.handleTaskCompletion(DAGScheduler.scala:1344)\r\n\tat org.apache.spark.scheduler.DAGSchedulerEventProcessLoop.doOnReceive(DAGScheduler.scala:2172)\r\n\tat org.apache.spark.scheduler.DAGSchedulerEventProcessLoop.onReceive(DAGScheduler.scala:2124)\r\n\tat org.apache.spark.scheduler.DAGSchedulerEventProcessLoop.onReceive(DAGScheduler.scala:2113)\r\n\tat org.apache.spark.util.EventLoop$$anon$1.run(EventLoop.scala:50)\r\nstopping Thread[dag-scheduler-event-loop,5,main] in Thread[Thread-1,5,main]\r\nwaiting for Thread[dag-scheduler-event-loop,5,main] in Thread[Thread-1,5,main]\r\n```\r\n\r\nMy JDK version is `1.8.0_171`. Maybe `Thread.join` in a shutdown hook behaviors differently in different JDK versions.",
+        "createdAt" : "2019-06-05T19:56:57Z",
+        "updatedAt" : "2019-06-05T19:56:57Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a421a55b-40de-4dd4-87d8-c453d62e84b2",
+        "parentId" : "f4123915-a2f3-4962-9507-062d82dae8cd",
+        "authorId" : "63281e91-e961-4e6e-b0bb-6855587910d1",
+        "body" : "@zsxwing interesting... I use the jvm in the alpine docker image used for Spark on K8s [openjdk:8-alpine ](https://github.com/apache/spark/blob/master/resource-managers/kubernetes/docker/src/main/dockerfiles/spark/Dockerfile#L18)\r\n```\r\nsh-4.4$ java -version\r\nopenjdk version \"1.8.0_201\"\r\nOpenJDK Runtime Environment (IcedTea 3.11.0) (Alpine 8.201.08-r1)\r\nOpenJDK 64-Bit Server VM (build 25.212-b04, mixed mode\r\n```\r\nwhich is the latest...\r\nBtw from what I read there is no guarantee shutdown hooks will run till completed...\r\nhttps://dzone.com/articles/know-jvm-series-2-shutdown, that is why I thought just exiting is the most reliable option and that is why I cleared the hooks, although not satisfying in every case. \r\n\"First thing to keep in mind is that it is not guaranteed that shutdown hooks will always run. If the JVM crashes due to some internal error, then it might crash down without having a chance to execute a single instruction.\"\r\nIn addition, even if this will not happen often, shutdown hooks need to finish fast anyway so you stand a chance to finish (especially with jvm errors) and waiting in a join when you dont know the state of things is dangerous anyway.",
+        "createdAt" : "2019-06-07T07:53:23Z",
+        "updatedAt" : "2019-06-07T08:22:44Z",
+        "lastEditedBy" : "63281e91-e961-4e6e-b0bb-6855587910d1",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6784bc4a-b7b7-4fc8-8e2b-b397f089b363",
+        "parentId" : "f4123915-a2f3-4962-9507-062d82dae8cd",
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "@zsxwing its possible your change is not triggering the same thing because throwing an OOM from within java code is not the same as an OOM from within the JVM itself (IIRC, when the user throws OOM themselves none of the jvm XX options related to OOMs get triggered).",
+        "createdAt" : "2019-06-21T16:51:46Z",
+        "updatedAt" : "2019-06-21T16:51:47Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "affcb04b3e20a9b151668c5c82408b1dac6d6d72",
+    "line" : 13,
+    "diffHunk" : "@@ -1,1 +205,209 @@  }\n\n  def clear(): Unit = {\n    hooks.synchronized {\n      hooks.clear()"
   }
 ]

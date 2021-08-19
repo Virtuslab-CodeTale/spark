@@ -416,5 +416,214 @@
     "commit" : "15a9897131f06ec115b13d97e86c497ef36dace8",
     "line" : 212,
     "diffHunk" : "@@ -1,1 +800,804 @@        if (canLaunchDriver(worker, driver.desc)) {\n          val allocated = worker.acquireResources(driver.desc.resourceReqs)\n          driver.withResources(allocated)\n          launchDriver(worker, driver)\n          waitingDrivers -= driver"
+  },
+  {
+    "id" : "dde1c9c8-5a6d-4e75-846d-ea8f641d8165",
+    "prId" : 24848,
+    "prUrl" : "https://github.com/apache/spark/pull/24848#pullrequestreview-252205559",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9a8c93fa-9725-450f-beb3-bd34a37a9668",
+        "parentId" : null,
+        "authorId" : "b4e64da3-d07f-4391-82fc-7bfc071fcb0b",
+        "body" : "Shall we also check the `state` to guarantee only the `WAITING` state and `coresGranted > 0` can be shifted to `RUNNING` ?",
+        "createdAt" : "2019-06-17T06:20:29Z",
+        "updatedAt" : "2019-06-17T06:20:29Z",
+        "lastEditedBy" : "b4e64da3-d07f-4391-82fc-7bfc071fcb0b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9da3932c-5e34-40b9-8da4-c1c3c9ebb5db",
+        "parentId" : "9a8c93fa-9725-450f-beb3-bd34a37a9668",
+        "authorId" : "8d712730-9885-49fa-aeff-705d5a9e1bd9",
+        "body" : "Correct me if I'm wrong, but isn't the app state should be RUNNING as long as it gained an executor? not matter whatever state before.",
+        "createdAt" : "2019-06-17T08:08:56Z",
+        "updatedAt" : "2019-06-17T08:08:56Z",
+        "lastEditedBy" : "8d712730-9885-49fa-aeff-705d5a9e1bd9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e21844d3-5a9e-46a3-b82c-e664be3309fd",
+        "parentId" : "9a8c93fa-9725-450f-beb3-bd34a37a9668",
+        "authorId" : "b4e64da3-d07f-4391-82fc-7bfc071fcb0b",
+        "body" : "My only concern is that there might be some corner cases to transfer wrong state to `RUNNING` (though I cannot imagine). ",
+        "createdAt" : "2019-06-17T08:49:29Z",
+        "updatedAt" : "2019-06-17T08:49:30Z",
+        "lastEditedBy" : "b4e64da3-d07f-4391-82fc-7bfc071fcb0b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "46e75721-74cd-4147-95d4-37f42ff7f8ab",
+        "parentId" : "9a8c93fa-9725-450f-beb3-bd34a37a9668",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "> Shall we also check the state to guarantee only the WAITING state and coresGranted > 0 can be shifted to RUNNING ?\r\n\r\nNot necessary. When we run into `completeRecovery()`, an app can only be either `UNKNOWN` or `WAITING`. And, all `UNKNOWN` apps have been filtered out when we reach here. So, they are definitely in `WAITING` state at this time. See: \r\n\r\nhttps://github.com/apache/spark/blob/d9e4cf67c06b2d6daa4cd24b056e33dfb5eb35f5/core/src/main/scala/org/apache/spark/deploy/master/Master.scala#L560-L563\r\n\r\n\r\n",
+        "createdAt" : "2019-06-17T09:16:02Z",
+        "updatedAt" : "2019-06-17T09:16:03Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d453b18f-6d8a-41d0-a43b-40b8e9eeec51",
+        "parentId" : "9a8c93fa-9725-450f-beb3-bd34a37a9668",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "I'm thinking that there may be a corner case where `_.coresGranted > 0` can not work. For example, in dynamic allocation mode, app A is running on HA Standalone. And master just happens to change during the time app A has released all of its executors, which result in  `coresGranted=0`. Then, app A can't recover to RUNNING but remain in WAITING at this time. @zuotingbing  @jerryshao ",
+        "createdAt" : "2019-06-17T09:31:08Z",
+        "updatedAt" : "2019-06-17T09:31:08Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "649b4070-4d39-48c3-94a1-50630baeec09",
+        "parentId" : "9a8c93fa-9725-450f-beb3-bd34a37a9668",
+        "authorId" : "b4e64da3-d07f-4391-82fc-7bfc071fcb0b",
+        "body" : "So this brings out another question, can we say that this application is `WAITING` or `RUNNING` if by judging the executors? Obviously when dynamic allocation is enabled, no executor doesn't mean the application is waiting.",
+        "createdAt" : "2019-06-17T09:44:27Z",
+        "updatedAt" : "2019-06-17T09:44:30Z",
+        "lastEditedBy" : "b4e64da3-d07f-4391-82fc-7bfc071fcb0b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d8865ce0-9363-48b6-8d24-837ab0bd7c65",
+        "parentId" : "9a8c93fa-9725-450f-beb3-bd34a37a9668",
+        "authorId" : "b4e64da3-d07f-4391-82fc-7bfc071fcb0b",
+        "body" : "So this brings out another question, can we say that this application is `WAITING` or `RUNNING` by judging the executors? Obviously when dynamic allocation is enabled, no executor doesn't mean the application is waiting.",
+        "createdAt" : "2019-06-17T09:44:53Z",
+        "updatedAt" : "2019-06-17T09:45:21Z",
+        "lastEditedBy" : "b4e64da3-d07f-4391-82fc-7bfc071fcb0b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ea043afc-8497-49fb-bc68-9b7fdb04ddf6",
+        "parentId" : "9a8c93fa-9725-450f-beb3-bd34a37a9668",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Maybe, the better way to mark an app as `WAITING` is the time the bind driver for that app waiting for an executor to launch on. Once the driver set up, the app is `RUNNING`.",
+        "createdAt" : "2019-06-17T11:09:55Z",
+        "updatedAt" : "2019-06-17T11:09:56Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c31d1605-5f59-4c12-b1ae-276508577857",
+        "parentId" : "9a8c93fa-9725-450f-beb3-bd34a37a9668",
+        "authorId" : "8d712730-9885-49fa-aeff-705d5a9e1bd9",
+        "body" : "> app A has released all of its executors, which result in `coresGranted=0`. Then, app A can't recover to RUNNING but remain in WAITING at this time. \r\n\r\nWhy app A release all of its executors? Does app A finished? Or shall we change the state to Running when app A grant executors again?\r\n\r\n",
+        "createdAt" : "2019-06-18T01:58:35Z",
+        "updatedAt" : "2019-06-18T01:58:56Z",
+        "lastEditedBy" : "8d712730-9885-49fa-aeff-705d5a9e1bd9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3ee5295c-24c4-42d5-bac9-05376233d241",
+        "parentId" : "9a8c93fa-9725-450f-beb3-bd34a37a9668",
+        "authorId" : "b4e64da3-d07f-4391-82fc-7bfc071fcb0b",
+        "body" : "In a Dynamic Executor Allocation enabled scenario, executor number can be 0 in idle state (when min executor number is set to 0). So in this scenario, we can hardly say that application is waiting (and it is not finished).",
+        "createdAt" : "2019-06-18T05:58:27Z",
+        "updatedAt" : "2019-06-18T05:58:27Z",
+        "lastEditedBy" : "b4e64da3-d07f-4391-82fc-7bfc071fcb0b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c495bb85-4a43-4054-a5c7-4ad319d3e748",
+        "parentId" : "9a8c93fa-9725-450f-beb3-bd34a37a9668",
+        "authorId" : "8d712730-9885-49fa-aeff-705d5a9e1bd9",
+        "body" : "I search for \"ApplicationState.RUNNING\" in the whole project, only be set in function `org.apache.spark.deploy.master.Master#allocateWorkerResourceToExecutors`, which means if app gained 0 executors it should be the init state(ApplicationState.WAITING)",
+        "createdAt" : "2019-06-18T06:18:56Z",
+        "updatedAt" : "2019-06-18T06:18:56Z",
+        "lastEditedBy" : "8d712730-9885-49fa-aeff-705d5a9e1bd9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "28aa350d-f5ef-4d67-b596-c8d4c97efe81",
+        "parentId" : "9a8c93fa-9725-450f-beb3-bd34a37a9668",
+        "authorId" : "8d712730-9885-49fa-aeff-705d5a9e1bd9",
+        "body" : ">For example, in dynamic allocation mode, app A is running on HA Standalone. And master just happens to change during the time app A has released all of its executors, which result in `coresGranted=0`. Then, app A can't recover to RUNNING but remain in WAITING at this time. \r\n\r\nAfter debug, i found when the app gain executors again, the app can update to RUNNING from WAITING. So it may be OK in master changed scenario that if app gained 0 executors we set it to WAITING state as usual as an app init do.\r\n\r\n",
+        "createdAt" : "2019-06-18T08:26:12Z",
+        "updatedAt" : "2019-06-18T08:26:54Z",
+        "lastEditedBy" : "8d712730-9885-49fa-aeff-705d5a9e1bd9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8dc05b9c-6abc-4408-908a-9a8bf5794db0",
+        "parentId" : "9a8c93fa-9725-450f-beb3-bd34a37a9668",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Hmmm...with the current code logic, I'd say yes that an app could always update to RUNNING from WAITING whenever it gains an executor. Then, the WAITING status, here, exactly means that **the app is waiting for at least one executor**. As a result, an app in Standalone with dynamic allocation could change its status from RUNNING/WAITING to WAITING/RUNNING back and forth. But, usually, it doesn't make sense. \r\n\r\nThe argument here, I think, is that how do you define the WAITING status for an app in Standalone.  If you say, an app should be in WAITING if it does not own  any executors at the moment. Then, current code logic and PR change would be fine. But, if you say, an app should be in WAITING if it hasn't launched its driver. Then, current code logic may be wrong.",
+        "createdAt" : "2019-06-18T15:39:06Z",
+        "updatedAt" : "2019-06-18T15:39:07Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "710ffd1e-b180-4fc7-997b-6e50a85be445",
+        "parentId" : "9a8c93fa-9725-450f-beb3-bd34a37a9668",
+        "authorId" : "8d712730-9885-49fa-aeff-705d5a9e1bd9",
+        "body" : "> But, if you say, an app should be in WAITING if it hasn't launched its driver\r\n\r\nHmmm... maybe you make it extremely complicated, there is no synchronous causal link between the Driver state and the App state, when driver is active in client mode, app can be WAITING or RUNNING.\r\n",
+        "createdAt" : "2019-06-19T03:27:01Z",
+        "updatedAt" : "2019-06-19T03:55:29Z",
+        "lastEditedBy" : "8d712730-9885-49fa-aeff-705d5a9e1bd9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d4e053d6-d328-4254-a220-a1e1e4d21326",
+        "parentId" : "9a8c93fa-9725-450f-beb3-bd34a37a9668",
+        "authorId" : "8d712730-9885-49fa-aeff-705d5a9e1bd9",
+        "body" : "> As a result, an app in Standalone with dynamic allocation could change its status from RUNNING/WAITING to WAITING/RUNNING back and forth\r\n\r\nRUNNING to WAITING only exists when Master has changed. Let us go to the beginning. Why we set app to WAITING, then change WAITING to RUNNING during the recovery time? **Shall we keep the state before and just filter out the UNKNOWN app that didn't respond during the recovery time?**",
+        "createdAt" : "2019-06-19T06:52:15Z",
+        "updatedAt" : "2019-06-19T06:52:15Z",
+        "lastEditedBy" : "8d712730-9885-49fa-aeff-705d5a9e1bd9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8e13fb04-b6c5-4dc5-8776-8505de2df7ee",
+        "parentId" : "9a8c93fa-9725-450f-beb3-bd34a37a9668",
+        "authorId" : "b4e64da3-d07f-4391-82fc-7bfc071fcb0b",
+        "body" : "From the code, it looks like only when executor is registered, then the state will change to `RUNNING` in master UI (the code there is quite old). But I think it is not valid to use registered executor numbers to judge the state of application:\r\n\r\n1. When dynamic allocation is enabled, executors can be 0, we cannot say this application is waiting because it will ramp up soon.\r\n2. Some driver only tasks can be run without executors, we cannot say this application is waiting.\r\n\r\nSo as a thorough fix, I would suggest to revisit all the changes related to application state, to see whether it is meaningful as for now, rather than just a point fix here.",
+        "createdAt" : "2019-06-19T07:45:11Z",
+        "updatedAt" : "2019-06-19T07:45:12Z",
+        "lastEditedBy" : "b4e64da3-d07f-4391-82fc-7bfc071fcb0b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4ca24528-84b0-4414-8ea7-d87d02705eb3",
+        "parentId" : "9a8c93fa-9725-450f-beb3-bd34a37a9668",
+        "authorId" : "8d712730-9885-49fa-aeff-705d5a9e1bd9",
+        "body" : "Yes the point is when and why app is set to WAITING state(besides the app init).  \r\n\r\nsee [MasterChangeAcknowledged](https://github.com/apache/spark/blob/d9e4cf67c06b2d6daa4cd24b056e33dfb5eb35f5/core/src/main/scala/org/apache/spark/deploy/master/Master.scala#L352-L361)\r\n\r\n```\r\n    case MasterChangeAcknowledged(appId) =>\r\n      idToApp.get(appId) match {\r\n        case Some(app) =>\r\n          logInfo(\"Application has been re-registered: \" + appId)\r\n          app.state = ApplicationState.WAITING\r\n        case None =>\r\n          logWarning(\"Master change ack from unknown app: \" + appId)\r\n      }\r\n\r\n      if (canCompleteRecovery) { completeRecovery() }\r\n```\r\n\r\nplanB: Maybe when master changed ,we just keep the state before(do not need to set app to WAITING) and filter out the UNKNOWN app that didn't respond . If so i will update code for planB",
+        "createdAt" : "2019-06-19T09:21:23Z",
+        "updatedAt" : "2019-06-19T09:45:44Z",
+        "lastEditedBy" : "8d712730-9885-49fa-aeff-705d5a9e1bd9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5260dad5-2d6c-48a9-861b-08014afb8deb",
+        "parentId" : "9a8c93fa-9725-450f-beb3-bd34a37a9668",
+        "authorId" : "8d712730-9885-49fa-aeff-705d5a9e1bd9",
+        "body" : "Further learning the logic of recover app when master has changed, i found that in function RegisterApplication , an app is created and then stored in persistenceEngine:  `persistenceEngine.addApplication(app)` as WAITING state. When master has changed, recover app from the stored data and register application again with WAITING state. The current fix maybe right(after recover,the app is on WAITING with init state, then change to RUNNING as long as it gained an executor), otherwise the stored app data in persistenceEngine is wrong.\r\n",
+        "createdAt" : "2019-06-20T10:18:07Z",
+        "updatedAt" : "2019-06-20T10:18:07Z",
+        "lastEditedBy" : "8d712730-9885-49fa-aeff-705d5a9e1bd9",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "fd5b685b3731e05a76402a50f9e4d592182c9a6c",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +562,566 @@\n    // Update the state of recovered apps to RUNNING\n    apps.filter(_.coresGranted > 0).foreach(_.state = ApplicationState.RUNNING)\n\n    // Reschedule drivers which were not claimed by any workers"
   }
 ]

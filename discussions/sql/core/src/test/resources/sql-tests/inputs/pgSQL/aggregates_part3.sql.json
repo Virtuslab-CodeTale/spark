@@ -1,0 +1,233 @@
+[
+  {
+    "id" : "d3ff6885-446e-42a7-8ed5-475a6287abe3",
+    "prId" : 24829,
+    "prUrl" : "https://github.com/apache/spark/pull/24829#pullrequestreview-276222768",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f84ae67a-8b67-48c5-9f6a-883d87d03f83",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Instead of adding `SPARK-9830`, can we check the actual error? The original PostgreSQL test is also for ensuring the error.",
+        "createdAt" : "2019-08-11T00:11:49Z",
+        "updatedAt" : "2019-08-25T10:00:16Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "23b887ac-03a6-41b0-b6a1-0f20adc297de",
+        "parentId" : "f84ae67a-8b67-48c5-9f6a-883d87d03f83",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "It's a correct behaviour, `aggregate function calls cannot be nested`\r\nhttps://github.com/postgres/postgres/blob/REL_12_BETA2/src/test/regress/expected/aggregates.out#L1078-L1085",
+        "createdAt" : "2019-08-17T03:13:26Z",
+        "updatedAt" : "2019-08-25T10:00:16Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "09357b1c-d75c-4b28-803b-9b75ace3c843",
+        "parentId" : "f84ae67a-8b67-48c5-9f6a-883d87d03f83",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Ya. I know. My suggestion is to check the error message like PostgreSQL.\r\nIf it doesn't throw exceptions later, we can detect a regression at that time.",
+        "createdAt" : "2019-08-17T04:29:02Z",
+        "updatedAt" : "2019-08-25T10:00:16Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "33650461aa18b66f5d69c032113efd264ebb4bea",
+    "line" : 35,
+    "diffHunk" : "@@ -1,1 +33,37 @@-- drop table minmaxtest cascade;\n\n-- check for correct detection of nested-aggregate errors\nselect max(min(unique1)) from tenk1;\n-- select (select max(min(unique1)) from int8_tbl) from tenk1;"
+  },
+  {
+    "id" : "0b9aa2df-dde7-4581-9761-878061060d98",
+    "prId" : 24829,
+    "prUrl" : "https://github.com/apache/spark/pull/24829#pullrequestreview-276274960",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "935d57a1-7677-4a2a-8769-250ac57c83ab",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Did you mean that Spark doesn't support UDF invocation syntax like this `udfName(distinct a,b,c order by b)`?",
+        "createdAt" : "2019-08-11T00:24:54Z",
+        "updatedAt" : "2019-08-25T10:00:16Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d26ce108-91e6-49bb-8424-8bf065174d69",
+        "parentId" : "935d57a1-7677-4a2a-8769-250ac57c83ab",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "I think this is UDF behaviour:\r\n![image](https://user-images.githubusercontent.com/5399861/63167123-edc5c500-c062-11e9-84db-d449c9f1359c.png)\r\n",
+        "createdAt" : "2019-08-16T12:18:04Z",
+        "updatedAt" : "2019-08-25T10:00:16Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d7f06322-a7ce-4058-9eea-966b5c148fab",
+        "parentId" : "935d57a1-7677-4a2a-8769-250ac57c83ab",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Do we have a JIRA for that? Then, please add the ID as a comment here.",
+        "createdAt" : "2019-08-17T04:30:47Z",
+        "updatedAt" : "2019-08-25T10:00:16Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1b93cd76-1211-47cd-b3ae-474c76e84442",
+        "parentId" : "935d57a1-7677-4a2a-8769-250ac57c83ab",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "```sql\r\npostgres=# select max(distinct a) from (values('a'), ('b')) v(a);\r\n max\r\n-----\r\n b\r\n(1 row)\r\n\r\nspark-sql> select max(distinct a) from (values('a'), ('b')) v(a);\r\nb\r\nspark-sql>\r\n```\r\n\r\n```sql\r\npostgres=# select upper(distinct a) from (values('a'), ('b')) v(a);\r\nERROR:  DISTINCT specified, but upper is not an aggregate function\r\nLINE 1: select upper(distinct a) from (values('a'), ('b')) v(a);\r\n\r\nspark-sql> select upper(distinct a) from (values('a'), ('b')) v(a);\r\nError in query: upper does not support the modifier DISTINCT; line 1 pos 7\r\nspark-sql>\r\n```\r\nDo we need to add an ID? It seems that only the error message is different.",
+        "createdAt" : "2019-08-18T11:09:28Z",
+        "updatedAt" : "2019-08-25T10:00:16Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "74d57128-2b5c-4d7e-adc9-9792c91eabfc",
+        "parentId" : "935d57a1-7677-4a2a-8769-250ac57c83ab",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "https://github.com/apache/spark/pull/25486",
+        "createdAt" : "2019-08-18T12:00:14Z",
+        "updatedAt" : "2019-08-25T10:00:16Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "33650461aa18b66f5d69c032113efd264ebb4bea",
+    "line" : 109,
+    "diffHunk" : "@@ -1,1 +107,111 @@--        generate_series(1,3) i;\n\n-- select aggfstr(distinct a,b,c order by b)\n--   from (values (1,3,'foo'),(0,null,null),(2,2,'bar'),(3,1,'baz')) v(a,b,c),\n--        generate_series(1,3) i;"
+  },
+  {
+    "id" : "2ab55965-6637-479d-b9cd-116da1a532b2",
+    "prId" : 24829,
+    "prUrl" : "https://github.com/apache/spark/pull/24829#pullrequestreview-276272486",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "fa25b086-ed17-435f-8ebb-2fd788cf85f5",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "It seems that we need to mention the existing JIRA issue for `distinct a,a,c order by c using ~<~,a`?",
+        "createdAt" : "2019-08-11T00:25:38Z",
+        "updatedAt" : "2019-08-25T10:00:16Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fa7b0402-3046-4303-9f87-aacc1a68112a",
+        "parentId" : "fa25b086-ed17-435f-8ebb-2fd788cf85f5",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "SPARK-28010 or a new one for `USING` syntax.",
+        "createdAt" : "2019-08-11T00:26:48Z",
+        "updatedAt" : "2019-08-25T10:00:16Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3be24301-b18f-4750-963b-9fdaa30340de",
+        "parentId" : "fa25b086-ed17-435f-8ebb-2fd788cf85f5",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "@maropu These are operators?\r\n```\r\npostgres=# \\do ~*~\r\n                                     List of operators\r\n   Schema   | Name | Left arg type | Right arg type | Result type |       Description\r\n------------+------+---------------+----------------+-------------+-------------------------\r\n pg_catalog | ~<=~ | character     | character      | boolean     | less than or equal\r\n pg_catalog | ~<=~ | text          | text           | boolean     | less than or equal\r\n pg_catalog | ~<~  | character     | character      | boolean     | less than\r\n pg_catalog | ~<~  | text          | text           | boolean     | less than\r\n pg_catalog | ~>=~ | character     | character      | boolean     | greater than or equal\r\n pg_catalog | ~>=~ | text          | text           | boolean     | greater than or equal\r\n pg_catalog | ~>~  | character     | character      | boolean     | greater than\r\n pg_catalog | ~>~  | text          | text           | boolean     | greater than\r\n pg_catalog | ~~   | bytea         | bytea          | boolean     | matches LIKE expression\r\n pg_catalog | ~~   | character     | text           | boolean     | matches LIKE expression\r\n pg_catalog | ~~   | name          | text           | boolean     | matches LIKE expression\r\n pg_catalog | ~~   | text          | text           | boolean     | matches LIKE expression\r\n(12 rows)\r\n```",
+        "createdAt" : "2019-08-16T12:25:00Z",
+        "updatedAt" : "2019-08-25T10:00:16Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7d147ad9-3b03-48f9-84b2-146f10f2e296",
+        "parentId" : "fa25b086-ed17-435f-8ebb-2fd788cf85f5",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "https://issues.apache.org/jira/browse/SPARK-28768",
+        "createdAt" : "2019-08-18T10:59:11Z",
+        "updatedAt" : "2019-08-25T10:00:16Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "33650461aa18b66f5d69c032113efd264ebb4bea",
+    "line" : 119,
+    "diffHunk" : "@@ -1,1 +117,121 @@\n-- [SPARK-28768] Implement more text pattern operators\n-- select aggfns(distinct a,a,c order by c using ~<~,a)\n--   from (values (1,3,'foo'),(0,null,null),(2,2,'bar'),(3,1,'baz')) v(a,b,c),\n--        generate_series(1,2) i;"
+  },
+  {
+    "id" : "b8272e2b-8d3d-4ffb-a185-917039921f9c",
+    "prId" : 24829,
+    "prUrl" : "https://github.com/apache/spark/pull/24829#pullrequestreview-275921731",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6b41f33e-7960-4dbf-b445-3375e6a30818",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Maybe, something like the following? And, do we have a JIRA for `decode`?\r\n```\r\ninsert into bytea_test_table values(decode('aa', 'utf-8'));\r\n```",
+        "createdAt" : "2019-08-11T00:42:16Z",
+        "updatedAt" : "2019-08-25T10:00:16Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "733ee371-62f6-46e7-aef3-b0787e5cca49",
+        "parentId" : "6b41f33e-7960-4dbf-b445-3375e6a30818",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "It's https://issues.apache.org/jira/browse/SPARK-28121",
+        "createdAt" : "2019-08-16T12:26:49Z",
+        "updatedAt" : "2019-08-25T10:00:16Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "33650461aa18b66f5d69c032113efd264ebb4bea",
+    "line" : 218,
+    "diffHunk" : "@@ -1,1 +216,220 @@-- select string_agg(v, '') from bytea_test_table;\n\n-- insert into bytea_test_table values(decode('ff','hex'));\n\n-- select string_agg(v, '') from bytea_test_table;"
+  },
+  {
+    "id" : "fb873e24-ac85-4e14-bfdd-c2b47cad2024",
+    "prId" : 24829,
+    "prUrl" : "https://github.com/apache/spark/pull/24829#pullrequestreview-275922868",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c174c19c-7bee-4e85-9222-feb8f3af331c",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "From line 252 ~ 268, I understand the reason why you add comments like `Rewriting to CASE WHEN will hit: Expressions referencing the outer query are not supported outside of WHERE/HAVING clause`. But, let's have an explicit JIRA ID. Otherwise, let's not add the comment here.",
+        "createdAt" : "2019-08-11T00:50:50Z",
+        "updatedAt" : "2019-08-25T10:00:16Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c9f39302-b4be-4ee7-99f7-d6363254ebd4",
+        "parentId" : "c174c19c-7bee-4e85-9222-feb8f3af331c",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "Yes. We should revert it to original query.",
+        "createdAt" : "2019-08-16T12:29:45Z",
+        "updatedAt" : "2019-08-25T10:00:16Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "33650461aa18b66f5d69c032113efd264ebb4bea",
+    "line" : 265,
+    "diffHunk" : "@@ -1,1 +263,267 @@-- subquery in FILTER clause (PostgreSQL extension)\n-- select sum(unique1) FILTER (WHERE\n--  unique1 IN (SELECT unique1 FROM onek where unique1 < 100)) FROM tenk1;\n\n-- exercise lots of aggregate parts with FILTER"
+  }
+]
