@@ -1,0 +1,178 @@
+[
+  {
+    "id" : "a4880c6e-508b-4dae-9fdc-fd970123e9ce",
+    "prId" : 26596,
+    "prUrl" : "https://github.com/apache/spark/pull/26596#pullrequestreview-319376353",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "35ac0332-58dc-4011-abb9-805b6d30f0c3",
+        "parentId" : null,
+        "authorId" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "body" : "Maybe reuse common code between ```std``` and ```variance```?",
+        "createdAt" : "2019-11-19T21:47:11Z",
+        "updatedAt" : "2019-12-02T02:26:10Z",
+        "lastEditedBy" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "886bdfa963550f621aec9329ba95186ffb338ee8",
+    "line" : 229,
+    "diffHunk" : "@@ -1,1 +549,553 @@      realVariance\n    }\n\n    /**\n     * Sample size."
+  },
+  {
+    "id" : "8cb047a8-0e74-4011-bc96-b9678c5aca52",
+    "prId" : 26596,
+    "prUrl" : "https://github.com/apache/spark/pull/26596#pullrequestreview-323724265",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ace984f3-9c2e-4162-a48e-80747385380f",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Hm, do we need to require this? It's valid to ask for the sum over nothing (0) in a way that isn't valid for variance / stdev. It is checked below, but see comments below.",
+        "createdAt" : "2019-11-25T14:27:59Z",
+        "updatedAt" : "2019-12-02T02:26:10Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "58e6ce9d-126b-4282-849e-af859c07033d",
+        "parentId" : "ace984f3-9c2e-4162-a48e-80747385380f",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "I think we should still `require(totalWeightSum > 0)`,\r\nsince if no instance is added to the summarizer,  then we do not know the size of vector and can not return a valid vector",
+        "createdAt" : "2019-11-27T02:13:44Z",
+        "updatedAt" : "2019-12-02T02:26:10Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "253dcb4b-f969-4639-b11e-572f97e40b04",
+        "parentId" : "ace984f3-9c2e-4162-a48e-80747385380f",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Well, the answer is certainly a vector of 0s in this case. It's different from central moments where there is no value when there is no data. I don't feel strongly about it though.",
+        "createdAt" : "2019-11-27T14:42:50Z",
+        "updatedAt" : "2019-12-02T02:26:10Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "886bdfa963550f621aec9329ba95186ffb338ee8",
+    "line" : 176,
+    "diffHunk" : "@@ -1,1 +498,502 @@    def sum: Vector = {\n      require(requestedMetrics.contains(Sum))\n      require(totalWeightSum > 0, s\"Nothing has been added to this summarizer.\")\n\n      val realSum = Array.ofDim[Double](n)"
+  },
+  {
+    "id" : "4eb0a46f-de34-459d-bd22-0faa57c9bf51",
+    "prId" : 26596,
+    "prUrl" : "https://github.com/apache/spark/pull/26596#pullrequestreview-323121392",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "bd4250f5-7fd0-4c0b-90dd-1275384a6152",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Hm, this comment confuses me. \"Unbiased\" arises when estimating the population variance from the sample's. Here there is no sample, just a population. Normally this amounts to diving by n instead of n-1 when computing the variance, but I don't quite understand the formula below, so I'm not sure which one it's doing. Do you happen to know what it is following, as you've looked at it recently?\r\n\r\nIt should follow pandas, which is computing population variance. The thing that confuses me in the comment below about considering a negative denominator, which leads me to ...",
+        "createdAt" : "2019-11-25T14:52:35Z",
+        "updatedAt" : "2019-12-02T02:26:10Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "61644d49-faa4-46e8-a995-d1744cb20d62",
+        "parentId" : "bd4250f5-7fd0-4c0b-90dd-1275384a6152",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "Good point. It is `Unbiased Estimation of Standard Deviation` only when diving by n-1.\r\nI also refer to sql's [var function](https://www.tutorialgateway.org/sql-var-function/), it says that the `(Total number of items - 1)` is used.\r\nSo I guess the impl is somewhat wrong, since old `MultivariateOnlineSummarizer`",
+        "createdAt" : "2019-11-26T11:31:47Z",
+        "updatedAt" : "2019-12-02T02:26:10Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "42a2195e-0c21-4552-a132-a2f6bb5ca5f8",
+        "parentId" : "bd4250f5-7fd0-4c0b-90dd-1275384a6152",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Wait, you are right. pandas is computing sample variance/stddev. There are \"var_samp\" and \"var_pop\" functions in DBs, including Spark, but \"variance\" is an alias for \"var_samp\". Hm, I kind of disagree with that conceptually, but that's what we should follow.\r\n\r\nThe current implementation appears to return the 'sample' variance. For inputs 1,2,3 it returns 1, which is what you'd get dividing by 3-1. OK, well it appears to be doing what we intend.",
+        "createdAt" : "2019-11-26T16:33:11Z",
+        "updatedAt" : "2019-12-02T02:26:10Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "886bdfa963550f621aec9329ba95186ffb338ee8",
+    "line" : 188,
+    "diffHunk" : "@@ -1,1 +510,514 @@\n    /**\n     * Unbiased estimate of sample variance of each dimension.\n     */\n    def variance: Vector = {"
+  },
+  {
+    "id" : "d0fb7a64-6c6c-46aa-a770-e9354a8210e6",
+    "prId" : 26596,
+    "prUrl" : "https://github.com/apache/spark/pull/26596#pullrequestreview-323121965",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5c412629-ac84-4b31-bb0d-aed09d84e19f",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Whatever this is, I'm not sure why it would be negative, unless the idea is simply to account for floating-point imprecision. But if it is the equivalent of diving by \"n-1\" then this seems to be incorrectly computing 'sample variance'. I'm not quite sure how sample variance is supposed to work out in the weighted case, but, if that's what it's doing it's not correct anyway, I think.\r\n\r\nIt would then be valid to require totalWeightSum > 0, but equally, would be valid and consistent with pandas to return NaN I think. But we can keep the current behavior.",
+        "createdAt" : "2019-11-25T15:00:57Z",
+        "updatedAt" : "2019-12-02T02:26:10Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0b7fd6ef-72a0-4408-bd3b-cd31f9f492df",
+        "parentId" : "5c412629-ac84-4b31-bb0d-aed09d84e19f",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "The idea behind this `def computeVariance: Array[Double]` method is only to reuse the code.\r\nSince according current design, we will check `requestedMetrics.contains(...)` before computation, so in `def std` we can not safely obtain a variance vector by call `def variance` ",
+        "createdAt" : "2019-11-26T11:35:59Z",
+        "updatedAt" : "2019-12-02T02:26:10Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "198800e5-5089-48da-ac18-bdbee330fa5c",
+        "parentId" : "5c412629-ac84-4b31-bb0d-aed09d84e19f",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "Ooh, you mean `We prevent variance from negative value caused by numerical error.`\r\nyes, I guess it is reasonable to del this check, it should not have a negative denominator.",
+        "createdAt" : "2019-11-26T11:38:50Z",
+        "updatedAt" : "2019-12-02T02:26:10Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "443d774a-e375-4de6-b7f0-11332b39cc8b",
+        "parentId" : "5c412629-ac84-4b31-bb0d-aed09d84e19f",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "Maybe this is for numeric-stablity? ",
+        "createdAt" : "2019-11-26T11:39:50Z",
+        "updatedAt" : "2019-12-02T02:26:10Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d7a41834-311a-4568-9c33-0ad648921351",
+        "parentId" : "5c412629-ac84-4b31-bb0d-aed09d84e19f",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Yeah probably. Well, per above, I think it's doing what we want anyway. We can leave the logic as-is.",
+        "createdAt" : "2019-11-26T16:33:56Z",
+        "updatedAt" : "2019-12-02T02:26:10Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "886bdfa963550f621aec9329ba95186ffb338ee8",
+    "line" : 212,
+    "diffHunk" : "@@ -1,1 +533,537 @@    private def computeVariance: Array[Double] = {\n      val realVariance = Array.ofDim[Double](n)\n      val denominator = totalWeightSum - (weightSquareSum / totalWeightSum)\n\n      // Sample variance is computed, if the denominator is less than 0, the variance is just 0."
+  }
+]

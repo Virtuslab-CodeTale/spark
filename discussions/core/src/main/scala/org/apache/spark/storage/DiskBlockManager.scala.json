@@ -196,5 +196,71 @@
     "commit" : "3520e339e2a9a8daf256ab1396fef9cf85a16354",
     "line" : 46,
     "diffHunk" : "@@ -1,1 +73,77 @@\n  // This method should be kept in sync with\n  // org.apache.spark.network.shuffle.ExecutorDiskUtils#getFile().\n  private def getFile(localDirs: Array[File], subDirs: Array[Array[File]],\n      subDirsPerLocalDir: Int, filename: String): File = {"
+  },
+  {
+    "id" : "b0ab48df-b471-4388-8231-7abedf5be65c",
+    "prId" : 26643,
+    "prUrl" : "https://github.com/apache/spark/pull/26643#pullrequestreview-322021422",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "61b12c67-8cb2-48c4-86fb-95dba1114053",
+        "parentId" : null,
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "Methinks this change corrupts shuffle writer an reader's dependency",
+        "createdAt" : "2019-11-24T12:47:21Z",
+        "updatedAt" : "2019-11-24T14:24:35Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2d8592d8-6fc0-43ac-a52b-c0108c8a7246",
+        "parentId" : "61b12c67-8cb2-48c4-86fb-95dba1114053",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> Methinks this change corrupts shuffle writer an reader's dependency\r\n\r\nRetry only happened for newSubDir, won't destroy origin dependency. \r\nIf one blockId have corresponding folder. It will return  origin `old`.\r\nFor new coming blockId, will retry when mkdir failed.\r\nAnd if finally return `File` and put into `subDirs`\r\n```\r\nsubDirs(dirId)(subDirId) = newDir\r\n```\r\nWhen this block's request come again, will return `old` since  `subDirs(dirId)(subDirId) != null`",
+        "createdAt" : "2019-11-24T13:48:21Z",
+        "updatedAt" : "2019-11-24T14:24:35Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0b66183c-0105-453d-8eb4-06ccbe09cf4e",
+        "parentId" : "61b12c67-8cb2-48c4-86fb-95dba1114053",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "the `dirId` seems unstable, I guess for external shuffle it probably goes wrong",
+        "createdAt" : "2019-11-24T14:02:39Z",
+        "updatedAt" : "2019-11-24T14:24:35Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dcac0f75-e988-40f8-9ff4-21c7f15657f0",
+        "parentId" : "61b12c67-8cb2-48c4-86fb-95dba1114053",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> the `dirId` seems unstable, I guess for external shuffle it probably goes wrong\r\n\r\nGot your point. If the disk problem was fixed, the `dirId` may not same",
+        "createdAt" : "2019-11-24T14:15:04Z",
+        "updatedAt" : "2019-11-24T14:24:35Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5eba5993-66b3-4073-bd4d-4a12933c52dd",
+        "parentId" : "61b12c67-8cb2-48c4-86fb-95dba1114053",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "@yaooqinn Add a method to control this problem, but it doesn't look very elegant. As @srowen mentioned, we can use blacklist to prevent this bad case. But i don't think it can handle all executor disk problem",
+        "createdAt" : "2019-11-25T03:05:30Z",
+        "updatedAt" : "2019-11-25T03:05:31Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2304837d002ee3ff4674157cff0357f53e661ccb",
+    "line" : 68,
+    "diffHunk" : "@@ -1,1 +98,102 @@              logError(s\"Failed to create local dir in $newDir.\", e)\n              count = count + 1\n              localDirIndex.remove(hashIndex)\n          }\n        }"
   }
 ]

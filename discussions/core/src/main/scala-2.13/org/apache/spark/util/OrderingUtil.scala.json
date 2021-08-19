@@ -1,0 +1,112 @@
+[
+  {
+    "id" : "b119f003-4393-41b0-ac9d-d7df6836edfa",
+    "prId" : 26654,
+    "prUrl" : "https://github.com/apache/spark/pull/26654#pullrequestreview-323968650",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b0157545-ed68-4227-8746-0ea8b925d00f",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "hmm, doesn't Scala 2.12's Ordering.Double.compare delegates to java.lang.Double.compare?\r\n\r\nwhy this matches java.lang.Double, but not Scala 2.12's Ordering.Double?\r\n\r\n",
+        "createdAt" : "2019-11-27T22:03:46Z",
+        "updatedAt" : "2019-11-27T22:03:46Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b6590017-66f1-47aa-a62d-6d11b6ff1598",
+        "parentId" : "b0157545-ed68-4227-8746-0ea8b925d00f",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "It does, for `compare`. The superclass `Ordering` then defines operations like `lt`, `lteq`, etc in terms of `compare`. But 2.12 `Ordering.Double` overrides them to use operations like `<`, `<=`. As far as I can tell it presents a consistent total ordering via `compare` already (as it appears `java.lang.Double.compare` does), but its comparisons aren't consistent with how NaNs behave in `lt`, etc. Then again... perhaps neither is Java. Its `Comparators.natural()` would work consistently, but the comparisons don't match the Java operators.",
+        "createdAt" : "2019-11-27T22:08:13Z",
+        "updatedAt" : "2019-11-27T22:08:13Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fdfb309c-056d-4abe-88e8-c9515d8b22fc",
+        "parentId" : "b0157545-ed68-4227-8746-0ea8b925d00f",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "So I guess the question is, when to the `Ordering`s get used by Spark? it's not immediately clear if they are, even. If they're used for sorting, all is well... I think, as sorting would use `compare` and all of the impls in question behave the same way. \r\n\r\nIf it's used to evaluate how doubles compare somewhere, then, should those answers be consistent with the sort ordering? or Java/Scala operators? I'd presume the former, but, that's not how it works right now. And the choice to use `TotalOrdering` changes that in 2.13.\r\n\r\n- If we think the current behavior is correct, and matters, then 2.12 is OK and then we use `IeeeOrdering` in 2.13 to be conservative\r\n- If the current behavior doesn't matter, it doesn't matter what we choose. `TotalOrdering` feels more logical.\r\n- If the current behavior is wrong, we can patch 2.12 to work like 2.13's `TotalOrdering`. Then the 2.13 choice is already correct, `TotalOrdering`.\r\n\r\nI actually suspect it doesn't matter, doesn't get used.",
+        "createdAt" : "2019-11-27T22:12:08Z",
+        "updatedAt" : "2019-11-27T22:12:09Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "57fc3f93f97110ac95bcffa47f1a8e0eca8fc5cd",
+    "line" : 26,
+    "diffHunk" : "@@ -1,1 +24,28 @@ * \n * It functions like Ordering.Double.TotalOrdering in Scala 2.13, which matches java.lang.Double\n * rather than Scala 2.12's Ordering.Double in handling of NaN.\n */\nprivate[spark] object OrderingUtil {"
+  },
+  {
+    "id" : "0af8c98e-9846-4f76-993c-84e360390e15",
+    "prId" : 26654,
+    "prUrl" : "https://github.com/apache/spark/pull/26654#pullrequestreview-327113266",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "09cb4f1f-5765-4cba-b181-64c0b864d146",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "after another thought, shall we just use `java.lang.Double.compare`? This is how Scala 2.13 implements `Ordering.Double.TotalOrdering`:\r\nhttps://github.com/scala/scala/blob/d0bd8241bb60bebc2bf0cbd2e9b01212fd1de93b/src/library/scala/math/Ordering.scala#L452",
+        "createdAt" : "2019-12-04T15:50:18Z",
+        "updatedAt" : "2019-12-04T15:51:58Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fcd08ece-39a1-4268-a9a4-6c4ebe1c99a5",
+        "parentId" : "09cb4f1f-5765-4cba-b181-64c0b864d146",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "This is also how Scala 2.12 implements `Ordering.Double.compare`:\r\nhttps://github.com/scala/scala/blob/2.12.x/src/library/scala/math/Ordering.scala#L295",
+        "createdAt" : "2019-12-04T15:51:39Z",
+        "updatedAt" : "2019-12-04T15:51:40Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "df7aecc8-82b6-468b-a700-7007474ecd32",
+        "parentId" : "09cb4f1f-5765-4cba-b181-64c0b864d146",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Then we don't need to have branches between Scala 2.12 and 2.13. We can also use `java.lang.Double.compare` to replace `Utils.nanSafeCompareDoubles`",
+        "createdAt" : "2019-12-04T15:53:12Z",
+        "updatedAt" : "2019-12-04T15:53:12Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1bbb7f6e-b60b-4a3a-89f4-17a3a47ca394",
+        "parentId" : "09cb4f1f-5765-4cba-b181-64c0b864d146",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Yes that sounds fine and simpler. If `compare` is the only functionality being used, this collapses to something simpler. I can make a follow-up. (We'll need the separate source trees for other reasons though.)",
+        "createdAt" : "2019-12-04T16:19:05Z",
+        "updatedAt" : "2019-12-04T16:19:06Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8707520a-c121-41c7-b49d-6ce5f71a0831",
+        "parentId" : "09cb4f1f-5765-4cba-b181-64c0b864d146",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "See https://github.com/apache/spark/pull/26761",
+        "createdAt" : "2019-12-04T19:56:12Z",
+        "updatedAt" : "2019-12-04T19:56:12Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "57fc3f93f97110ac95bcffa47f1a8e0eca8fc5cd",
+    "line" : 30,
+    "diffHunk" : "@@ -1,1 +28,32 @@private[spark] object OrderingUtil {\n\n  def compareDouble(x: Double, y: Double): Int = Ordering.Double.TotalOrdering.compare(x, y)\n\n  def compareFloat(x: Float, y: Float): Int = Ordering.Float.TotalOrdering.compare(x, y)"
+  }
+]

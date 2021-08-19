@@ -64,5 +64,214 @@
     "commit" : "2aebf0516f146456e4567612db8823fc3407641b",
     "line" : 7,
     "diffHunk" : "@@ -1,1 +797,801 @@:        +- SubqueryAlias dept\n:           +- View (`DEPT`, [dept_id#x,dept_name#x,state#x])\n:              +- Project [cast(dept_id#x as int) AS dept_id#x, cast(dept_name#x as string) AS dept_name#x, cast(state#x as string) AS state#x]\n:                 +- Project [dept_id#x, dept_name#x, state#x]\n:                    +- SubqueryAlias DEPT"
+  },
+  {
+    "id" : "84e2af9f-fd79-48d5-9697-9fd879ae0088",
+    "prId" : 26656,
+    "prUrl" : "https://github.com/apache/spark/pull/26656#pullrequestreview-324478791",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "34c07b63-6d13-4093-b8b2-469aa0c74e49",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Is this expected?",
+        "createdAt" : "2019-11-26T10:33:35Z",
+        "updatedAt" : "2019-12-24T03:01:16Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "72353640-32d1-47ac-8e3e-c0aac2856ea4",
+        "parentId" : "34c07b63-6d13-4093-b8b2-469aa0c74e49",
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "I don't know. it seems is forbidden or other reason.",
+        "createdAt" : "2019-11-26T10:35:42Z",
+        "updatedAt" : "2019-12-24T03:01:16Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a0addb43-06bf-4ff2-a6ca-27a01ed54fe8",
+        "parentId" : "34c07b63-6d13-4093-b8b2-469aa0c74e49",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Can you check the PgSQL behaviour? If it supports this query, we should do.",
+        "createdAt" : "2019-11-26T12:46:41Z",
+        "updatedAt" : "2019-12-24T03:01:16Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "15bd1a4f-f914-46df-8beb-98cf445e4683",
+        "parentId" : "34c07b63-6d13-4093-b8b2-469aa0c74e49",
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "```\r\n[SQL]SELECT COMPANY.DEP_ID,\r\n       avg(SALARY),\r\n       avg(SALARY) FILTER (WHERE EXISTS (SELECT ID\r\n               FROM DEPARTMENT\r\n               WHERE DEPARTMENT.ID = COMPANY.DEP_ID))\r\nFROM COMPANY;\r\n\r\n[Err] ERROR:  column \"company.dep_id\" must appear in the GROUP BY clause or be used in an aggregate function\r\nLINE 1: SELECT COMPANY.DEP_ID,\r\n               ^\r\n```",
+        "createdAt" : "2019-11-27T02:40:26Z",
+        "updatedAt" : "2019-12-24T03:01:16Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0b724a05-8af3-4bc5-a42b-f8d878a7f6cf",
+        "parentId" : "34c07b63-6d13-4093-b8b2-469aa0c74e49",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "I tried and it seemed that the query passed in pg;\r\n```\r\npostgres=# SELECT emp.dept_id, avg(salary), avg(salary) FILTER (WHERE EXISTS (SELECT state FROM dept WHERE dept.dept_id = emp.dept_id)) FROM emp GROUP BY dept_id;\r\n dept_id |         avg          |         avg          \r\n---------+----------------------+----------------------\r\n         | 400.0000000000000000 |                     \r\n      10 | 133.3333333333333333 | 133.3333333333333333\r\n     100 | 400.0000000000000000 |                     \r\n      30 | 400.0000000000000000 | 400.0000000000000000\r\n      70 | 150.0000000000000000 | 150.0000000000000000\r\n      20 | 300.0000000000000000 | 300.0000000000000000\r\n(6 rows)\r\n```\r\nDo I miss something?",
+        "createdAt" : "2019-11-27T12:21:49Z",
+        "updatedAt" : "2019-12-24T03:01:16Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3b782963-42c4-47f6-a59b-1fda9e5ed0cd",
+        "parentId" : "34c07b63-6d13-4093-b8b2-469aa0c74e49",
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "```\r\nSELECT COMPANY.DEP_ID,\r\n       avg(SALARY),\r\n       avg(SALARY) FILTER (WHERE EXISTS (SELECT ID\r\n               FROM DEPARTMENT\r\n               WHERE DEPARTMENT.ID = COMPANY.DEP_ID))\r\nFROM COMPANY GROUP BY DEP_ID;\r\n```\r\nI'm sorry, I lost the group by clause.\r\nPgSQL supports this query.",
+        "createdAt" : "2019-11-28T01:48:48Z",
+        "updatedAt" : "2019-12-24T03:01:16Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c02bda97-2454-42f7-a692-1b759d5b7ff5",
+        "parentId" : "34c07b63-6d13-4093-b8b2-469aa0c74e49",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "If so, we should support this, too.",
+        "createdAt" : "2019-11-28T02:31:43Z",
+        "updatedAt" : "2019-12-24T03:01:16Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ded7b620-9456-4912-939c-4b40ab2dd200",
+        "parentId" : "34c07b63-6d13-4093-b8b2-469aa0c74e49",
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "It seems difficult to implement. \r\nI references the implement that IN/EXISTS predicate sub-queries used in Filter, it converts the subquery to semi/anti join. But we cannot do the same.\r\nDo you have a good idea?\r\ncc @cloud-fan ",
+        "createdAt" : "2019-11-28T04:11:16Z",
+        "updatedAt" : "2019-12-24T03:01:16Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3eb064e8-ecba-4f9f-a87c-76d6bd627a36",
+        "parentId" : "34c07b63-6d13-4093-b8b2-469aa0c74e49",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "The ohter dbms-like systems support this query, oracle, mysql, presto, ...? Can you check?",
+        "createdAt" : "2019-11-28T04:21:27Z",
+        "updatedAt" : "2019-12-24T03:01:16Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c13061e3-a13f-4598-ac1f-ed683069c90b",
+        "parentId" : "34c07b63-6d13-4093-b8b2-469aa0c74e49",
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "I just checked oracle, mysql, presto, hive, Redshift, Vertica, DB2, all of them not support this query.",
+        "createdAt" : "2019-11-28T04:44:47Z",
+        "updatedAt" : "2019-12-24T03:01:16Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fdfdfdb2-e3e6-44e0-b74f-4cb9ec330820",
+        "parentId" : "34c07b63-6d13-4093-b8b2-469aa0c74e49",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Can you show us error messages of part of them(e.g., oracle and db2)? What's a kind of errors?",
+        "createdAt" : "2019-11-28T05:32:24Z",
+        "updatedAt" : "2019-12-24T03:01:16Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6766dde2-5c9b-42a2-9d48-2010b58f051d",
+        "parentId" : "34c07b63-6d13-4093-b8b2-469aa0c74e49",
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "The error message of MySQL is:\r\n```\r\n[SQL]SELECT emp.dept_id,\r\n       avg(salary),\r\n       avg(salary) FILTER (WHERE EXISTS (SELECT state\r\n               FROM dept\r\n               WHERE id = emp.dept_id))\r\nFROM emp\r\nGROUP BY dept_id;\r\n[Err] 1064 - You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '(WHERE EXISTS (SELECT state\r\n               FROM dept\r\n               WHERE id =' at line 3\r\n```",
+        "createdAt" : "2019-11-28T06:52:19Z",
+        "updatedAt" : "2019-12-24T03:01:16Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bed35af0-0053-4213-ba74-890210ed45d7",
+        "parentId" : "34c07b63-6d13-4093-b8b2-469aa0c74e49",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "How about Oracle? It has more meaningful errors like \"FILTER syntax does not support subqueries, brabrabra\"?",
+        "createdAt" : "2019-11-28T06:56:59Z",
+        "updatedAt" : "2019-12-24T03:01:16Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "479edb80-3c3f-4e08-b259-c5f6d46522ac",
+        "parentId" : "34c07b63-6d13-4093-b8b2-469aa0c74e49",
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "The error message of Oracle is:\r\n```\r\nSELECT TEST.\"emp\".dept_id, avg(salary), avg(salary) FILTER (WHERE EXISTS (SELECT state FROM TEST.\"dept\" WHERE id = TEST.\"emp\".dept_id))\r\nFROM TEST.\"emp\" GROUP BY dept_id\r\n> ORA-00923: FROM keyword not found where expected\r\n  \r\n> Time: 0.026s\r\n```",
+        "createdAt" : "2019-11-28T09:02:32Z",
+        "updatedAt" : "2019-12-24T03:01:16Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b2786879-2356-4f20-ad5d-b7a97012fc03",
+        "parentId" : "34c07b63-6d13-4093-b8b2-469aa0c74e49",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Ah, I see. Thanks. Then, yes, I personally think its ok not to support subqueries in this pr. Can you throw an exception with an explicit error message in `CheckAnalysis`?  cc: @gatorsmile @cloud-fan ",
+        "createdAt" : "2019-11-28T23:58:05Z",
+        "updatedAt" : "2019-12-24T03:01:16Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d98ea4139454e3346e220aa0e1df8a2e4da18cea",
+    "line" : 369,
+    "diffHunk" : "@@ -1,1 +367,371 @@-- !query 32 output\norg.apache.spark.sql.AnalysisException\nIN/EXISTS predicate sub-queries can only be used in Filter/Join and a few commands: Aggregate [dept_id#x], [dept_id#x, avg(salary#x) AS avg(salary)#x, avg(salary#x) AS avg(salary)#x]\n:  +- Project [state#x]\n:     +- Filter (dept_id#x = outer(dept_id#x))"
+  },
+  {
+    "id" : "26ffcac7-c25e-4f13-9d60-698c1000d33f",
+    "prId" : 26656,
+    "prUrl" : "https://github.com/apache/spark/pull/26656#pullrequestreview-335693845",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "cbb8aac3-011b-4402-b722-55ae895cf5b1",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Please file jira for unsupported subquery cases and leave jira IDs here?",
+        "createdAt" : "2019-12-23T01:43:21Z",
+        "updatedAt" : "2019-12-24T03:01:16Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "49bb487a-e271-44a6-bf61-d66d6d696e49",
+        "parentId" : "cbb8aac3-011b-4402-b722-55ae895cf5b1",
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "OK",
+        "createdAt" : "2019-12-23T02:47:16Z",
+        "updatedAt" : "2019-12-24T03:01:16Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d98ea4139454e3346e220aa0e1df8a2e4da18cea",
+    "line" : 368,
+    "diffHunk" : "@@ -1,1 +366,370 @@struct<>\n-- !query 32 output\norg.apache.spark.sql.AnalysisException\nIN/EXISTS predicate sub-queries can only be used in Filter/Join and a few commands: Aggregate [dept_id#x], [dept_id#x, avg(salary#x) AS avg(salary)#x, avg(salary#x) AS avg(salary)#x]\n:  +- Project [state#x]"
   }
 ]

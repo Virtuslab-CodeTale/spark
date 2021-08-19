@@ -1,0 +1,90 @@
+[
+  {
+    "id" : "535e2ec4-e46c-46ce-991b-a81e8b413edb",
+    "prId" : 26644,
+    "prUrl" : "https://github.com/apache/spark/pull/26644#pullrequestreview-322314767",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "754b3237-7f06-49ca-b2c6-63848ba53a7f",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Can you use the existing UDT for testing this pr instead of defining the new UDT?",
+        "createdAt" : "2019-11-25T13:45:15Z",
+        "updatedAt" : "2019-12-30T16:20:27Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "faa8a919-65fb-4ebd-9ccb-1ffc83ef4b16",
+        "parentId" : "754b3237-7f06-49ca-b2c6-63848ba53a7f",
+        "authorId" : "e29a7794-ac2e-4e6f-a690-737e83e1bace",
+        "body" : "No, this isn't possible since we need to override the `jvalue` to the native DataType type. Otherwise, it will be caught by: https://github.com/apache/spark/blob/master/sql/catalyst/src/main/scala/org/apache/spark/sql/types/StructType.scala#L592",
+        "createdAt" : "2019-11-25T14:26:14Z",
+        "updatedAt" : "2019-12-30T16:20:27Z",
+        "lastEditedBy" : "e29a7794-ac2e-4e6f-a690-737e83e1bace",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dd3c913f0c552c975cd96cde554ba90f99b85bab",
+    "line" : 20,
+    "diffHunk" : "@@ -1,1 +65,69 @@  }\n\n  private[sql] class MyXMLGregorianCalendarUDT extends UserDefinedType[XMLGregorianCalendar] {\n    override def sqlType: DataType = TimestampType\n"
+  },
+  {
+    "id" : "6e8a8409-6f53-4106-873a-b235139cde96",
+    "prId" : 26644,
+    "prUrl" : "https://github.com/apache/spark/pull/26644#pullrequestreview-338416260",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4fc531d5-bfbb-479c-a2c8-3f095c759e50",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Why did you change this? ISTM this method is not expected to be override by users. We need `final` for `UserDefinedType.jsonValue`? cc: @dongjoon-hyun @HyukjinKwon \r\n https://github.com/apache/spark/blob/2a28c73d81dd12fa39eb52d3eb343e651123a51d/sql/catalyst/src/main/scala/org/apache/spark/sql/types/UserDefinedType.scala#L61",
+        "createdAt" : "2019-11-26T00:11:46Z",
+        "updatedAt" : "2019-12-30T16:20:27Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d8791d01-7a9c-4bce-9e66-498edfaa98a7",
+        "parentId" : "4fc531d5-bfbb-479c-a2c8-3f095c759e50",
+        "authorId" : "e29a7794-ac2e-4e6f-a690-737e83e1bace",
+        "body" : "With the normal UDT `jsonValue`, we would get:\r\n```\r\n  override private[sql] def jsonValue: JValue = {\r\n    (\"type\" -> \"udt\") ~\r\n      (\"class\" -> this.getClass.getName) ~\r\n      (\"pyClass\" -> pyUDT) ~\r\n      (\"sqlType\" -> sqlType.jsonValue)\r\n```\r\nWhich will write the type as the UDT. If you try to read the column later on in another job where the UDTRegistration hasn't been done will give an error. Therefore we would like to write the XMLGregorianCalendar as a normal timestamp. However, when we append the table, we want to be able to merge the `XMLGregorianCalendar` UDT into the timestamp. Without the added rule this wouldn't be possible. Hope this helps.",
+        "createdAt" : "2019-11-26T11:01:34Z",
+        "updatedAt" : "2019-12-30T16:20:27Z",
+        "lastEditedBy" : "e29a7794-ac2e-4e6f-a690-737e83e1bace",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4c5ebd0a-5240-453e-8328-26865d7d8b9a",
+        "parentId" : "4fc531d5-bfbb-479c-a2c8-3f095c759e50",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "This is a bit odd .. wouldn't it be a timestamp whenever it does a roundtrip in ser/de?",
+        "createdAt" : "2020-01-03T07:19:23Z",
+        "updatedAt" : "2020-01-03T07:19:24Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7fc1ad8f-0ba2-42af-8210-87df386f4456",
+        "parentId" : "4fc531d5-bfbb-479c-a2c8-3f095c759e50",
+        "authorId" : "e29a7794-ac2e-4e6f-a690-737e83e1bace",
+        "body" : "That is correct. So when we serialize it, it will use:\r\n```scala\r\n    override def serialize(obj: XMLGregorianCalendar): Any =\r\n      obj.toGregorianCalendar.getTimeInMillis * 1000\r\n```\r\nWhich will write it as a timestamp stored as the number of microseconds from the epoch of 1970-01-01T00:00:00.000000Z (UTC+00:00).\r\n\r\nAnd this serialize implementation should be the same as the one in the `sqlType`, because we don't store any references to the UDT, another Spark session will just decode it as a `TimestampType`, so the decoder of the TimestampType will be used. \r\n\r\nI know that this isn't trivial, but it is very powerful and makes the UDT's much more flexible when writing ETL jobs since you can directly use your own types with the Dataset API.",
+        "createdAt" : "2020-01-05T19:12:45Z",
+        "updatedAt" : "2020-01-05T19:12:46Z",
+        "lastEditedBy" : "e29a7794-ac2e-4e6f-a690-737e83e1bace",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dd3c913f0c552c975cd96cde554ba90f99b85bab",
+    "line" : 35,
+    "diffHunk" : "@@ -1,1 +80,84 @@\n    // By setting this to a timestamp, we lose the information about the udt\n    override private[sql] def jsonValue: JValue = \"timestamp\"\n  }\n}"
+  }
+]

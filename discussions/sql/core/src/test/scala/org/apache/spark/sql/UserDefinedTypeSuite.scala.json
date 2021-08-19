@@ -64,5 +64,203 @@
     "commit" : "d724fa48dc8d9b419e46efd2a9d7858003908245",
     "line" : 53,
     "diffHunk" : "@@ -1,1 +323,327 @@    val result = agg.collect()\n\n    assert(result.toSet === Set(FooWithDate(date, \"FooFoo\", 3), FooWithDate(date, \"Foo\", 1)))\n  }\n}"
+  },
+  {
+    "id" : "bcc56303-d657-4bb2-9d2e-8f48377940cc",
+    "prId" : 26644,
+    "prUrl" : "https://github.com/apache/spark/pull/26644#pullrequestreview-321979443",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "62863bdd-7e4b-4fa8-903f-7d8b886f726c",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Could you run `dev/scalastyle` and fix the errors?\r\n```\r\n[error] /home/runner/work/spark/spark/sql/core/src/test/scala/org/apache/spark/sql/UserDefinedTypeSuite.scala:26:0: There should at least one a single empty line separating groups 3rdParty and spark.\r\n15\r\n[error] /home/runner/work/spark/spark/sql/core/src/test/scala/org/apache/spark/sql/UserDefinedTypeSuite.scala:35:0: scala.reflect.ClassTag should be in group scala, not spark.\r\n```",
+        "createdAt" : "2019-11-24T16:42:29Z",
+        "updatedAt" : "2019-12-30T16:20:27Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0a50956a-1195-47ef-9a5a-6bf995e97924",
+        "parentId" : "62863bdd-7e4b-4fa8-903f-7d8b886f726c",
+        "authorId" : "e29a7794-ac2e-4e6f-a690-737e83e1bace",
+        "body" : "Thank you for the pointers. I've fixed the style errors.",
+        "createdAt" : "2019-11-24T19:12:57Z",
+        "updatedAt" : "2019-12-30T16:20:27Z",
+        "lastEditedBy" : "e29a7794-ac2e-4e6f-a690-737e83e1bace",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dd3c913f0c552c975cd96cde554ba90f99b85bab",
+    "line" : 9,
+    "diffHunk" : "@@ -1,1 +22,26 @@\nimport com.sun.org.apache.xerces.internal.jaxp.datatype.XMLGregorianCalendarImpl\nimport javax.xml.datatype.XMLGregorianCalendar\n\nimport org.apache.spark.rdd.RDD"
+  },
+  {
+    "id" : "15064c8a-3287-4f45-8585-ce406d22bb6b",
+    "prId" : 26644,
+    "prUrl" : "https://github.com/apache/spark/pull/26644#pullrequestreview-325946164",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "bc453205-244b-4667-b25b-6267c5715a1c",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "How about the simplified one like this?\r\n```\r\n  test(\"Allow merge UserDefinedType into a native DataType\") {\r\n    // Register the UDT\r\n    UDTRegistration.register(\r\n      classOf[XMLGregorianCalendar].getName,\r\n      classOf[MyXMLGregorianCalendarUDT].getName)\r\n\r\n    withTempDir { dir =>\r\n      val gregorianCalendar = new GregorianCalendar(1925, 5, 20, 19, 25)\r\n      // Equivalent of above (the year minus 1900)\r\n      val timestamp = new Timestamp(25, 5, 20, 19, 25, 0, 0)\r\n\r\n      val data = Seq(Row(new XMLGregorianCalendarImpl(gregorianCalendar)))\r\n      val rdd = spark.sparkContext.parallelize(data)\r\n      val schema = StructType(StructField(\"dt\", new MyXMLGregorianCalendarUDT) :: Nil)\r\n      val df = spark.sqlContext.createDataFrame(rdd, schema)\r\n\r\n      df.write.mode(SaveMode.Append).save(dir.getCanonicalPath)\r\n      // We should be able to write a second time, and Spark should be able to resolve the types\r\n      df.write.mode(SaveMode.Append).save(dir.getCanonicalPath)\r\n\r\n      val records = spark.read.load(dir.getCanonicalPath)\r\n      records.printSchema()\r\n      checkAnswer(records, Row(timestamp) :: Row(timestamp) :: Nil)\r\n    }\r\n  }\r\n```\r\nBut, it seems this current test is not related to this fix (I mean this test passed without the fix). Can you check again?",
+        "createdAt" : "2019-11-26T00:07:40Z",
+        "updatedAt" : "2019-12-30T16:20:27Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0d4bfa6c-4d57-43b5-83fa-7009a6b764cd",
+        "parentId" : "bc453205-244b-4667-b25b-6267c5715a1c",
+        "authorId" : "e29a7794-ac2e-4e6f-a690-737e83e1bace",
+        "body" : "Perfect, much cleaner. Thanks for suggesting.\r\n\r\nI'm pretty sure that it will fail without the fix. It will fail when it will write the second time. Since we've saved the `XMLGregorianCalendarImpl` as a timestamp (this is why we've overwritten the `jvalue`), Spark will recognize it as a regular timestamp. At then next append we're trying to merge an XMLGregorianCalendar into a timestamp, which isn't allowed with the additional rule. ",
+        "createdAt" : "2019-11-26T10:59:15Z",
+        "updatedAt" : "2019-12-30T16:20:27Z",
+        "lastEditedBy" : "e29a7794-ac2e-4e6f-a690-737e83e1bace",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "21f70f0a-4a0e-4dd3-8675-155877592006",
+        "parentId" : "bc453205-244b-4667-b25b-6267c5715a1c",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Just tried to copy this test only into the current master again, but it passed. I think the other reviewers need to double-check.",
+        "createdAt" : "2019-11-27T01:04:37Z",
+        "updatedAt" : "2019-12-30T16:20:27Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8fe4ccc3-0d40-4794-a53c-0d2450eacb63",
+        "parentId" : "bc453205-244b-4667-b25b-6267c5715a1c",
+        "authorId" : "e29a7794-ac2e-4e6f-a690-737e83e1bace",
+        "body" : "Ok, let's remove the rule, and I'll retrigger the test",
+        "createdAt" : "2019-11-27T08:47:10Z",
+        "updatedAt" : "2019-12-30T16:20:27Z",
+        "lastEditedBy" : "e29a7794-ac2e-4e6f-a690-737e83e1bace",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6c345eae-bd8b-4a6d-b141-1602b638dc8f",
+        "parentId" : "bc453205-244b-4667-b25b-6267c5715a1c",
+        "authorId" : "e29a7794-ac2e-4e6f-a690-737e83e1bace",
+        "body" : "You're right, let me investigate.",
+        "createdAt" : "2019-11-27T13:43:17Z",
+        "updatedAt" : "2019-12-30T16:20:27Z",
+        "lastEditedBy" : "e29a7794-ac2e-4e6f-a690-737e83e1bace",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "403b9c91-ea84-4f0c-bf81-052a53e0acd6",
+        "parentId" : "bc453205-244b-4667-b25b-6267c5715a1c",
+        "authorId" : "e29a7794-ac2e-4e6f-a690-737e83e1bace",
+        "body" : "Interesting. When appending to the table, Spark does not check compatibility on write, when using Delta this is the case.",
+        "createdAt" : "2019-11-27T18:02:52Z",
+        "updatedAt" : "2019-12-30T16:20:27Z",
+        "lastEditedBy" : "e29a7794-ac2e-4e6f-a690-737e83e1bace",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fd0030db-94da-46a5-8c29-3d7460f0a808",
+        "parentId" : "bc453205-244b-4667-b25b-6267c5715a1c",
+        "authorId" : "e29a7794-ac2e-4e6f-a690-737e83e1bace",
+        "body" : "Ok, I've rewritten the test, and not it fails on current master:\r\n```\r\nscala> val df = gregorianCalendarDf.union(timestampDf)\r\norg.apache.spark.sql.AnalysisException: Union can only be performed on tables with the compatible column types. timestamp <> timestamp at the first column of the second table;;\r\n'Union\r\n:- LogicalRDD [dt#11], false\r\n+- LogicalRDD [dt#14], false\r\n\r\n  at org.apache.spark.sql.catalyst.analysis.CheckAnalysis$class.failAnalysis(CheckAnalysis.scala:43)\r\n  at org.apache.spark.sql.catalyst.analysis.Analyzer.failAnalysis(Analyzer.scala:95)\r\n  at org.apache.spark.sql.catalyst.analysis.CheckAnalysis$$anonfun$checkAnalysis$1$$anonfun$apply$12$$anonfun$apply$13.apply(CheckAnalysis.scala:294)\r\n  at org.apache.spark.sql.catalyst.analysis.CheckAnalysis$$anonfun$checkAnalysis$1$$anonfun$apply$12$$anonfun$apply$13.apply(CheckAnalysis.scala:291)\r\n  at scala.collection.immutable.List.foreach(List.scala:392)\r\n  at org.apache.spark.sql.catalyst.analysis.CheckAnalysis$$anonfun$checkAnalysis$1$$anonfun$apply$12.apply(CheckAnalysis.scala:291)\r\n  at org.apache.spark.sql.catalyst.analysis.CheckAnalysis$$anonfun$checkAnalysis$1$$anonfun$apply$12.apply(CheckAnalysis.scala:280)\r\n  at scala.collection.immutable.List.foreach(List.scala:392)\r\n  at org.apache.spark.sql.catalyst.analysis.CheckAnalysis$$anonfun$checkAnalysis$1.apply(CheckAnalysis.scala:280)\r\n  at org.apache.spark.sql.catalyst.analysis.CheckAnalysis$$anonfun$checkAnalysis$1.apply(CheckAnalysis.scala:86)\r\n  at org.apache.spark.sql.catalyst.trees.TreeNode.foreachUp(TreeNode.scala:127)\r\n  at org.apache.spark.sql.catalyst.analysis.CheckAnalysis$class.checkAnalysis(CheckAnalysis.scala:86)\r\n  at org.apache.spark.sql.catalyst.analysis.Analyzer.checkAnalysis(Analyzer.scala:95)\r\n  at org.apache.spark.sql.catalyst.analysis.Analyzer$$anonfun$executeAndCheck$1.apply(Analyzer.scala:108)\r\n  at org.apache.spark.sql.catalyst.analysis.Analyzer$$anonfun$executeAndCheck$1.apply(Analyzer.scala:105)\r\n  at org.apache.spark.sql.catalyst.plans.logical.AnalysisHelper$.markInAnalyzer(AnalysisHelper.scala:201)\r\n  at org.apache.spark.sql.catalyst.analysis.Analyzer.executeAndCheck(Analyzer.scala:105)\r\n  at org.apache.spark.sql.execution.QueryExecution.analyzed$lzycompute(QueryExecution.scala:57)\r\n  at org.apache.spark.sql.execution.QueryExecution.analyzed(QueryExecution.scala:55)\r\n  at org.apache.spark.sql.execution.QueryExecution.assertAnalyzed(QueryExecution.scala:47)\r\n  at org.apache.spark.sql.Dataset$.ofRows(Dataset.scala:78)\r\n  at org.apache.spark.sql.Dataset.withSetOperator(Dataset.scala:3424)\r\n  at org.apache.spark.sql.Dataset.union(Dataset.scala:1862)\r\n  ... 40 elided\r\n```\r\nI'm creating two DF's, both representing time, and one of them a UDT. I'm trying to merge them. This is very similar to what I'm doing with Delta. With Delta, using `SaveMode.Overwrite` it will still check the compatibility with the existing schema.",
+        "createdAt" : "2019-11-27T23:26:37Z",
+        "updatedAt" : "2019-12-30T16:20:27Z",
+        "lastEditedBy" : "e29a7794-ac2e-4e6f-a690-737e83e1bace",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "55447e2c-04be-45e4-b18e-d3da15119393",
+        "parentId" : "bc453205-244b-4667-b25b-6267c5715a1c",
+        "authorId" : "e29a7794-ac2e-4e6f-a690-737e83e1bace",
+        "body" : "@maropu I'm unable to reproduce the issue without Delta. Since plan Spark does not check schema compatibility on write, I'm unable to implement an end to end integration test. I tried to fix this by taking the union of the two DF's, but this took another branch in the codebase, and it failed on `TypeCoercion`.\r\n\r\nPlease advise. ",
+        "createdAt" : "2019-12-02T18:58:59Z",
+        "updatedAt" : "2019-12-30T16:20:27Z",
+        "lastEditedBy" : "e29a7794-ac2e-4e6f-a690-737e83e1bace",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "44ab80c3-dbe2-44df-8afe-94ea9f95f4da",
+        "parentId" : "bc453205-244b-4667-b25b-6267c5715a1c",
+        "authorId" : "e29a7794-ac2e-4e6f-a690-737e83e1bace",
+        "body" : "After a good night of sleep, I've came up with an integration test, that will mimic the behavior as in Delta.",
+        "createdAt" : "2019-12-03T07:53:36Z",
+        "updatedAt" : "2019-12-30T16:20:27Z",
+        "lastEditedBy" : "e29a7794-ac2e-4e6f-a690-737e83e1bace",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dd3c913f0c552c975cd96cde554ba90f99b85bab",
+    "line" : 26,
+    "diffHunk" : "@@ -1,1 +294,298 @@  }\n\n  test(\"Allow merge UserDefinedType into a native DataType\") {\n    // Register the UDT\n    UDTRegistration.register("
+  },
+  {
+    "id" : "06eae6f8-04aa-4a28-934d-3be7f7231c74",
+    "prId" : 26599,
+    "prUrl" : "https://github.com/apache/spark/pull/26599#pullrequestreview-319843079",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "58dad5b8-9374-4e43-8f13-7ccac3df7c15",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "I thought we don't need this based on the @cloud-fan suggestion: https://github.com/apache/spark/pull/26599#issuecomment-555855696 ?\r\nIn that case, we need to throw an analysis exception for unsupported types?",
+        "createdAt" : "2019-11-20T12:06:32Z",
+        "updatedAt" : "2019-11-20T12:16:04Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dcb7fb0d-3c6e-4803-b330-264e277e58a3",
+        "parentId" : "58dad5b8-9374-4e43-8f13-7ccac3df7c15",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "Spark contributors also can benefit from this function. I suggest we make it support for `udt`s . WDYT? @cloud-fan",
+        "createdAt" : "2019-11-20T12:13:04Z",
+        "updatedAt" : "2019-11-20T12:19:26Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "df40ab23-09bc-4a7f-aa04-3e4a4f4a1803",
+        "parentId" : "58dad5b8-9374-4e43-8f13-7ccac3df7c15",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "If we do want to support it, I think we should output `MyDenseVectorUDT` instead of `array<double>`",
+        "createdAt" : "2019-11-20T13:20:40Z",
+        "updatedAt" : "2019-11-20T13:20:40Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c63d1459-3f47-4c11-8209-75f2c07c883f",
+        "parentId" : "58dad5b8-9374-4e43-8f13-7ccac3df7c15",
+        "authorId" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "body" : "this is base on how we overwrite the `sqlType` or `catalogString` of UDTs, it is `sqlType.simpleString` by default",
+        "createdAt" : "2019-11-20T13:37:30Z",
+        "updatedAt" : "2019-11-20T13:37:30Z",
+        "lastEditedBy" : "c62ded40-3015-4888-8e91-d671d0f615be",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5759be3abea554b325d7696961ebf1e2d4385f8c",
+    "line" : 19,
+    "diffHunk" : "@@ -1,1 +286,290 @@      RowFactory.create(new TestUDT.MyDenseVector(Array(1.0, 3.0, 5.0, 7.0, 9.0))))\n    checkAnswer(spark.createDataFrame(data, schema).selectExpr(\"typeof(a)\"),\n      Seq(Row(\"array<double>\")))\n  }\n}"
   }
 ]
