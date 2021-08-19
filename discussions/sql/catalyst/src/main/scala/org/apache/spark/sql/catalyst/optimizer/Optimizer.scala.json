@@ -3441,5 +3441,269 @@
     "commit" : "b00225078c6471b5b01f8a920ab28a2361b8e48b",
     "line" : 6,
     "diffHunk" : "@@ -1,1 +50,54 @@  override protected val blacklistedOnceBatches: Set[String] =\n    Set(\n      \"PartitionPruning\",\n      \"Extract Python UDFs\")\n"
+  },
+  {
+    "id" : "5044a9f0-f32c-4e9d-928e-98633a2ce8aa",
+    "prId" : 25258,
+    "prUrl" : "https://github.com/apache/spark/pull/25258#pullrequestreview-267106439",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3f9ddafb-fd04-411f-98f1-984ff57ad681",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "why do we need to separate the column pruning rule?",
+        "createdAt" : "2019-07-26T08:31:51Z",
+        "updatedAt" : "2019-07-29T20:50:52Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f3a69c64-eaa7-4568-a84f-44f443afba6c",
+        "parentId" : "3f9ddafb-fd04-411f-98f1-984ff57ad681",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "there is a subquery related bug fix: https://github.com/apache/spark/pull/25204\r\n\r\nIs it related to your change as well?",
+        "createdAt" : "2019-07-26T08:33:52Z",
+        "updatedAt" : "2019-07-29T20:50:52Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dd84725a-586c-4019-9c0a-51345a53afc4",
+        "parentId" : "3f9ddafb-fd04-411f-98f1-984ff57ad681",
+        "authorId" : "a2fcc15e-a51a-42f0-87a6-137048a28e30",
+        "body" : "@cloud-fan I took a very quick look. It does not seem related to this PR.",
+        "createdAt" : "2019-07-26T08:36:25Z",
+        "updatedAt" : "2019-07-29T20:50:52Z",
+        "lastEditedBy" : "a2fcc15e-a51a-42f0-87a6-137048a28e30",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9c824cf9-44e9-4917-9261-ba6abcf45d5d",
+        "parentId" : "3f9ddafb-fd04-411f-98f1-984ff57ad681",
+        "authorId" : "a2fcc15e-a51a-42f0-87a6-137048a28e30",
+        "body" : "@cloud-fan \r\n> why do we need to separate the column pruning rule?\r\n\r\nPerhaps there is a better way to do this. But here is the problem. Please take a look at `RewriteSubquerySuite: Column pruning after rewriting predicate subquery`. This test case is expecting that we perform column pruning to filter out un-needed columns before the join. Here is the input plan  : \r\n```\r\nProject [a#0]                    \r\n +- Join LeftSemi, (a#0 = x#2)    \r\n   +-LocalRelation [a#0, b#1]       \r\n   +- LocalRelation [x#2]\r\n```\r\nDue to the presence Project on top of LeftSemi, the regular ColumnPruning rule is not able to add the Project on top of the left child of LeftSemiJoin. This is done to avoid the cycle between ColumnPruning and PushPredicateThroughProject. Thats why i created this FinalColumnPruning rule that does not have the logic to remove the project.",
+        "createdAt" : "2019-07-26T09:21:11Z",
+        "updatedAt" : "2019-07-29T20:50:52Z",
+        "lastEditedBy" : "a2fcc15e-a51a-42f0-87a6-137048a28e30",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c51b0289-725f-4776-a6c6-bc0a00737d5c",
+        "parentId" : "3f9ddafb-fd04-411f-98f1-984ff57ad681",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "> This is done to avoid the cycle between ColumnPruning and PushPredicateThroughProject\r\n\r\nI don't see a filter in the input plan, how is it related to `PushPredicateThroughProject`?",
+        "createdAt" : "2019-07-26T09:47:24Z",
+        "updatedAt" : "2019-07-29T20:50:52Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e7bcd0a9-5158-4ebe-a961-c77ae3bfcd0b",
+        "parentId" : "3f9ddafb-fd04-411f-98f1-984ff57ad681",
+        "authorId" : "a2fcc15e-a51a-42f0-87a6-137048a28e30",
+        "body" : "@cloud-fan so the LeftSemi/Anti pattern is treated like a Filter in modified ColumnPruning rule. Since we convert the subqueries (which was in Filter form) to join early now, we are basically treating it like a Filter in related rules.\r\n\r\n>  how is it related to PushPredicateThroughProject\r\n\r\nSorry.. just to clarify, In the prior PR, we have added `PushDownLeftSemiAntiJoin` where a LeftSemi/Anti join is pushed down below Project. So the Cycle would be between ColumnPruning and PushDownLeftSemiAntiJoin.",
+        "createdAt" : "2019-07-26T09:58:38Z",
+        "updatedAt" : "2019-07-29T20:50:52Z",
+        "lastEditedBy" : "a2fcc15e-a51a-42f0-87a6-137048a28e30",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e6423087-b05e-4894-b96e-7be80b8f1e67",
+        "parentId" : "3f9ddafb-fd04-411f-98f1-984ff57ad681",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "ah i see, thanks for explaination!",
+        "createdAt" : "2019-07-26T10:15:26Z",
+        "updatedAt" : "2019-07-29T20:50:52Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "24be0574ddb74b27c952c1e3f5971b01e487f360",
+    "line" : 67,
+    "diffHunk" : "@@ -1,1 +584,588 @@ * Attempts to eliminate the reading of unneeded columns from the query plan.\n */\nobject FinalColumnPruning extends Rule[LogicalPlan] {\n  def apply(plan: LogicalPlan): LogicalPlan = plan transform {\n    // Prunes the unused columns from project list of Project/Aggregate/Expand"
+  },
+  {
+    "id" : "ef499652-19da-44fe-a06b-17c4e8f5626a",
+    "prId" : 25258,
+    "prUrl" : "https://github.com/apache/spark/pull/25258#pullrequestreview-270422361",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "81e02e65-a019-4752-84b3-8d35e3a9dcce",
+        "parentId" : null,
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "Will it affect CBO?",
+        "createdAt" : "2019-08-02T18:13:29Z",
+        "updatedAt" : "2019-08-02T18:13:29Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ab2ec9a2-0574-4c71-b23d-1cdccbe70045",
+        "parentId" : "81e02e65-a019-4752-84b3-8d35e3a9dcce",
+        "authorId" : "a2fcc15e-a51a-42f0-87a6-137048a28e30",
+        "body" : "@gatorsmile Could you please elaborate ? My hope is that we can get better optimized plans as we will expose the full plan to entire set of optimizations ? As an example, lets say we have a rule that can convert leftsemi join to inner join, with this, we can hope to have this conversion and if we do, then CBO will be able to impact positively to re-order joins as required. Please let me know if i am missing something..",
+        "createdAt" : "2019-08-02T19:27:59Z",
+        "updatedAt" : "2019-08-02T19:27:59Z",
+        "lastEditedBy" : "a2fcc15e-a51a-42f0-87a6-137048a28e30",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c28756be-eeab-49cc-9a73-d10c3b68730a",
+        "parentId" : "81e02e65-a019-4752-84b3-8d35e3a9dcce",
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "Our CBO is based on the pattern matching. We only support InnerLike joins. \r\n\r\nIs that possible the pattern matched before but it does not matched after we convert subquery to join?  RewritePredicateSubquery adds LeftSemi or LeftAnti joins into the original plan. ",
+        "createdAt" : "2019-08-02T22:10:59Z",
+        "updatedAt" : "2019-08-02T22:10:59Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d18b39df-cbab-4525-81a0-ea7bec1237ee",
+        "parentId" : "81e02e65-a019-4752-84b3-8d35e3a9dcce",
+        "authorId" : "a2fcc15e-a51a-42f0-87a6-137048a28e30",
+        "body" : "@gatorsmile At the moment, i am unable to think of a case when by moving the rewrite up would impact the pattern matching in CBO in a negative way since `RewritePredicateSubquery` needs to happen any way (it just happens later) . The leftsemi/anti join should end up being in the same position in the plan tree as we have the same pushdown rules for leftsemi and leftanti as there are for filters. If you have a case in mind, i can give it a quick try ?",
+        "createdAt" : "2019-08-02T22:44:46Z",
+        "updatedAt" : "2019-08-02T22:44:46Z",
+        "lastEditedBy" : "a2fcc15e-a51a-42f0-87a6-137048a28e30",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "24be0574ddb74b27c952c1e3f5971b01e487f360",
+    "line" : 10,
+    "diffHunk" : "@@ -1,1 +156,160 @@      OptimizeSubqueries,\n      PullupCorrelatedPredicates,\n      RewritePredicateSubquery) ::\n    Batch(\"Replace Operators\", fixedPoint,\n      RewriteExceptAll,"
+  },
+  {
+    "id" : "d92c61ae-f120-44f5-89a2-adcc528a727a",
+    "prId" : 25249,
+    "prUrl" : "https://github.com/apache/spark/pull/25249#pullrequestreview-267315600",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d1f96e54-b6dc-4349-aac0-0adfee241021",
+        "parentId" : null,
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "Please create an umbrella JIRA and create a separate JIRA for each rule?",
+        "createdAt" : "2019-07-26T06:43:15Z",
+        "updatedAt" : "2019-07-26T06:43:15Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d83a1836-f6aa-4928-80f8-1205aecd9ae8",
+        "parentId" : "d1f96e54-b6dc-4349-aac0-0adfee241021",
+        "authorId" : "88f0c774-9c59-4485-885d-f6aee36efcea",
+        "body" : "Sure. https://issues.apache.org/jira/browse/SPARK-28528?filter=-2",
+        "createdAt" : "2019-07-26T17:35:54Z",
+        "updatedAt" : "2019-07-26T18:01:11Z",
+        "lastEditedBy" : "88f0c774-9c59-4485-885d-f6aee36efcea",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "02e17006654b2e010b6867a7b20a583b9b0e30ed",
+    "line" : 8,
+    "diffHunk" : "@@ -1,1 +52,56 @@      \"Join Reorder\",\n      \"Subquery\",\n      \"Extract Python UDFs\"\n    )\n"
+  },
+  {
+    "id" : "22013e26-6d6d-414e-8040-f1a976df5030",
+    "prId" : 25204,
+    "prUrl" : "https://github.com/apache/spark/pull/25204#pullrequestreview-266534133",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b33a2e09-0ef1-442b-9967-5082490fd069",
+        "parentId" : null,
+        "authorId" : "24e1dd39-ae3f-4bbb-a391-f60afb62d075",
+        "body" : "I am not sure about this change. This may cause serious perf regression",
+        "createdAt" : "2019-07-25T08:50:22Z",
+        "updatedAt" : "2019-07-26T13:25:29Z",
+        "lastEditedBy" : "24e1dd39-ae3f-4bbb-a391-f60afb62d075",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9f453d81-0752-4721-a456-ff7ee03b3e4f",
+        "parentId" : "b33a2e09-0ef1-442b-9967-5082490fd069",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "How can we remove project that's not attribute-only?",
+        "createdAt" : "2019-07-25T08:55:24Z",
+        "updatedAt" : "2019-07-26T13:25:29Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "af17013f-2cbf-4c53-93ef-6f3f84d05265",
+        "parentId" : "b33a2e09-0ef1-442b-9967-5082490fd069",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I'd say it was wrong previously, but if a project's output has same expr IDs with its child, it's usually attribute-only.",
+        "createdAt" : "2019-07-25T08:56:38Z",
+        "updatedAt" : "2019-07-26T13:25:29Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "eedfd870-cfc3-4bab-a58a-a50c106c29ba",
+        "parentId" : "b33a2e09-0ef1-442b-9967-5082490fd069",
+        "authorId" : "24e1dd39-ae3f-4bbb-a391-f60afb62d075",
+        "body" : "Mmmmh... I may be missing something, but I'd imagine a case like this:\r\n```\r\nselect a, b from\r\n(select a, b, very_expensive_operation as c from ... where a = 1)\r\n```\r\nBefore this change, would be optimized as:\r\n```\r\nselect a, b from\r\n(select a, b from ... where a = 1)\r\n```\r\nwhile after it is not. Am I wrong?",
+        "createdAt" : "2019-07-25T09:28:29Z",
+        "updatedAt" : "2019-07-26T13:25:29Z",
+        "lastEditedBy" : "24e1dd39-ae3f-4bbb-a391-f60afb62d075",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2375a88e-db6b-4565-9169-5a7711700ec2",
+        "parentId" : "b33a2e09-0ef1-442b-9967-5082490fd069",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "In above case, it has a Alias in project list, so it's not an attribute-only project. And I think it also create new attr c, so `p2.outputSet.subsetOf(child.outputSet)` is not met too.\r\n\r\nI think the rules in `ColumnPruning` will trim `very_expensive_operation` in the end.",
+        "createdAt" : "2019-07-25T09:59:18Z",
+        "updatedAt" : "2019-07-26T13:25:29Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "83636ed6-e958-484c-b4c4-4e4f51c5154b",
+        "parentId" : "b33a2e09-0ef1-442b-9967-5082490fd069",
+        "authorId" : "24e1dd39-ae3f-4bbb-a391-f60afb62d075",
+        "body" : "I see now, sorry. Why do we need this? Seems an unrelated change to the fix in this PR, isn't it?",
+        "createdAt" : "2019-07-25T10:10:29Z",
+        "updatedAt" : "2019-07-26T13:25:29Z",
+        "lastEditedBy" : "24e1dd39-ae3f-4bbb-a391-f60afb62d075",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6c95763d-612a-400e-954a-fb8eabce2b75",
+        "parentId" : "b33a2e09-0ef1-442b-9967-5082490fd069",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "oh, the issue was seen in previous comment https://github.com/apache/spark/pull/25204/commits/33441a32412eacbe84f2b188f046b2959a8b60ee. It was overwritten now.\r\n\r\nWe added a column for count bug. The column checks a always-true leading column `alwaysTrueExpr`, returns special value if `alwaysTrueExpr` is null, to simulate empty input case.\r\n\r\nThis column reuses expr id of original output in the subquery. In non-foldable expression case, the added column in a potential Project-Filter-Project, will be trimmed by `removeProjectBeforeFilter`, because the second project meets `p2.outputSet.subsetOf(child.outputSet)`.\r\n\r\nMy original fix is to create an expr id. Replace original expr id with new one in the subquery. Looks complicated. This seems a simple fix, and looks reasonable.\r\n\r\n",
+        "createdAt" : "2019-07-25T10:22:12Z",
+        "updatedAt" : "2019-07-26T13:25:29Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "fd296776b826f6ce041a52cdc4dce4e278d3d786",
+    "line" : 7,
+    "diffHunk" : "@@ -1,1 +653,657 @@      if p2.outputSet.subsetOf(child.outputSet) &&\n        // We only remove attribute-only project.\n        p2.projectList.forall(_.isInstanceOf[AttributeReference]) =>\n      p1.copy(child = f.copy(child = child))\n  }"
   }
 ]

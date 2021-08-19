@@ -108,5 +108,49 @@
     "commit" : "ba93111b8ccfc7958e4facf57280a7c980beed84",
     "line" : 20,
     "diffHunk" : "@@ -1,1 +75,79 @@    val configMap = KubernetesClientUtils.buildConfigMap(configMapName, confFilesMap, labels)\n    kubernetesClient.configMaps().create(configMap)\n  }\n\n  /**"
+  },
+  {
+    "id" : "2a299df2-45c7-4bf8-97d6-376110a9cfd1",
+    "prId" : 25236,
+    "prUrl" : "https://github.com/apache/spark/pull/25236#pullrequestreview-271541540",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "20816dea-4312-44aa-b73b-afd3e8b3826a",
+        "parentId" : null,
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "this seems bad.  If we get the response wrong, then the ExecutorAllocationManager will mistakenly update its internal state to think the executors have been removed, when they haven't been:\r\n\r\nhttps://github.com/apache/spark/blob/b29829e2abdebdf6fa9dd0a4a4cf4c9d676ee82d/core/src/main/scala/org/apache/spark/ExecutorAllocationManager.scala#L448-L455\r\n\r\nwhich means we're expecting that call to kubernetes to delete the pods to be foolproof.\r\n\r\nWhy is it so bad to wait here?  Is it because we are holding locks when making this call in CoarseGrainedSchedulerBackend?  could that be avoided?",
+        "createdAt" : "2019-08-01T15:01:36Z",
+        "updatedAt" : "2019-08-05T18:20:47Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "42933223-904b-4c57-aabd-c59fb3230ca8",
+        "parentId" : "20816dea-4312-44aa-b73b-afd3e8b3826a",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "I added a longer comment explaining this.\r\n\r\nThe gist is:\r\n- it's bad to wait because it blocks the EAM thread (in this case for a really long time)\r\n- it's ok to return \"true\" because these executors will all die eventually, whether because of the shutdown message or because of the explicit kill.\r\n\r\nThe return value, to the best of my understanding, is not meant to say \"yes all executors have been killed\", but rather \"an attempt has been made to remove all of these executors, and they'll die eventually\".\r\n\r\n(Otherwise there would be no need for the EAM to track which executors are pending removal, since it would know immediately from this return value.)",
+        "createdAt" : "2019-08-05T18:23:28Z",
+        "updatedAt" : "2019-08-05T18:23:28Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "70cee081-8630-442a-b3cc-e77739d341ff",
+        "parentId" : "20816dea-4312-44aa-b73b-afd3e8b3826a",
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "ok, thanks, I buy that explanation",
+        "createdAt" : "2019-08-06T18:42:43Z",
+        "updatedAt" : "2019-08-06T18:43:11Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "635326a88a19e21f7644dbc8a149aa2dd1cb917c",
+    "line" : 140,
+    "diffHunk" : "@@ -1,1 +171,175 @@    // The cleanup timer above is just an optimization to make sure that stuck executors don't\n    // stick around in the k8s server. Normally it should never delete any pods at all.\n    Future.successful(true)\n  }\n"
   }
 ]

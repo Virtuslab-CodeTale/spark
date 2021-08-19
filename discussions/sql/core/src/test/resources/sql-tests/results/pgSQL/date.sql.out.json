@@ -64,5 +64,137 @@
     "commit" : "dd6f092f5cbc94eacca91dc8b9caba6c6b01746e",
     "line" : 18,
     "diffHunk" : "@@ -1,1 +513,517 @@struct<date_trunc(MILLENNIUM, TIMESTAMP('1970-03-20 04:30:00')):timestamp>\n-- !query 47 output\n1001-01-01 00:07:02\n\n"
+  },
+  {
+    "id" : "c8eaae19-fe16-489f-802e-7dd988b5b77b",
+    "prId" : 25230,
+    "prUrl" : "https://github.com/apache/spark/pull/25230#pullrequestreview-266479980",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "03ac1d77-f6f8-4563-84f7-782690e864b9",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Interesting, so postgres had a different answer here? also shouldn't the year be negative in this output or do I misunderstand?",
+        "createdAt" : "2019-07-24T12:30:31Z",
+        "updatedAt" : "2019-07-24T12:30:31Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "21944b7c-9b1f-4ca6-b986-b3995e582c49",
+        "parentId" : "03ac1d77-f6f8-4563-84f7-782690e864b9",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "Postgres's answer is `44 BC` for `-44` https://github.com/postgres/postgres/blob/master/src/test/regress/expected/date.out#L1454-L1457 which is wrong. It must be `45 BC` or `-44` (see https://github.com/apache/spark/pull/25210#discussion_r305609274).",
+        "createdAt" : "2019-07-24T15:06:19Z",
+        "updatedAt" : "2019-07-24T15:06:20Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8a76c509-4ed9-401f-b0a6-6a7c7cf3c5d7",
+        "parentId" : "03ac1d77-f6f8-4563-84f7-782690e864b9",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "OK so its answer of \"0045\" is really 45 BC? OK.",
+        "createdAt" : "2019-07-24T23:51:36Z",
+        "updatedAt" : "2019-07-24T23:51:36Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8926b7c4-ef3b-4579-82c3-f1818c856a86",
+        "parentId" : "03ac1d77-f6f8-4563-84f7-782690e864b9",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "Yes, our current answer is `45` which is `45 BC`... but because we skip the era field in our pattern, it is just `45` or `45 CE` (current era by default). That's wrong as well.\r\n\r\nSo, correct answer must include either **positive year + era** or **year with sign (-)**. PostgreSQL choose the first approach but it converts year incorrectly. I have proposed in this PR the second approach because it allows to maintain only one pattern (`uuuu` instead of `yyyy`).\r\n\r\nThe first approach requires dynamically switching to the pattern with era only for negative years. I don't think it is worth, especially when SQL standard tells us that years must be in the range `[0001, 9999]`.",
+        "createdAt" : "2019-07-25T08:42:22Z",
+        "updatedAt" : "2019-07-25T08:42:23Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b47d6d574d9b2fb32a56301c0c6a1b01fd935b80",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +521,525 @@struct<make_date(-44, 3, 15):date>\n-- !query 48 output\n-0044-03-15\n\n"
+  },
+  {
+    "id" : "7eb991b6-7f47-47b1-a1b3-8607301c5212",
+    "prId" : 25210,
+    "prUrl" : "https://github.com/apache/spark/pull/25210#pullrequestreview-264649584",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b38254c1-05e5-41e8-a14d-3b5cc9fc1e9f",
+        "parentId" : null,
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "The year `-44` is out of valid range according to SQL standard. We are getting `45` instead of `-44` while converting to java.sql.Date. If you switch to Java 8 API for date/timestamps:\r\n```Scala\r\nscala> spark.conf.set(\"spark.sql.datetime.java8API.enabled\", true)\r\n\r\nscala> spark.sql(\"select make_date(-44, 3, 15)\").collect\r\nres7: Array[org.apache.spark.sql.Row] = Array([-0044-03-15])\r\n```\r\nthe returned instance of `java.time.LocalDate` seems reasonable.",
+        "createdAt" : "2019-07-21T08:20:07Z",
+        "updatedAt" : "2019-07-22T08:52:40Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7eb5251a-68ef-4983-8197-8837bdbec2df",
+        "parentId" : "b38254c1-05e5-41e8-a14d-3b5cc9fc1e9f",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "You need to file a JIRA issue for this difference on `make_date` input range checking. Also, please add the JIRA id to `date.sql` file.\r\n\r\nFYI, the following is PostgreSQL output. \r\n- https://github.com/postgres/postgres/blob/REL_12_BETA2/src/test/regress/expected/date.out",
+        "createdAt" : "2019-07-21T08:27:44Z",
+        "updatedAt" : "2019-07-22T08:52:40Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a0c474dc-cca1-4c4a-9894-fbcfb0e60982",
+        "parentId" : "b38254c1-05e5-41e8-a14d-3b5cc9fc1e9f",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "Actually, the reason for the difference here is how Spark converts internal type `DateType` to external one `java.sql.Date` (by default) or `java.sql.LocalDate` (when `spark.sql.datetime.java8API.enabled` is set to `true`). And how the external type converted to string. For example, to get the same format as PostgreSQL, need to provide the appropriate formatter.\r\n\r\nFor `java.sql.Date`:\r\n```Scala\r\nspark.conf.set(\"spark.sql.datetime.java8API.enabled\", false)\r\nval date = spark.sql(\"select make_date(-44, 3, 15)\").first.getAs[java.sql.Date](0)\r\nval sdf = new java.text.SimpleDateFormat(\"MM-dd-yyyy G\")\r\nscala> sdf.format(date)\r\nres18: String = 03-17-0045 BC\r\n``` \r\n\r\nFor Java8 `java.time.LocalDate`:\r\n```Scala\r\nspark.conf.set(\"spark.sql.datetime.java8API.enabled\", true)\r\nval formatter = DateTimeFormatter.ofPattern(\"MM-dd-yyyy G\")\r\nval localDate = spark.sql(\"select make_date(-44, 3, 15)\").first.getAs[LocalDate](0)\r\nlocalDate.format(formatter)\r\nres16: String = 03-15-0045 BC\r\n```\r\n\r\nThe difference in days due to difference calendars (Julian in the first case, and Proleptic Gregorian in the second one).\r\n\r\nI see Postgres formats the `-44` year as `44 BC` which is wrong according to ISO 8601. See https://en.wikipedia.org/wiki/Year_zero , for example:\r\n```\r\nThe \"basic\" format for year 0 ... year 1 BC. ... hence -0001 = 2 BC.\r\n```\r\nI don't think we should implement Postgres bugs.",
+        "createdAt" : "2019-07-21T09:36:25Z",
+        "updatedAt" : "2019-07-22T08:52:40Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "43518c54-da20-4d09-818e-49b1ec39da64",
+        "parentId" : "b38254c1-05e5-41e8-a14d-3b5cc9fc1e9f",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "No, what I mean is we need a JIRA report and JIRA ID comment because we don't follow PostgreSQL like that.",
+        "createdAt" : "2019-07-21T20:30:09Z",
+        "updatedAt" : "2019-07-22T08:52:40Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0eec928d-e31c-4769-8858-45cf0a1ecfc9",
+        "parentId" : "b38254c1-05e5-41e8-a14d-3b5cc9fc1e9f",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Ideally, you can file a PostgreSQL bug and use that instead of SPARK JIRA.\r\nIn both ways, we should report the difference.",
+        "createdAt" : "2019-07-21T20:31:40Z",
+        "updatedAt" : "2019-07-22T08:52:40Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5e1a1778-29ed-4191-83b5-26f2e6153b4e",
+        "parentId" : "b38254c1-05e5-41e8-a14d-3b5cc9fc1e9f",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "Here is the JIRA ticket: https://issues.apache.org/jira/browse/SPARK-28471",
+        "createdAt" : "2019-07-22T07:53:45Z",
+        "updatedAt" : "2019-07-22T08:52:40Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "15c64d2dfcb616334e1d054f9fdb485f1870ed81",
+    "line" : 25,
+    "diffHunk" : "@@ -1,1 +521,525 @@struct<make_date(-44, 3, 15):date>\n-- !query 48 output\n0045-03-15\n\n"
   }
 ]

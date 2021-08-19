@@ -196,5 +196,115 @@
     "commit" : "573ffcd83a320d7405e4795f3fe81df0a015dc53",
     "line" : 72,
     "diffHunk" : "@@ -1,1 +77,81 @@      }.length\n    }\n    // Check whether additional shuffle introduced. If introduced, revert the local reader.\n    val numExchangeBefore = numExchanges(EnsureRequirements(conf).apply(plan))\n    val numExchangeAfter = numExchanges(EnsureRequirements(conf).apply(withProbeSideLocalReader))"
+  },
+  {
+    "id" : "15de5edf-31d3-408b-9787-9cb1572c070d",
+    "prId" : 25295,
+    "prUrl" : "https://github.com/apache/spark/pull/25295#pullrequestreview-298660202",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1910494c-0c02-47b8-8e89-f8fc1337394e",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "For example, `LocalShuffleReaderExec(ShuffleQueryStage(scan))`, shouldn't we report `outputPartitioning` as `scan.outputPartitioning`? Each task of the `scan` operator writes data to one mapper, so the output partitioning of local shuffle reader should be the same as the operator before the shuffle.",
+        "createdAt" : "2019-10-08T10:07:07Z",
+        "updatedAt" : "2019-10-15T05:10:40Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9c1dc5538afce26c4e693e353d8d4ef4231bb78c",
+    "line" : 79,
+    "diffHunk" : "@@ -1,1 +77,81 @@  override def doCanonicalize(): SparkPlan = child.canonicalized\n\n  override def outputPartitioning: Partitioning = {\n\n    def tryReserveChildPartitioning(stage: ShuffleQueryStageExec): Partitioning = {"
+  },
+  {
+    "id" : "3a84cd24-b6a7-4ea3-8a12-ab311b4b93e5",
+    "prId" : 25295,
+    "prUrl" : "https://github.com/apache/spark/pull/25295#pullrequestreview-298788013",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "07d6099f-6dc3-4009-9d00-69919fa9d1c5",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I spend more time to think about the cost framework, and I think we can't fully rely on it right now.\r\n\r\nFor example, if there is a `rule1` doing something good, and a `rule2` doing something negative, the current cost framework in AQE simply discard the entire re-optimization and neither `rule1` or `rule2` takes effect. What we expect to see is to have `rule1` take effect while `rule2` does not.\r\n\r\nI think each rule should try its best to make sure itself is always positive. For this particular rule, we can run `EnsureRequirements` on the original plan and the updated plan, and only keep the updated plan if number of shuffles doesn't increase.",
+        "createdAt" : "2019-10-08T10:16:18Z",
+        "updatedAt" : "2019-10-15T05:10:40Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f1bc4ab8-70a9-4067-90ed-fef4b3779963",
+        "parentId" : "07d6099f-6dc3-4009-9d00-69919fa9d1c5",
+        "authorId" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "body" : "> I think each rule should try its best to make sure itself is always positive.\r\n\r\n+1. This is a general assumption in the current Spark optimization framework. So-called cost-based rules check cost independently within themselves.\r\n\r\nThat said, an alternative would be we introduce an idea of \"Batch\" in AQE optimizations and we choose to adopt or revert the effect of each Batch based on the cost check. But in this case, we simply need to make sure the exchange number is not increased, while the cost model could evolve to be more complicated than what we need here, so let's stick to checking the exchange number in the rule itself.",
+        "createdAt" : "2019-10-08T14:04:51Z",
+        "updatedAt" : "2019-10-15T05:10:40Z",
+        "lastEditedBy" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9c1dc5538afce26c4e693e353d8d4ef4231bb78c",
+    "line" : 70,
+    "diffHunk" : "@@ -1,1 +68,72 @@      optimizedPlan\n    }\n  }\n}\n"
+  },
+  {
+    "id" : "e04d19c5-8413-4397-8d4f-d0c63d0011b1",
+    "prId" : 25295,
+    "prUrl" : "https://github.com/apache/spark/pull/25295#pullrequestreview-303275120",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9ce41824-2ba6-4ca2-96d1-6cf1d1013d03",
+        "parentId" : null,
+        "authorId" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "body" : "`logDebug` should be enough.",
+        "createdAt" : "2019-10-17T13:55:25Z",
+        "updatedAt" : "2019-10-17T13:55:25Z",
+        "lastEditedBy" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9c1dc5538afce26c4e693e353d8d4ef4231bb78c",
+    "line" : 64,
+    "diffHunk" : "@@ -1,1 +62,66 @@\n    if (numExchangeAfter > numExchangeBefore) {\n      logWarning(\"OptimizeLocalShuffleReader rule is not applied due\" +\n        \" to additional shuffles will be introduced.\")\n      plan"
+  },
+  {
+    "id" : "299780e4-9dd6-4410-9c5a-5a75ab70e1e0",
+    "prId" : 25295,
+    "prUrl" : "https://github.com/apache/spark/pull/25295#pullrequestreview-306974140",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "894ac347-1163-49a5-a43e-0a01be2eea37",
+        "parentId" : null,
+        "authorId" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "body" : "Any reason to make `LocalShuffleReaderExec` a LeafNode?\r\nThere's a potential issue here: we make it a leaf node yet did not visit this node in `createQueryStages`. So a stage can be \"not complete yet\" but considered complete and thus trigger the creation of parent stages. This might be the root cause of the flaky tests.\r\n```\r\n    case q: QueryStageExec =>\r\n      CreateStageResult(newPlan = q,\r\n        allChildStagesMaterialized = q.resultOption.isDefined, newStages = Seq.empty)\r\n\r\n    case _ =>\r\n      if (plan.children.isEmpty) {\r\n        CreateStageResult(newPlan = plan, allChildStagesMaterialized = true, newStages = Seq.empty)\r\n      } else {\r\n        val results = plan.children.map(createQueryStages)\r\n        CreateStageResult(\r\n          newPlan = plan.withNewChildren(results.map(_.newPlan)),\r\n          allChildStagesMaterialized = results.forall(_.allChildStagesMaterialized),\r\n          newStages = results.flatMap(_.newStages))\r\n      }\r\n```",
+        "createdAt" : "2019-10-24T18:20:46Z",
+        "updatedAt" : "2019-10-24T18:20:46Z",
+        "lastEditedBy" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0ed6bba6-993f-4adf-ad6a-28cb5ee7e9d2",
+        "parentId" : "894ac347-1163-49a5-a43e-0a01be2eea37",
+        "authorId" : "1b84a7ff-6bf9-4417-bf9f-e46e997e5974",
+        "body" : "@maryannxue Thanks for your good findings. I have create [PR#26250](https://github.com/apache/spark/pull/26250) to fix.\r\nHere the flaky tests may be not caused by this. It occurs by the random build side of planner for inner join. Even with [PR#26250](https://github.com/apache/spark/pull/26250), the flaky tests still exists. Thanks.",
+        "createdAt" : "2019-10-25T04:08:44Z",
+        "updatedAt" : "2019-10-25T04:08:44Z",
+        "lastEditedBy" : "1b84a7ff-6bf9-4417-bf9f-e46e997e5974",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9c1dc5538afce26c4e693e353d8d4ef4231bb78c",
+    "line" : 73,
+    "diffHunk" : "@@ -1,1 +71,75 @@}\n\ncase class LocalShuffleReaderExec(child: QueryStageExec) extends LeafExecNode {\n\n  override def output: Seq[Attribute] = child.output"
   }
 ]

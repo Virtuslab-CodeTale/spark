@@ -53,5 +53,148 @@
     "commit" : "092aba289201433d7079cfba438ef6cef15d77e0",
     "line" : 31,
     "diffHunk" : "@@ -1,1 +110,114 @@   * answers directly.\n   */\n  def size: Long = untilOffset - fromOffset\n}"
+  },
+  {
+    "id" : "cddf433d-a84f-4b7d-b9aa-00e134c66574",
+    "prId" : 25237,
+    "prUrl" : "https://github.com/apache/spark/pull/25237#pullrequestreview-266946493",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0730c1e4-8e2d-49c4-a5ff-7c53e26a3c79",
+        "parentId" : null,
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "This one ensures we never drop a TopicPartition.",
+        "createdAt" : "2019-07-24T00:13:13Z",
+        "updatedAt" : "2019-07-24T19:53:17Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2494ea7a-c171-4e90-80e5-1da681443e14",
+        "parentId" : "0730c1e4-8e2d-49c4-a5ff-7c53e26a3c79",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "The ratio calculation looks good, but `round` seems to generate less partitions. Is there a reason to choose `round` instead of `ceiling`?",
+        "createdAt" : "2019-07-24T01:19:32Z",
+        "updatedAt" : "2019-07-24T19:53:17Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "db3d854b-ae6d-4c64-866c-b9e623e71b00",
+        "parentId" : "0730c1e4-8e2d-49c4-a5ff-7c53e26a3c79",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Yeah I'm seeing the same. Suppose 4 offsetRanges divide 1 partition for each 0.25, then we lost 1. The number of lost partitions may vary.\r\n\r\nIn other words, if we use ceil, it may overflow the minimum partitions, and the number of exceeding partitions may vary. We don't guarantee for this calculator to return partitions closest to minimum partitions, so it seems OK.\r\n\r\nIf we really would like to make this strict, we could apply \"allocation\" - calculating ratio on each offsetRange, and allocate partitions to each offsetRange according to ratio (apply minimum of 1 for safeness), and allocate extra partitions to some offsetRanges if there're remaining partitions. Not sure we would like to deal with complexity.",
+        "createdAt" : "2019-07-24T02:57:18Z",
+        "updatedAt" : "2019-07-24T19:53:17Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6c8e5689-9a07-4075-9d70-8a07efeee0c9",
+        "parentId" : "0730c1e4-8e2d-49c4-a5ff-7c53e26a3c79",
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "Yep, it's a hint. And when the number of partitions is less than `minPartition`, we will try our best to split. Agreed that the option name `minPartition` is not accurate.",
+        "createdAt" : "2019-07-24T19:52:40Z",
+        "updatedAt" : "2019-07-24T19:53:17Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "25089d33-1c54-4c41-b683-52c841bd4355",
+        "parentId" : "0730c1e4-8e2d-49c4-a5ff-7c53e26a3c79",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Then, could you update the document instead in a more accurate way?",
+        "createdAt" : "2019-07-25T02:00:44Z",
+        "updatedAt" : "2019-07-25T02:00:44Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "46b89497-8aef-4db7-9f64-4d4f12b1fd59",
+        "parentId" : "0730c1e4-8e2d-49c4-a5ff-7c53e26a3c79",
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "@dongjoon-hyun I think the doc for this method is accurate : https://github.com/apache/spark/blob/c4010a25a7311d58c06880c00ad85bfb7f583b90/external/kafka-0-10-sql/src/main/scala/org/apache/spark/sql/kafka010/KafkaOffsetRangeCalculator.scala#L38",
+        "createdAt" : "2019-07-25T23:56:19Z",
+        "updatedAt" : "2019-07-25T23:56:19Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0e80cf27-7d4f-4fc8-b73b-ce1af6421721",
+        "parentId" : "0730c1e4-8e2d-49c4-a5ff-7c53e26a3c79",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "I meant [the structured streaming Kafka integration](https://github.com/apache/spark/blame/master/docs/structured-streaming-kafka-integration.md#L391-L400)~",
+        "createdAt" : "2019-07-26T00:35:30Z",
+        "updatedAt" : "2019-07-26T00:35:31Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e281aad9-2f2e-465c-85a1-f9809a8a3b97",
+        "parentId" : "0730c1e4-8e2d-49c4-a5ff-7c53e26a3c79",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "A few days ago, `minPartitions` is added to the documentation for master/branch-2.4 via https://github.com/apache/spark/pull/25219 .",
+        "createdAt" : "2019-07-26T00:36:55Z",
+        "updatedAt" : "2019-07-26T00:36:55Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c4010a25a7311d58c06880c00ad85bfb7f583b90",
+    "line" : 18,
+    "diffHunk" : "@@ -1,1 +66,70 @@        val size = range.size\n        // number of partitions to divvy up this topic partition to\n        val parts = math.max(math.round(size.toDouble / totalSize * minPartitions.get), 1).toInt\n        var remaining = size\n        var startOffset = range.fromOffset"
+  },
+  {
+    "id" : "a4696964-6f23-4989-86e4-73ebf7c58810",
+    "prId" : 25237,
+    "prUrl" : "https://github.com/apache/spark/pull/25237#pullrequestreview-265738815",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "39a0c4b3-e1d6-4e98-a646-f118b4e94c25",
+        "parentId" : null,
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "`thisPartition` will be the same as `remaining` for the last part. This will ensure we always get a KafkaOffsetRange ending with `range.untilOffset`.",
+        "createdAt" : "2019-07-24T00:14:13Z",
+        "updatedAt" : "2019-07-24T19:53:17Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c4010a25a7311d58c06880c00ad85bfb7f583b90",
+    "line" : 23,
+    "diffHunk" : "@@ -1,1 +71,75 @@        (0 until parts).map { part =>\n          // Fine to do integer division. Last partition will consume all the round off errors\n          val thisPartition = remaining / (parts - part)\n          remaining -= thisPartition\n          val endOffset = math.min(startOffset + thisPartition, range.untilOffset)"
+  },
+  {
+    "id" : "93d8373e-ba2b-4a8b-a82a-24fddf8e7da7",
+    "prId" : 25237,
+    "prUrl" : "https://github.com/apache/spark/pull/25237#pullrequestreview-265773704",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "42cc4d08-da47-4a37-a590-b57ae4742303",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "I'm not sure it could be possible, but suppose it could be possible (as we have this, and we are doing integer division), then we still have chance to have less than minPartitions even the calculation on ratio-based distribution is correct.",
+        "createdAt" : "2019-07-24T03:14:22Z",
+        "updatedAt" : "2019-07-24T19:53:17Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c4010a25a7311d58c06880c00ad85bfb7f583b90",
+    "line" : 31,
+    "diffHunk" : "@@ -1,1 +78,82 @@          offsetRange\n        }\n      }.filter(_.size > 0)\n    }\n  }"
   }
 ]

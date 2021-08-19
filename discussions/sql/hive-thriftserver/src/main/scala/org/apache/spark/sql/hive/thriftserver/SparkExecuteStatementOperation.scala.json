@@ -669,5 +669,71 @@
     "commit" : "536756be89b77d37219b97bbf4358722a214f76d",
     "line" : 75,
     "diffHunk" : "@@ -1,1 +240,244 @@      Thread.currentThread().setContextClassLoader(executionHiveClassLoader)\n\n      sqlContext.sparkContext.setJobGroup(statementId, statement)\n      result = sqlContext.sql(statement)\n      logDebug(result.queryExecution.toString())"
+  },
+  {
+    "id" : "52487346-a793-41a4-bc94-377a0e933f36",
+    "prId" : 25277,
+    "prUrl" : "https://github.com/apache/spark/pull/25277#pullrequestreview-283256987",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1fd65b95-3b64-4648-9ad3-28a1465fe370",
+        "parentId" : null,
+        "authorId" : "e5beb795-ac0e-4bd6-ad66-708215b8ae58",
+        "body" : "not related to Interval itself, but shouldn't it also return \"string\" for  `case ArrayType | _: StructType | _: MapType | _: UserDefinedType[_]` here?",
+        "createdAt" : "2019-08-26T13:00:47Z",
+        "updatedAt" : "2019-09-04T01:11:38Z",
+        "lastEditedBy" : "e5beb795-ac0e-4bd6-ad66-708215b8ae58",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "82315d51-2e54-4b62-827c-7fa7b1588cd8",
+        "parentId" : "1fd65b95-3b64-4648-9ad3-28a1465fe370",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "This is because `Type` does not have a type mapping to our `CalendarIntervalType`: https://github.com/apache/spark/blob/02c33694c8254f69cb36c71c0876194dccdbc014/sql/hive-thriftserver/v1.2.1/src/main/java/org/apache/hive/service/cli/Type.java#L31-L105\r\nOtherwise:\r\n```java\r\nCaused by: java.lang.IllegalArgumentException: Unrecognized type name: interval\r\n\tat org.apache.hive.service.cli.Type.getType(Type.java:169)\r\n\tat org.apache.hive.service.cli.TypeDescriptor.<init>(TypeDescriptor.java:53)\r\n\tat org.apache.hive.service.cli.ColumnDescriptor.<init>(ColumnDescriptor.java:53)\r\n\tat org.apache.hive.service.cli.TableSchema.<init>(TableSchema.java:52)\r\n\tat org.apache.spark.sql.hive.thriftserver.SparkExecuteStatementOperation$.getTableSchema(SparkExecuteStatementOperation.scala:321)\r\n\tat org.apache.spark.sql.hive.thriftserver.SparkExecuteStatementOperation.resultSchema$lzycompute(SparkExecuteStatementOperation.scala:70)\r\n\tat org.apache.spark.sql.hive.thriftserver.SparkExecuteStatementOperation.resultSchema(SparkExecuteStatementOperation.scala:65)\r\n\tat org.apache.spark.sql.hive.thriftserver.SparkExecuteStatementOperation.getResultSetSchema(SparkExecuteStatementOperation.scala:161)\r\n\tat org.apache.hive.service.cli.operation.OperationManager.getOperationResultSetSchema(OperationManager.java:209)\r\n\tat org.apache.hive.service.cli.session.HiveSessionImpl.getResultSetMetadata(HiveSessionImpl.java:773)\r\n\tat sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)\r\n\tat sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)\r\n\tat sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)\r\n\tat java.lang.reflect.Method.invoke(Method.java:498)\r\n\tat org.apache.hive.service.cli.session.HiveSessionProxy.invoke(HiveSessionProxy.java:78)\r\n```",
+        "createdAt" : "2019-08-27T01:37:30Z",
+        "updatedAt" : "2019-09-04T01:11:38Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e47e445b-515c-4c97-8944-789b1c785122",
+        "parentId" : "1fd65b95-3b64-4648-9ad3-28a1465fe370",
+        "authorId" : "e5beb795-ac0e-4bd6-ad66-708215b8ae58",
+        "body" : "But the query actually returns a string for Arrays, Maps, Structs etc. Should it tell the client that it returns an ARRAY_TYPE or MAP_TYPE or STRUCT_TYPE if it in reality returns a string?",
+        "createdAt" : "2019-08-27T09:36:28Z",
+        "updatedAt" : "2019-09-04T01:11:38Z",
+        "lastEditedBy" : "e5beb795-ac0e-4bd6-ad66-708215b8ae58",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3d6cb748-e688-44f5-b4d8-7027325a4ee1",
+        "parentId" : "1fd65b95-3b64-4648-9ad3-28a1465fe370",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "I think we do not need to return `string` for ` ArrayType | _: StructType | _: MapType | _: UserDefinedType[_]` because this will not change the actual return type. Just a workaround for the interval type:\r\n```\r\n0: jdbc:hive2://localhost:10000> SELECT interval '1' year '2' day AS i;\r\n+--------------------------+--+\r\n|            i             |\r\n+--------------------------+--+\r\n| interval 1 years 2 days  |\r\n+--------------------------+--+\r\n1 row selected (0.032 seconds)\r\n0: jdbc:hive2://localhost:10000> DESC SELECT interval '1' year '2' day AS i;\r\n+-----------+------------+----------+--+\r\n| col_name  | data_type  | comment  |\r\n+-----------+------------+----------+--+\r\n| i         | interval   | NULL     |\r\n+-----------+------------+----------+--+\r\n\r\n```",
+        "createdAt" : "2019-09-03T15:14:00Z",
+        "updatedAt" : "2019-09-04T01:11:38Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "346dbefa-8f93-4a0a-8a3c-2b8fe2faee2f",
+        "parentId" : "1fd65b95-3b64-4648-9ad3-28a1465fe370",
+        "authorId" : "e5beb795-ac0e-4bd6-ad66-708215b8ae58",
+        "body" : "Ok. I understand now.\r\nI was wondering how does it work that if you here create a `TableSchema` with a complex type like Array, and then this `TableSchema` is used through `getResultSetSchema` to create the `resultRowSet`, how does the RowSet know that we are in fact going to return String, and not an Array.\r\nBut it goes all the way down to Column in the constructed ColumnBasedSet in https://github.com/apache/spark/blob/master/sql/hive-thriftserver/v1.2.1/src/main/java/org/apache/hive/service/cli/Column.java#L123 that assumes String for any non-primitive type. (or to conversions in ColumnValue for RowBasedSet in older protocol versions https://github.com/apache/spark/blob/master/sql/hive-thriftserver/v1.2.1/src/main/java/org/apache/hive/service/cli/ColumnValue.java#L198).\r\n\r\nNow I understand. Thank you :+1: ",
+        "createdAt" : "2019-09-03T20:57:04Z",
+        "updatedAt" : "2019-09-04T01:11:38Z",
+        "lastEditedBy" : "e5beb795-ac0e-4bd6-ad66-708215b8ae58",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "59b35986d18360e00dc760e6b51f2098532185f1",
+    "line" : 25,
+    "diffHunk" : "@@ -1,1 +315,319 @@        case NullType => \"void\"\n        case CalendarIntervalType => StringType.catalogString\n        case other => other.catalogString\n      }\n      new FieldSchema(field.name, attrTypeString, field.getComment.getOrElse(\"\"))"
   }
 ]

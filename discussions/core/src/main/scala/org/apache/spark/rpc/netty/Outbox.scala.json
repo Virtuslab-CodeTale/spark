@@ -1,0 +1,35 @@
+[
+  {
+    "id" : "532b6f3d-8e06-47bd-84e5-f7910cd5a26c",
+    "prId" : 25235,
+    "prUrl" : "https://github.com/apache/spark/pull/25235#pullrequestreview-276630380",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9643e7ef-13eb-4382-a0ed-060904c28d5f",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "why don't `onFailure` call `removeRpcRequest`?",
+        "createdAt" : "2019-08-19T09:18:51Z",
+        "updatedAt" : "2019-08-19T15:18:42Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7911600d-717f-42c2-834d-a310755fb5c0",
+        "parentId" : "9643e7ef-13eb-4382-a0ed-060904c28d5f",
+        "authorId" : "7e665d8b-d739-4edf-88c8-7379ff8585c2",
+        "body" : "Not a good idea.\r\nWhen we want to abort the RPC, we should trigger an RPC aborted exception (thrown from the `Future` thread itself). And let the `Future` thread to catch the exception, and do cleanup, and then re-throw the exception.\r\n\r\nWe can also reference how RPC impl the \"timeout\" , see\r\n```\r\n      val timeoutCancelable = timeoutScheduler.schedule(new Runnable {\r\n        override def run(): Unit = {\r\n          onFailure(new TimeoutException(s\"Cannot receive any reply from ${remoteAddr} \" +\r\n            s\"in ${timeout.duration}\"))\r\n        }\r\n      }, timeout.duration.toNanos, TimeUnit.NANOSECONDS)\r\n```\r\nIt only call `onFailure(new TimeoutException(...))` and inside `onFailure` it call `promise.tryFailure(e)` to raise exception `Future` thread itself.",
+        "createdAt" : "2019-08-19T15:16:07Z",
+        "updatedAt" : "2019-08-19T15:18:42Z",
+        "lastEditedBy" : "7e665d8b-d739-4edf-88c8-7379ff8585c2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "86da5a60fde4420dd750bf0c195044b8568f631c",
+    "line" : 19,
+    "diffHunk" : "@@ -1,1 +80,84 @@\n  def onAbort(): Unit = {\n    removeRpcRequest()\n  }\n"
+  }
+]

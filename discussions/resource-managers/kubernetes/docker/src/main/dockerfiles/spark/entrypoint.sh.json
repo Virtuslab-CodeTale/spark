@@ -97,5 +97,192 @@
     "commit" : "550508339d401750d9f1e74f2bcfcd9c83ed4427",
     "line" : 24,
     "diffHunk" : "@@ -1,1 +81,85 @@      --conf \"spark.driver.bindAddress=$SPARK_DRIVER_BIND_ADDRESS\"\n      --deploy-mode client\n      \"$@\"\n    )\n    ;;"
+  },
+  {
+    "id" : "fac618ed-b59f-4444-86d9-98f5843ef3a1",
+    "prId" : 25229,
+    "prUrl" : "https://github.com/apache/spark/pull/25229#pullrequestreview-268667280",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4031d2e9-32a3-4500-8461-845cab6e826d",
+        "parentId" : null,
+        "authorId" : "63281e91-e961-4e6e-b0bb-6855587910d1",
+        "body" : "`/opt/spark/conf/spark.properties` cannot be written in place as its a mounted config map.",
+        "createdAt" : "2019-07-30T21:04:09Z",
+        "updatedAt" : "2019-07-30T21:04:20Z",
+        "lastEditedBy" : "63281e91-e961-4e6e-b0bb-6855587910d1",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7cfcefc59a4a2c9c99b737ac4cb559885c8d9489",
+    "line" : 22,
+    "diffHunk" : "@@ -1,1 +79,83 @@  else\n    if grep -q \"spark.driver.extraJavaOptions\" \"/opt/spark/conf/spark.properties\"; then\n      sed 's/spark.driver.extraJavaOptions=/&-XX:OnOutOfMemoryError=\"kill -9 %p\" /g' /opt/spark/conf/spark.properties > /tmp/spark.properties\n    else\n      cp /opt/spark/conf/spark.properties /tmp/spark.properties"
+  },
+  {
+    "id" : "96b6ac06-b97e-427a-b3b7-7f2a499fd19d",
+    "prId" : 25229,
+    "prUrl" : "https://github.com/apache/spark/pull/25229#pullrequestreview-268667847",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "93c4dd7b-9580-4971-bc99-4add152754de",
+        "parentId" : null,
+        "authorId" : "63281e91-e961-4e6e-b0bb-6855587910d1",
+        "body" : "We use this flag so in the tests we can detect what properties we get. Also it it useful in general users want to debug Spark.",
+        "createdAt" : "2019-07-30T21:05:14Z",
+        "updatedAt" : "2019-07-30T21:05:23Z",
+        "lastEditedBy" : "63281e91-e961-4e6e-b0bb-6855587910d1",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7cfcefc59a4a2c9c99b737ac4cb559885c8d9489",
+    "line" : 35,
+    "diffHunk" : "@@ -1,1 +92,96 @@    shift 1\n    DRIVER_ARGS=$(get_args_with_defaults \"$@\")\n    VERBOSE_FLAG=$(get_verbose_flag)\n    CMD=(\n      \"$SPARK_HOME/bin/spark-submit\""
+  },
+  {
+    "id" : "ed17fcb4-bd2c-4b60-8377-fcdd5e5fc1be",
+    "prId" : 25229,
+    "prUrl" : "https://github.com/apache/spark/pull/25229#pullrequestreview-271199756",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4f82c950-0140-4464-99ae-08f4dcaf756d",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Can we have `DEFAULT_DRIVER_JVM_OPTIONS` instead of this flag?\r\n1. By default, `DEFAULT_DRIVER_JVM_OPTIONS=-XX:OnOutOfMemoryError=\"kill -9 %p\"` and it will be appended **before** `spark.driver.extraJavaOptions`.\r\n2. If users unset `DEFAULT_DRIVER_JVM_OPTIONS`, then only `spark.driver.extraJavaOptions` works.\r\n\r\nAt (1), if `spark.driver.extraJavaOptions` has `-XX:OnOutOfMemoryError=`, it will supersede `DEFAULT_DRIVER_JVM_OPTIONS` because the last one is used.",
+        "createdAt" : "2019-07-30T21:09:56Z",
+        "updatedAt" : "2019-07-30T21:09:56Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "14511c8f-b191-4598-adcc-5b04091d8b39",
+        "parentId" : "4f82c950-0140-4464-99ae-08f4dcaf756d",
+        "authorId" : "63281e91-e961-4e6e-b0bb-6855587910d1",
+        "body" : "@dongjoon-hyun How can they unset `DEFAULT_DRIVER_JVM_OPTIONS` at runtime? Probably missing something here.  Do you mean by setting the container env var eg. spark.kubernetes.driverEnv.DEFAULT_DRIVER_JVM_OPTIONS=\"\"? ",
+        "createdAt" : "2019-07-30T21:13:19Z",
+        "updatedAt" : "2019-07-31T10:20:32Z",
+        "lastEditedBy" : "63281e91-e961-4e6e-b0bb-6855587910d1",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8c3ab14b-df93-4aaa-aeaf-aed6c2a16f26",
+        "parentId" : "4f82c950-0140-4464-99ae-08f4dcaf756d",
+        "authorId" : "63281e91-e961-4e6e-b0bb-6855587910d1",
+        "body" : "@dongjoon-hyun the only option I see is setting `DEFAULT_DRIVER_JVM_OPTIONS` to empty string to signal the script to use the default, which is similar to setting that flag to true. I will the rename the flag but not sure if we are aligned.\r\n\r\n> If users unset DEFAULT_DRIVER_JVM_OPTIONS\r\n\r\nHow should the user do that? Could you elaborate a bit more?",
+        "createdAt" : "2019-07-31T10:24:21Z",
+        "updatedAt" : "2019-07-31T10:25:40Z",
+        "lastEditedBy" : "63281e91-e961-4e6e-b0bb-6855587910d1",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "341bd019-fe24-4e45-8837-08553a044ab4",
+        "parentId" : "4f82c950-0140-4464-99ae-08f4dcaf756d",
+        "authorId" : "63281e91-e961-4e6e-b0bb-6855587910d1",
+        "body" : "@dongjoon-hyun gentle ping :)",
+        "createdAt" : "2019-08-02T10:30:11Z",
+        "updatedAt" : "2019-08-02T10:30:11Z",
+        "lastEditedBy" : "63281e91-e961-4e6e-b0bb-6855587910d1",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "da4b8801-de51-4ee4-af37-befc423f18f8",
+        "parentId" : "4f82c950-0140-4464-99ae-08f4dcaf756d",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Oops. Sorry for being late, @skonto . I'll take a look this PR tomorrow again~",
+        "createdAt" : "2019-08-05T06:15:30Z",
+        "updatedAt" : "2019-08-05T06:15:30Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fba2c41b-6fde-4b13-bd0f-c38d54bf5cd0",
+        "parentId" : "4f82c950-0140-4464-99ae-08f4dcaf756d",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Initially, what I thought was something like the following\r\n```\r\nDEFAULT_DRIVER_JVM_OPTIONS=${DEFAULT_DRIVER_JVM_OPTIONS:--XX:OnOutOfMemoryError=\"kill -9 %p\"}\r\n```\r\nAnd users do `export DEFAULT_DRIVER_JVM_OPTIONS=' '` for unset. Ya. My comment was unclear at that time.\r\n\r\n",
+        "createdAt" : "2019-08-06T03:09:39Z",
+        "updatedAt" : "2019-08-06T03:10:08Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4e1c0f2e-3fba-4419-b6f0-44219d7e59b5",
+        "parentId" : "4f82c950-0140-4464-99ae-08f4dcaf756d",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "@skonto . What do you think about the above? For me, the above looks more direct.",
+        "createdAt" : "2019-08-06T03:20:16Z",
+        "updatedAt" : "2019-08-06T03:20:16Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "844d3d00-60ca-404f-9cf1-e6f0a3a6b366",
+        "parentId" : "4f82c950-0140-4464-99ae-08f4dcaf756d",
+        "authorId" : "63281e91-e961-4e6e-b0bb-6855587910d1",
+        "body" : "@dongjoon-hyun Ok so that is what I also concluded :) I can do that, it looks fine to me, the only issue is that this way we open the door to adding arbitrary options there. Initially that was what I didnt want to support, thus I used that the flag to make defaults unchangeable (defaults usually have fixed values). \r\nBut we could be flexible here for simplicity reasons,  so I will change to what you suggest.",
+        "createdAt" : "2019-08-06T08:46:59Z",
+        "updatedAt" : "2019-08-06T10:56:50Z",
+        "lastEditedBy" : "63281e91-e961-4e6e-b0bb-6855587910d1",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7cfcefc59a4a2c9c99b737ac4cb559885c8d9489",
+    "line" : 4,
+    "diffHunk" : "@@ -1,1 +61,65 @@fi\n\nIGNORE_DEFAULT_DRIVER_JVM_OPTIONS=${IGNORE_DEFAULT_DRIVER_JVM_OPTIONS:-false}\nDRIVER_VERBOSE=${DRIVER_VERBOSE:-false}\n"
+  },
+  {
+    "id" : "3b17f024-78b2-464e-bdb5-1de1b9066e98",
+    "prId" : 25229,
+    "prUrl" : "https://github.com/apache/spark/pull/25229#pullrequestreview-271267620",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0fa66d21-c58b-458d-8220-ed07b19668e0",
+        "parentId" : null,
+        "authorId" : "63281e91-e961-4e6e-b0bb-6855587910d1",
+        "body" : "We cannot avoid sed if we want to make sure the default is always added. Otherwise if we just add `spark.driver.extraJavaOptions` to CMD, user provided `spark.driver.extraJavaOptions` will override it, as Spark conf has precedence rules in case the same property is used more than once (the last value is the one chosen).",
+        "createdAt" : "2019-07-30T21:29:33Z",
+        "updatedAt" : "2019-07-30T21:30:25Z",
+        "lastEditedBy" : "63281e91-e961-4e6e-b0bb-6855587910d1",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1d42e887-e349-4d4e-a1f1-f392ccfc37f1",
+        "parentId" : "0fa66d21-c58b-458d-8220-ed07b19668e0",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "If you follow https://github.com/apache/spark/pull/25229/files#r310866032, the suggested behavior is the following. So, it seems that we don't need this complexity.\r\n> At (1), if spark.driver.extraJavaOptions has -XX:OnOutOfMemoryError=, it will supersede DEFAULT_DRIVER_JVM_OPTIONS because the last one is used.",
+        "createdAt" : "2019-08-06T03:22:21Z",
+        "updatedAt" : "2019-08-06T03:22:21Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4ecc2d7f-ef86-49ea-a066-7e332422e115",
+        "parentId" : "0fa66d21-c58b-458d-8220-ed07b19668e0",
+        "authorId" : "63281e91-e961-4e6e-b0bb-6855587910d1",
+        "body" : "ok so we say that `spark.driver.extraJavaOptions` overrides whatever the default is.",
+        "createdAt" : "2019-08-06T10:57:14Z",
+        "updatedAt" : "2019-08-06T10:57:14Z",
+        "lastEditedBy" : "63281e91-e961-4e6e-b0bb-6855587910d1",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7cfcefc59a4a2c9c99b737ac4cb559885c8d9489",
+    "line" : 27,
+    "diffHunk" : "@@ -1,1 +84,88 @@      echo 'spark.driver.extraJavaOptions=-XX:OnOutOfMemoryError=\"kill -9 %p\"' >> /tmp/spark.properties\n    fi\n     echo \"$@\" | sed  's|/opt/spark/conf/spark.properties |/tmp/spark.properties |g'\n  fi\n}"
   }
 ]

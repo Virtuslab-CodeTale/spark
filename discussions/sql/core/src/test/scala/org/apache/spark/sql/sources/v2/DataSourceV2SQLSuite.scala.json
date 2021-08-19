@@ -119,5 +119,82 @@
     "commit" : "4895a6eab6ec449238192715b78fea61217f7f54",
     "line" : 206,
     "diffHunk" : "@@ -1,1 +462,466 @@\n  test(\"CreateTableAsSelect: use default catalog for v2 sources when default catalog is set\") {\n    spark.conf.set(\"spark.sql.default.catalog\", \"testcat\")\n\n    val df = spark.createDataFrame(Seq((1L, \"a\"), (2L, \"b\"), (3L, \"c\"))).toDF(\"id\", \"data\")"
+  },
+  {
+    "id" : "2ef211e4-8c77-44a6-8280-8bb6e6c38512",
+    "prId" : 25247,
+    "prUrl" : "https://github.com/apache/spark/pull/25247#pullrequestreview-273841918",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0b4abdbf-f474-4d90-a559-1fc7db76fb57",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "In current Spark, `SHOW TABLES FROM non-existing-db` would fail, shall we follow it?",
+        "createdAt" : "2019-08-12T03:31:15Z",
+        "updatedAt" : "2019-08-23T00:03:45Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "622962f2-ae1f-4648-9a26-4f00ab7908d8",
+        "parentId" : "0b4abdbf-f474-4d90-a559-1fc7db76fb57",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "@cloud-fan as far as I understand, throwing `NoSuchNamespaceException` is optional in v2:\r\n```\r\n  /**\r\n   * List the tables in a namespace from the catalog.\r\n   * <p>\r\n   * If the catalog supports views, this must return identifiers for only tables and not views.\r\n   *\r\n   * @param namespace a multi-part namespace\r\n   * @return an array of Identifiers for tables\r\n   * @throws NoSuchNamespaceException If the namespace does not exist (optional).\r\n   */\r\n  Identifier[] listTables(String[] namespace) throws NoSuchNamespaceException;\r\n```\r\n\r\nI can update `TestInMemoryTableCatalog` to throw NoSuchNamespaceException if there is no namespace existing for the tables created. However, I am not sure if this is the right approach since you could have created namespace without tables - in v1, you could have done `CREATE DATABASE db` without creating tables belonging to `db`, although I don't think this scenario is supported in v2 yet.\r\n\r\nPlease advise how this needs to be handled. Thanks!\r\n\r\n",
+        "createdAt" : "2019-08-12T04:24:06Z",
+        "updatedAt" : "2019-08-23T00:03:45Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "169930ad-ef53-42c9-8408-ecafd212ac54",
+        "parentId" : "0b4abdbf-f474-4d90-a559-1fc7db76fb57",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "v2 can support `CREATE NAMESPACE`, we have the APIs in `SupportNamespace`.\r\n\r\nI think this is another case we should discuss: how much should Spark restrict the semantic of a SQL command? e.g. `SHOW TABLE catalog.nonExistingNS`, should Spark guarantee that, this command fails if the namespace doesn't exist?\r\n\r\ncc @brkyvz @rdblue ",
+        "createdAt" : "2019-08-12T11:34:02Z",
+        "updatedAt" : "2019-08-23T00:03:45Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d4342d68-afaf-4d6b-9d98-965b4c095aa9",
+        "parentId" : "0b4abdbf-f474-4d90-a559-1fc7db76fb57",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "If the catalog throws `NoSuchNamespaceException`, then the query should fail. If not, then this should return whatever the catalog returned. Throwing `NoSuchNamespaceException` is optional, so I think Spark should respect the catalog's choice of whether to throw it or not in this case.",
+        "createdAt" : "2019-08-12T17:35:23Z",
+        "updatedAt" : "2019-08-23T00:03:45Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6f2fa4e7b8572a6b9dd243f1253e4962af27d40a",
+    "line" : 63,
+    "diffHunk" : "@@ -1,1 +1739,1743 @@\n  test(\"ShowTables: using v2 catalog, namespace doesn't exist\") {\n    runShowTablesSql(\"SHOW TABLES FROM testcat.unknown\", Seq())\n  }\n"
+  },
+  {
+    "id" : "ff4f17f5-23a0-47ed-8412-1425c4856f59",
+    "prId" : 25247,
+    "prUrl" : "https://github.com/apache/spark/pull/25247#pullrequestreview-277539124",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "282a17c7-0209-4aa7-9f31-2a25ca0092fb",
+        "parentId" : null,
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "This test is currently failing and will be updated based on the resolution of https://github.com/apache/spark/pull/25368/files#r315980292.",
+        "createdAt" : "2019-08-21T03:16:21Z",
+        "updatedAt" : "2019-08-23T00:03:45Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6f2fa4e7b8572a6b9dd243f1253e4962af27d40a",
+    "line" : 97,
+    "diffHunk" : "@@ -1,1 +1773,1777 @@\n  test(\"ShowTables: namespace is not specified and default v2 catalog is set\") {\n    spark.conf.set(\"spark.sql.default.catalog\", \"testcat\")\n    spark.sql(\"CREATE TABLE testcat.table (id bigint, data string) USING foo\")\n"
   }
 ]
