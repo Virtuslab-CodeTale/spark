@@ -119,5 +119,71 @@
     "commit" : "e5c33f0b28e58110de04e9dbc6e1d75bc59d53f0",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +605,609 @@        TaskContext._setTaskContext(None)\n        BarrierTaskContext._setTaskContext(None)\n    except BaseException:\n        try:\n            exc_info = traceback.format_exc()"
+  },
+  {
+    "id" : "ce0bdcee-667c-4a52-b77c-87238685fddc",
+    "prId" : 26239,
+    "prUrl" : "https://github.com/apache/spark/pull/26239#pullrequestreview-309210063",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5b0296cd-b958-4ed4-9030-cfefcd1535dd",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Hm, what happens if it fails with exceptions in the middle of execution in this worker?",
+        "createdAt" : "2019-10-28T10:16:53Z",
+        "updatedAt" : "2019-10-31T03:16:28Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "547a2671-b75c-4bea-a870-4b8154d8bc5b",
+        "parentId" : "5b0296cd-b958-4ed4-9030-cfefcd1535dd",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Is it really needed? We always set the global TaskContext and never reset it previouslly.",
+        "createdAt" : "2019-10-28T13:42:36Z",
+        "updatedAt" : "2019-10-31T03:16:28Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "723f3438-9906-481b-bd2e-2503bf835f8c",
+        "parentId" : "5b0296cd-b958-4ed4-9030-cfefcd1535dd",
+        "authorId" : "28d581bb-a398-46f0-861f-a016fdb56186",
+        "body" : "> Hm, what happens if it fails with exceptions in the middle of execution in this worker?\r\n\r\nIf exceptions occured, the worker will be closed with `sys.exit(-1)`. \r\n\r\n> Is it really needed? We always set the global TaskContext and never reset it previouslly.\r\n\r\nPreviously:\r\n```\r\nval rdd = ...\r\nval barriered = rdd.barrier().mapPartitions(...)\r\n\r\nbarriered.mapPartitions(...)  # here the BarrierTaskContext still existed.\r\n```\r\n\r\nThis code is just a guard program, it shouldn't increase extra overhead or behavior change.",
+        "createdAt" : "2019-10-29T04:19:43Z",
+        "updatedAt" : "2019-10-31T03:16:28Z",
+        "lastEditedBy" : "28d581bb-a398-46f0-861f-a016fdb56186",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d68875a0-c13e-4ae3-8e43-340033d8d177",
+        "parentId" : "5b0296cd-b958-4ed4-9030-cfefcd1535dd",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "> This code is just a guard program, it shouldn't increase extra overhead or behavior change.\r\n\r\nI guess that's only when the worker is reused. Can you clarify it with comments here?",
+        "createdAt" : "2019-10-30T00:29:38Z",
+        "updatedAt" : "2019-10-31T03:16:28Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a992161a-0196-4b7d-bd6a-a735524b5460",
+        "parentId" : "5b0296cd-b958-4ed4-9030-cfefcd1535dd",
+        "authorId" : "28d581bb-a398-46f0-861f-a016fdb56186",
+        "body" : "thanks for reviewing. updated.",
+        "createdAt" : "2019-10-30T13:45:09Z",
+        "updatedAt" : "2019-10-31T03:16:28Z",
+        "lastEditedBy" : "28d581bb-a398-46f0-861f-a016fdb56186",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a3d14c83de89775e5bba7f5a94cc2101dacbe9bb",
+    "line" : 18,
+    "diffHunk" : "@@ -1,1 +604,608 @@        # reuse.\n        TaskContext._setTaskContext(None)\n        BarrierTaskContext._setTaskContext(None)\n    except Exception:\n        try:"
   }
 ]

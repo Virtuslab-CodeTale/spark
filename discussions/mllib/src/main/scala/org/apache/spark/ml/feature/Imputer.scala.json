@@ -20,5 +20,137 @@
     "commit" : "5875c65950c3db562f3d3b75c59e0f67595eb266",
     "line" : 86,
     "diffHunk" : "@@ -1,1 +183,187 @@          // Ignore null.\n          Iterator.range(0, numCols)\n            .flatMap(i => if (row.isNullAt(i)) None else Some((i, row.getDouble(i))))\n        }.toDF(\"index\", \"value\")\n         .groupBy(\"index\", \"value\").agg(negate(count(lit(0))).as(\"negative_count\"))"
+  },
+  {
+    "id" : "610fde73-4d37-424d-95b9-5a45bd6c9608",
+    "prId" : 26247,
+    "prUrl" : "https://github.com/apache/spark/pull/26247#pullrequestreview-343640311",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ab98eab7-c7c6-4b0c-a972-cededc648e4b",
+        "parentId" : null,
+        "authorId" : "981b170c-729a-429c-b115-0350ea50b32b",
+        "body" : "What is the intended purpose of this method? \r\n\r\nAs it is implemented right now, it doesn't seem to have any practical applications:\r\n\r\n- If model has been created with single col, surrogate will contain only a single column, so there is nothing to set here.\r\n- If model has been created with multiple cols, `setInputCol` / `setOutputCol` should clear `setInputCols` and `setOutputCols`, otherwise it will fail to validate. I guess something like this:\r\n\r\n      @Since(\"3.0.0\")\r\n      def setInputCol(value: String): this.type = {\r\n        clear(inputCols)\r\n        clear(outputCols)\r\n        set(inputCol, value)\r\n      }\r\n\r\n      @Since(\"3.0.0\")\r\n      def setOutputCol(value: String): this.type = {\r\n        clear(inputCols)\r\n        clear(outputCols)\r\n         set(outputCol, value)\r\n      }\r\n\r\n\r\nI am asking, because these two are missing in Python (https://github.com/apache/spark/pull/27195).\r\n",
+        "createdAt" : "2020-01-13T23:35:25Z",
+        "updatedAt" : "2020-01-13T23:36:09Z",
+        "lastEditedBy" : "981b170c-729a-429c-b115-0350ea50b32b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7c3ea580-9621-45e4-afff-3bae72359224",
+        "parentId" : "ab98eab7-c7c6-4b0c-a972-cededc648e4b",
+        "authorId" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "body" : "@zero323 I actually realized I missed the two setters in python when I checked the parity between python and scala last night. I fixed it along with a few other problems. ",
+        "createdAt" : "2020-01-14T00:09:22Z",
+        "updatedAt" : "2020-01-14T00:09:22Z",
+        "lastEditedBy" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "431b91bf-e72f-4ad0-a4ea-d66f3035634c",
+        "parentId" : "ab98eab7-c7c6-4b0c-a972-cededc648e4b",
+        "authorId" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "body" : "@zero323 There is a check on scala side to make sure only ```setInputCol/setOutputCol``` or ```setInputCols/setOutputCols``` is set",
+        "createdAt" : "2020-01-14T00:16:30Z",
+        "updatedAt" : "2020-01-14T00:16:31Z",
+        "lastEditedBy" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2308fc97-3398-4676-84f3-67ab7d8f7ce2",
+        "parentId" : "ab98eab7-c7c6-4b0c-a972-cededc648e4b",
+        "authorId" : "981b170c-729a-429c-b115-0350ea50b32b",
+        "body" : "> @zero323 There is a check on scala side to make sure only `setInputCol/setOutputCol` or `setInputCols/setOutputCols` is set\r\n\r\nThat's is what confuses me.  Let's say the workflow looks like this:\r\n\r\n```scala\r\nimport org.apache.spark.ml.feature.Imputer\r\n\r\nval df = Seq((1, 2)).toDF(\"x1\", \"x2\")\r\n\r\nval mm = new Imputer()\r\n   .setInputCols(Array(\"x1\", \"x2\"))\r\n   .setOutputCols(Array(\"x1_\", \"x2_\"))\r\n   .fit(df)\r\n```\r\n\r\nYou cannot switch to single `col` at the model level:\r\n\r\n```scala\r\nmm.setInputCol(\"x1\").setOutputCol(\"x1_\").transform(df)\r\n\r\n// java.lang.IllegalArgumentException: requirement failed: ImputerModel ImputerModel: uid=imputer_5923f59d0d3a, strategy=mean, missingValue=NaN, numInputCols=2, numOutputCols=2 requires exactly one of inputCol, inputCols Params to be set, but both are set.\r\n```\r\n\r\nwithout clearing `cols` explicitly:\r\n\r\n```\r\nmm.clear(mm.inputCols).clear(mm.outputCols).transform(df)\r\n```\r\n\r\nThat's really not intuitive workflow, if this is what was intended.\r\n\r\nIf we only want to support `Imupter.setInputCol` -> `ImputerModel.setInputcol`, then there is no point in having this method at all:\r\n\r\n```scala\r\nval ms = new Imputer().setInputCol(\"x1\").setOutputCol(\"x1_\").fit(df)\r\n\r\nms.setInputCol(\"x2\").setOutputCol(\"x2_\").transform(df)\r\n// org.apache.spark.sql.AnalysisException: cannot resolve '`x2`' given input columns: [x1];;\r\n\r\n```\r\n\r\nas surrogate contains only the column used for fit\r\n\r\n```scala\r\nms.surrogateDF\r\norg.apache.spark.sql.DataFrame = [x1: double]\r\n```\r\n\r\nDo I miss something obvious here?",
+        "createdAt" : "2020-01-14T00:34:55Z",
+        "updatedAt" : "2020-01-14T00:37:35Z",
+        "lastEditedBy" : "981b170c-729a-429c-b115-0350ea50b32b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3ae1d961-0275-4a26-9f51-21fc25521251",
+        "parentId" : "ab98eab7-c7c6-4b0c-a972-cededc648e4b",
+        "authorId" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "body" : "@zero323 It is a problem. I will have a follow up pr to fix this. ",
+        "createdAt" : "2020-01-14T05:46:39Z",
+        "updatedAt" : "2020-01-14T05:46:39Z",
+        "lastEditedBy" : "99765afe-8dbe-4d5f-9ad3-d5bc40f0462b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "514ea112-7fb8-4ad7-a765-38030bd8b7f8",
+        "parentId" : "ab98eab7-c7c6-4b0c-a972-cededc648e4b",
+        "authorId" : "981b170c-729a-429c-b115-0350ea50b32b",
+        "body" : "Thanks @huaxingao. Please ping me when you do.",
+        "createdAt" : "2020-01-14T09:35:24Z",
+        "updatedAt" : "2020-01-14T09:35:24Z",
+        "lastEditedBy" : "981b170c-729a-429c-b115-0350ea50b32b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bfd40f6a-8ecd-4430-ac76-5250b2328882",
+        "parentId" : "ab98eab7-c7c6-4b0c-a972-cededc648e4b",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "I think the sanity check in Scala side for inputCol/outputCol and inputCols/outputCols are more for preventing errors when mixing single and multiple columns at the same time, e.g. set both single and multiple column params, inputCol + outputCols...etc.\r\n\r\nIt sounds rarely switching between single/multiple column during fitting and transforming.",
+        "createdAt" : "2020-01-15T23:27:44Z",
+        "updatedAt" : "2020-01-15T23:27:44Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3aa3be8a-69c4-4f08-8f2c-d0cdd4d48817",
+        "parentId" : "ab98eab7-c7c6-4b0c-a972-cededc648e4b",
+        "authorId" : "981b170c-729a-429c-b115-0350ea50b32b",
+        "body" : "@viirya But then we're back to the question why we need `setInputCol` in  `Models`. Should we support \r\n\r\n    new Estimator().setInputCols(...).fit(...).setInputCol(...).transform(...)\r\n\r\nflow at all?\r\n",
+        "createdAt" : "2020-01-15T23:48:56Z",
+        "updatedAt" : "2020-01-15T23:50:02Z",
+        "lastEditedBy" : "981b170c-729a-429c-b115-0350ea50b32b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "08266cfc-6a7e-48a8-b18a-b69a64c94ce5",
+        "parentId" : "ab98eab7-c7c6-4b0c-a972-cededc648e4b",
+        "authorId" : "981b170c-729a-429c-b115-0350ea50b32b",
+        "body" : "And what about overriding `inputCols` (taking a subset?)\r\n\r\n    new Estimator().setInputCols(...).fit(...).setInputCols(...).transform(...)\r\n\r\nfor that matter?",
+        "createdAt" : "2020-01-15T23:52:25Z",
+        "updatedAt" : "2020-01-15T23:52:25Z",
+        "lastEditedBy" : "981b170c-729a-429c-b115-0350ea50b32b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d61aa6f5-7199-4085-a5b3-baa46f4f2228",
+        "parentId" : "ab98eab7-c7c6-4b0c-a972-cededc648e4b",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "For a model fitted by an Estimator, I think we usually won't change input/output column(s). The setter is still useful, as there are still cases that we might create a model instance directly. For such cases, we need input column(s) setter.\r\n\r\n",
+        "createdAt" : "2020-01-16T00:51:03Z",
+        "updatedAt" : "2020-01-16T00:51:03Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "df952082-339f-4658-bab0-939589d8639f",
+        "parentId" : "ab98eab7-c7c6-4b0c-a972-cededc648e4b",
+        "authorId" : "981b170c-729a-429c-b115-0350ea50b32b",
+        "body" : "Having option to overwrite `outputCol(s)` on can be useful to avoid name clashes on pre-trained models. \r\n\r\nBut providing setters for inputs seems to be more confusing than useful, and proliferation of `Params` that support both `Col` and `Cols` makes things even more fuzzy, as there is no way to tell which variant we have, without inspecting `Param` values.\r\n\r\nIn general I am asking because we seem to have cases like `OneHotEncoderModel` - which provide `setInputCols` / `setOutputCols` but no single column equivalents. \r\n",
+        "createdAt" : "2020-01-16T02:22:11Z",
+        "updatedAt" : "2020-01-16T02:23:22Z",
+        "lastEditedBy" : "981b170c-729a-429c-b115-0350ea50b32b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f833397feaca73176c4c24eb4caaa8a0fe9a93b2",
+    "line" : 121,
+    "diffHunk" : "@@ -1,1 +230,234 @@  /** @group setParam */\n  @Since(\"3.0.0\")\n  def setInputCol(value: String): this.type = set(inputCol, value)\n\n  /** @group setParam */"
   }
 ]

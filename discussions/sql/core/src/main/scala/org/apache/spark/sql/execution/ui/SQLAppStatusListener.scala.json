@@ -141,5 +141,82 @@
     "commit" : "e28df7e578d360597b4c928df4c48df1e0e52a51",
     "line" : 33,
     "diffHunk" : "@@ -1,1 +323,327 @@    Option(liveExecutions.get(executionId)).foreach { exec =>\n      exec.completionTime = Some(new Date(time))\n      update(exec)\n\n      // Aggregating metrics can be expensive for large queries, so do it asynchronously. The end"
+  },
+  {
+    "id" : "0b8818bb-2d45-4862-a4f1-22c32a7adc71",
+    "prId" : 26218,
+    "prUrl" : "https://github.com/apache/spark/pull/26218#pullrequestreview-306910060",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6fdfad17-67fb-4795-99aa-7b7911d2aad1",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "~In `{ stage =>`, can we use `metrics` or `stageMetrics` or `liveStageMetrics` instead of `stage`?~\r\nNever mind.",
+        "createdAt" : "2019-10-24T23:03:50Z",
+        "updatedAt" : "2019-10-25T00:52:21Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6377c701620d9c6b344993a8bf4c2c1acd267c00",
+    "line" : 41,
+    "diffHunk" : "@@ -1,1 +123,127 @@\n    // Reset the metrics tracking object for the new attempt.\n    Option(stageMetrics.get(event.stageInfo.stageId)).foreach { stage =>\n      if (stage.attemptId != event.stageInfo.attemptNumber) {\n        stageMetrics.put(event.stageInfo.stageId,"
+  },
+  {
+    "id" : "0ec9a23c-8347-408b-bf89-5197b34bb4f4",
+    "prId" : 26218,
+    "prUrl" : "https://github.com/apache/spark/pull/26218#pullrequestreview-306936340",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e91d0b24-5eb9-45bf-b5ce-311681c402fa",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Actually, it seems that we need a little comment for this, @vanzin .\r\nThis PR defines the following.\r\n```scala\r\n  /**\r\n   * Mapping of task IDs to the partition index they're computing. Note this may contain more\r\n   * elements than the stage's number of tasks, if speculative execution is on.\r\n   */\r\n  private val taskIndices = new OpenHashMap[Long, Int]()\r\n```\r\n\r\nHowever, we are putting `TaskInfo.Index` which is defined like the following.\r\n```scala\r\n@DeveloperApi\r\nclass TaskInfo(\r\n    val taskId: Long,\r\n    /**\r\n     * The index of this task within its task set. Not necessarily the same as the ID of the RDD\r\n     * partition that the task is computing.\r\n     */\r\n    val index: Int,\r\n```\r\n\r\nI guess we can update the definition of `taskIndices` by using `task index` instead of `partition index`. How do you think about that?",
+        "createdAt" : "2019-10-24T23:22:37Z",
+        "updatedAt" : "2019-10-25T00:52:21Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3495e934-712a-4f4e-9805-d89fe2b12e7d",
+        "parentId" : "e91d0b24-5eb9-45bf-b5ce-311681c402fa",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "See below. ",
+        "createdAt" : "2019-10-24T23:52:30Z",
+        "updatedAt" : "2019-10-25T00:52:21Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "64ab29f1-a67b-4aa9-8909-8b37848370eb",
+        "parentId" : "e91d0b24-5eb9-45bf-b5ce-311681c402fa",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Thank you for the explanation. However, simply put, when `taskIndices` maintain a copy of `TaskInfo.taskId` and `TaskInfo.index`, can we call them, `taskId` and `taskIndex`, literally? The variable name is already _task**Indices**_.",
+        "createdAt" : "2019-10-25T00:10:53Z",
+        "updatedAt" : "2019-10-25T00:52:21Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "96629e3f-7050-4692-a97e-77803d0a6084",
+        "parentId" : "e91d0b24-5eb9-45bf-b5ce-311681c402fa",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Man, if that's going to make you drop this discussion, I'll call them \"pink unicorns\" if that's what you want. The variable name won't help you understand the relationship between partitions and indices and why it's important to track this.",
+        "createdAt" : "2019-10-25T00:53:13Z",
+        "updatedAt" : "2019-10-25T00:53:14Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6377c701620d9c6b344993a8bf4c2c1acd267c00",
+    "line" : 62,
+    "diffHunk" : "@@ -1,1 +155,159 @@    Option(stageMetrics.get(event.stageId)).foreach { stage =>\n      if (stage.attemptId == event.stageAttemptId) {\n        stage.registerTask(event.taskInfo.taskId, event.taskInfo.index)\n      }\n    }"
   }
 ]

@@ -3738,5 +3738,104 @@
     "commit" : "a44948eccea4ac3f033248babe84c8ab6792d5e0",
     "line" : 42,
     "diffHunk" : "@@ -1,1 +278,282 @@          case (_, CalendarIntervalType) => Cast(TimeAdd(l, r), l.dataType)\n          case (CalendarIntervalType, _) => Cast(TimeAdd(r, l), r.dataType)\n          case (DateType, _) => DateAdd(l, r)\n          case (_, DateType) => DateAdd(r, l)\n          case _ => a"
+  },
+  {
+    "id" : "ade03702-c02b-4d95-b166-70638d4d6774",
+    "prId" : 26214,
+    "prUrl" : "https://github.com/apache/spark/pull/26214#pullrequestreview-316840622",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f1c5506f-84df-428e-9c3b-9ab0a1607819",
+        "parentId" : null,
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "I like that this is refactored into a separate rule. Can we move it to an earlier batch? If metastore views can't contain temp views, then there's no reason to do this in the same batch as table and view resolution from catalogs.",
+        "createdAt" : "2019-11-13T23:51:50Z",
+        "updatedAt" : "2019-11-21T08:11:47Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "36a4e68f-8e58-49f4-ac6c-a75cbc19267c",
+        "parentId" : "f1c5506f-84df-428e-9c3b-9ab0a1607819",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "as discussed in the sync, we decide to keep it in the current batch for safety, in case some user-supplied analyzers rules need Spark to resolve unresolved temp views.",
+        "createdAt" : "2019-11-14T10:11:50Z",
+        "updatedAt" : "2019-11-21T08:11:47Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c10f28896b20e124532aa36d586a23d2c7bc2810",
+    "line" : 16,
+    "diffHunk" : "@@ -1,1 +669,673 @@   * [[ResolveTables]].\n   */\n  object ResolveTempViews extends Rule[LogicalPlan] {\n    def apply(plan: LogicalPlan): LogicalPlan = plan.resolveOperatorsUp {\n      case u @ UnresolvedRelation(Seq(part1)) =>"
+  },
+  {
+    "id" : "ba6e4f56-37eb-4a00-a214-1ead3efa5b61",
+    "prId" : 26214,
+    "prUrl" : "https://github.com/apache/spark/pull/26214#pullrequestreview-321717022",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a816bdc6-529b-4185-be08-70cedc57574f",
+        "parentId" : null,
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "This needs to check whether `part1` is a known catalog. If it is a catalog, then it isn't a temp view reference because catalog resolution happens first.\r\n\r\nNot needing to remember that is the purpose of the extractors. I think it would be better to continue using the extractor:\r\n\r\n```scala\r\n  case u @ UnresolvedRelation(AsTemporaryTableIdentifier(ident)) =>\r\n    ident.database match {\r\n      case Some(db) =>\r\n        v1SessionCatalog.lookupGlobalTempView(db, ident.table).getOrElse(u)\r\n      case None =>\r\n        v1SessionCatalog.lookupTempView(ident.table).getOrElse(u)\r\n    }\r\n```",
+        "createdAt" : "2019-11-14T00:02:07Z",
+        "updatedAt" : "2019-11-21T08:11:47Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "612cd4c7-115a-4357-ae07-b59e89bedc35",
+        "parentId" : "a816bdc6-529b-4185-be08-70cedc57574f",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "as discussed in the sync, we decide to treat the global temp view name prefix `global_temp` as a special catalog, so that it won't be masked by user-supplied catalog.",
+        "createdAt" : "2019-11-14T12:06:45Z",
+        "updatedAt" : "2019-11-21T08:11:47Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "73f71071-c8f4-4c2a-90a2-666724ef6b16",
+        "parentId" : "a816bdc6-529b-4185-be08-70cedc57574f",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "If this is intended to only match `global_temp` then it should match `Seq(GLOBAL_TEMP_NAMESPACE, name)` instead of matching `part1`.",
+        "createdAt" : "2019-11-21T17:42:39Z",
+        "updatedAt" : "2019-11-21T17:42:40Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b6d7a279-6e48-42de-a468-310488c04992",
+        "parentId" : "a816bdc6-529b-4185-be08-70cedc57574f",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "unfortunately, `global_temp` is not a constant, it's a static SQL conf that users can set before starting a Spark application(not at runtime)",
+        "createdAt" : "2019-11-22T02:28:20Z",
+        "updatedAt" : "2019-11-22T02:28:20Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b9c01819-3c59-4afd-b59a-add89d72e0e2",
+        "parentId" : "a816bdc6-529b-4185-be08-70cedc57574f",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "Yeah, that's why I went ahead with the merge. I think the code is currently correct.\r\n\r\nStill, it would be nice to use the runtime setting here in the matcher instead.",
+        "createdAt" : "2019-11-22T18:05:43Z",
+        "updatedAt" : "2019-11-22T18:05:44Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c10f28896b20e124532aa36d586a23d2c7bc2810",
+    "line" : 20,
+    "diffHunk" : "@@ -1,1 +673,677 @@      case u @ UnresolvedRelation(Seq(part1)) =>\n        v1SessionCatalog.lookupTempView(part1).getOrElse(u)\n      case u @ UnresolvedRelation(Seq(part1, part2)) =>\n        v1SessionCatalog.lookupGlobalTempView(part1, part2).getOrElse(u)\n    }"
   }
 ]

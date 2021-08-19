@@ -1,0 +1,90 @@
+[
+  {
+    "id" : "154ebbd4-619e-4b24-bc51-f7c47bec5bea",
+    "prId" : 26266,
+    "prUrl" : "https://github.com/apache/spark/pull/26266#pullrequestreview-308705973",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6e4cc307-b043-41e9-b7bb-d566aa3f689a",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "I think it's OK to sort, but will it be less surprising to sort by topic name?",
+        "createdAt" : "2019-10-27T22:53:56Z",
+        "updatedAt" : "2019-11-02T03:01:01Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1e6937be-f3a7-41c5-81a3-2eeea9c4965b",
+        "parentId" : "6e4cc307-b043-41e9-b7bb-d566aa3f689a",
+        "authorId" : "7f6ee848-0975-44c1-ad19-5bc909e9b38d",
+        "body" : "thank you for reviewing, it seems to be reasonable to sort by topic(or partition) name, but it's useful to sort by count when inspecting your data skewness problem, and it will help you to have an intuitive acknowledge of some data-intensive topics.",
+        "createdAt" : "2019-10-28T01:56:23Z",
+        "updatedAt" : "2019-11-02T03:01:01Z",
+        "lastEditedBy" : "7f6ee848-0975-44c1-ad19-5bc909e9b38d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2e3fc4ab-33ab-4458-bcf2-a2772c792779",
+        "parentId" : "6e4cc307-b043-41e9-b7bb-d566aa3f689a",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Sure, but the topics might also change order on every load or something. I don't feel strongly about it. Any sort order is probably more useful than arbitrary.",
+        "createdAt" : "2019-10-28T03:00:57Z",
+        "updatedAt" : "2019-11-02T03:01:01Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f089f234-50d7-4930-9685-fe7f65bdc7fa",
+        "parentId" : "6e4cc307-b043-41e9-b7bb-d566aa3f689a",
+        "authorId" : "7f6ee848-0975-44c1-ad19-5bc909e9b38d",
+        "body" : "Any sort order is useful, and sorting by count may provide the most important information we need. So I think it's better. Can someone else provide some suggestions? ",
+        "createdAt" : "2019-10-28T06:39:10Z",
+        "updatedAt" : "2019-11-02T03:01:01Z",
+        "lastEditedBy" : "7f6ee848-0975-44c1-ad19-5bc909e9b38d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ec1fee68-1d9d-456a-ac79-5d009d974e83",
+        "parentId" : "6e4cc307-b043-41e9-b7bb-d566aa3f689a",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "@dengziming . Could you try this with Apache Spark `minPartitions` feature? Actually, Apache Spark has a feature to handle the Kafka topic skewness. The skewness seems not important in that case.",
+        "createdAt" : "2019-10-28T17:35:33Z",
+        "updatedAt" : "2019-11-02T03:01:01Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "81e04c26-8524-4588-9350-241a071235a0",
+        "parentId" : "6e4cc307-b043-41e9-b7bb-d566aa3f689a",
+        "authorId" : "7f6ee848-0975-44c1-ad19-5bc909e9b38d",
+        "body" : "@dongjoon-hyun, thank you, I will try it. `minPartitions` is a parameter of `sparkContext.textFile` method, how can I use it when reading from Kafka? ",
+        "createdAt" : "2019-10-29T02:14:28Z",
+        "updatedAt" : "2019-11-02T03:01:01Z",
+        "lastEditedBy" : "7f6ee848-0975-44c1-ad19-5bc909e9b38d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "97d17084-2078-41b1-9656-74d2e7f53162",
+        "parentId" : "6e4cc307-b043-41e9-b7bb-d566aa3f689a",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Please take a look at our official Kafka integration document. `minPartitions` is one of our typical parameters like `startingOffsets` and `endingOffsets`.\r\n- https://spark.apache.org/docs/latest/structured-streaming-kafka-integration.html#creating-a-kafka-source-for-batch-queries",
+        "createdAt" : "2019-10-29T17:36:29Z",
+        "updatedAt" : "2019-11-02T03:01:01Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "13b5cf9371ff23d7056e3bbd446c4cb9caed0b81",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +238,242 @@      // Don't display empty ranges.\n      offsetRange.fromOffset != offsetRange.untilOffset\n    }.toSeq.sortBy(-_.count()).map { offsetRange =>\n      s\"topic: ${offsetRange.topic}\\tpartition: ${offsetRange.partition}\\t\" +\n      s\"offsets: ${offsetRange.fromOffset} to ${offsetRange.untilOffset}\\t\" +"
+  }
+]

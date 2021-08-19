@@ -691,5 +691,82 @@
     "commit" : "cab9c673099d9043cb0d39565440f9263a386231",
     "line" : 18,
     "diffHunk" : "@@ -1,1 +183,187 @@          VacuumTableExec(table.asVacuumable) :: Nil\n        case _ =>\n          throw new AnalysisException(\"VACUUM is only supported with v2 tables.\")\n      }\n"
+  },
+  {
+    "id" : "968c9cd4-56ad-4189-b157-7399baf639b0",
+    "prId" : 26231,
+    "prUrl" : "https://github.com/apache/spark/pull/26231#pullrequestreview-341637608",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9a719c83-0b03-43bb-9089-72e1a8e43e00",
+        "parentId" : null,
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "It seems like there is quite a bit of work done here in the strategy that should be in the exec node instead, like converting the RDD to a catalyst RDD. What about building a subclass of RowDataSourceScanExec that handles these concerns?",
+        "createdAt" : "2019-12-20T19:35:01Z",
+        "updatedAt" : "2020-01-16T08:35:54Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f602f05f-9f7c-47ec-a796-3673c4166290",
+        "parentId" : "9a719c83-0b03-43bb-9089-72e1a8e43e00",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "This may be a good idea, but this is what we do for ds v1 (see the v1 rule `DataSourceStrategy`). I'd like to avoid changing the existing design choice we made before.",
+        "createdAt" : "2019-12-23T04:35:54Z",
+        "updatedAt" : "2020-01-16T08:35:54Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fbffc940-91a0-40bf-b466-b0a8d4a7bc6c",
+        "parentId" : "9a719c83-0b03-43bb-9089-72e1a8e43e00",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "I'd like to clean this up before committing this change. I'm not so sure that this was a purposeful design choice in v1. If so, what was the rationale for putting this logic in the strategy?",
+        "createdAt" : "2019-12-23T18:32:46Z",
+        "updatedAt" : "2020-01-16T08:35:54Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a5b3cdf3-2152-446d-9ea3-aad36d5311ad",
+        "parentId" : "9a719c83-0b03-43bb-9089-72e1a8e43e00",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I tried and it's not easy to refactor. The query plans in Spark are all case class and you can't create a sub-class of case class. And it's only a few lines of code that can be encapsulated, the part of getting the v1 scan should belong to the strategy.\r\n\r\nIf you have some ideas, please help and send a PR to my branch. I'm happy to see approaches that can make the code cleaner.",
+        "createdAt" : "2019-12-24T08:34:14Z",
+        "updatedAt" : "2020-01-16T08:35:54Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ff4aa2fe-62ab-4446-a81c-57578085503e",
+        "parentId" : "9a719c83-0b03-43bb-9089-72e1a8e43e00",
+        "authorId" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "body" : "how about an alternate constructor?",
+        "createdAt" : "2020-01-10T02:11:42Z",
+        "updatedAt" : "2020-01-16T08:35:54Z",
+        "lastEditedBy" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "feeefec5-e2ef-4ecf-966b-bdc78d527851",
+        "parentId" : "9a719c83-0b03-43bb-9089-72e1a8e43e00",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "The Scala auxiliary constructors must call other constructors as the FIRST action, e.g. \r\n```\r\ndef this(...) {\r\n  do something\r\n  this(...)\r\n}\r\n```\r\nis not allowed.\r\n\r\nWe can create an object and add an `apply` method to encapsulate the 4 lines of code, but does it really matter? The 4 lines of code only appear once here.",
+        "createdAt" : "2020-01-13T04:41:33Z",
+        "updatedAt" : "2020-01-16T08:35:54Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a48e7bb31bdab8abcd2b6ba9aa37faa464351f61",
+    "line" : 55,
+    "diffHunk" : "@@ -1,1 +67,71 @@      val originalOutputNames = relation.table.schema().map(_.name)\n      val requiredColumnsIndex = output.map(_.name).map(originalOutputNames.indexOf)\n      val dsScan = RowDataSourceScanExec(\n        output,\n        requiredColumnsIndex,"
   }
 ]

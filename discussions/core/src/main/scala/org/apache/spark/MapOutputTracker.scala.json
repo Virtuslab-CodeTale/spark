@@ -1285,5 +1285,170 @@
     "commit" : "2e11d1bedf15b59c89b1f686ea716a575802f1e6",
     "line" : 58,
     "diffHunk" : "@@ -1,1 +859,863 @@            case e: IOException if\n              Throwables.getCausalChain(e).asScala.exists(_.isInstanceOf[BlockNotFoundException]) =>\n              mapStatuses.clear()\n              throw new MetadataFetchFailedException(\n                shuffleId, -1, Throwables.getStackTraceAsString(e))"
+  },
+  {
+    "id" : "01dc5baa-4f7b-4de2-a08b-3bf960cb3f02",
+    "prId" : 26235,
+    "prUrl" : "https://github.com/apache/spark/pull/26235#pullrequestreview-306208268",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "fe64d159-2b75-4d52-be05-1359d0253099",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "So, this is the main change?",
+        "createdAt" : "2019-10-23T21:36:03Z",
+        "updatedAt" : "2019-10-23T22:49:58Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e275f7f6-192f-4a8f-b18e-e9e31aef299e",
+        "parentId" : "fe64d159-2b75-4d52-be05-1359d0253099",
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "Yes. The codec is wrapped in buffered stream which avoids overhead excessive of JNI call while trying to decompress small amount of data each time when `objIn.readObject()` is called.",
+        "createdAt" : "2019-10-23T21:39:32Z",
+        "updatedAt" : "2019-10-23T22:49:58Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e5acdbf46098d7e8d08f8db87f6646409dc4460a",
+    "line" : 163,
+    "diffHunk" : "@@ -1,1 +941,945 @@\n    def deserializeObject(arr: Array[Byte], off: Int, len: Int): AnyRef = {\n      val codec = CompressionCodec.createCodec(conf, \"zstd\")\n      // The ZStd codec is wrapped in a `BufferedInputStream` which avoids overhead excessive\n      // of JNI call while trying to decompress small amount of data for each element"
+  },
+  {
+    "id" : "977b4278-e833-4a60-8e02-9d5a408b2094",
+    "prId" : 26235,
+    "prUrl" : "https://github.com/apache/spark/pull/26235#pullrequestreview-306233569",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4cf66365-0c47-4b5e-a166-f6dd25f691ef",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "It is now controlled by spark.io.compression.zstd.level. The default value is 1. Is it the same as before?",
+        "createdAt" : "2019-10-23T22:09:12Z",
+        "updatedAt" : "2019-10-23T22:49:58Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1d0b6cb7-ac9f-40e8-878e-a65f04b912bb",
+        "parentId" : "4cf66365-0c47-4b5e-a166-f6dd25f691ef",
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "I think the default one for ZStd codec is 3 (before). Just tested, and I don't see much difference between 1 or 3.",
+        "createdAt" : "2019-10-23T22:43:35Z",
+        "updatedAt" : "2019-10-23T22:49:58Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e5acdbf46098d7e8d08f8db87f6646409dc4460a",
+    "line" : 101,
+    "diffHunk" : "@@ -1,1 +904,908 @@    val out = new ApacheByteArrayOutputStream()\n    out.write(DIRECT)\n    val codec = CompressionCodec.createCodec(conf, \"zstd\")\n    val objOut = new ObjectOutputStream(codec.compressedOutputStream(out))\n    Utils.tryWithSafeFinally {"
+  },
+  {
+    "id" : "e3dfd1fb-dea6-4511-a07d-07eebe5d6ab5",
+    "prId" : 26235,
+    "prUrl" : "https://github.com/apache/spark/pull/26235#pullrequestreview-306233837",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e6eb7474-56c9-4a31-9c48-bd47160e5818",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "since we are using CompressionCodec, instead of hard-coding zstd here, it is good to have a config for it now?",
+        "createdAt" : "2019-10-23T22:11:17Z",
+        "updatedAt" : "2019-10-23T22:49:58Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4158220b-e291-4347-ade3-1fc929373e63",
+        "parentId" : "e6eb7474-56c9-4a31-9c48-bd47160e5818",
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "I don't like to have too many configurations, but we have the flexibility to add it later.",
+        "createdAt" : "2019-10-23T22:44:23Z",
+        "updatedAt" : "2019-10-23T22:49:58Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e5acdbf46098d7e8d08f8db87f6646409dc4460a",
+    "line" : 101,
+    "diffHunk" : "@@ -1,1 +904,908 @@    val out = new ApacheByteArrayOutputStream()\n    out.write(DIRECT)\n    val codec = CompressionCodec.createCodec(conf, \"zstd\")\n    val objOut = new ObjectOutputStream(codec.compressedOutputStream(out))\n    Utils.tryWithSafeFinally {"
+  },
+  {
+    "id" : "bba4250c-bb7c-48db-a5bc-92b4415639e7",
+    "prId" : 26235,
+    "prUrl" : "https://github.com/apache/spark/pull/26235#pullrequestreview-318331900",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "404d9193-05e4-46d0-9ea5-dc478cd3a5ca",
+        "parentId" : null,
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "All the other compressions have conf. Could we do it for this too? See the examples:\r\n\r\nhttps://github.com/apache/spark/blob/1b575ef5d1b8e3e672b2fca5c354d6678bd78bd1/core/src/main/scala/org/apache/spark/serializer/SerializerManager.scala#L67-L73",
+        "createdAt" : "2019-11-07T07:39:37Z",
+        "updatedAt" : "2019-11-07T07:39:37Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7e17a340-46e2-4fec-941b-e0a5f24423ac",
+        "parentId" : "404d9193-05e4-46d0-9ea5-dc478cd3a5ca",
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "cc @zsxwing @cloud-fan ",
+        "createdAt" : "2019-11-07T07:39:50Z",
+        "updatedAt" : "2019-11-07T07:39:50Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "93fd14a3-4816-4df0-94d9-c0071f7ee7c6",
+        "parentId" : "404d9193-05e4-46d0-9ea5-dc478cd3a5ca",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "I brought the up here in the other pr, please see discussion there: https://github.com/apache/spark/pull/26085\r\n\r\nIf you think its needed now then we should file a jira for it.",
+        "createdAt" : "2019-11-07T14:42:24Z",
+        "updatedAt" : "2019-11-07T14:42:24Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b5280eee-5ccf-4f77-90c8-c17ac556ec3e",
+        "parentId" : "404d9193-05e4-46d0-9ea5-dc478cd3a5ca",
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "Created a JIRA https://issues.apache.org/jira/browse/SPARK-29939 @Ngone51 Could you submit a PR to fix it?",
+        "createdAt" : "2019-11-18T07:16:48Z",
+        "updatedAt" : "2019-11-18T07:16:48Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6c15feb0-9c1c-40f0-8e38-0f095391c552",
+        "parentId" : "404d9193-05e4-46d0-9ea5-dc478cd3a5ca",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Sure:)@gatorsmile",
+        "createdAt" : "2019-11-18T13:34:21Z",
+        "updatedAt" : "2019-11-18T13:34:21Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e5acdbf46098d7e8d08f8db87f6646409dc4460a",
+    "line" : 101,
+    "diffHunk" : "@@ -1,1 +904,908 @@    val out = new ApacheByteArrayOutputStream()\n    out.write(DIRECT)\n    val codec = CompressionCodec.createCodec(conf, \"zstd\")\n    val objOut = new ObjectOutputStream(codec.compressedOutputStream(out))\n    Utils.tryWithSafeFinally {"
   }
 ]

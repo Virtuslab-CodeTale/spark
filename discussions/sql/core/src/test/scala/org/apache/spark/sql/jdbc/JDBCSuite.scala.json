@@ -75,5 +75,49 @@
     "commit" : "0de85296406d0b431eadde1742400eb0d9954aba",
     "line" : 14,
     "diffHunk" : "@@ -1,1 +1660,1664 @@    }.getMessage\n    assert(e.contains(\n      \"Invalid value `test` for parameter `isolationLevel`. This can be \" +\n      \"`NONE`, `READ_UNCOMMITTED`, `READ_COMMITTED`, `REPEATABLE_READ` or `SERIALIZABLE`.\"))\n  }"
+  },
+  {
+    "id" : "b070d2ca-0ce1-4312-a174-9a0f41b8bf74",
+    "prId" : 26242,
+    "prUrl" : "https://github.com/apache/spark/pull/26242#pullrequestreview-307746246",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1cdf1ddf-5072-4391-99a3-64bf3d9a0148",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "nit: It seems the most part of this test is the same with https://github.com/apache/spark/blob/master/sql/core/src/test/scala/org/apache/spark/sql/jdbc/JDBCSuite.scala#L1517-L1565\r\nSo, can we share it by defining a helper func?",
+        "createdAt" : "2019-10-25T02:04:56Z",
+        "updatedAt" : "2019-10-25T07:38:45Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4d5c78c3-f529-4830-9aea-7c5fec0480cb",
+        "parentId" : "1cdf1ddf-5072-4391-99a3-64bf3d9a0148",
+        "authorId" : "9c99fec9-cc01-4c44-8bb8-60e23ac802b1",
+        "body" : "I reused it to verify the correctness of the method.",
+        "createdAt" : "2019-10-25T02:10:50Z",
+        "updatedAt" : "2019-10-25T02:45:21Z",
+        "lastEditedBy" : "9c99fec9-cc01-4c44-8bb8-60e23ac802b1",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a2a04a73-3af0-4f5f-ad93-c3655f8711f7",
+        "parentId" : "1cdf1ddf-5072-4391-99a3-64bf3d9a0148",
+        "authorId" : "9c99fec9-cc01-4c44-8bb8-60e23ac802b1",
+        "body" : "@maropu \r\nI didn't think of a good way, maybe maybe I can combine them like this\r\n```\r\ntest(\"SPARK-22814 support date/timestamp types in partitionColumn\") {\r\n    val expectedResult = Seq(\r\n      (\"2018-07-06\", \"2018-07-06 05:50:00.0\"),\r\n      (\"2018-07-06\", \"2018-07-06 08:10:08.0\"),\r\n      (\"2018-07-08\", \"2018-07-08 13:32:01.0\"),\r\n      (\"2018-07-12\", \"2018-07-12 09:51:15.0\")\r\n    ).map { case (date, timestamp) =>\r\n      Row(Date.valueOf(date), Timestamp.valueOf(timestamp))\r\n    }\r\n\r\n    // DateType partition column\r\n    val df1 = spark.read.format(\"jdbc\")\r\n      .option(\"url\", urlWithUserAndPass)\r\n      .option(\"dbtable\", \"TEST.DATETIME\")\r\n      .option(\"partitionColumn\", \"d\")\r\n      .option(\"lowerBound\", \"2018-07-06\")\r\n      .option(\"upperBound\", \"2018-07-20\")\r\n      .option(\"numPartitions\", 3)\r\n      .load()\r\n\r\n    val df2 = spark.read.jdbc(\r\n      url = urlWithUserAndPass,\r\n      table = \"TEST.DATETIME\",\r\n      columnName = \"d\",\r\n      lowerBound = \"2018-07-06\",\r\n      upperBound = \"2018-07-20\",\r\n      numPartitions = 3,\r\n      connectionProperties = new Properties()\r\n    )\r\n\r\n    dateMatch(df1)\r\n    dateMatch(df2)\r\n    checkAnswer(df1, expectedResult)\r\n    checkAnswer(df2, expectedResult)\r\n\r\n    def dateMatch(df: DataFrame): Unit ={\r\n      df.logicalPlan match {\r\n        case LogicalRelation(JDBCRelation(_, parts, _), _, _, _) =>\r\n          val whereClauses = parts.map(_.asInstanceOf[JDBCPartition].whereClause).toSet\r\n          assert(whereClauses === Set(\r\n            \"\"\"\"D\" < '2018-07-10' or \"D\" is null\"\"\",\r\n            \"\"\"\"D\" >= '2018-07-10' AND \"D\" < '2018-07-14'\"\"\",\r\n            \"\"\"\"D\" >= '2018-07-14'\"\"\"))\r\n      }\r\n    }\r\n\r\n    // TimestampType partition column\r\n    val df3 = spark.read.format(\"jdbc\")\r\n      .option(\"url\", urlWithUserAndPass)\r\n      .option(\"dbtable\", \"TEST.DATETIME\")\r\n      .option(\"partitionColumn\", \"t\")\r\n      .option(\"lowerBound\", \"2018-07-04 03:30:00.0\")\r\n      .option(\"upperBound\", \"2018-07-27 14:11:05.0\")\r\n      .option(\"numPartitions\", 2)\r\n      .load()\r\n\r\n    val df4 = spark.read.jdbc(\r\n      url = urlWithUserAndPass,\r\n      table = \"TEST.DATETIME\",\r\n      columnName = \"t\",\r\n      lowerBound = \"2018-07-04 03:30:00.0\",\r\n      upperBound = \"2018-07-27 14:11:05.0\",\r\n      numPartitions = 2,\r\n      connectionProperties = new Properties()\r\n    )\r\n\r\n    timeStampMatch(df3)\r\n    timeStampMatch(df4)\r\n    checkAnswer(df3, expectedResult)\r\n    checkAnswer(df4, expectedResult)\r\n\r\n    def timeStampMatch(df: DataFrame): Unit ={\r\n      df.logicalPlan match {\r\n        case LogicalRelation(JDBCRelation(_, parts, _), _, _, _) =>\r\n          val whereClauses = parts.map(_.asInstanceOf[JDBCPartition].whereClause).toSet\r\n          assert(whereClauses === Set(\r\n            \"\"\"\"T\" < '2018-07-15 20:50:32.5' or \"T\" is null\"\"\",\r\n            \"\"\"\"T\" >= '2018-07-15 20:50:32.5'\"\"\"))\r\n      }\r\n    }\r\n  }\r\n```",
+        "createdAt" : "2019-10-28T10:12:22Z",
+        "updatedAt" : "2019-10-28T10:12:22Z",
+        "lastEditedBy" : "9c99fec9-cc01-4c44-8bb8-60e23ac802b1",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "23a2420a017b8b03f84fddd5cd559d709a45af36",
+    "line" : 131,
+    "diffHunk" : "@@ -1,1 +1712,1716 @@    }\n    checkAnswer(df2, expectedResult)\n  }\n}"
   }
 ]

@@ -185,5 +185,225 @@
     "commit" : "a59724e87e84ca09e6d59a6b8a10f0e035ee4d61",
     "line" : 182,
     "diffHunk" : "@@ -1,1 +190,194 @@      val contingency = new DenseMatrix(numValues, numLabels,\n        Array.ofDim[Double](numValues * numLabels))\n      count.foreach { case ((value, label), c) =>\n        val i = value2Index(value)\n        val j = label2Index(label)"
+  },
+  {
+    "id" : "b828282c-fb7c-4ca9-978c-2da09c87d08d",
+    "prId" : 26197,
+    "prUrl" : "https://github.com/apache/spark/pull/26197#pullrequestreview-306888148",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "44e11e19-924e-42eb-868c-a04bf9fdcba8",
+        "parentId" : null,
+        "authorId" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "body" : "Spark MLLib is in maintaince mode, see https://spark.apache.org/docs/latest/ml-guide.html . If we do want this I think we need to make sure it is exposed in Spark ML.",
+        "createdAt" : "2019-10-23T17:28:59Z",
+        "updatedAt" : "2019-10-23T18:31:59Z",
+        "lastEditedBy" : "ae55b635-dd0e-41aa-9272-372de9a35f38",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "afc6b83d-62da-49e0-aa9d-1bfe7b169091",
+        "parentId" : "44e11e19-924e-42eb-868c-a04bf9fdcba8",
+        "authorId" : "ea8a6662-7936-4641-93d9-0fe2b7f70e4e",
+        "body" : "I see. This looks like a good opportunity to bring ML into alignment with MLlib since the ML implementation of Chi squared tests so far seems to only include the independence test. \r\nhttps://github.com/apache/spark/blob/master/mllib/src/main/scala/org/apache/spark/ml/stat/ChiSquareTest.scala\r\n\r\nIt will probably take me a week or so, but I could work on migrating the goodness of fit test and this p-value simulation into ML if that's the way to go. Thoughts?",
+        "createdAt" : "2019-10-23T22:05:03Z",
+        "updatedAt" : "2019-10-23T22:05:03Z",
+        "lastEditedBy" : "ea8a6662-7936-4641-93d9-0fe2b7f70e4e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d4983128-31f9-463f-b896-781b805f70ff",
+        "parentId" : "44e11e19-924e-42eb-868c-a04bf9fdcba8",
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "Spark depends on https://github.com/addthis/stream-lib/blob/master/src/main/java/com/clearspring/analytics/stream/quantile/TDigest.java already, and this version is also implemented by Ted. Can you check if those two versions work the same way? If so, we don't need to add another dependency which is hard to justify normally.",
+        "createdAt" : "2019-10-24T21:57:44Z",
+        "updatedAt" : "2019-10-24T21:57:44Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "da1c6fae18aa19d073fae5afc184a14912a50729",
+    "line" : 23,
+    "diffHunk" : "@@ -1,1 +155,159 @@  def chiSquared(observed: Vector,\n      expected: Vector = Vectors.dense(Array.empty[Double]),\n      simulatePValue: Boolean = false,\n      numDraw: Int = 50000,\n      methodName: String = PEARSON.name): ChiSqTestResult = {"
+  },
+  {
+    "id" : "b62f487a-8046-4b9d-b1d5-0b3a3bf0cf93",
+    "prId" : 26197,
+    "prUrl" : "https://github.com/apache/spark/pull/26197#pullrequestreview-314523511",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "098a1129-55a6-49d4-ae8d-de063f45168b",
+        "parentId" : null,
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "What's the intuition of doing MC given we can compute p-value directly?",
+        "createdAt" : "2019-10-24T22:09:17Z",
+        "updatedAt" : "2019-10-24T22:09:17Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "61369f1f-2b67-400c-aea4-157490b913a7",
+        "parentId" : "098a1129-55a6-49d4-ae8d-de063f45168b",
+        "authorId" : "ea8a6662-7936-4641-93d9-0fe2b7f70e4e",
+        "body" : "For small N (<5-10 depending on who you talk to) in any bucket of the array of expected values, the theoretical chi2 distribution is not valid so we cannot use it in the goodness of fit test. In such cases, we can use MC to empirically compute the distribution of the chi2 metric, and use this distribution in lieu of the theoretical one. \r\n\r\nHere's an image depicting the deviation of this empirical distribution from the theoretical one as we scan the total number of points (note that this number in the legend is not the \"N in any bucket\" I referred to above, but think of it as a proxy).\r\n![image](https://user-images.githubusercontent.com/4906224/68055001-efd81100-fcac-11e9-8245-0f6486b444db.png)\r\n",
+        "createdAt" : "2019-11-01T20:39:02Z",
+        "updatedAt" : "2019-11-01T20:39:02Z",
+        "lastEditedBy" : "ea8a6662-7936-4641-93d9-0fe2b7f70e4e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1d2ec7e9-af55-419f-8581-3ca4c8c2223f",
+        "parentId" : "098a1129-55a6-49d4-ae8d-de063f45168b",
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "Make sense. Thanks for the explanation. ",
+        "createdAt" : "2019-11-09T00:30:05Z",
+        "updatedAt" : "2019-11-09T00:30:05Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "da1c6fae18aa19d073fae5afc184a14912a50729",
+    "line" : 41,
+    "diffHunk" : "@@ -1,1 +209,213 @@    } else {\n      1.0 - new ChiSquaredDistribution(df).cumulativeProbability(statistic)\n    }\n    new ChiSqTestResult(pValue, df, statistic, PEARSON.name, NullHypothesis.goodnessOfFit.toString)\n  }"
+  },
+  {
+    "id" : "7f714686-704c-4a44-ae1e-72e86b3aa3da",
+    "prId" : 26197,
+    "prUrl" : "https://github.com/apache/spark/pull/26197#pullrequestreview-310685344",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b4ccc5a0-b463-4093-8239-39e5591dae48",
+        "parentId" : null,
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "Why do you need kryo here?",
+        "createdAt" : "2019-10-24T22:16:54Z",
+        "updatedAt" : "2019-10-24T22:16:54Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "84cc41b1-736e-4f95-8688-9ae574d1e06a",
+        "parentId" : "b4ccc5a0-b463-4093-8239-39e5591dae48",
+        "authorId" : "ea8a6662-7936-4641-93d9-0fe2b7f70e4e",
+        "body" : "I think because Spark issued errors about non-serializability of the MergingDigest without this, but maybe it's no longer necessary. I'll try running without this and will remove if it works.",
+        "createdAt" : "2019-11-01T20:40:56Z",
+        "updatedAt" : "2019-11-01T20:40:56Z",
+        "lastEditedBy" : "ea8a6662-7936-4641-93d9-0fe2b7f70e4e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "da1c6fae18aa19d073fae5afc184a14912a50729",
+    "line" : 88,
+    "diffHunk" : "@@ -1,1 +309,313 @@    // Probably LOTS of room for optimization building d, but this approach works...\n    val tic = DateTime.now(DateTimeZone.UTC)\n    implicit val enc: Encoder[MergingDigest] = Encoders.kryo[MergingDigest]\n\n    val d: TDigest = drawRange.mapPartitions { part =>"
+  },
+  {
+    "id" : "80b3a496-9f08-4e1d-a27b-3dc3fb1b4f69",
+    "prId" : 26197,
+    "prUrl" : "https://github.com/apache/spark/pull/26197#pullrequestreview-306904155",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "57d8ba11-ee6d-4db9-91a2-808535780f89",
+        "parentId" : null,
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "Sometimes, we find the following is more readable. Since both has the same performance; so it's your preference.\r\n```scala\r\n    val drawRange = spark.sparkContext.range(0, numDraw, 1, numPart)\r\n\r\n    val seqOp = (d: MergingDigest, drawId: Long) => {\r\n      val obs = BDV.zeros[Double](exp.size)\r\n      BDV.rand(expSum.toInt).foreach { r: Double =>\r\n        val i = argmax(BDV(expFrac.map { e => if (r >= e._1 && r <= e._2) 1 else 0 }: _*))\r\n        obs(i) += 1\r\n      }\r\n\r\n      val chi2: Double = sum(breeze.numerics.pow(obs - exp, 2) / exp)\r\n      d.add(chi2)\r\n      d\r\n    }\r\n\r\n    val combOp = (d1: MergingDigest, d2: MergingDigest) => {\r\n      d1.add(d2)\r\n      d1\r\n    }\r\n\r\n    val d = drawRange.treeAggregate(new MergingDigest(k))(seqOp, combOp)\r\n\r\n    d.compress()\r\n    d\r\n  }\r\n```",
+        "createdAt" : "2019-10-24T22:43:58Z",
+        "updatedAt" : "2019-10-24T22:45:57Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "da1c6fae18aa19d073fae5afc184a14912a50729",
+    "line" : 116,
+    "diffHunk" : "@@ -1,1 +337,341 @@        d1.add(d2)\n        d1\n      }\n\n    val toc = DateTime.now(DateTimeZone.UTC)"
+  },
+  {
+    "id" : "512cdefb-53f4-4959-87cd-f04eda5bff98",
+    "prId" : 26197,
+    "prUrl" : "https://github.com/apache/spark/pull/26197#pullrequestreview-310686091",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4482ba34-830e-4ad3-b086-fabe50844cf8",
+        "parentId" : null,
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "should we check the size of digest, and add the smaller one to the larger one?",
+        "createdAt" : "2019-10-24T22:46:46Z",
+        "updatedAt" : "2019-10-24T22:46:46Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "10cc3b48-a1ca-4952-98d0-22b9eff8cfe7",
+        "parentId" : "4482ba34-830e-4ad3-b086-fabe50844cf8",
+        "authorId" : "ea8a6662-7936-4641-93d9-0fe2b7f70e4e",
+        "body" : "It doesn't seem to matter which digest we add to which, so I don't think we need this.",
+        "createdAt" : "2019-11-01T20:42:30Z",
+        "updatedAt" : "2019-11-01T20:42:30Z",
+        "lastEditedBy" : "ea8a6662-7936-4641-93d9-0fe2b7f70e4e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "da1c6fae18aa19d073fae5afc184a14912a50729",
+    "line" : 114,
+    "diffHunk" : "@@ -1,1 +335,339 @@      }.treeReduce { (d1: MergingDigest, d2: MergingDigest) =>\n        logDebug(s\"merging digests with ${d1.size()} values and ${d2.size()} values\")\n        d1.add(d2)\n        d1\n      }"
+  },
+  {
+    "id" : "2e04672a-de39-45e7-b4ad-f63995f6740a",
+    "prId" : 26197,
+    "prUrl" : "https://github.com/apache/spark/pull/26197#pullrequestreview-314523654",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8f912782-fb44-4589-b433-c4d01e29867c",
+        "parentId" : null,
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "this array might be able to reuse, and move up before foreach to avoid GC.",
+        "createdAt" : "2019-10-24T22:47:12Z",
+        "updatedAt" : "2019-10-24T22:47:12Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "38f46fec-4507-4249-8362-8a066efd1461",
+        "parentId" : "8f912782-fb44-4589-b433-c4d01e29867c",
+        "authorId" : "ea8a6662-7936-4641-93d9-0fe2b7f70e4e",
+        "body" : "I'll check, but I think it is necessary to re-initialize this array to zeros for each iteration.",
+        "createdAt" : "2019-11-01T20:56:29Z",
+        "updatedAt" : "2019-11-01T20:56:30Z",
+        "lastEditedBy" : "ea8a6662-7936-4641-93d9-0fe2b7f70e4e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "86015a27-0666-4d34-9086-2fed83608194",
+        "parentId" : "8f912782-fb44-4589-b433-c4d01e29867c",
+        "authorId" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "body" : "re-inialize will be probably more efficient than reallocating the memory for each record. ",
+        "createdAt" : "2019-11-09T00:31:02Z",
+        "updatedAt" : "2019-11-09T00:31:03Z",
+        "lastEditedBy" : "677aa336-324b-4b93-8300-21f8bd378f26",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "da1c6fae18aa19d073fae5afc184a14912a50729",
+    "line" : 97,
+    "diffHunk" : "@@ -1,1 +318,322 @@          logDebug(s\"drawId=$drawId adding to digest\")\n\n          val obs = BDV.zeros[Double](exp.size)\n\n          BDV.rand(expSum.toInt).foreach { r: Double =>"
   }
 ]
