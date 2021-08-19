@@ -449,5 +449,93 @@
     "commit" : "3c6c6c51bf8f5c3af9fbeaf1a4e182190bb600e6",
     "line" : 25,
     "diffHunk" : "@@ -1,1 +1678,1682 @@#'\n#' The output of \\code{func} must be a \\code{data.frame} matching \\code{schema} --\n#' in particular this means the names of the output \\code{data.frame} are irrelevant\n#'\n#' @seealso \\link{gapplyCollect}"
+  },
+  {
+    "id" : "ae023c4e-0e39-453d-8eea-708ffb1c70f4",
+    "prId" : 24414,
+    "prUrl" : "https://github.com/apache/spark/pull/24414#pullrequestreview-230453126",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "43f588e7-ac1d-477e-b536-168d841c0a7b",
+        "parentId" : null,
+        "authorId" : "99156419-7ce7-4671-b858-d0b5c4711f88",
+        "body" : "does this change the result (by default when `extended = FALSE, codegen = FALSE, cost = FALSE`) from before?",
+        "createdAt" : "2019-04-20T02:26:35Z",
+        "updatedAt" : "2019-08-09T09:31:22Z",
+        "lastEditedBy" : "99156419-7ce7-4671-b858-d0b5c4711f88",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "96df87b5-045a-4174-9d83-bee7a5fa4409",
+        "parentId" : "43f588e7-ac1d-477e-b536-168d841c0a7b",
+        "authorId" : "99156419-7ce7-4671-b858-d0b5c4711f88",
+        "body" : "can you check / test `explain(df, TRUE)` if the same as `explain(df, extended = TRUE)`",
+        "createdAt" : "2019-04-20T02:27:43Z",
+        "updatedAt" : "2019-08-09T09:31:22Z",
+        "lastEditedBy" : "99156419-7ce7-4671-b858-d0b5c4711f88",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f7d1128c-47e4-419b-9bee-f8ae98734a18",
+        "parentId" : "43f588e7-ac1d-477e-b536-168d841c0a7b",
+        "authorId" : "4af80f78-923e-45a5-8511-12e159c6ab09",
+        "body" : "> does this change the result (by default when extended = FALSE, codegen = FALSE, cost = FALSE) from before?\r\n\r\nYes,  but it changes it to match the output of Scala Spark's `.explain` and SQL's `EXPLAIN ...`. For instance, given a file `test.json` that contains:\r\n\r\n```json\r\n{\"a\": 1,\"b\":1.2}\r\n{\"a\": 2,\"b\":3.4}\r\n{\"a\": 3,\"b\":4.5}\r\n```\r\n\r\n2.4:\r\n\r\n```\r\n> explain(read.json(\"/tmp/test.json\"))\r\n*(1) FileScan json [a#24L,b#25] Batched: false, Format: JSON, Location: InMemoryFileIndex[file:/private/tmp/test.json], PartitionFilters: [], PushedFilters: [], ReadSchema: struct<a:bigint,b:double>```\r\n```\r\n\r\nThis PR:\r\n\r\n```\r\n> explain(read.json(\"/tmp/test.json\"))\r\n== Physical Plan ==\r\n*(1) FileScan json [a#37L,b#38] Batched: false, DataFilters: [], Format: JSON, Location: InMemoryFileIndex[file:/private/tmp/test.json], PartitionFilters: [], PushedFilters: [], ReadSchema: struct<a:bigint,b:double>\r\n```\r\n\r\nScala(for reference). This is on `master`, but 2.4 is similar:\r\n\r\n```\r\nscala> spark.read.json(\"/tmp/test.json\").explain\r\n== Physical Plan ==\r\n*(1) FileScan json [a#19L,b#20] Batched: false, DataFilters: [], Format: JSON, Location: InMemoryFileIndex[file:/tmp/test.json], PartitionFilters: [], PushedFilters: [], ReadSchema: struct<a:bigint,b:double>\r\n```\r\n\r\n> can you check / test explain(df, TRUE) if the same as explain(df, extended = TRUE)\r\n \r\nI added a test.",
+        "createdAt" : "2019-04-25T05:13:47Z",
+        "updatedAt" : "2019-08-09T09:31:22Z",
+        "lastEditedBy" : "4af80f78-923e-45a5-8511-12e159c6ab09",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a6db40b39323e817b02596b999aef48860ca8763",
+    "line" : 38,
+    "diffHunk" : "@@ -1,1 +164,168 @@setMethod(\"explain\",\n          signature(x = \"SparkDataFrame\"),\n          function(x, extended = FALSE, codegen = FALSE, cost = FALSE) {\n            cat(callJMethod(x@sdf, \"explainString\", extended, codegen, cost))\n          })"
+  },
+  {
+    "id" : "329595a2-7d9c-4b90-b400-a399d6425cc4",
+    "prId" : 24414,
+    "prUrl" : "https://github.com/apache/spark/pull/24414#pullrequestreview-241988510",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2fb0c831-e70c-44f7-80cc-f1db18dd177f",
+        "parentId" : null,
+        "authorId" : "99156419-7ce7-4671-b858-d0b5c4711f88",
+        "body" : "the doc is there, this might have broken R build\r\nhttps://github.com/apache/spark/blob/beba93c562cc98f6ebe799830f55e54d7c69fa0d/R/pkg/R/generics.R#L467",
+        "createdAt" : "2019-04-20T02:28:39Z",
+        "updatedAt" : "2019-08-09T09:31:22Z",
+        "lastEditedBy" : "99156419-7ce7-4671-b858-d0b5c4711f88",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e7349e09-d51d-4de8-87eb-78bce9422bff",
+        "parentId" : "2fb0c831-e70c-44f7-80cc-f1db18dd177f",
+        "authorId" : "4af80f78-923e-45a5-8511-12e159c6ab09",
+        "body" : "Hm, I'm not sure what to do about that. It looks like most of the other functions in that file use either `...` or a specific parameter list, without `@param` documentation, but `explain` uses `...` with `@param` documentation for both a specific parameter and the `...`. Could you give some advice: Should I add all the new parameters there, or just delete the `@param extended` to match the other functions in `generics.R`?\r\n\r\n(Also, I don't see any failures on AppVeyor? It seems to just stop mid-log.)",
+        "createdAt" : "2019-04-24T05:00:27Z",
+        "updatedAt" : "2019-08-09T09:31:22Z",
+        "lastEditedBy" : "4af80f78-923e-45a5-8511-12e159c6ab09",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "528040c7-201b-4909-b981-3915b434ae9b",
+        "parentId" : "2fb0c831-e70c-44f7-80cc-f1db18dd177f",
+        "authorId" : "99156419-7ce7-4671-b858-d0b5c4711f88",
+        "body" : "It means all the param should be added there (https://github.com/apache/spark/blob/beba93c562cc98f6ebe799830f55e54d7c69fa0d/R/pkg/R/generics.R#L467)",
+        "createdAt" : "2019-05-25T03:50:30Z",
+        "updatedAt" : "2019-08-09T09:31:22Z",
+        "lastEditedBy" : "99156419-7ce7-4671-b858-d0b5c4711f88",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a6db40b39323e817b02596b999aef48860ca8763",
+    "line" : 13,
+    "diffHunk" : "@@ -1,1 +145,149 @@#' @param extended print the logical plans as well as the physical plans\n#' @param codegen print the generated code for whole-stage codegen\n#' @param cost print the optimized logical plan with operator costs\n#'\n#' @family SparkDataFrame functions"
   }
 ]

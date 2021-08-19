@@ -977,5 +977,71 @@
     "commit" : "f2700eb517246a72873090dffd35635e93283015",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +551,555 @@    case ByteType =>\n      (stmt: PreparedStatement, row: Row, pos: Int) =>\n        stmt.setByte(pos + 1, row.getByte(pos))\n\n    case BooleanType =>"
+  },
+  {
+    "id" : "ead3a51d-d8df-40aa-af7b-0cb3621a9cd8",
+    "prId" : 24421,
+    "prUrl" : "https://github.com/apache/spark/pull/24421#pullrequestreview-403794761",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ef61902e-633b-41e1-8830-5dab9e4db3fe",
+        "parentId" : null,
+        "authorId" : "6c567e25-d5a1-4eea-91c8-8793440496ab",
+        "body" : "Seems there is no option for TGT nor delegation token. This later may be useful for hadoop components though. But distributing the keytab is not the most secure way and KDC may be overloaded.",
+        "createdAt" : "2019-07-25T15:10:58Z",
+        "updatedAt" : "2019-07-25T15:17:00Z",
+        "lastEditedBy" : "6c567e25-d5a1-4eea-91c8-8793440496ab",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b6b89466-a698-432a-b36a-e60a7ec92367",
+        "parentId" : "ef61902e-633b-41e1-8830-5dab9e4db3fe",
+        "authorId" : "e72b93f8-6b76-4df2-a14e-c6ebc2b457a8",
+        "body" : "Hi @misutoth , \r\n\r\n1. Distributing keytab is based on the assumption of secure HDFS. Each executor requires a keytab to do kinit, so we have to distribute the keytab across different executors. If HDFS is secured, then the keytab should be safe.\r\n\r\n2. A user is required to upload the data to /spark/admin.keytab. This file is pre-uploaded by the user. \r\n\r\n3. Since SQL server does not delegation token, we cannot use delegation token. If SQL server supports delegation token in the future, we can use a more efficient way to do the kinit. Right now we need to use keytab (or password) to do the kinit and this limit comes from SQL server side, not HDFS side. ",
+        "createdAt" : "2019-11-12T23:36:34Z",
+        "updatedAt" : "2019-11-12T23:36:34Z",
+        "lastEditedBy" : "e72b93f8-6b76-4df2-a14e-c6ebc2b457a8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d749f1ba-d2d1-4f7f-9135-3c33d245fcf2",
+        "parentId" : "ef61902e-633b-41e1-8830-5dab9e4db3fe",
+        "authorId" : "b3d08152-8bde-40a2-ab51-a413f2f8c40a",
+        "body" : "I see an issue with `UserGroupInformation.loginUserFromKeytabAndReturnUGI(options.principal, keytabFileName)`\r\n\r\nThis would replace static field on UGI for keytab and principal. So further call to UGI for for hadoop may not work.\r\n\r\nI think better approach would be to not to rely on UGI. instead do login using LoginContext and wrap call with Subject.doAs(subject,...)",
+        "createdAt" : "2020-01-28T17:32:23Z",
+        "updatedAt" : "2020-01-28T17:32:24Z",
+        "lastEditedBy" : "b3d08152-8bde-40a2-ab51-a413f2f8c40a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cfe3bd5a-8f60-48ac-8b1c-9ca254b88f2f",
+        "parentId" : "ef61902e-633b-41e1-8830-5dab9e4db3fe",
+        "authorId" : "c9c61219-802f-49bf-82c3-2e4d14bf5f35",
+        "body" : "> I see an issue with `UserGroupInformation.loginUserFromKeytabAndReturnUGI(options.principal, keytabFileName)`\r\n> \r\n> This would replace static field on UGI for keytab and principal. So further call to UGI for for hadoop may not work.\r\n> \r\n> I think better approach would be to not to rely on UGI. instead do login using LoginContext and wrap call with Subject.doAs(subject,...)\r\n\r\nGood suggestion. I will give a try and if it works I will update this PR.",
+        "createdAt" : "2020-01-28T20:15:25Z",
+        "updatedAt" : "2020-01-28T20:15:26Z",
+        "lastEditedBy" : "c9c61219-802f-49bf-82c3-2e4d14bf5f35",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7fbba6ac-0fc2-49a9-ad2c-b153925f64a8",
+        "parentId" : "ef61902e-633b-41e1-8830-5dab9e4db3fe",
+        "authorId" : "397457a0-b9ac-4c41-b605-e6b0cca3f828",
+        "body" : "@misutoth @dasbh, the keytab is only for JDBC connection and not intended for future use by other hadoop calls, for now, since these database does not support delegation token yet. Usually customer should use their own principal in keytab file stored in secure HDFS to login to sql database, the same as the credential they use to submit the Spark application. This is really a workaround for databases that do not support delegation token.\r\n",
+        "createdAt" : "2020-04-30T18:58:38Z",
+        "updatedAt" : "2020-04-30T18:58:38Z",
+        "lastEditedBy" : "397457a0-b9ac-4c41-b605-e6b0cca3f828",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "652786dad5a65e997d6a5a38a0fa2bbb8a7f145f",
+    "line" : 35,
+    "diffHunk" : "@@ -1,1 +78,82 @@            })\n        }\n        else {\n          driver.connect(options.url, options.asConnectionProperties)\n        }"
   }
 ]

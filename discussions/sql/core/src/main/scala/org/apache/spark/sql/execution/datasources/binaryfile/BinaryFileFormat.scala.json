@@ -1,0 +1,123 @@
+[
+  {
+    "id" : "e4c3f730-e046-4bb6-a150-e8ff9f8b2fc9",
+    "prId" : 24483,
+    "prUrl" : "https://github.com/apache/spark/pull/24483#pullrequestreview-231880418",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "03ce0469-2cf4-4ca5-9bb5-257b60a78966",
+        "parentId" : null,
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "Nit: we can define a method in `SQLConf`, like `SQLConf.maxRecordsPerFile`.",
+        "createdAt" : "2019-04-29T19:45:44Z",
+        "updatedAt" : "2019-04-29T20:16:28Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d60b7665-4e94-4b4e-9f06-0d08712e867c",
+        "parentId" : "03ce0469-2cf4-4ca5-9bb5-257b60a78966",
+        "authorId" : "0c812942-02cb-4975-9748-394d1387affa",
+        "body" : "? The logic is not general enough to be applied outside binary data source.",
+        "createdAt" : "2019-04-29T20:17:15Z",
+        "updatedAt" : "2019-04-29T20:17:16Z",
+        "lastEditedBy" : "0c812942-02cb-4975-9748-394d1387affa",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "0d6f92c4160c2b92d547e68f48280f440a65748f",
+    "line" : 18,
+    "diffHunk" : "@@ -1,1 +102,106 @@    val pathGlobPattern = binaryFileSourceOptions.pathGlobFilter\n    val filterFuncs = filters.map(filter => createFilterFunction(filter))\n    val maxLength = sparkSession.conf.get(SOURCES_BINARY_FILE_MAX_LENGTH)\n\n    file: PartitionedFile => {"
+  },
+  {
+    "id" : "c1701f0c-ccfb-41f7-8819-ef8fd51b1468",
+    "prId" : 24483,
+    "prUrl" : "https://github.com/apache/spark/pull/24483#pullrequestreview-231884720",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2811dfb2-dd8d-4393-857a-26c45d7a980f",
+        "parentId" : null,
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "I think we can move this to line 113.",
+        "createdAt" : "2019-04-29T19:52:52Z",
+        "updatedAt" : "2019-04-29T20:16:28Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e3a02419-086b-4123-b7ec-618519d0c7bb",
+        "parentId" : "2811dfb2-dd8d-4393-857a-26c45d7a980f",
+        "authorId" : "0c812942-02cb-4975-9748-394d1387affa",
+        "body" : "I don't get it. The conf is to prevent reading very large files that we are sure about failures. User can still use the data source if they don't need `content`.",
+        "createdAt" : "2019-04-29T20:17:54Z",
+        "updatedAt" : "2019-04-29T20:17:54Z",
+        "lastEditedBy" : "0c812942-02cb-4975-9748-394d1387affa",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9cf7af36-faef-4e79-9024-51200bda730f",
+        "parentId" : "2811dfb2-dd8d-4393-857a-26c45d7a980f",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "I see. I am actually OK with either way.",
+        "createdAt" : "2019-04-29T20:26:34Z",
+        "updatedAt" : "2019-04-29T20:26:34Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "0d6f92c4160c2b92d547e68f48280f440a65748f",
+    "line" : 26,
+    "diffHunk" : "@@ -1,1 +119,123 @@              writer.write(i, DateTimeUtils.fromMillis(status.getModificationTime))\n            case (CONTENT, i) =>\n              if (status.getLen > maxLength) {\n                throw new SparkException(\n                  s\"The length of ${status.getPath} is ${status.getLen}, \" +"
+  },
+  {
+    "id" : "0a79d7b9-38c4-47da-bd2c-73484ce12336",
+    "prId" : 24473,
+    "prUrl" : "https://github.com/apache/spark/pull/24473#pullrequestreview-231449465",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "473bcb44-f777-406a-8d57-dc9e53cdece3",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Can we make it one if-else while we're here? For instance,\r\n\r\n```scala\r\nval isPatternMatched = pathGlobPattern.forall(new GlobFilter(_).accept(fsPath))\r\n\r\n// These vals are intentionally lazy to avoid unnecessary file access via short-circuiting. \r\nlazy val fs = fsPath.getFileSystem(broadcastedHadoopConf.value.value)\r\nlazy val fileStatus = fs.getFileStatus(fsPath)\r\nlazy val shouldNotFilterOut = filterFuncs.forall(_.apply(fileStatus))\r\n      \r\nif (isPatternMatched && shouldNotFilterOut) {\r\n  ...\r\n  Iterator(requiredColumns(internalRow))\r\n} else {\r\n  Iterator.empty[InternalRow]\r\n}\r\n```",
+        "createdAt" : "2019-04-28T01:50:46Z",
+        "updatedAt" : "2019-04-28T05:40:24Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "20bf3a9e-2a72-4a68-af9e-7976c107982e",
+        "parentId" : "473bcb44-f777-406a-8d57-dc9e53cdece3",
+        "authorId" : "0c812942-02cb-4975-9748-394d1387affa",
+        "body" : "In the current impl, `getFileStatus` and `filterFuncs` are not touched if path doesn't match.",
+        "createdAt" : "2019-04-28T05:29:17Z",
+        "updatedAt" : "2019-04-28T05:40:24Z",
+        "lastEditedBy" : "0c812942-02cb-4975-9748-394d1387affa",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a76dc6b9-01ec-47ab-bdb9-aeb06aa0084a",
+        "parentId" : "473bcb44-f777-406a-8d57-dc9e53cdece3",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Yes, this suggestion does not touch both because they are lazy",
+        "createdAt" : "2019-04-28T05:43:22Z",
+        "updatedAt" : "2019-04-28T05:43:22Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f4a64698805c768e37f081eefe2a5c8f06b8e4b0",
+    "line" : 68,
+    "diffHunk" : "@@ -1,1 +104,108 @@      val path = new Path(file.filePath)\n      // TODO: Improve performance here: each file will recompile the glob pattern here.\n      if (pathGlobPattern.forall(new GlobFilter(_).accept(path))) {\n        val fs = path.getFileSystem(broadcastedHadoopConf.value.value)\n        val status = fs.getFileStatus(path)"
+  }
+]

@@ -1,0 +1,35 @@
+[
+  {
+    "id" : "55312c7a-d52c-4f5e-8739-08c248438f96",
+    "prId" : 24431,
+    "prUrl" : "https://github.com/apache/spark/pull/24431#pullrequestreview-230664876",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6a0739c3-6393-4f67-ad40-3929d3f77d00",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Hm .. did it require `scala.language.existentials`? If so, it's fine. If not, I think we can just revert this one - seems previous one looks slightly better ..",
+        "createdAt" : "2019-04-25T03:53:00Z",
+        "updatedAt" : "2019-04-27T18:03:34Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5daee5fb-337c-4ec2-a56a-5ecf726b87da",
+        "parentId" : "6a0739c3-6393-4f67-ad40-3929d3f77d00",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "This one did, in that the return type was something like `Tuple2[RDD[_], ...]`. This is one of the cases where it comes up, when Scala tries to work out what the type of `rdd` is, and can only figure `RDD[_]`, and will only allow the assignment if it can infer the existence of some type that matches both wildcards. \r\n\r\nNow, why is it OK making the assignment from `RDD[_]` when broken out below? I don't know. I'm not sure if it's just a common 'exception' that the compiler makes, or whether there is some subtlety about why the above nested generic type is different. This seemed to solve it. \r\n\r\nThis could also be more properly solved if the args to `deserialize` had generic types. None are apparent here, though it could also have been pulled into a method that declares their existence. That seemed like a bigger change.",
+        "createdAt" : "2019-04-25T13:57:59Z",
+        "updatedAt" : "2019-04-27T18:03:34Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "cb288f1ef0f83ba176ab776c423f05f19d1ced11",
+    "line" : 19,
+    "diffHunk" : "@@ -1,1 +83,87 @@    } else 0L\n    val ser = SparkEnv.get.closureSerializer.newInstance()\n    val rddAndDep = ser.deserialize[(RDD[_], ShuffleDependency[_, _, _])](\n      ByteBuffer.wrap(taskBinary.value), Thread.currentThread.getContextClassLoader)\n    _executorDeserializeTimeNs = System.nanoTime() - deserializeStartTimeNs"
+  }
+]

@@ -1,0 +1,189 @@
+[
+  {
+    "id" : "ec6c55a8-a62e-4b98-bbbe-a58d411ef011",
+    "prId" : 24458,
+    "prUrl" : "https://github.com/apache/spark/pull/24458#pullrequestreview-232961951",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d3e4a6eb-0218-4a37-ba3c-b6074224603b",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "I don't think the min is correct here? should divide through by the number of relevant docs in all cases.",
+        "createdAt" : "2019-04-25T15:05:16Z",
+        "updatedAt" : "2019-05-06T09:54:21Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4753c0cd-2edc-4140-aacd-34bf3ade78cb",
+        "parentId" : "d3e4a6eb-0218-4a37-ba3c-b6074224603b",
+        "authorId" : "7d018596-bac0-483b-8336-ecce3b21165c",
+        "body" : "This is true when we are calculating `AP` but for `AP@k` I think we have to take `math.min(labSet.size, k)`. Cross checked with IR metrics literature and also found some reference related to AP@k in tensorflow https://github.com/tensorflow/tensorflow/blob/r1.13/tensorflow/python/ops/metrics_impl.py#L2932\r\nhttps://github.com/tensorflow/tensorflow/blob/r1.13/tensorflow/python/ops/metrics_impl.py#L3052\r\n\r\nDon't know whether my understanding is right? Please check once and let me know I will fix the above code.",
+        "createdAt" : "2019-04-26T04:47:26Z",
+        "updatedAt" : "2019-05-06T09:54:21Z",
+        "lastEditedBy" : "7d018596-bac0-483b-8336-ecce3b21165c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1bafbe88-fbbe-4f9e-b760-6b7d8a22ecdf",
+        "parentId" : "d3e4a6eb-0218-4a37-ba3c-b6074224603b",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "That's a good question. I do see that minimum, but it seems inconsistent with the wikipedia definition they point to (which is what I'm going on for Spark too). The 'number of relevant documents' doesn't depend on k. If it's capped at k then I think you'd end up with a weird looking precision-recall curve that would start at 1 when precision is 1, rather than 0. And average precision is the area under that curve.",
+        "createdAt" : "2019-04-26T15:08:25Z",
+        "updatedAt" : "2019-05-06T09:54:21Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e7c2b5e5-039f-4a1a-9587-96457f10ec60",
+        "parentId" : "d3e4a6eb-0218-4a37-ba3c-b6074224603b",
+        "authorId" : "7d018596-bac0-483b-8336-ecce3b21165c",
+        "body" : "Let me come with some experiment to test and I will project that result. I think that will help.",
+        "createdAt" : "2019-04-29T15:54:15Z",
+        "updatedAt" : "2019-05-06T09:54:21Z",
+        "lastEditedBy" : "7d018596-bac0-483b-8336-ecce3b21165c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a8f17530-eae7-42f3-864b-6bcd82aeab57",
+        "parentId" : "d3e4a6eb-0218-4a37-ba3c-b6074224603b",
+        "authorId" : "7d018596-bac0-483b-8336-ecce3b21165c",
+        "body" : "I ran the `RankingMetricsExample` with measured precisionAt & recallAt for k = [1, 2, 3, 4, 5] and also mapk with above implementation. I have plot precision-recall curves and also mapk curves. Need your inputs?\r\n\r\nhttps://colab.research.google.com/drive/1plPwinJzce0tgK01T9ywtgV3JGW0dSYn#scrollTo=8Vdi2ISK8Nl7",
+        "createdAt" : "2019-05-02T09:51:28Z",
+        "updatedAt" : "2019-05-06T09:54:21Z",
+        "lastEditedBy" : "7d018596-bac0-483b-8336-ecce3b21165c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d6d3f704-41ef-4af5-800e-5a17ba6c534f",
+        "parentId" : "d3e4a6eb-0218-4a37-ba3c-b6074224603b",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "(I think precision is reversed, as it should go down and recall goes up, but I get it.)\r\n\r\nI suppose that the \"min(relevant, k)\" definition only ends up being different by a constant factor. When computing all the relevant recall@i values, It's not defining recall@i as \"correct / min(relevant, i)\", which would be wrong -- would reduce to precision in most cases. But that's not what it's doing, OK.\r\n\r\nThe example at http://fastml.com/what-you-wanted-to-know-about-mean-average-precision/ however also supports dividing by \"min(relevant, k)\" so I think your approach is OK. Let me re-read the existing and new code then.",
+        "createdAt" : "2019-05-02T11:47:44Z",
+        "updatedAt" : "2019-05-06T09:54:21Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4d6ce477a252feeb86ea793a7b5d80e538df1833",
+    "line" : 111,
+    "diffHunk" : "@@ -1,1 +164,168 @@        i += 1\n      }\n      precSum / math.min(labSet.size, k)\n    } else {\n      logWarning(\"Empty ground truth set, check input data\")"
+  },
+  {
+    "id" : "a8d35e7f-ca5c-4795-b4cb-654a60e6c40f",
+    "prId" : 24458,
+    "prUrl" : "https://github.com/apache/spark/pull/24458#pullrequestreview-233906223",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "66251e9d-3106-4658-9769-47f704377972",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "The existing meanAveragePrecision can now just call this, I think? with k = pred.length",
+        "createdAt" : "2019-04-25T15:05:37Z",
+        "updatedAt" : "2019-05-06T09:54:21Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "50c3b8b5-6943-47ce-9741-58d47c75638c",
+        "parentId" : "66251e9d-3106-4658-9769-47f704377972",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "@qb-tarushg what about something like this to refactor:\r\n\r\n```\r\n  lazy val meanAveragePrecision: Double = {\r\n    predictionAndLabels.map { case (pred, lab) =>\r\n      val labSet = lab.toSet\r\n      val k = math.max(pred.length, labSet.size)\r\n      averagePrecision(pred, labSet, k)\r\n    }.mean()\r\n  }\r\n  \r\n  def meanAveragePrecisionAtK(k: Int): Double = {\r\n    predictionAndLabels.map { case (pred, lab) =>\r\n      averagePrecision(pred, lab.toSet, k)\r\n    }.mean()\r\n  }\r\n  \r\n  private def averagePrecision(pred: Array[T], labSet: Set[T], k: Int): Double = {\r\n    if (labSet.nonEmpty) {\r\n      var i = 0\r\n      var cnt = 0\r\n      var precSum = 0.0\r\n      val n = math.min(k, pred.length)\r\n      while (i < n) {\r\n        if (labSet.contains(pred(i))) {\r\n          cnt += 1\r\n          precSum += cnt.toDouble / (i + 1)\r\n        }\r\n        i += 1\r\n      }\r\n      precSum / math.min(k, labSet.size)\r\n    } else {\r\n      logWarning(\"Empty ground truth set, check input data\")\r\n      0.0\r\n    }\r\n  }\r\n```\r\n\r\nI haven't tested it but this seems about right",
+        "createdAt" : "2019-05-02T18:40:37Z",
+        "updatedAt" : "2019-05-06T09:54:21Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a11a8ca8-50be-4d55-8d62-7511dc76a47c",
+        "parentId" : "66251e9d-3106-4658-9769-47f704377972",
+        "authorId" : "7d018596-bac0-483b-8336-ecce3b21165c",
+        "body" : "@srowen Thanks! I have refactored and added above implementation. I have tested above code its working and test cases are passed. Resolved!!",
+        "createdAt" : "2019-05-06T10:05:29Z",
+        "updatedAt" : "2019-05-06T10:05:29Z",
+        "lastEditedBy" : "7d018596-bac0-483b-8336-ecce3b21165c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4d6ce477a252feeb86ea793a7b5d80e538df1833",
+    "line" : 96,
+    "diffHunk" : "@@ -1,1 +149,153 @@   * @return average precision at first k ranking positions\n   */\n  private def averagePrecisionAt(pred: Array[T], lab: Array[T], k: Int): Double = {\n    val labSet = lab.toSet\n"
+  },
+  {
+    "id" : "0d9805d4-de32-4be6-b0b0-5e894d46f67c",
+    "prId" : 24458,
+    "prUrl" : "https://github.com/apache/spark/pull/24458#pullrequestreview-230978503",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ffb059f5-dd3d-4b62-9575-a4522239eec4",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "It's kind of \"average precision up to position k\" rather than at? but I understand its conventional to call this average precision at k. Is there anything we can link to to further explain?",
+        "createdAt" : "2019-04-25T15:06:41Z",
+        "updatedAt" : "2019-05-06T09:54:21Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7010fcf9-3a8b-48aa-9e85-a5fa944fdc88",
+        "parentId" : "ffb059f5-dd3d-4b62-9575-a4522239eec4",
+        "authorId" : "7d018596-bac0-483b-8336-ecce3b21165c",
+        "body" : "I can give the reference to some literature, hope this would give user a better idea.",
+        "createdAt" : "2019-04-26T04:50:00Z",
+        "updatedAt" : "2019-05-06T09:54:21Z",
+        "lastEditedBy" : "7d018596-bac0-483b-8336-ecce3b21165c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4d6ce477a252feeb86ea793a7b5d80e538df1833",
+    "line" : 72,
+    "diffHunk" : "@@ -1,1 +125,129 @@\n  /**\n   * Returns the mean average precision (MAP) at ranking position k of all the queries.\n   * If a query has an empty ground truth set, the average precision will be zero and a log\n   * warning is generated."
+  },
+  {
+    "id" : "68eb802e-feb2-4c89-9a1c-46720f1003ed",
+    "prId" : 24458,
+    "prUrl" : "https://github.com/apache/spark/pull/24458#pullrequestreview-233906677",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e8602f3b-caba-4d31-88e2-20955f641986",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Nit: unindent here too",
+        "createdAt" : "2019-05-02T18:17:55Z",
+        "updatedAt" : "2019-05-06T09:54:21Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "03e08d17-531e-486e-9d76-cc60a68c86ff",
+        "parentId" : "e8602f3b-caba-4d31-88e2-20955f641986",
+        "authorId" : "7d018596-bac0-483b-8336-ecce3b21165c",
+        "body" : "Indented",
+        "createdAt" : "2019-05-06T10:06:56Z",
+        "updatedAt" : "2019-05-06T10:06:56Z",
+        "lastEditedBy" : "7d018596-bac0-483b-8336-ecce3b21165c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4d6ce477a252feeb86ea793a7b5d80e538df1833",
+    "line" : 82,
+    "diffHunk" : "@@ -1,1 +135,139 @@    require(k > 0, \"ranking position k should be positive\")\n    predictionAndLabels.map { case (pred, lab) =>\n          averagePrecisionAt(pred, lab, k)\n    }.mean()\n  }"
+  }
+]

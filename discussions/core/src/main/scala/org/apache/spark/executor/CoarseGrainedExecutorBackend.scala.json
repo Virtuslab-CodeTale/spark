@@ -955,5 +955,137 @@
     "commit" : "768392ca83c29a2ef6b3ecb2d175cccd20ffa0ab",
     "line" : 49,
     "diffHunk" : "@@ -1,1 +87,91 @@  def parseOrFindResources(resourcesFile: Option[String]): Map[String, ResourceInformation] = {\n    // only parse the resources if a task requires them\n    val resourceInfo = if (env.conf.getAllWithPrefix(SPARK_TASK_RESOURCE_PREFIX).nonEmpty) {\n      val actualExecResources = resourcesFile.map { resourceFileStr => {\n        val source = new BufferedInputStream(new FileInputStream(resourceFileStr))"
+  },
+  {
+    "id" : "7192f812-20f1-4376-bc29-fa7e00e16a14",
+    "prId" : 24406,
+    "prUrl" : "https://github.com/apache/spark/pull/24406#pullrequestreview-233681117",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5fe4fc15-6f55-4002-b0e9-7969d73b2e8d",
+        "parentId" : null,
+        "authorId" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "body" : "nit: If `resourceFile` is provided but user didn't specify task resource requirement shall we print a warning message?",
+        "createdAt" : "2019-05-03T01:48:25Z",
+        "updatedAt" : "2019-05-14T02:27:16Z",
+        "lastEditedBy" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4ece3c62-daf7-417a-b026-d3cb831fd779",
+        "parentId" : "5fe4fc15-6f55-4002-b0e9-7969d73b2e8d",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "will add one",
+        "createdAt" : "2019-05-03T21:33:55Z",
+        "updatedAt" : "2019-05-14T02:27:16Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b9dacef1d7d47d19df300628d3841b3a13c03547",
+    "line" : 141,
+    "diffHunk" : "@@ -1,1 +165,169 @@\n      execResources\n    } else {\n      if (resourcesFile.nonEmpty) {\n        logWarning(s\"A resources file was specified but the application is not configured \" +"
+  },
+  {
+    "id" : "419092a2-b121-4887-8dc3-3161f3b7b10a",
+    "prId" : 24406,
+    "prUrl" : "https://github.com/apache/spark/pull/24406#pullrequestreview-234544177",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f96da207-1934-4a88-bdfb-ea52e37d15ba",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Is it correct to say this is only used in standalone mode? this is how the master tells executors what resource it can use? if that's right, how would this work for other resource managers -- simply, in some other RM-specific way? ",
+        "createdAt" : "2019-05-06T22:06:48Z",
+        "updatedAt" : "2019-05-14T02:27:16Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "48a6931e-0cdc-4944-ba9b-acf9c6cfb799",
+        "parentId" : "f96da207-1934-4a88-bdfb-ea52e37d15ba",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "Yes, the intention is for this to be used by standalone mode.  It has no support for containers or isolation like the other resource managers have so it will pass in a file specifying which resources for that container to use. In the GPU case if the node has 4 gpu's and the executor asked for one, it would pass in one GPU resource and the id of that 1 gpu it should use.  There is a separate jira to add that to standalone mode.\r\nThe other resources managers I believe all support some sort of container and isolation such that when the executor starts up it can just use the discoveryScript  to auto discover what resources it has.  We have tested on kubernetes and yarn, I don't have a mesos setup to test on but someone I believe volunteered to work on that side.\r\nYou can obviously run other resources manager like YARN without docker and isolation and in that case this wouldn't work, but YARN doesn't give you any other option.  It doesn't tell you what GPU you received for instance, so in the documentation we will put the limitations and required that yarn/kubernetes, etc must be configured in such a way for this to work.  If you are running YARN without isolation then you could also come up with discovery script to make this work, similar to the hacks users are doing now on YARN with gpu scheduling.",
+        "createdAt" : "2019-05-07T14:18:04Z",
+        "updatedAt" : "2019-05-14T02:27:16Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b9dacef1d7d47d19df300628d3841b3a13c03547",
+    "line" : 34,
+    "diffHunk" : "@@ -1,1 +54,58 @@    userClassPath: Seq[URL],\n    env: SparkEnv,\n    resourcesFile: Option[String])\n  extends ThreadSafeRpcEndpoint with ExecutorBackend with Logging {\n"
+  },
+  {
+    "id" : "713f3a12-73e8-4d94-b494-76c84dbb624c",
+    "prId" : 24406,
+    "prUrl" : "https://github.com/apache/spark/pull/24406#pullrequestreview-235747491",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1dd68203-524b-4fc7-8770-a8d613c5357b",
+        "parentId" : null,
+        "authorId" : "0c812942-02cb-4975-9748-394d1387affa",
+        "body" : "minor: `parse(source).extract[Seq[ResourceInformation]]`",
+        "createdAt" : "2019-05-07T22:23:53Z",
+        "updatedAt" : "2019-05-14T02:27:16Z",
+        "lastEditedBy" : "0c812942-02cb-4975-9748-394d1387affa",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f5b23fd2-950b-43e5-8e67-2a1a7e3cfe08",
+        "parentId" : "1dd68203-524b-4fc7-8770-a8d613c5357b",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "this code changed due to ResourceInformation not being case class anymore",
+        "createdAt" : "2019-05-09T18:18:46Z",
+        "updatedAt" : "2019-05-14T02:27:16Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b9dacef1d7d47d19df300628d3841b3a13c03547",
+    "line" : 107,
+    "diffHunk" : "@@ -1,1 +131,135 @@        val source = new BufferedInputStream(new FileInputStream(resourceFileStr))\n        val resourceMap = try {\n          val parsedJson = parse(source).asInstanceOf[JArray].arr\n          parsedJson.map { json =>\n            val name = (json \\ \"name\").extract[String]"
+  },
+  {
+    "id" : "43c8eb6b-11d8-4066-86b0-56a0631f1e5b",
+    "prId" : 24406,
+    "prUrl" : "https://github.com/apache/spark/pull/24406#pullrequestreview-237227143",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f0c91d4d-9db9-47fd-acb1-8d99117bdafc",
+        "parentId" : null,
+        "authorId" : "0c812942-02cb-4975-9748-394d1387affa",
+        "body" : "Had an offline discussion with @WeichenXu123 . He suggested refactoring this check to make it easier to read. Now the arguments are:\r\n\r\n* `reqResourcesAndCounts`: request per task (not per executor)\r\n* `actualResources`: resources allocated per executor\r\n\r\nIt is not easy to tell from the variable names and hence make the code harder to read. Basically we need the following:\r\n\r\n1. number allocated per executor cannot be smaller than requested count for each resource name\r\n2. requested count for executor cannot be smaller than requested count for task for each resource name. Note that this doesn't require resource discovery.\r\n3. the set of requested resource names for executors should match the set of requested resource names for tasks.\r\n\r\nIt would be nice to refactor the method into those three. We can also do it in a follow-up PR.",
+        "createdAt" : "2019-05-14T03:53:09Z",
+        "updatedAt" : "2019-05-14T03:54:04Z",
+        "lastEditedBy" : "0c812942-02cb-4975-9748-394d1387affa",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "153407fa-1f31-4352-b70d-8c3383dea8b5",
+        "parentId" : "f0c91d4d-9db9-47fd-acb1-8d99117bdafc",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "I added a comment  to the driver jira since it needs to be refactored for that anyway:\r\nhttps://issues.apache.org/jira/browse/SPARK-27488",
+        "createdAt" : "2019-05-14T13:02:09Z",
+        "updatedAt" : "2019-05-14T13:02:09Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b9dacef1d7d47d19df300628d3841b3a13c03547",
+    "line" : 64,
+    "diffHunk" : "@@ -1,1 +88,92 @@  // mismatches between what the user requested and what resource manager gave or\n  // what the discovery script found.\n  private def checkResourcesMeetRequirements(\n      resourceConfigPrefix: String,\n      reqResourcesAndCounts: Array[(String, String)],"
   }
 ]
