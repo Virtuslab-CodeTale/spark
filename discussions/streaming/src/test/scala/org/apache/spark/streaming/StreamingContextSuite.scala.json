@@ -20,5 +20,71 @@
     "commit" : "d24ed2171587ddaf3a5986d4bdfd8779116c1d2a",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +985,989 @@\n/** Streaming application for testing DStream and RDD creation sites */\nobject testPackage extends Assertions {\n  def test(): Unit = {\n    val conf = new SparkConf().setMaster(\"local\").setAppName(\"CreationSite test\")"
+  },
+  {
+    "id" : "0e760f26-2174-4331-bf04-20dc3cd1ec08",
+    "prId" : 25725,
+    "prUrl" : "https://github.com/apache/spark/pull/25725#pullrequestreview-287054230",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d01cbbe9-ec72-425a-a0a1-06fa92369b58",
+        "parentId" : null,
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Shouldn't this be in the `Thread.run()` implementation above?",
+        "createdAt" : "2019-09-09T21:44:37Z",
+        "updatedAt" : "2019-09-11T01:06:03Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fb698f30-e83a-4bc4-818d-6d939e11d2a6",
+        "parentId" : "d01cbbe9-ec72-425a-a0a1-06fa92369b58",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "If we consider only timing, technically it can be placed anywhere, even first line of `onStart()`, as whether receiver is registered within time or not is the key. For verification, it doesn't make existing test failing without patch even we add `Thread.sleep(1000)` in first line of `onStart()`.\r\n\r\nSo no strong opinion on where to put. \r\n\r\nBtw, maybe we can apply \"more verbose but clearer\" solution (without this flag) via adding below code in test side:\r\n\r\n```\r\n    // tracks whether the receiver is started or not\r\n    var isReceiverStarted = false\r\n    val listener = new StreamingListener {\r\n      override def onReceiverStarted(receiverStarted: StreamingListenerReceiverStarted): Unit = {\r\n        isReceiverStarted = receiverStarted.receiverInfo.name.startsWith(\r\n          input.getReceiver().getClass.getSimpleName)\r\n      }\r\n    }\r\n    ssc.addStreamingListener(listener)\r\n\r\n    ssc.start()\r\n    ssc.awaitTerminationOrTimeout(500)\r\n\r\n    eventually(timeout(10.seconds), interval(10.millis)) {\r\n      assert(isReceiverStarted)\r\n    }\r\n```\r\n\r\nWhich one do you think is better?",
+        "createdAt" : "2019-09-10T01:09:31Z",
+        "updatedAt" : "2019-09-11T01:06:03Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d21ce272-8a93-43bf-b65f-1d18b8644f73",
+        "parentId" : "d01cbbe9-ec72-425a-a0a1-06fa92369b58",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "> as whether receiver is registered within time or not is the key\r\n\r\nAh ok. Was wondering if the thread that actually does stuff needed to run for this to work, but if it's just the registration that matters, this is enough.\r\n\r\nBut can't the flag be in the actual `SlowTestReceiver` instance (instead of the object)?",
+        "createdAt" : "2019-09-11T00:05:37Z",
+        "updatedAt" : "2019-09-11T01:06:03Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0a5456e7-f02e-4068-a476-db80b9088c2e",
+        "parentId" : "d01cbbe9-ec72-425a-a0a1-06fa92369b58",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "I guess we can't access these flags if we place them in instance - as the receiver will be executed in executor (say, different JVM, or at least, serialized - deserialized even in test). So exposing them in object is really a hack only for testing.\r\n\r\nBtw, `receivedAllRecords` is actually not needed to be exposed as outside, as we create new receiver instance and we can just set the default value to false. If we move it, we can either remove hack entirely via adding more verbose code or keep the hack for concise code change.\r\n\r\nI'll move out receivedAllRecords for now: please let me know if you prefer to remove the hack, then I'll make a change.",
+        "createdAt" : "2019-09-11T01:03:17Z",
+        "updatedAt" : "2019-09-11T01:06:03Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "62fb389a-6690-4926-8cc0-70e3cb12bc21",
+        "parentId" : "d01cbbe9-ec72-425a-a0a1-06fa92369b58",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "> as the receiver will be executed in executor\r\n\r\nok, that makes sense; I was under the impression it was a driver thing since an instance of it was passed to the context, instead of one created somehow in the executor.\r\n\r\nAnyway, what you have is fine.",
+        "createdAt" : "2019-09-11T20:29:52Z",
+        "updatedAt" : "2019-09-11T20:29:52Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b5e39c5e6ba7fa372b9ad0632791d8759bd2190f",
+    "line" : 37,
+    "diffHunk" : "@@ -1,1 +978,982 @@    receivingThreadOption = Some(thread)\n    thread.start()\n    SlowTestReceiver.initialized = true\n  }\n"
   }
 ]

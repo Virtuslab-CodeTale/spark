@@ -306,5 +306,82 @@
     "commit" : "46715b3d2c52acd97fdca2e2034393f7e49e1b4f",
     "line" : 103,
     "diffHunk" : "@@ -1,1 +375,379 @@  var failedTasks = 0\n  val completedIndices = new OpenHashSet[Int]()\n  // will only be set when recover LiveStage is needed.\n  var numCompletedIndices = 0\n"
+  },
+  {
+    "id" : "6966ffb5-6fea-4c82-8b20-afab54834ccd",
+    "prId" : 25779,
+    "prUrl" : "https://github.com/apache/spark/pull/25779#pullrequestreview-298239104",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "89fe4473-ca2e-4baf-b15d-5b603efea687",
+        "parentId" : null,
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "A stage may have been submitted before the RDD was persisted at all, then another stage submitted after the RDD is persisted, so its not actually immutable.  You wouldn't properly capture that here.\r\n\r\n(probably not the optimal thing for the user to do, but I've seen weirder things ...)",
+        "createdAt" : "2019-10-04T21:22:45Z",
+        "updatedAt" : "2019-10-04T22:16:52Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "985b305b-03fd-4632-8f9e-5609593ea000",
+        "parentId" : "89fe4473-ca2e-4baf-b15d-5b603efea687",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Actually that works fine, because the listener does not track RDDs that are not persisted; so there wouldn't be a live RDD for the first stage in your example; it would be created when the second stage is submitted, and at that point the storage level cannot be changed further.\r\n\r\nI'll update the comment (maybe even add a unit test).",
+        "createdAt" : "2019-10-04T22:03:53Z",
+        "updatedAt" : "2019-10-04T22:16:52Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9818d759-9441-4334-b518-1b060a81654f",
+        "parentId" : "89fe4473-ca2e-4baf-b15d-5b603efea687",
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "makes sense, thanks for adding the test too.",
+        "createdAt" : "2019-10-07T16:02:00Z",
+        "updatedAt" : "2019-10-07T16:02:05Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b95baec2297254707fecf6a819ecd86b088a68d9",
+    "line" : 52,
+    "diffHunk" : "@@ -1,1 +535,539 @@ * RDDs, this covers the case where an early stage is run on the unpersisted RDD, and a later stage\n * it started after the RDD is marked for caching.\n */\nprivate class LiveRDD(val info: RDDInfo, storageLevel: StorageLevel) extends LiveEntity {\n"
+  },
+  {
+    "id" : "6264f9ad-f636-4d99-9fe9-5caf3d379749",
+    "prId" : 25779,
+    "prUrl" : "https://github.com/apache/spark/pull/25779#pullrequestreview-297737471",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "226fafb5-acc9-4ea1-a39f-bb6268506f56",
+        "parentId" : null,
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "It would help me a bit if this was called 'requestedStorageLevel' and in RDDPartitionInfo it was called 'effectiveStorageLevel'.  I guess its not worth changing RDDPartitionInfo, but maybe just a comment along those lines.",
+        "createdAt" : "2019-10-04T21:25:03Z",
+        "updatedAt" : "2019-10-04T22:16:52Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7dcf74d6-3d13-4e3e-8105-2ced92ac1c39",
+        "parentId" : "226fafb5-acc9-4ea1-a39f-bb6268506f56",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Sure.",
+        "createdAt" : "2019-10-04T22:04:08Z",
+        "updatedAt" : "2019-10-04T22:16:52Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b95baec2297254707fecf6a819ecd86b088a68d9",
+    "line" : 20,
+    "diffHunk" : "@@ -1,1 +465,469 @@ * by the application.\n */\nprivate class LiveRDDPartition(val blockName: String, rddLevel: StorageLevel) {\n\n  import LiveEntityHelpers._"
   }
 ]

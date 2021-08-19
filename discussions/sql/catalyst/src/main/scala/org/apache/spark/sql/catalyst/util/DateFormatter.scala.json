@@ -75,5 +75,60 @@
     "commit" : "d7fc6d9db1244f681066415b14e798820fc6f61e",
     "line" : 14,
     "diffHunk" : "@@ -1,1 +127,131 @@      locale: Locale = defaultLocale,\n      legacyFormat: LegacyDateFormat = LENIENT_SIMPLE_DATE_FORMAT,\n      isParsing: Boolean): DateFormatter = {\n    val pattern = format.getOrElse(defaultPattern)\n    if (SQLConf.get.legacyTimeParserPolicy == LEGACY) {"
+  },
+  {
+    "id" : "6030bac8-3507-45de-b7ac-f633e1178d8c",
+    "prId" : 25708,
+    "prUrl" : "https://github.com/apache/spark/pull/25708#pullrequestreview-285222791",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "86e68dca-fc64-496f-9051-e0b9dcabc29c",
+        "parentId" : null,
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "We always trim input inside of `stringToDate`. Maybe here we should trim the input in all cases? /cc @HyukjinKwon @srowen",
+        "createdAt" : "2019-09-07T17:33:27Z",
+        "updatedAt" : "2019-09-18T15:49:31Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "42ac6b2d-14b5-4842-8752-d5f74ee745a5",
+        "parentId" : "86e68dca-fc64-496f-9051-e0b9dcabc29c",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Since casts from strings to date/tmestamp already does so, the trim looks reasonable to me.",
+        "createdAt" : "2019-09-08T00:55:04Z",
+        "updatedAt" : "2019-09-18T15:49:31Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2485d317-9716-4d7e-a164-f2257c8b4f01",
+        "parentId" : "86e68dca-fc64-496f-9051-e0b9dcabc29c",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "One thing I am a bit worried though, if users set the date `pattern` including the leading or trailing white spaces intentionally (because they know there's spaces), it will now returns invalid results.\r\n\r\n```scala\r\nDateFormatter(\" yyyy MMM\").parse(\"2018 Dec\")\r\n```\r\n```\r\nText '2018 Dec' could not be parsed at index 0\r\njava.time.format.DateTimeParseException: Text '2018 Dec' could not be parsed at index 0\r\n\tat java.base/java.time.format.DateTimeFormatter.parseResolved0(Unknown Source)\r\n\tat java.base/java.time.format.DateTimeFormatter.parse(Unknown Source)\r\n\tat java.base/java.time.LocalDate.parse(Unknown Source)\r\n\tat org.apache.spark.sql.catalyst.util.Iso8601DateFormatter.parse(DateFormatter.scala:36)\r\n\tat org.apache.spark.sql.util.DateFormatterSuite.$anonfun$new$15(DateFormatterSuite.scala:94)\r\n\tat scala.runtime.java8.JFunction0$mcI$sp.apply(JFunction0$mcI$sp.java:23)\r\n```\r\n\r\nWhile trimming makes sense in general, there's difference comparing to `stringToDate` since here we allow to set the `pattern` (and with this Java 8 APIs, now Spark can support exact and better match with the pattern).\r\n\r\nIs this change necessary or does this change make it easier to fix the issue? ",
+        "createdAt" : "2019-09-08T01:23:17Z",
+        "updatedAt" : "2019-09-18T15:49:31Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d3b0634a-189e-4700-a5c2-bace230ff903",
+        "parentId" : "86e68dca-fc64-496f-9051-e0b9dcabc29c",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "@HyukjinKwon I just asked because I am doing trimming here for checking special values. So, the overhead already exists. Maybe, it could be useful in another branch.",
+        "createdAt" : "2019-09-08T15:50:21Z",
+        "updatedAt" : "2019-09-18T15:49:31Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ff925318b3258ade6b2db13489b078f394a1fdbd",
+    "line" : 26,
+    "diffHunk" : "@@ -1,1 +37,41 @@\n  override def parse(s: String): Int = {\n    val specialDate = convertSpecialDate(s.trim, zoneId)\n    specialDate.getOrElse {\n      val localDate = LocalDate.parse(s, formatter)"
   }
 ]

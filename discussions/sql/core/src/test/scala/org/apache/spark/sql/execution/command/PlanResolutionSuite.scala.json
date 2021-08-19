@@ -328,5 +328,126 @@
     "commit" : "23cc9d3894fe39f989ea7511433213dc44a60e5c",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +142,146 @@      new ResolveCatalogs(catalogManager),\n      new ResolveSessionCatalog(catalogManager, conf, _ == Seq(\"v\")),\n      analyzer.ResolveTables,\n      analyzer.ResolveRelations)\n    rules.foldLeft(parsePlan(query)) {"
+  },
+  {
+    "id" : "efc3d9fd-9eb8-49f7-b40e-d178430f72ba",
+    "prId" : 25747,
+    "prUrl" : "https://github.com/apache/spark/pull/25747#pullrequestreview-289673422",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2e5471bd-79fe-4222-872e-5401b73132d3",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "improve the test coverage of this test suite, to covert all the cases:\r\n1. statement is converted to v1 command.\r\n2. statement is converted to v2 command.\r\n3. statement is left unchanged because table not found.",
+        "createdAt" : "2019-09-18T05:16:56Z",
+        "updatedAt" : "2019-10-04T02:49:47Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9ad516ea9a0ec7525308c9ca64d36d4069531ae0",
+    "line" : 23,
+    "diffHunk" : "@@ -1,1 +38,42 @@import org.apache.spark.sql.types.{DoubleType, IntegerType, LongType, StringType, StructType}\n\nclass PlanResolutionSuite extends AnalysisTest {\n  import CatalystSqlParser._\n"
+  },
+  {
+    "id" : "0535a185-a3d4-473d-8151-39844937d290",
+    "prId" : 25747,
+    "prUrl" : "https://github.com/apache/spark/pull/25747#pullrequestreview-290396964",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "364e1aa9-7ff3-4ad3-b7b9-95efd06f19a9",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I added one more test here, eventually we should test all the v2 SQL statements.",
+        "createdAt" : "2019-09-19T08:22:12Z",
+        "updatedAt" : "2019-10-04T02:49:47Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9ad516ea9a0ec7525308c9ca64d36d4069531ae0",
+    "line" : 271,
+    "diffHunk" : "@@ -1,1 +795,799 @@  }\n\n  test(\"describe table\") {\n    Seq(\"v1Table\" -> true, \"v2Table\" -> false, \"testcat.tab\" -> false).foreach {\n      case (tblName, useV1Command) =>"
+  },
+  {
+    "id" : "878e0871-dc51-4c2d-8a55-370c0eaf1af1",
+    "prId" : 25747,
+    "prUrl" : "https://github.com/apache/spark/pull/25747#pullrequestreview-328014579",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5b86fdf3-cf6e-4f71-9aee-2e3553c414cd",
+        "parentId" : null,
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "Hi @cloud-fan I'm curious why we need convert non-existing table to v2 command. In my idea, we can just handle this in v1 command.",
+        "createdAt" : "2019-12-06T02:29:07Z",
+        "updatedAt" : "2019-12-06T02:29:07Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9c629e91-4419-4416-a291-808bd1ffb1d2",
+        "parentId" : "5b86fdf3-cf6e-4f71-9aee-2e3553c414cd",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "we use v2 command for v2 table, and v1 command for v1 table. If table not exists, I think v2 command is better, as we want to migrate everything to v2 command in the future.",
+        "createdAt" : "2019-12-06T03:41:48Z",
+        "updatedAt" : "2019-12-06T03:41:49Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4d7d099c-c282-48e2-aed1-4d15d8d8e376",
+        "parentId" : "5b86fdf3-cf6e-4f71-9aee-2e3553c414cd",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "I do agree v2 command is better than v1. But it will make some things unexpected. when load table return none, `ResolveSessionCatalog` will check if v2 support it, and throw not support msg when not support and throw table not found when support. I do not determine which msg is the high priority. Here is a example: \r\n```\r\ncreate table test(c int);\r\n// throw Table not found\r\ndesc tes;\r\n// throw Describing columns is not supported for v2 tables.;\r\ndesc tes c;\r\n```\r\nShall we keep this consistent when table is non-existing ?",
+        "createdAt" : "2019-12-06T04:07:21Z",
+        "updatedAt" : "2019-12-06T05:20:52Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7fb75f8f-a1ec-4c69-b84e-528acd469810",
+        "parentId" : "5b86fdf3-cf6e-4f71-9aee-2e3553c414cd",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "If we use v1 command directly, things will be more simple. We even not need load table(it will affect perf), just use v1 command when catalog is session catalog.\r\nE.G. \r\n```\r\ncase DescribeTableStatement(SessionCatalog(_, tableName), partitionSpec, isExtended) =>\r\n  DescribeTableCommand(tableName.asTableIdentifier, partitionSpec, isExtended)\r\n\r\ncase DescribeColumnStatement(SessionCatalog(_, tableName), colNameParts, isExtended) =>\r\n  DescribeColumnCommand(tableName.asTableIdentifier, colNameParts, isExtended)\r\n```",
+        "createdAt" : "2019-12-06T04:23:40Z",
+        "updatedAt" : "2019-12-06T04:24:45Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f7953c59-bbba-4435-8a77-e9bfa2f44965",
+        "parentId" : "5b86fdf3-cf6e-4f71-9aee-2e3553c414cd",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I think it's fine. fail earlier is better than looking up the table and report table not found.",
+        "createdAt" : "2019-12-06T05:32:48Z",
+        "updatedAt" : "2019-12-06T05:32:48Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "02cf6f77-170b-4a0d-a199-afb6f25d6c2d",
+        "parentId" : "5b86fdf3-cf6e-4f71-9aee-2e3553c414cd",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "That's OK. Thanks.",
+        "createdAt" : "2019-12-06T06:19:15Z",
+        "updatedAt" : "2019-12-06T06:19:16Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9ad516ea9a0ec7525308c9ca64d36d4069531ae0",
+    "line" : 190,
+    "diffHunk" : "@@ -1,1 +734,738 @@    val parsed5 = parseAndResolve(sql5)\n\n    // For non-existing tables, we convert it to v2 command with `UnresolvedV2Table`\n    parsed4 match {\n      case AlterTable(_, _, _: UnresolvedV2Relation, _) => // OK"
   }
 ]

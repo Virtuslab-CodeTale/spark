@@ -1296,5 +1296,159 @@
     "commit" : "f7fa8ed72143991522653c49da685a1ace15d057",
     "line" : 23,
     "diffHunk" : "@@ -1,1 +775,779 @@    testShowNamespaces(\"SHOW NAMESPACES IN testcat.ns1\", Seq(\"ns1.ns2\"))\n\n    // TODO: Add tests for validating namespace metadata when DESCRIBE NAMESPACE is available.\n  }\n"
+  },
+  {
+    "id" : "0e0e06c3-7987-474e-adc6-b2c7ade9c224",
+    "prId" : 25771,
+    "prUrl" : "https://github.com/apache/spark/pull/25771#pullrequestreview-294617389",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "bb647943-8bf8-4985-b190-2adee53903cc",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "this reminds that we should have a `CREATE NAMESPACE` command. We can do it in followup.",
+        "createdAt" : "2019-09-27T08:14:16Z",
+        "updatedAt" : "2019-10-02T08:17:10Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e4ffb35d-41ba-45f7-8868-ba3a8852aadf",
+        "parentId" : "bb647943-8bf8-4985-b190-2adee53903cc",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "Yes, I intend to do it right after this. ",
+        "createdAt" : "2019-09-28T02:08:40Z",
+        "updatedAt" : "2019-10-02T08:17:10Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ab32a572-86a9-4c4d-9da0-bc490a5734cd",
+        "parentId" : "bb647943-8bf8-4985-b190-2adee53903cc",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "I created a [JIRA](https://issues.apache.org/jira/browse/SPARK-29278) to track this along with `SHOW CURRENT CATALOG` and `SHOW CURRENT NAMESPACE` as you suggested.",
+        "createdAt" : "2019-09-28T02:45:14Z",
+        "updatedAt" : "2019-10-02T08:17:10Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "84856190f5bf7f7865ce3428986cca61471c9845",
+    "line" : 11,
+    "diffHunk" : "@@ -1,1 +838,842 @@    assert(catalogManager.currentNamespace === Array(\"default\"))\n\n    // The following implicitly creates namespaces.\n    sql(\"CREATE TABLE testcat.ns1.ns1_1.table (id bigint) USING foo\")\n    sql(\"CREATE TABLE testcat2.ns2.ns2_2.table (id bigint) USING foo\")"
+  },
+  {
+    "id" : "376a9f0a-3fa0-4557-b045-395f59196d26",
+    "prId" : 25771,
+    "prUrl" : "https://github.com/apache/spark/pull/25771#pullrequestreview-294619285",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "46777b47-9b44-4702-88c0-01ed3aedf968",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "If we support this, maybe it's better to have 3 commands\r\n1. USE CATALOG ...\r\n2. USE NAMESPACE ...\r\n3. USE [catalogName].ns1.ns2...\r\n\r\nSince the catalog has the highest priority during name resolution, there is no ambiguity to switch to a specific namespace in a specific catalog, via `USE catalogName.ns1.ns2`. That said, we don't need `USE ... IN ...`",
+        "createdAt" : "2019-09-27T08:18:31Z",
+        "updatedAt" : "2019-10-02T08:17:10Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ee42a7e7-ab97-405f-a64c-0fe24b18656e",
+        "parentId" : "46777b47-9b44-4702-88c0-01ed3aedf968",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "If we go with this proposal, we can simplify the parser a little bit\r\n```\r\nUSE (CATALOG | NAMESPACE)? multipartIdentifier\r\n```\r\n\r\n```\r\ndef visitUse(ctx: UseContext): LogicalPlan = withOrigin(ctx) {\r\n  val nameParts = visitMultipartIdentifier(ctx.multipartIdentifier)\r\n  // USE CATALOG can only specify a single catalog name\r\n  if (ctx.CATALOG != null && nameParts.length > 1) parser error\r\n  UseStatement(ctx.CATALOG != null, ctx.NAMESPACE != null, nameParts)  \r\n}\r\n...\r\ncase class UseStatement(isCatalog: Boolean, isNamespace: Boolean, nameParts: Seq[String]) {\r\n  if (isCatalog) {\r\n    assert(!isNamespace) // isCatalog and isNamespace can't be both true\r\n    assert(nameParts.length ==1) // USE CATALOG can only specify a single catalog name\r\n  }\r\n}\r\n...\r\n\r\n```\r\n",
+        "createdAt" : "2019-09-27T08:45:43Z",
+        "updatedAt" : "2019-10-02T08:17:10Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5de4670d-feae-43c0-bd37-16bfc2b4656d",
+        "parentId" : "46777b47-9b44-4702-88c0-01ed3aedf968",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "I am fine with this proposal, but do we even need `2) USE NAMESPACE ...`?",
+        "createdAt" : "2019-09-28T02:18:05Z",
+        "updatedAt" : "2019-10-02T08:17:10Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6ba7540f-8823-46b0-8c22-f6fe759fb0d3",
+        "parentId" : "46777b47-9b44-4702-88c0-01ed3aedf968",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "image you have a namepace `abc` in the current catalog, and a catalog called `abc`, `USE NAMESPACE abc` can set current namespace to `abc` without ambiguity.\r\n\r\nActually this reminds me that we don't need `USE CATALOG` as `USE catalogName` can set current catalog without ambiguity. So we can simplify it a bit more:\r\n```\r\nUSE NAMESPACE? multipartIdentifier\r\n```\r\n```\r\ndef visitUse(ctx: UseContext): LogicalPlan = withOrigin(ctx) {\r\n  val nameParts = visitMultipartIdentifier(ctx.multipartIdentifier)\r\n  UseStatement(ctx.NAMESPACE != null, nameParts)\r\n}\r\n...\r\ncase class UseStatement(isSetNamespace: Boolean, nameParts: Seq[String])\r\n```\r\n\r\nAnd the rule is simple:\r\n1. USE NAMESPACE only sets the current namespace\r\n2. USE sets the current catalog if the first name part is a catalog name. This doesn't change even if there is a namespace with the same name. Catalog has the highest priority during name resolution.",
+        "createdAt" : "2019-09-28T03:16:43Z",
+        "updatedAt" : "2019-10-02T08:17:10Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "33a6e1a6-ef0c-4e37-b65d-d5cfa2cc7fcf",
+        "parentId" : "46777b47-9b44-4702-88c0-01ed3aedf968",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "OK. Sounds good to me. Let me try this.",
+        "createdAt" : "2019-09-28T03:42:33Z",
+        "updatedAt" : "2019-10-02T08:17:10Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "84856190f5bf7f7865ce3428986cca61471c9845",
+    "line" : 23,
+    "diffHunk" : "@@ -1,1 +850,854 @@\n    // Catalog is resolved to 'testcat2'.\n    sql(\"USE testcat2.ns2.ns2_2\")\n    assert(catalogManager.currentCatalog.name() == \"testcat2\")\n    assert(catalogManager.currentNamespace === Array(\"ns2\", \"ns2_2\"))"
+  },
+  {
+    "id" : "10622e6a-7b77-4563-b41c-7a5252cbc93f",
+    "prId" : 25747,
+    "prUrl" : "https://github.com/apache/spark/pull/25747#pullrequestreview-297247216",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4ea00ebb-0821-42c4-a202-fde01c9d6e50",
+        "parentId" : null,
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "Why is this not supported?",
+        "createdAt" : "2019-10-03T22:31:12Z",
+        "updatedAt" : "2019-10-04T02:49:47Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f25c71cb-6a3d-4884-b9dd-88001e0da98c",
+        "parentId" : "4ea00ebb-0821-42c4-a202-fde01c9d6e50",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "This is the existing behavior. We will support it once we unify SHOW NAMESPACE and SHOW DATABASE. AFAIK @imback82 already has a PR for it.",
+        "createdAt" : "2019-10-04T02:10:21Z",
+        "updatedAt" : "2019-10-04T02:49:47Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "28566d93-ac98-4d4e-bf3e-e7f807f965e6",
+        "parentId" : "4ea00ebb-0821-42c4-a202-fde01c9d6e50",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "Yes, I will update this as soon as this PR is merged.",
+        "createdAt" : "2019-10-04T03:18:12Z",
+        "updatedAt" : "2019-10-04T03:18:12Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9ad516ea9a0ec7525308c9ca64d36d4069531ae0",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +787,791 @@\n    assert(exception.getMessage.contains(\n      \"SHOW NAMESPACES is not supported with the session catalog\"))\n  }\n"
   }
 ]

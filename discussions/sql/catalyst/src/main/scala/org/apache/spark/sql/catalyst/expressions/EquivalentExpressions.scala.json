@@ -977,5 +977,269 @@
     "commit" : "75109a01011e313ede4ceedc92139ef10f972e53",
     "line" : 16,
     "diffHunk" : "@@ -1,1 +77,81 @@      // `PlanExpression` wraps query plan. To compare query plans of `PlanExpression` on executor,\n      // can cause error like NPE.\n      (expr.isInstanceOf[PlanExpression[_]] && TaskContext.get != null)\n\n    // There are some special expressions that we should not recurse into all of its children."
+  },
+  {
+    "id" : "3584bf06-2442-488a-835d-0fb1cd93eb4c",
+    "prId" : 25717,
+    "prUrl" : "https://github.com/apache/spark/pull/25717#pullrequestreview-285223515",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "905d25ef-5d5e-4716-abda-99d5fd0dead7",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "We cannot always share a function for non-deterministic cases? e.g.,\r\n```\r\nint subExpr1 = input[0] + random();\r\nint subExpr2 = input[1] + random();\r\n=>\r\nint subExpr1 = subExpr(input[0]);\r\nint subExpr2 = subExpr(input[1]);\r\n\r\nint subExpr(int v) { return v + random(); }\r\n```",
+        "createdAt" : "2019-09-08T05:28:09Z",
+        "updatedAt" : "2019-09-16T20:29:06Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1370ef87-7327-4c3f-b271-ee4b7c6700cc",
+        "parentId" : "905d25ef-5d5e-4716-abda-99d5fd0dead7",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Non-deterministic expressions can't do sub-expression elimination.",
+        "createdAt" : "2019-09-08T05:40:45Z",
+        "updatedAt" : "2019-09-16T20:29:06Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a3d57b53-beb4-43b0-be3f-3f0709e03282",
+        "parentId" : "905d25ef-5d5e-4716-abda-99d5fd0dead7",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "oh, I see.",
+        "createdAt" : "2019-09-08T05:46:57Z",
+        "updatedAt" : "2019-09-16T20:29:06Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "da597459-1038-494e-b090-d90cd57164f0",
+        "parentId" : "905d25ef-5d5e-4716-abda-99d5fd0dead7",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "btw, this idea is limited to common subexprs? For example, the idea can cover a case like;\r\n```\r\nselect sum(a + b), sum(b + c), sum(c + d), sum(d + e) from values (1, 1, 1, 1, 1) t(a, b, c, d, e)\r\n```\r\n?",
+        "createdAt" : "2019-09-08T06:26:36Z",
+        "updatedAt" : "2019-09-16T20:29:06Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fc168b25-a0fc-4116-a84c-9464abcdccb1",
+        "parentId" : "905d25ef-5d5e-4716-abda-99d5fd0dead7",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "It is probably suitable. Only if we want these functions sum(a+b)...etc. to be called in split functions. Their inputs can be parameterized.",
+        "createdAt" : "2019-09-08T16:05:34Z",
+        "updatedAt" : "2019-09-16T20:29:06Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4700b89004380e48ed484311018686856df3027e",
+    "line" : 74,
+    "diffHunk" : "@@ -1,1 +98,102 @@   */\n  def addStructExpr(expr: Expression): Boolean = {\n    if (expr.deterministic) {\n      // For structural equivalent expressions, we need to pass in int type ordinals into\n      // split functions. If the number of ordinals is more than JVM function limit, we skip"
+  },
+  {
+    "id" : "3db83204-7a63-40b3-88e5-4facce59952e",
+    "prId" : 25717,
+    "prUrl" : "https://github.com/apache/spark/pull/25717#pullrequestreview-285223543",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f058c045-e5b4-4c1d-bb45-29e1d6c49f69",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "If the length goes over the limit, the current logic gives up eliminating common exprs? If so, can we fall back into the non-structural mode?",
+        "createdAt" : "2019-09-08T09:14:33Z",
+        "updatedAt" : "2019-09-16T20:29:06Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "75e7e8a1-e187-404c-b891-b28a2145a80b",
+        "parentId" : "f058c045-e5b4-4c1d-bb45-29e1d6c49f69",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Good idea.",
+        "createdAt" : "2019-09-08T16:06:20Z",
+        "updatedAt" : "2019-09-16T20:29:06Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4700b89004380e48ed484311018686856df3027e",
+    "line" : 84,
+    "diffHunk" : "@@ -1,1 +108,112 @@      }\n      val parameterLength = CodeGenerator.calculateParamLength(refs) + 2\n      if (CodeGenerator.isValidParamLength(parameterLength)) {\n        val e: StructuralExpr = StructuralExpr(expr)\n        val f = structEquivalenceMap.get(e)"
+  },
+  {
+    "id" : "040bf7c9-3d1b-4964-b3a1-aecdd5b03167",
+    "prId" : 25717,
+    "prUrl" : "https://github.com/apache/spark/pull/25717#pullrequestreview-285238825",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "48dd7be5-1eba-4ef2-a009-f13283855826",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Naturally thinking from the comment, I thought the type's `mutable.HashMap.empty[StructuralExpr, mutable.ArrayBuffer[Expression]]`. Is  the value `EquivalenceMap` because you reuse the existing logic?",
+        "createdAt" : "2019-09-08T09:32:35Z",
+        "updatedAt" : "2019-09-16T20:29:06Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dc3e408e-d6ae-47fb-a02e-0b61ac66b225",
+        "parentId" : "48dd7be5-1eba-4ef2-a009-f13283855826",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Among expressions with same structure, there are still different sub-set of expressions which are semantically different to each others. I need the EquivalenceMap here to distinguish them. ",
+        "createdAt" : "2019-09-08T20:16:11Z",
+        "updatedAt" : "2019-09-16T20:29:06Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e43fd0c8-3843-4c9b-8b8d-184e6726c459",
+        "parentId" : "48dd7be5-1eba-4ef2-a009-f13283855826",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Yea, it looks ok. So, could you update the comment to describe more?",
+        "createdAt" : "2019-09-08T22:42:56Z",
+        "updatedAt" : "2019-09-16T20:29:06Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4700b89004380e48ed484311018686856df3027e",
+    "line" : 41,
+    "diffHunk" : "@@ -1,1 +69,73 @@  // which are semantically different to each others. Thus, under each key, the value is\n  // the map structure used to do semantically sub-expression elimination.\n  private val structEquivalenceMap = mutable.HashMap.empty[StructuralExpr, EquivalenceMap]\n\n  /**"
+  },
+  {
+    "id" : "01a47c27-7c80-4b12-987b-d89ecee89c0c",
+    "prId" : 25717,
+    "prUrl" : "https://github.com/apache/spark/pull/25717#pullrequestreview-288878343",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f4d69e52-5912-4665-95df-73fdcadf0e89",
+        "parentId" : null,
+        "authorId" : "99e31844-a5b3-48a2-af71-412edb607a13",
+        "body" : "nit: Do we need ` = this.equivalenceMap`? It seems that all of the callers pass two arguments.",
+        "createdAt" : "2019-09-16T03:26:06Z",
+        "updatedAt" : "2019-09-16T20:29:06Z",
+        "lastEditedBy" : "99e31844-a5b3-48a2-af71-412edb607a13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1ddaaf8d-d0f4-407e-8419-afd421534756",
+        "parentId" : "f4d69e52-5912-4665-95df-73fdcadf0e89",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "addExpr is also used at PhysicalAggregation:\r\n\r\nhttps://github.com/apache/spark/blob/2f3997fddca44a89b3b8e8b9cc114e26ee4c1d39/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/planning/patterns.scala#L222-L229",
+        "createdAt" : "2019-09-16T20:23:47Z",
+        "updatedAt" : "2019-09-16T20:29:06Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4700b89004380e48ed484311018686856df3027e",
+    "line" : 49,
+    "diffHunk" : "@@ -1,1 +76,80 @@   * Returns true if there was already a matching expression.\n   */\n  def addExpr(expr: Expression, exprMap: EquivalenceMap = this.equivalenceMap): Boolean = {\n    if (expr.deterministic) {\n      val e: Expr = Expr(expr)"
+  },
+  {
+    "id" : "84bb5e10-037d-4c63-bbb3-1c4386a34836",
+    "prId" : 25717,
+    "prUrl" : "https://github.com/apache/spark/pull/25717#pullrequestreview-288879963",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "83b1a7a2-9444-44a3-81ed-26e25b947b54",
+        "parentId" : null,
+        "authorId" : "99e31844-a5b3-48a2-af71-412edb607a13",
+        "body" : "nit: Do we need some words for `SortPrefix`?",
+        "createdAt" : "2019-09-16T03:35:39Z",
+        "updatedAt" : "2019-09-16T20:29:06Z",
+        "lastEditedBy" : "99e31844-a5b3-48a2-af71-412edb607a13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ea6fe349-038a-4f0e-a87b-b2bca06a4b76",
+        "parentId" : "83b1a7a2-9444-44a3-81ed-26e25b947b54",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "These words are copied from previous place. Let me add one for it.",
+        "createdAt" : "2019-09-16T20:26:42Z",
+        "updatedAt" : "2019-09-16T20:29:06Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4700b89004380e48ed484311018686856df3027e",
+    "line" : 125,
+    "diffHunk" : "@@ -1,1 +147,151 @@  //                will always get accessed.\n  //   4. Coalesce: it's also a conditional expression, we should only recurse into the first\n  //                children, because others may not get accessed.\n  //   5. SortPrefix: skipt the direct child of SortPrefix which is an unevaluable SortOrder.\n  private def childrenToRecurse(expr: Expression): Seq[Expression] = expr match {"
+  },
+  {
+    "id" : "f2bdc527-817f-43d8-9d00-64922e17b723",
+    "prId" : 25717,
+    "prUrl" : "https://github.com/apache/spark/pull/25717#pullrequestreview-289513982",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9b2464c0-1754-48ee-9671-74fb08dab28e",
+        "parentId" : null,
+        "authorId" : "99e31844-a5b3-48a2-af71-412edb607a13",
+        "body" : "nit: do we want to add `(_)`?",
+        "createdAt" : "2019-09-16T03:41:52Z",
+        "updatedAt" : "2019-09-16T20:29:06Z",
+        "lastEditedBy" : "99e31844-a5b3-48a2-af71-412edb607a13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b505709b-b672-4a47-94d0-f8137ec05646",
+        "parentId" : "9b2464c0-1754-48ee-9671-74fb08dab28e",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "addExprTree doesn't add (_) too. Just followed it. If no special reason, I will leave it.",
+        "createdAt" : "2019-09-16T20:27:32Z",
+        "updatedAt" : "2019-09-16T20:29:06Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2663ff7e-ba02-42c9-8efd-4f2e67cd2812",
+        "parentId" : "9b2464c0-1754-48ee-9671-74fb08dab28e",
+        "authorId" : "99e31844-a5b3-48a2-af71-412edb607a13",
+        "body" : "I am neutral on this.   \r\nI was curious why [this line](https://github.com/apache/spark/pull/25717/files#diff-8bcc5aea39c73d4bf38aef6f6951d42cR1042) added `(_)`, but here does not add.",
+        "createdAt" : "2019-09-17T08:52:02Z",
+        "updatedAt" : "2019-09-17T08:52:03Z",
+        "lastEditedBy" : "99e31844-a5b3-48a2-af71-412edb607a13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e98a8552-7012-4016-8bba-542e2638deef",
+        "parentId" : "9b2464c0-1754-48ee-9671-74fb08dab28e",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "At that line, if not add a (_) to call addExprTree, will see compilation error:\r\n\r\n```\r\n[error]  found   : (org.apache.spark.sql.catalyst.expressions.Expression, equivalentExpressions.EquivalenceMap) => Unit                                                               \r\n[error]     (which expands to)  (org.apache.spark.sql.catalyst.expressions.Expression, scala.collection.mutable.HashMap[equivalentExpressions.Expr,scala.collection.mutable.ArrayBuff$r[org.apache.spark.sql.catalyst.expressions.Expression]]) => Unit                                                                                                                     \r\n[error]  required: org.apache.spark.sql.catalyst.expressions.Expression => ?               \r\n[error]     expressions.foreach(equivalentExpressions.addExprTree)     \r\n[error]                                               ^                                                                                                                               \r\n```\r\n\r\nBecause addExprTree actually needs to arguments, it doesn't match foreach's argument type.",
+        "createdAt" : "2019-09-17T20:04:52Z",
+        "updatedAt" : "2019-09-17T20:04:53Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4700b89004380e48ed484311018686856df3027e",
+    "line" : 176,
+    "diffHunk" : "@@ -1,1 +180,184 @@\n    if (!skip && addStructExpr(expr)) {\n      childrenToRecurse(expr).foreach(addStructuralExprTree)\n      true\n    } else {"
   }
 ]
