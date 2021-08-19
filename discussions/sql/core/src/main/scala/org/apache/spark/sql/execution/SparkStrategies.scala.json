@@ -504,5 +504,60 @@
     "commit" : "4b011ab3570f3d9ae3f30e88987cd05a47ec1a87",
     "line" : 7,
     "diffHunk" : "@@ -1,1 +294,298 @@          createBroadcastHashJoin(\n            canBroadcast(left) && !hint.leftHint.exists(_.strategy.contains(NO_BROADCAST_HASH)),\n            canBroadcast(right) && !hint.rightHint.exists(_.strategy.contains(NO_BROADCAST_HASH)))\n            .orElse {\n              if (!conf.preferSortMergeJoin) {"
+  },
+  {
+    "id" : "7afa2a63-cb7e-4eab-9cae-29eb1ff834b8",
+    "prId" : 25569,
+    "prUrl" : "https://github.com/apache/spark/pull/25569#pullrequestreview-286466453",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "23318273-7e5f-4726-aabe-364c6516f5a1",
+        "parentId" : null,
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "Maybe I am not following completely, but what happens if you return the physical plan here? Or do you get into trouble with rules that are not exactly idempotent?",
+        "createdAt" : "2019-08-23T21:22:13Z",
+        "updatedAt" : "2019-09-23T02:05:40Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b8ac55ed-48ca-4cdd-8a9c-d0874908ec7e",
+        "parentId" : "23318273-7e5f-4726-aabe-364c6516f5a1",
+        "authorId" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "body" : "You still go through the entire join planning, Adaptive query planning and much more. We also may need to add projections to rewrite expression ids in case the plan was re-used in joins, etc",
+        "createdAt" : "2019-08-23T21:41:48Z",
+        "updatedAt" : "2019-09-23T02:05:40Z",
+        "lastEditedBy" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "54951e64-921c-484f-a2a1-8bd60cce28f6",
+        "parentId" : "23318273-7e5f-4726-aabe-364c6516f5a1",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "I don't think that we want to rewrite expression IDs. This should only be used for cases where we need to pass a physical plan as a logical plan within the same physical plan's execution. That's the case for `InsertableRelation`. We want all of those physical nodes to remain unchanged so that metrics are correctly reported to the UI.",
+        "createdAt" : "2019-08-24T00:52:37Z",
+        "updatedAt" : "2019-09-23T02:05:40Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "629f81a4-84d6-44df-949e-27148a740b63",
+        "parentId" : "23318273-7e5f-4726-aabe-364c6516f5a1",
+        "authorId" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "body" : "So we should make sure the \"already planned\" `SparkPlan` comes from `sparkPlan` not `executedPlan`, right? @hvanhovell \r\nAnd indeed some physical preparation rules are not idempotent, WSCG being one of them.",
+        "createdAt" : "2019-09-10T22:18:32Z",
+        "updatedAt" : "2019-09-23T02:05:40Z",
+        "lastEditedBy" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2bd20c016a3b3df08d38cde4a005271a49f47f81",
+    "line" : 4,
+    "diffHunk" : "@@ -1,1 +635,639 @@  object BasicOperators extends Strategy {\n    def apply(plan: LogicalPlan): Seq[SparkPlan] = plan match {\n      case AlreadyPlanned(physical, output) => AlreadyPlannedExec(physical, output) :: Nil\n      case d: DataWritingCommand => DataWritingCommandExec(d, planLater(d.query)) :: Nil\n      case r: RunnableCommand => ExecutedCommandExec(r) :: Nil"
   }
 ]

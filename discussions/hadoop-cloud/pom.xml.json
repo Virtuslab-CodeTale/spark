@@ -53,5 +53,82 @@
     "commit" : "764c4d2516bb33a7233767b70e35ce68313226e9",
     "line" : 19,
     "diffHunk" : "@@ -1,1 +216,220 @@      <id>hadoop-3.2</id>\n      <activation>\n        <activeByDefault>true</activeByDefault>\n      </activation>\n      <properties>"
+  },
+  {
+    "id" : "165bcfed-acba-4859-a2fe-8f518d0f492f",
+    "prId" : 25559,
+    "prUrl" : "https://github.com/apache/spark/pull/25559#pullrequestreview-280799566",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c228aad7-a78c-40af-a9d6-3fcafd931b2b",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Preemptively CCing @steveloughran for a look at this. The TL;DR is that `hadoop-cloud` is brining in an old `aws-java-sdk` dependency to the assembly and it interferes with the Kinesis dependencies, which are newer. Excluding these is a bit extreme, but, the `aws-java-sdk` dependency brings in like 20 other AWS JARs. I'm not clear whether that's the intent anyway.",
+        "createdAt" : "2019-08-26T22:30:10Z",
+        "updatedAt" : "2019-08-28T17:07:37Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d81fc176-5cc0-4e28-864e-f04160338806",
+        "parentId" : "c228aad7-a78c-40af-a9d6-3fcafd931b2b",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Won't you break the `hadoop-cloud` profile by doing this?\r\n\r\nThe kinesis integration is not packaged as part of the Spark distribution (when you enable its profile), while `hadoop-cloud` is.",
+        "createdAt" : "2019-08-26T22:37:38Z",
+        "updatedAt" : "2019-08-28T17:07:37Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6db949b9-38e6-4d5d-a958-4208c5f077e5",
+        "parentId" : "c228aad7-a78c-40af-a9d6-3fcafd931b2b",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Yeah, this is the thing. Right now we only pull in the core `aws-java-sdk` JAR. If I include `aws-java-sdk` as an explicit dependency, it pulls in tons of other dependencies that seem irrelevant to Spark. Hm, maybe I need to use `<dependencyManagement>` to more narrowly manage up the version of `aws-java-sdk` without affecting the transitive dependency resolution? Well, if this change works, at least we are on to the cause, and then I'll try that.",
+        "createdAt" : "2019-08-26T22:45:32Z",
+        "updatedAt" : "2019-08-28T17:07:37Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d88b0aeb-61f4-419f-aec2-cf2c65ec48eb",
+        "parentId" : "c228aad7-a78c-40af-a9d6-3fcafd931b2b",
+        "authorId" : "224991ce-ad69-410b-8143-bf394b6b5c59",
+        "body" : "1.7.4 is a really old version; hadoop 2.9+ uses a (fat) shaded JAR which has a consistent kinesis SDK in with it; 2.8 is on a 1.10.x I think\r\n\r\nGo on, move off Hadoop 2.7 as a baseline. It's many years old. EOL/unsupported and never actually qualified against Java 8",
+        "createdAt" : "2019-08-27T22:02:00Z",
+        "updatedAt" : "2019-08-28T17:07:37Z",
+        "lastEditedBy" : "224991ce-ad69-410b-8143-bf394b6b5c59",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e910938e-3dcf-46b8-a22f-ec066341edd6",
+        "parentId" : "c228aad7-a78c-40af-a9d6-3fcafd931b2b",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Thanks @steveloughran -- so, given that we are for better or worse here still on Hadoop 2.7 (because I think I need to back port this to 2.4 at least), is it safe to exclude the whole aws-java-sdk dependency? doesn't seem so as it would mean the user has to re-include it. But is it safe to assume they would be running this on Hadoop anyway?\r\n\r\nSounds like you are saying that in Hadoop 2.9, this dependency wouldn't exist or could be excluded.\r\n\r\nSo, excluding it definitely worked to solve the problem. Right now I'm seeing what happens if we explicitly manage its version up _as a direct dependency_ because just managing it up with `<dependencyManagement>` wasn't enough. The downside is probably that the assembly brings in everything the `aws-java-sdk` depends on, which is a lot of stuff. We don't distribute the assembly per se (right?) so it doesn't really mean more careful checks of the license of all the dependencies.\r\n\r\nStill, if somehow it were fine to exclude this dependency, that's the tidiest from Spark's perspective. Does that fly for Hadoop 2.7 or pretty well break the point of `hadoop-cloud`?",
+        "createdAt" : "2019-08-27T22:21:09Z",
+        "updatedAt" : "2019-08-28T17:07:37Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "16866bab-074a-41bc-a95d-675ab32e6805",
+        "parentId" : "c228aad7-a78c-40af-a9d6-3fcafd931b2b",
+        "authorId" : "224991ce-ad69-410b-8143-bf394b6b5c59",
+        "body" : "+1 to excluding the AWS dependency. It is not actually something you can bundle into ASF releases anyway [https://issues.apache.org/jira/browse/HADOOP-13794](https://issues.apache.org/jira/browse/HADOOP-13794). But: it'd be good for a spark-hadoop-cloud artifact to be published with that dependency for downstream users, or at least the things you have to add documented somewhere.\r\n\r\nFWIW,  I do build and test the spark kinesis module as part of my AWS SDK update process -one that actually went pretty smoothly for a change last time. No regressions, no new error messages in logs, shaded JARs really are shaded, etc. This is progress and means that backporting is something we should be doing\r\n\r\nsee https://github.com/apache/hadoop/blob/trunk/hadoop-tools/hadoop-aws/src/site/markdown/tools/hadoop-aws/testing.md#-qualifying-an-aws-sdk-update for the runbook there",
+        "createdAt" : "2019-08-28T12:43:26Z",
+        "updatedAt" : "2019-08-28T17:07:37Z",
+        "lastEditedBy" : "224991ce-ad69-410b-8143-bf394b6b5c59",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "36830b49bf66aedf61e5296d86d5bded3690aed7",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +102,106 @@        </exclusion>\n        <!-- Keep old SDK out of the assembly to avoid conflict with Kinesis module -->\n        <exclusion>\n          <groupId>com.amazonaws</groupId>\n          <artifactId>aws-java-sdk</artifactId>"
   }
 ]

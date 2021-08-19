@@ -878,5 +878,60 @@
     "commit" : "87557e08deec4e6650f16546829b233158b529e5",
     "line" : 81,
     "diffHunk" : "@@ -1,1 +203,207 @@            if sparkSession.sessionState.catalog.isTemporaryTable(ident) =>\n            // Temporary views are only stored in the session catalog\n            if (sparkSession.sqlContext.conf.usePostgreSQLDialect) {\n              logInfo(s\"View $name is based on temporary view $ident.\"\n                + s\" $name will be created as temporary view\")"
+  },
+  {
+    "id" : "a2fb59b1-8203-43b3-9ffa-cfe8ef6a22ba",
+    "prId" : 25570,
+    "prUrl" : "https://github.com/apache/spark/pull/25570#pullrequestreview-280450920",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ecfd9a11-ad1c-4178-baec-11fce154a87f",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "we can make the diff much smaller by changing this line to\r\n```\r\nval colNamesToCheck = if (userSpecifiedColumns.nonEmpty) userSpecifiedColumns.map(_._1) else queryOutput\r\nSchemaUtils.checkColumnNameDuplication(colNamesToCheck, ...)\r\n```",
+        "createdAt" : "2019-08-26T15:17:36Z",
+        "updatedAt" : "2019-08-26T15:17:36Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "68b06afb-faff-4ce2-8ec5-688705281edf",
+        "parentId" : "ecfd9a11-ad1c-4178-baec-11fce154a87f",
+        "authorId" : "86ccead2-bbe2-4f38-b15b-1e311a86f5cf",
+        "body" : "> we can make the diff much smaller by changing this line to\r\n> \r\n> ```\r\n> val colNamesToCheck = if (userSpecifiedColumns.nonEmpty) userSpecifiedColumns.map(_._1) else queryOutput\r\n> SchemaUtils.checkColumnNameDuplication(colNamesToCheck, ...)\r\n> ```\r\nuserSpecifiedColumns is not accessible in SchemaUtils. I guess we will have to pass them as arguments\r\n",
+        "createdAt" : "2019-08-26T20:44:23Z",
+        "updatedAt" : "2019-08-26T20:44:23Z",
+        "lastEditedBy" : "86ccead2-bbe2-4f38-b15b-1e311a86f5cf",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f792a4e1-18d7-4546-8198-f8724f85a747",
+        "parentId" : "ecfd9a11-ad1c-4178-baec-11fce154a87f",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "We only need to access `userSpecifiedColumns` before calling `SchemaUtils`, don't we?",
+        "createdAt" : "2019-08-27T07:40:23Z",
+        "updatedAt" : "2019-08-27T07:40:23Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "27d1e6e6-eb6c-43e2-914b-bf5774b8305b",
+        "parentId" : "ecfd9a11-ad1c-4178-baec-11fce154a87f",
+        "authorId" : "86ccead2-bbe2-4f38-b15b-1e311a86f5cf",
+        "body" : "My bad, I meant `userSpecifiedColumns` is not available in `ViewHelper` not `SchemaUtils`\r\n\r\n- `CreateViewCommand.prepareTable()` and `AlterViewAsCommand.alterPermanentView()` both call  `ViewHelper.generateViewProperties()`\r\n- And `ViewHelper.generateViewProperties()` is where we call `SchemaUtils.checkColumnNameDuplication()`. The suggestion you provided requires `userSpecifiedColumns` to be accessible in `ViewHelper.generateViewProperties()`\r\n- So i added an argument to `ViewHelper.generateViewProperties()` allowing `CreateViewCommand` to send aliased schema and `AlterViewAsCommand` to send analyzed schema",
+        "createdAt" : "2019-08-27T20:24:52Z",
+        "updatedAt" : "2019-08-27T20:24:52Z",
+        "lastEditedBy" : "86ccead2-bbe2-4f38-b15b-1e311a86f5cf",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2f45192f99cc2cc49641ccdec36aca8259b5ea89",
+    "line" : 50,
+    "diffHunk" : "@@ -1,1 +370,374 @@    // Generate the query column names, throw an AnalysisException if there exists duplicate column\n    // names.\n    SchemaUtils.checkColumnNameDuplication(\n      fieldNames, \"in the view definition\", session.sessionState.conf.resolver)\n"
   }
 ]

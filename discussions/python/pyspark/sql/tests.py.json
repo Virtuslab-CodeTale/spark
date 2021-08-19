@@ -1,0 +1,90 @@
+[
+  {
+    "id" : "48b186b6-9628-45c6-af53-3d60cbdb5e50",
+    "prId" : 25593,
+    "prUrl" : "https://github.com/apache/spark/pull/25593#pullrequestreview-280314612",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8b73d115-8671-4930-aaa2-3cba283bfb41",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "just to double-check, this test fails even if we do not set these 2 configs, right?",
+        "createdAt" : "2019-08-27T13:17:47Z",
+        "updatedAt" : "2019-08-27T14:18:58Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f8e84cd2-6521-40d3-9d3f-fe955ebea6b8",
+        "parentId" : "8b73d115-8671-4930-aaa2-3cba283bfb41",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "This one configuration only `spark.sql.execution.arrow.enabled` because the partial results are being produced from Arrow optimized code path.\r\n\r\n`spark.sql.execution.arrow.fallback.enabled` is just to make sure we only test Arrow optimized code path.",
+        "createdAt" : "2019-08-27T13:28:39Z",
+        "updatedAt" : "2019-08-27T14:18:58Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "847c3ee7-b3ba-4a65-83ca-ca44f3b275ec",
+        "parentId" : "8b73d115-8671-4930-aaa2-3cba283bfb41",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Yep. In `branch-2.4`, `spark.sql.execution.arrow.enabled` is `false` by default.\r\n\r\nI verified this manually that this test doesn't fail if we remove this configurations. This is required in `branch-2.4`.",
+        "createdAt" : "2019-08-27T16:17:49Z",
+        "updatedAt" : "2019-08-27T16:17:58Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "bd3031750cea363eb6ffc76c0158b270e8133f1e",
+    "line" : 25,
+    "diffHunk" : "@@ -1,1 +4563,4567 @@            'local[4]', cls.__name__, conf=SparkConf().set(\"spark.driver.maxResultSize\", \"10k\")))\n\n        # Explicitly enable Arrow and disable fallback.\n        cls.spark.conf.set(\"spark.sql.execution.arrow.enabled\", \"true\")\n        cls.spark.conf.set(\"spark.sql.execution.arrow.fallback.enabled\", \"false\")"
+  },
+  {
+    "id" : "102af9cb-b69b-415b-8348-640415a148da",
+    "prId" : 25593,
+    "prUrl" : "https://github.com/apache/spark/pull/25593#pullrequestreview-280528618",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7af8bbf2-ffd3-4024-97a4-7d3c415e66d3",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Okay, the last test failure looks weird and flaky (https://github.com/apache/spark/pull/25593#issuecomment-525286876). This test itself passed but seems like previously set `spark.driver.maxResultSize=10k` affects the other tests even though I stop the session and context explicitly.\r\n\r\nThis is fine for now in the master branch because this test is in a separate file and launched in a separate process; however, this is potentially an issue.\r\n\r\nSince the issue only happens when `spark.builder` is used, I am working around, in branch-2.4 specifically, by using `SparkSession(SparkContext(...))` for now as it's an orthogonal issue.",
+        "createdAt" : "2019-08-27T14:20:34Z",
+        "updatedAt" : "2019-08-27T14:26:08Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4202e870-b51f-4373-812d-28ed0dbc6743",
+        "parentId" : "7af8bbf2-ffd3-4024-97a4-7d3c415e66d3",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "are we going to do the same change for master branch later?",
+        "createdAt" : "2019-08-27T15:43:22Z",
+        "updatedAt" : "2019-08-27T15:43:22Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a842c4fb-7d6b-484e-a807-1214925375a0",
+        "parentId" : "7af8bbf2-ffd3-4024-97a4-7d3c415e66d3",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "We can although it's fine in the master for now as I described. Let me make a followup later to match.",
+        "createdAt" : "2019-08-27T23:50:05Z",
+        "updatedAt" : "2019-08-27T23:50:05Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "bd3031750cea363eb6ffc76c0158b270e8133f1e",
+    "line" : 23,
+    "diffHunk" : "@@ -1,1 +4561,4565 @@    def setUpClass(cls):\n        cls.spark = SparkSession(SparkContext(\n            'local[4]', cls.__name__, conf=SparkConf().set(\"spark.driver.maxResultSize\", \"10k\")))\n\n        # Explicitly enable Arrow and disable fallback."
+  }
+]

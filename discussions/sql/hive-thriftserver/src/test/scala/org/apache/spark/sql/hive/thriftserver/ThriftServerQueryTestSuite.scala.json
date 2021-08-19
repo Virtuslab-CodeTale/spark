@@ -515,5 +515,93 @@
     "commit" : "2eac612a33320e64a464df7ba9da683f36aa6b05",
     "line" : 37,
     "diffHunk" : "@@ -1,1 +51,55 @@\n  override def beforeAll(): Unit = {\n    super.beforeAll()\n    // Chooses a random port between 10000 and 19999\n    var listeningPort = 10000 + Random.nextInt(10000)"
+  },
+  {
+    "id" : "6318548c-f84e-438a-9a21-2bd5041c8844",
+    "prId" : 25567,
+    "prUrl" : "https://github.com/apache/spark/pull/25567#pullrequestreview-280562654",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "44b1d4de-96cf-46ab-b12f-67ddcfe81d4a",
+        "parentId" : null,
+        "authorId" : "e5beb795-ac0e-4bd6-ad66-708215b8ae58",
+        "body" : "@wangyum \r\nI think this is the cause of flakiness.\r\n\r\nThis goes down to https://github.com/apache/spark/blob/master/sql/hive-thriftserver/v1.2.1/src/main/java/org/apache/hive/service/cli/thrift/ThriftCLIService.java#L178, which starts the service in an asynchronous background thread. It can race and try to connect in the test before the server actually gets initialized.\r\nMoving it to `beforeAll()` and adding a few seconds sleep should help.\r\nOr we could transplant the whole way from `HiveThriftServer2Test` that starts uses the start-thriftserver.sh script and monitors it's log until its started. Would it be possible to make `HiveThriftServer2Test` a trait that can be mixed in here?",
+        "createdAt" : "2019-08-27T14:12:40Z",
+        "updatedAt" : "2019-08-27T14:12:40Z",
+        "lastEditedBy" : "e5beb795-ac0e-4bd6-ad66-708215b8ae58",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "27c4b8d1-b599-4f62-8470-eb94a00f7b20",
+        "parentId" : "44b1d4de-96cf-46ab-b12f-67ddcfe81d4a",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Thank you so much for the investigation, @juliuszsompolski !",
+        "createdAt" : "2019-08-27T16:45:10Z",
+        "updatedAt" : "2019-08-27T16:45:10Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3b0698bb-c1f7-4adc-a786-f86389ec483e",
+        "parentId" : "44b1d4de-96cf-46ab-b12f-67ddcfe81d4a",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "Move it to `beforeAll()` also unstable: https://github.com/apache/spark/pull/25567#issuecomment-524507309\r\n\r\nAnyway, I will try to move it to `beforeAll()` again.",
+        "createdAt" : "2019-08-28T02:35:32Z",
+        "updatedAt" : "2019-08-28T02:35:32Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2254809a4de19030ecf3b5561aafaeb5e1557b4b",
+    "line" : 57,
+    "diffHunk" : "@@ -1,1 +55,59 @@      started.orElse {\n        listeningPort += 1\n        Try(startThriftServer(listeningPort, attempt))\n      }\n    }.recover {"
+  },
+  {
+    "id" : "bceaf247-e6a7-4463-be68-069e9bedb879",
+    "prId" : 25567,
+    "prUrl" : "https://github.com/apache/spark/pull/25567#pullrequestreview-318734079",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "897f383b-1448-48ba-93aa-8bf40f140086",
+        "parentId" : null,
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "I am trying to troubleshoot an jenkins build failure on this this, but the regular command which I use to run `SQLQueryTestSuite` \r\n```\r\nSPARK_GENERATE_GOLDEN_FILES=1 build/sbt \"sql/test-only *ThriftServerQueryTestSuite -- -z interval.sql\"\r\n```\r\nCould someone help me to run `ThriftServerQueryTestSuite`?",
+        "createdAt" : "2019-11-15T16:48:43Z",
+        "updatedAt" : "2019-11-15T16:48:44Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "69efc673-1b1c-48b0-9c9a-bcb0abb784ea",
+        "parentId" : "897f383b-1448-48ba-93aa-8bf40f140086",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "@wangyum, can you write some guides in the documentation about how we run each tests?",
+        "createdAt" : "2019-11-18T04:03:02Z",
+        "updatedAt" : "2019-11-18T04:03:02Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d5b3b583-ef32-4667-87ee-63ebab313e21",
+        "parentId" : "897f383b-1448-48ba-93aa-8bf40f140086",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "https://github.com/apache/spark/pull/26587",
+        "createdAt" : "2019-11-19T01:24:46Z",
+        "updatedAt" : "2019-11-19T01:24:46Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2254809a4de19030ecf3b5561aafaeb5e1557b4b",
+    "line" : 45,
+    "diffHunk" : "@@ -1,1 +43,47 @@ *   3. Support SHOW command.\n */\nclass ThriftServerQueryTestSuite extends SQLQueryTestSuite {\n\n  private var hiveServer2: HiveThriftServer2 = _"
   }
 ]

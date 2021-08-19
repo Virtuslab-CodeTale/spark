@@ -4035,5 +4035,126 @@
     "commit" : "2753af5c2adbbb0c27decda3afb7a06e8ff1a31f",
     "line" : 29,
     "diffHunk" : "@@ -1,1 +796,800 @@    override def apply(plan: LogicalPlan): LogicalPlan = plan resolveOperators {\n      case i @ InsertIntoStatement(r: DataSourceV2Relation, _, _, _, _) if i.query.resolved =>\n        // ifPartitionNotExists is append with validation, but validation is not supported\n        if (i.ifPartitionNotExists) {\n          throw new AnalysisException("
+  },
+  {
+    "id" : "0aa67ebd-a54a-4cce-b12e-2cc4b7f9721b",
+    "prId" : 25512,
+    "prUrl" : "https://github.com/apache/spark/pull/25512#pullrequestreview-282590587",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4a847d54-abf2-4b78-be9f-ec09a8345d13",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "nit: can we keep it close to other Project cases?",
+        "createdAt" : "2019-08-30T07:57:18Z",
+        "updatedAt" : "2019-09-04T10:00:56Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fc872a99-2037-4119-a81f-dbd42c592abf",
+        "parentId" : "4a847d54-abf2-4b78-be9f-ec09a8345d13",
+        "authorId" : "7e665d8b-d739-4edf-88c8-7379ff8585c2",
+        "body" : "I prefer current switch case order.\r\nThe first four switch case only do some check so put them in front.",
+        "createdAt" : "2019-09-02T13:20:15Z",
+        "updatedAt" : "2019-09-04T10:00:56Z",
+        "lastEditedBy" : "7e665d8b-d739-4edf-88c8-7379ff8585c2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a839035ec424af67fe12c917a1bab2782e0053cb",
+    "line" : 56,
+    "diffHunk" : "@@ -1,1 +2071,2075 @@        Project(projectExprs.toList, newAgg)\n\n      case p @ Project(projectList, child) =>\n        // Holds the resolved generator, if one exists in the project list.\n        var resolvedGenerator: Generate = null"
+  },
+  {
+    "id" : "cac0f25b-4c51-4226-b2ba-64dd91167d9a",
+    "prId" : 25507,
+    "prUrl" : "https://github.com/apache/spark/pull/25507#pullrequestreview-279676554",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3c3225cd-7721-4f10-a4a1-e33f7b8895db",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "`lookupV2Relation` needs to return `Either` because we need to catch this case and create v1 insert command. I have a simpler idea:\r\n1. `ResolveInsertInto` only handles v2 insert command, and leave `InsertIntoStatement(UnresolvedRelation, ...)` unchanged if we can't load a v2 table.\r\n2. `ResolveRelations` catches the `InsertIntoStatement(UnresolvedRelation, ...)` and convert it to v1 insert command if we can load a v1 table.\r\n\r\nBy doing this, `lookupV2Relation` doesn't need to distinguish between normal v2 catalog and v2 session catalog during table lookup, and can return `Option[Table]`.",
+        "createdAt" : "2019-08-26T12:07:54Z",
+        "updatedAt" : "2019-08-26T18:57:39Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a01e0f37-8d8f-4ce1-b68d-20b255bd0cb8",
+        "parentId" : "3c3225cd-7721-4f10-a4a1-e33f7b8895db",
+        "authorId" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "body" : "I was looking at ALTER TABLE as well, and it seems like `lookupV2Relation` will need to support Either in cases where we do have a catalog name. I was thinking that:\r\n```scala\r\nEither[(CatalogPlugin, Ident, Option[Table]), Option[(Ident, Table)]] match {\r\n  case Left => // Catalog found, table may or may not be found\r\n  case Right => // Table may be resolved as V2 or left for V1\r\n}\r\n```",
+        "createdAt" : "2019-08-26T15:54:25Z",
+        "updatedAt" : "2019-08-26T18:57:39Z",
+        "lastEditedBy" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f1d86fffdafaac99a040ecd718f9e16aa49d164c",
+    "line" : 70,
+    "diffHunk" : "@@ -1,1 +769,773 @@            resolveV2Insert(i, v2Table)\n          case _ =>\n            InsertIntoTable(i.table, i.partitionSpec, i.query, i.overwrite, i.ifPartitionNotExists)\n        }\n    }"
+  },
+  {
+    "id" : "56e09513-ebe5-49c1-9641-675981108b2c",
+    "prId" : 25502,
+    "prUrl" : "https://github.com/apache/spark/pull/25502#pullrequestreview-281841032",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a3b66dc7-d9cc-440a-94a3-01e8cab08a7e",
+        "parentId" : null,
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "I understand the motivation to create the `lookupV2Relation` method, but I don't quite like the effects that it has on these rules because it mixes identifier resolution (which catalog is responsible?) with table resolution (look up the table in a catalog). This leads to some strange changes, like the addition of `AlterTableStatement` to `checkAnalysis` that throws \"Table or view not found\" when the real problem is that the statement wasn't converted to a v1 or v2 plan.\r\n\r\nBefore this change, only identifier resolution is done. Table resolution is done by the `ResolveTables` rule so it is fairly well contained. Plans were created with a place-holder `UnresolvedRelation`, which avoids the need to catch `AlterTableStatement` in `checkAnalysis`\r\n\r\nBut, to add the fallback to v1 for tables that are loaded by the v2 session catalog, we have to look up the table and only convert to the v2 plan if it isn't an `UnresolvedTable`.\r\n\r\nI'm not sure what the _right_ solution is. Maybe instead of avoiding conversion to the v2 plan, we should convert from v2 to v1 for the fallback case. I think that would make the rules cleaner and more orthogonal to one another.",
+        "createdAt" : "2019-08-29T22:45:32Z",
+        "updatedAt" : "2019-08-29T23:18:17Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "016b8fb6-6eb7-47f3-b0ac-d6de76592485",
+        "parentId" : "a3b66dc7-d9cc-440a-94a3-01e8cab08a7e",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "I don't think this is a reason to block this commit. I would just like to follow up with a reasonable solution if there isn't a quick fix that can go in this PR. The important thing is getting this PR in so this makes it into 3.0.",
+        "createdAt" : "2019-08-29T23:00:54Z",
+        "updatedAt" : "2019-08-29T23:18:17Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a154f846-29b3-47ca-b979-56c69d36328b",
+        "parentId" : "a3b66dc7-d9cc-440a-94a3-01e8cab08a7e",
+        "authorId" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "body" : "> mixes identifier resolution (which catalog is responsible?) with table resolution (look up the table in a catalog)\r\nthat's fair and makes a lot of sense to keep these separate. I'm in favor of merging this as a first step (which will allow the tests to be there), and then cleaning up the logic, since the logic will look similar for INSERT INTO as well. Since this is already a 900loc PR, I'd like to that in a follow up.",
+        "createdAt" : "2019-08-29T23:17:18Z",
+        "updatedAt" : "2019-08-29T23:18:17Z",
+        "lastEditedBy" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "33a97efc-772d-4a2c-9e16-c6a6f77e772f",
+        "parentId" : "a3b66dc7-d9cc-440a-94a3-01e8cab08a7e",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I also thought about it before. I think the ideal resolution process is:\r\n1. rules like `ResolveAlterTable` are only responsible for converting XYZStatement to v1 or v2 command\r\n2. `ResolveTables` and `ResolveRelations` are responsible for resolving `UnresolvedRelation` to v1 or v2 relations\r\n\r\nHowever, some commands like ALTER TABLE also need to get the catalog instance, which can't be done by `ResolveTables` or `ResolveRelations`. Unlike table resolution which replaces `UnresolvedRelation` with v1/v2 relation and can be done by a rule separately. Catalog resolution needs to be done during the converting from XYZStatement to v1/v2 command and we can't do it in a separated rule.\r\n\r\nI don't have a good idea now but we should definitely revisit it later.\r\n\r\n",
+        "createdAt" : "2019-08-30T06:02:16Z",
+        "updatedAt" : "2019-08-30T06:02:17Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "1f821986e7458ca4b87c898d6c3c6d73b0ac78ad",
+    "line" : 93,
+    "diffHunk" : "@@ -1,1 +943,947 @@    private def resolveV2Alter(\n        tableName: Seq[String],\n        changes: Seq[TableChange]): Option[AlterTable] = {\n      lookupV2Relation(tableName) match {\n        case scala.Left((v2Catalog, ident, tableOpt)) =>"
   }
 ]
