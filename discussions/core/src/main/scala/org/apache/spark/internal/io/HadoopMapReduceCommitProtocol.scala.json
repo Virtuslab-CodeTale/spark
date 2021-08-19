@@ -218,5 +218,280 @@
     "commit" : "2c873dbae136904f086a23290c29a5559ce8d14f",
     "line" : 70,
     "diffHunk" : "@@ -1,1 +204,208 @@                fs.mkdirs(finalPartPath.getParent)\n              }\n              fs.rename(new Path(s\"$stagingDir/$successAttemptID\", part), finalPartPath)\n            })\n            allPartitionPath"
+  },
+  {
+    "id" : "dc04d8c2-c646-460c-81a5-b17377d89dea",
+    "prId" : 26339,
+    "prUrl" : "https://github.com/apache/spark/pull/26339#pullrequestreview-392594467",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9bea6a47-9f71-461d-a8ef-7a4228af399a",
+        "parentId" : null,
+        "authorId" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "body" : "so where does SparkHadoopMapRedUtil.commitTask moves the data from/to and how does dynamicPartitionOverwrite deal with that output? Can you please give an example? It seems there are 2 renames happening one due to SparkHadoopMapRedUtil.commitTask and then with the code block inside dynamicPartitionOverwrite.",
+        "createdAt" : "2020-04-07T18:29:16Z",
+        "updatedAt" : "2020-06-18T07:04:58Z",
+        "lastEditedBy" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fd0b75c0-2702-4b8c-bf4e-dd34cdf88478",
+        "parentId" : "9bea6a47-9f71-461d-a8ef-7a4228af399a",
+        "authorId" : "334a081c-cba1-403e-ac80-30e6124077d1",
+        "body" : "IIUC, `SparkHadoopMapRedUtil.commitTask` will output to `dynamicStagingTaskFiles` where each task attempt gets its own staging directory to avoid conflicts. Then, we rename the staging files to their final destination if not exist. \r\n\r\nOne minor issue is the following log in `SparkHadoopMapRedUtil.commitTask`. When we say the task attempt has committed, it's actually not. @turboFei \r\n\r\n```        \r\nlogInfo(s\"$mrTaskAttemptID: Committed\")\r\n```",
+        "createdAt" : "2020-04-14T04:03:54Z",
+        "updatedAt" : "2020-06-18T07:04:58Z",
+        "lastEditedBy" : "334a081c-cba1-403e-ac80-30e6124077d1",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7ae41b7d-d064-4884-b6aa-1b2cf4d0f563",
+        "parentId" : "9bea6a47-9f71-461d-a8ef-7a4228af399a",
+        "authorId" : "b6393788-12cc-4066-9294-857f4baec092",
+        "body" : "yeah, this log is a little confused.",
+        "createdAt" : "2020-04-14T04:25:00Z",
+        "updatedAt" : "2020-06-18T07:04:58Z",
+        "lastEditedBy" : "b6393788-12cc-4066-9294-857f4baec092",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "717d9a56faf128e4864844cdf6341cb7b8731307",
+    "line" : 82,
+    "diffHunk" : "@@ -1,1 +281,285 @@    SparkHadoopMapRedUtil.commitTask(\n      committer, taskContext, attemptId.getJobID.getId, attemptId.getTaskID.getId)\n    if (dynamicPartitionOverwrite) {\n      val fs = stagingDir.getFileSystem(taskContext.getConfiguration)\n      dynamicStagingTaskFiles.foreach { stagingTaskFile =>"
+  },
+  {
+    "id" : "51ac1199-1a8a-4cdf-9fbe-e79ffc4be439",
+    "prId" : 26339,
+    "prUrl" : "https://github.com/apache/spark/pull/26339#pullrequestreview-392555662",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e3549b57-5bb3-4544-82c3-edb820bd60f2",
+        "parentId" : null,
+        "authorId" : "334a081c-cba1-403e-ac80-30e6124077d1",
+        "body" : "I thinks this can be an immutable `Set`",
+        "createdAt" : "2020-04-14T01:54:41Z",
+        "updatedAt" : "2020-06-18T07:04:58Z",
+        "lastEditedBy" : "334a081c-cba1-403e-ac80-30e6124077d1",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "824d54d2-543d-49cf-b5d1-d9dc69b4c9fb",
+        "parentId" : "e3549b57-5bb3-4544-82c3-edb820bd60f2",
+        "authorId" : "b6393788-12cc-4066-9294-857f4baec092",
+        "body" : "Just test, it should be mutable, otherwise there is no `+=` method for immutable.Set.\r\n",
+        "createdAt" : "2020-04-14T02:08:37Z",
+        "updatedAt" : "2020-06-18T07:04:58Z",
+        "lastEditedBy" : "b6393788-12cc-4066-9294-857f4baec092",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "717d9a56faf128e4864844cdf6341cb7b8731307",
+    "line" : 26,
+    "diffHunk" : "@@ -1,1 +95,99 @@   * Tracks the staging task files with dynamicPartitionOverwrite=true.\n   */\n  @transient private[spark] var dynamicStagingTaskFiles: mutable.Set[Path] = null\n\n  /**"
+  },
+  {
+    "id" : "5d4961ce-2d42-4fca-a117-be87bdd8396e",
+    "prId" : 26339,
+    "prUrl" : "https://github.com/apache/spark/pull/26339#pullrequestreview-392593417",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "569980d7-c946-4970-9856-1bfcf63e5126",
+        "parentId" : null,
+        "authorId" : "334a081c-cba1-403e-ac80-30e6124077d1",
+        "body" : "what happens if the `finalFile` exists ?",
+        "createdAt" : "2020-04-14T02:01:41Z",
+        "updatedAt" : "2020-06-18T07:04:58Z",
+        "lastEditedBy" : "334a081c-cba1-403e-ac80-30e6124077d1",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2a7d1fcc-defe-4062-a85d-8f6cd8506c00",
+        "parentId" : "569980d7-c946-4970-9856-1bfcf63e5126",
+        "authorId" : "b6393788-12cc-4066-9294-857f4baec092",
+        "body" : "I think the finalFile may exist when spark.hadoop.outputCommitCoordination.enabled is false.\r\nIt is true by defaults.",
+        "createdAt" : "2020-04-14T02:06:28Z",
+        "updatedAt" : "2020-06-18T07:04:58Z",
+        "lastEditedBy" : "b6393788-12cc-4066-9294-857f4baec092",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "46b71f81-5d9f-4381-ba23-cca6649aca0e",
+        "parentId" : "569980d7-c946-4970-9856-1bfcf63e5126",
+        "authorId" : "334a081c-cba1-403e-ac80-30e6124077d1",
+        "body" : "It was a dumb question by me. It's by design to skip `rename` when `finalFile` exists to avoid conflicts. As to when the `finalFile` will exist, are you saying there will be no conflict with task speculation if output commit coordination is enabled ? \r\n\r\nAnother question is if it's possible the existing `finalFile` is corrupted due to another task crashing during commit.\r\n\r\n",
+        "createdAt" : "2020-04-14T02:49:52Z",
+        "updatedAt" : "2020-06-18T07:04:58Z",
+        "lastEditedBy" : "334a081c-cba1-403e-ac80-30e6124077d1",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d124608d-28a5-4b24-b3ef-5ca04c5cafa3",
+        "parentId" : "569980d7-c946-4970-9856-1bfcf63e5126",
+        "authorId" : "b6393788-12cc-4066-9294-857f4baec092",
+        "body" : "Thanks, I just check the code.\r\nIt seems that the  `SparkHadoopMapRedUtil.commitTask` has no meaning for dynamic partition overwrite, because dynamicPartitionOverwrite operation has a specific staging dir (`.spark-staging-jobId`) instead of using the working temporary of FileOutputCommitter(`_temporary/0`).\r\n\r\nSo, the conflict issue is not related with the enable of outputCommitCoordination.\r\n\r\n\r\n> Another question is if it's possible the existing finalFile is corrupted due to another task crashing during commit.\r\n\r\nIt is possible, because there may be several dynamicStagingTaskFiles，if the task aborted when renaming these dynamicStagingTaskFiles to finalFiles, partial outputs are moved to the partition paths.\r\n",
+        "createdAt" : "2020-04-14T03:02:44Z",
+        "updatedAt" : "2020-06-18T07:04:58Z",
+        "lastEditedBy" : "b6393788-12cc-4066-9294-857f4baec092",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f442e779-a933-4e08-9426-78e2493af346",
+        "parentId" : "569980d7-c946-4970-9856-1bfcf63e5126",
+        "authorId" : "334a081c-cba1-403e-ac80-30e6124077d1",
+        "body" : "I think `outputCommitCoordination` still avoids two attempts committing at the same time through driver. \r\n\r\n> It is possible, because there may be several dynamicStagingTaskFiles，if the task aborted when commitTask, partial outputs are moved to the partition paths.\r\n\r\nI mean what will happen if `rename` fails. \r\n ",
+        "createdAt" : "2020-04-14T03:53:32Z",
+        "updatedAt" : "2020-06-18T07:04:58Z",
+        "lastEditedBy" : "334a081c-cba1-403e-ac80-30e6124077d1",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4d9808da-5573-45e4-9534-acd73d29adfe",
+        "parentId" : "569980d7-c946-4970-9856-1bfcf63e5126",
+        "authorId" : "b6393788-12cc-4066-9294-857f4baec092",
+        "body" : "If rename failed, partial result would be loss.",
+        "createdAt" : "2020-04-14T03:56:30Z",
+        "updatedAt" : "2020-06-18T07:04:58Z",
+        "lastEditedBy" : "b6393788-12cc-4066-9294-857f4baec092",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "af10dd68-fd3b-47aa-86fa-84663ee7c7f4",
+        "parentId" : "569980d7-c946-4970-9856-1bfcf63e5126",
+        "authorId" : "334a081c-cba1-403e-ac80-30e6124077d1",
+        "body" : "Do we tests for the two failure scenarios ?\r\n\r\n1. task aborted between renaming staging files\r\n2. `rename` fails and an `IOException` is thrown",
+        "createdAt" : "2020-04-14T04:07:53Z",
+        "updatedAt" : "2020-06-18T07:04:58Z",
+        "lastEditedBy" : "334a081c-cba1-403e-ac80-30e6124077d1",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9b32ef9b-f20f-4b61-abaa-7e6f24160b07",
+        "parentId" : "569980d7-c946-4970-9856-1bfcf63e5126",
+        "authorId" : "b6393788-12cc-4066-9294-857f4baec092",
+        "body" : "Will try to add relative tests",
+        "createdAt" : "2020-04-14T04:21:03Z",
+        "updatedAt" : "2020-06-18T07:04:58Z",
+        "lastEditedBy" : "b6393788-12cc-4066-9294-857f4baec092",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "717d9a56faf128e4864844cdf6341cb7b8731307",
+    "line" : 88,
+    "diffHunk" : "@@ -1,1 +287,291 @@        val partitionPath = getDynamicPartitionPath(fs, stagingTaskFile, taskContext)\n        val finalFile = new Path(partitionPath, fileName)\n        if (!fs.exists(finalFile) && !fs.rename(stagingTaskFile, finalFile)) {\n          if (fs.exists(finalFile)) {\n            logWarning("
+  },
+  {
+    "id" : "d67ab051-3317-4c0b-b02c-91628a60c186",
+    "prId" : 26339,
+    "prUrl" : "https://github.com/apache/spark/pull/26339#pullrequestreview-400441194",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0d8d8572-68cc-4d06-aed0-98ee56ac833d",
+        "parentId" : null,
+        "authorId" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "body" : "This will fail wrt HDFS, without having the parent directory fs.rename won't work. So the partitionPath directory has to be created before renaming it to final location. Please refer SPARK-23815",
+        "createdAt" : "2020-04-25T23:42:16Z",
+        "updatedAt" : "2020-06-18T07:04:58Z",
+        "lastEditedBy" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "717d9a56faf128e4864844cdf6341cb7b8731307",
+    "line" : 88,
+    "diffHunk" : "@@ -1,1 +287,291 @@        val partitionPath = getDynamicPartitionPath(fs, stagingTaskFile, taskContext)\n        val finalFile = new Path(partitionPath, fileName)\n        if (!fs.exists(finalFile) && !fs.rename(stagingTaskFile, finalFile)) {\n          if (fs.exists(finalFile)) {\n            logWarning("
+  },
+  {
+    "id" : "96f168a9-351c-4e9d-b83b-f40cce4916ba",
+    "prId" : 26339,
+    "prUrl" : "https://github.com/apache/spark/pull/26339#pullrequestreview-400470194",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f96bceab-1e60-4a25-8410-c095b68d9879",
+        "parentId" : null,
+        "authorId" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "body" : "if rename failed shouldn't we wrap and propagate that exception? Like permission denied etc.",
+        "createdAt" : "2020-04-26T05:50:55Z",
+        "updatedAt" : "2020-06-18T07:04:58Z",
+        "lastEditedBy" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6853528a-5e83-452b-af81-5a49744be533",
+        "parentId" : "f96bceab-1e60-4a25-8410-c095b68d9879",
+        "authorId" : "b6393788-12cc-4066-9294-857f4baec092",
+        "body" : "I think it is not necessary, it would be wrapped as a `SparkException`.",
+        "createdAt" : "2020-04-26T07:34:44Z",
+        "updatedAt" : "2020-06-18T07:04:58Z",
+        "lastEditedBy" : "b6393788-12cc-4066-9294-857f4baec092",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "717d9a56faf128e4864844cdf6341cb7b8731307",
+    "line" : 96,
+    "diffHunk" : "@@ -1,1 +295,299 @@              \"\"\".stripMargin)\n          } else {\n            throw new IOException(s\"Failed to rename $stagingTaskFile to $finalFile\")\n          }\n        }"
+  },
+  {
+    "id" : "3162fd2d-b09d-4b4c-9bd3-a40bf970ff03",
+    "prId" : 26339,
+    "prUrl" : "https://github.com/apache/spark/pull/26339#pullrequestreview-401501667",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "073800f4-37bb-4d62-8f1b-4c9a028a431d",
+        "parentId" : null,
+        "authorId" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "body" : "@turboFei It seems even with outputCoordinatorEnabled, there are cases with speculation where the other task also tries to commit and fails with IOException because the finalFile already exists. I think this needs to be fixed. committer.needsTaskCommit is turning out to be false in those cases I think. I don't think throwing IOException is fine here.",
+        "createdAt" : "2020-04-28T01:24:49Z",
+        "updatedAt" : "2020-06-18T07:04:58Z",
+        "lastEditedBy" : "4da55a4a-8a34-454a-9445-fb8101f62652",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "78363d55-b8a6-428d-843d-c5b212edfa1c",
+        "parentId" : "073800f4-37bb-4d62-8f1b-4c9a028a431d",
+        "authorId" : "b6393788-12cc-4066-9294-857f4baec092",
+        "body" : "thanks",
+        "createdAt" : "2020-04-28T01:40:33Z",
+        "updatedAt" : "2020-06-18T07:04:58Z",
+        "lastEditedBy" : "b6393788-12cc-4066-9294-857f4baec092",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ee973d50-627b-4e49-816f-e9ac24b6cf9c",
+        "parentId" : "073800f4-37bb-4d62-8f1b-4c9a028a431d",
+        "authorId" : "b6393788-12cc-4066-9294-857f4baec092",
+        "body" : "I have double checked whether this finalFile exists",
+        "createdAt" : "2020-04-28T05:11:29Z",
+        "updatedAt" : "2020-06-18T07:04:58Z",
+        "lastEditedBy" : "b6393788-12cc-4066-9294-857f4baec092",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "717d9a56faf128e4864844cdf6341cb7b8731307",
+    "line" : 96,
+    "diffHunk" : "@@ -1,1 +295,299 @@              \"\"\".stripMargin)\n          } else {\n            throw new IOException(s\"Failed to rename $stagingTaskFile to $finalFile\")\n          }\n        }"
   }
 ]

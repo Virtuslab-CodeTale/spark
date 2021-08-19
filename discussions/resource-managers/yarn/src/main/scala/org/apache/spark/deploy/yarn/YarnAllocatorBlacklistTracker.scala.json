@@ -20,5 +20,60 @@
     "commit" : "508a7469fb03f98ea5fca1740251487aba1d7358",
     "line" : 6,
     "diffHunk" : "@@ -1,1 +105,109 @@\n  def isAllNodeBlacklisted: Boolean = {\n    if (numClusterNodes <= 0) {\n      logWarning(\"No available nodes reported, please check Resource Manager.\")\n      false"
+  },
+  {
+    "id" : "9cc40e69-3cc0-46bc-ac8f-309f1916249f",
+    "prId" : 26343,
+    "prUrl" : "https://github.com/apache/spark/pull/26343#pullrequestreview-409045214",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7f55e03e-1de0-4d74-8d37-299dc7539e9e",
+        "parentId" : null,
+        "authorId" : "49d9f262-8467-4955-9309-d5e793a4e15e",
+        "body" : "add double check: `numClusterNodes != 0`",
+        "createdAt" : "2020-05-11T10:21:09Z",
+        "updatedAt" : "2020-05-11T10:21:09Z",
+        "lastEditedBy" : "49d9f262-8467-4955-9309-d5e793a4e15e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8981bd19ddd81c2cee8acd7ede76f6c4031d3619",
+    "line" : 47,
+    "diffHunk" : "@@ -1,1 +119,123 @@\n  def isAllNodeBlacklisted: Boolean =\n    numClusterNodes != 0 && currentBlacklistedYarnNodes.size >= numClusterNodes\n\n  private def refreshBlacklistedNodes(): Unit = {"
+  },
+  {
+    "id" : "238b0c92-1fa4-4892-aff9-173ad15602a0",
+    "prId" : 26343,
+    "prUrl" : "https://github.com/apache/spark/pull/26343#pullrequestreview-410783413",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "84359457-d8cb-41da-a097-3a83533b4c86",
+        "parentId" : null,
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "This is still not needed as `refreshYarnNodes()` is used only in one place. \r\nAlthough it would be nice to have a separate member val for the config read `sparkConf.get(YARN_EXCLUDE_NODES).toSet`. We could call it like `configuredExcludeNodes`.\r\n\r\nRegarding `refreshYarnNodes()`my suggestion is get rid of it completely and within `excludeNodes` you could do sth like this (assuming you introduced `configuredExcludeNodes`):\r\n\r\n```scala\r\n  val allCurrentlyAvailableNodes =\r\n    yarnClient.getNodeReports().asScala.map(node => (node.getNodeId.getHost, node.getNodeState)).toMap\r\n  val (existentNodes, nonexistentNodes) =\r\n      configuredExcludeNodes.partition(node => allCurrentlyAvailableNodes.contains(node))\r\n  ...\r\n```\r\n",
+        "createdAt" : "2020-05-13T09:48:57Z",
+        "updatedAt" : "2020-05-13T09:48:57Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "861e4bfd-d331-4565-b43d-5bfffa90f9ae",
+        "parentId" : "84359457-d8cb-41da-a097-3a83533b4c86",
+        "authorId" : "67abdbbd-2c0a-4ae5-9520-742e7853e17f",
+        "body" : "+1 to dropping `refreshYarnNodes()` -- maybe this is paranoid, but it seems like it would add a lot of RPC volume to the active RM if each Spark app were calling it each time it needed to allocate",
+        "createdAt" : "2020-05-13T10:14:18Z",
+        "updatedAt" : "2020-05-13T10:14:18Z",
+        "lastEditedBy" : "67abdbbd-2c0a-4ae5-9520-742e7853e17f",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "8981bd19ddd81c2cee8acd7ede76f6c4031d3619",
+    "line" : 18,
+    "diffHunk" : "@@ -1,1 +53,57 @@  extends Logging {\n\n  private var allNodes = Map.empty[String, NodeState]\n\n  private val blacklistTimeoutMillis = BlacklistTracker.getBlacklistTimeout(sparkConf)"
   }
 ]

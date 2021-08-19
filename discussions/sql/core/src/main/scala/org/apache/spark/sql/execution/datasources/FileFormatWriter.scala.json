@@ -372,5 +372,126 @@
     "commit" : "cfbb49d7155f50bcbe82e436d7db8447aa53d920",
     "line" : 15,
     "diffHunk" : "@@ -1,1 +167,171 @@    // propagate the decription UUID into the jobs, so that committers\n    // get an ID guaranteed to be unique.\n    job.getConfiguration.set(\"spark.sql.sources.writeJobUUID\", description.uuid)\n\n    // This call shouldn't be put into the `try` block below because it only initializes and"
+  },
+  {
+    "id" : "63acb6f7-1ed9-46d2-adc6-4f37ecb406fb",
+    "prId" : 26312,
+    "prUrl" : "https://github.com/apache/spark/pull/26312#pullrequestreview-510540028",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "dbd903be-7618-45df-b4fd-a720798a5f5e",
+        "parentId" : null,
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "Looks like this makes a very strong assumption. It assumes `FileAlreadyExistsException` is thrown from the commit protocol. But `FileAlreadyExistsException` is a very common exception which can be thrown from anywhere. `FileAlreadyExistsException` may be from user codes and the user may want to retry.",
+        "createdAt" : "2020-10-16T00:15:41Z",
+        "updatedAt" : "2020-10-16T00:30:26Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "476435fd-a9e2-460c-b41a-efadb0863ded",
+        "parentId" : "dbd903be-7618-45df-b4fd-a720798a5f5e",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "If users really want to retry, I believe it is to catch `FileAlreadyExistsException` and do retry in user code with changing filename, instead of relying on Spark to retry it.\r\n\r\nTo rely on Spark's task attempt for file writing retry? It is unreliable and task failure can have many reasons not just file already existing.\r\n",
+        "createdAt" : "2020-10-16T00:53:29Z",
+        "updatedAt" : "2020-10-16T00:53:29Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9f3726da-4d74-48df-ae50-720fca9740b3",
+        "parentId" : "dbd903be-7618-45df-b4fd-a720798a5f5e",
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "> If users really want to retry, I believe it is to catch `FileAlreadyExistsException` and do retry in user code with changing filename, instead of relying on Spark to retry it.\r\n\r\nThis applies to any other exceptions as well. Of cause, users can retry. But since Spark provides task retry, users may have a rare race that can cause `FileAlreadyExistsException` and decide to reply on Spark task retry to handle it. In addition, some users may just call a library or a service that they cannot make changes.\r\n\r\nMoreover, this is a behavior change and it may break user applications relying on task retry for `FileAlreadyExistsException`. But it's documented.\r\n\r\nIIUC, this PR seems just trying to fail fast when hitting `FileAlreadyExistsException` in some rare case ( SPARK-27194 ). Please correct me if I'm wrong. If so, it's not worth to make a behavior change in my opinion.\r\n",
+        "createdAt" : "2020-10-16T01:49:35Z",
+        "updatedAt" : "2020-10-16T01:49:35Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "20560ef5-66c6-46d3-9676-fcd018848bc2",
+        "parentId" : "dbd903be-7618-45df-b4fd-a720798a5f5e",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "It is not a rare case actually. We had customer encountered this issue in production jobs occasionally. There are also other people reporting this issue. It is remarkable because this `FileAlreadyExistsException` cannot be handled by user code. It is happened internally in Spark, and users have no way to deal with it. Image your production jobs fail after 10+ hours because of `FileAlreadyExistsException`. I believe it is worth failing fast the production jobs.\r\n\r\nIt sounds really unreliable to rely on retry to handle a rare race that causes `FileAlreadyExistsException`. What if later attempts cannot success too? Seems to me a production job won't rely on that and needs address this issue seriously. In most of cases this can be handled by catching `FileAlreadyExistsException` and retrying. In rare case if any, there is rare race that can cause `FileAlreadyExistsException`  and it cannot make change? It sounds pretty rare to me, and even if it is really happens we can retry the call of the library/service to solve it, so I'm not sure if we should sacrifice the cases seen in production for a rare case.\r\n\r\n\r\n\r\n",
+        "createdAt" : "2020-10-16T03:18:53Z",
+        "updatedAt" : "2020-10-16T03:18:53Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "403d2de8-2766-496d-8373-86184d35d0ff",
+        "parentId" : "dbd903be-7618-45df-b4fd-a720798a5f5e",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Makes sense to me. @viirya can we throw a spark specific exception for commit protocol errors and catch it here?",
+        "createdAt" : "2020-10-16T03:28:36Z",
+        "updatedAt" : "2020-10-16T03:28:36Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3145269e-fa0c-4c1f-827b-01a986226bdf",
+        "parentId" : "dbd903be-7618-45df-b4fd-a720798a5f5e",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "@cloud-fan Sure. Will submit a PR.",
+        "createdAt" : "2020-10-16T03:30:45Z",
+        "updatedAt" : "2020-10-16T03:30:45Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f26b707c-1af5-4bc6-8ac0-c38381df153a",
+        "parentId" : "dbd903be-7618-45df-b4fd-a720798a5f5e",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Created SPARK-33167 and will submit a PR in next days. Thanks.",
+        "createdAt" : "2020-10-16T03:36:41Z",
+        "updatedAt" : "2020-10-16T03:36:42Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "77eb8be9-b4e4-4445-9e71-ab3a9a43fa1d",
+        "parentId" : "dbd903be-7618-45df-b4fd-a720798a5f5e",
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "If SPARK-27194 is not rare, it sounds a serious bug. Can we focus on fixing SPARK-27194 instead? Maybe speed up the review for #29000? If SPARK-27194 is resolved, we won't need this hack. Right? In addition, it's weird that FileFormatWriter needs to understand the behavior of `SQLHadoopMapReduceCommitProtocol`. It would be great if we can avoid leaking the implementation details of a commit protocol to `FileFormatWriter`.\r\n\r\nRegarding user cases, I have seen multiple customers hitting recoverable `FileAlreadyExistsException` caused by https://issues.apache.org/jira/browse/HADOOP-17015 . But they could not upgrade the their Hadoop version. It's much harder to upgrade Hadoop than Spark. This change makes their jobs fail occasionally after upgrading to Spark 3.0 because Spark doesn't retry `FileAlreadyExistsException`. And like what you said, the user cannot change Spark's behavior to retry `FileAlreadyExistsException`. Their jobs should have been finished but because Spark didn't retry, they wasted hours of work.\r\n\r\nThrowing spark specific exception for commit protocol errors cannot resolve this because the issue is in the underlying FileSystem implementation called by Spark directly.\r\n\r\nIMO, we need to make the tradeoff between:\r\n\r\n- Make a job successful if we retry `FileAlreadyExistsException`, but a failed job may take more time to fail.\r\n- Make a job fail when it should have been successful if we retried `FileAlreadyExistsException`, but make a failed job fail fast.\r\n\r\nI prefer the first one as we can make more jobs successful and the behavior is the same as before.",
+        "createdAt" : "2020-10-16T04:56:50Z",
+        "updatedAt" : "2020-10-16T04:58:40Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "796a342b-8aed-422e-869f-02348f446184",
+        "parentId" : "dbd903be-7618-45df-b4fd-a720798a5f5e",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "I see. Thanks for the details. We have different standpoints. For your cases the first one option looks a better choice. The customers we had are using HDFS and `FileAlreadyExistsException` isn't recoverable. So the pain point comes from more time spent on a failed job.\r\n\r\nI believe even SPARK-27194 is resolved, fast-fail of a failed job caused by `FileAlreadyExistsException` or maybe other errors if we know they are un-recoverable in advance, is still useful.\r\n\r\nSeems to me there are options, one is to revert this completely, second is to add a config for the fast-fail behavior and set it false by default. I prefer the second one because the reason above, we can relieve the pain of wasting time on failed job if users want.\r\n\r\nWDYT?\r\n\r\n",
+        "createdAt" : "2020-10-16T06:34:22Z",
+        "updatedAt" : "2020-10-16T06:34:22Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "60feed99-25f8-43d3-8635-dcb546fe8780",
+        "parentId" : "dbd903be-7618-45df-b4fd-a720798a5f5e",
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "> second is to add a config for the fast-fail behavior and set it false by default. I prefer the second one because the reason above, we can relieve the pain of wasting time on failed job if users want.\r\n\r\n+1 for this. Thanks a lot for the discussion.\r\n\r\n",
+        "createdAt" : "2020-10-16T14:45:29Z",
+        "updatedAt" : "2020-10-16T14:45:44Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d799c2748590e49cfcbcfa950b281358d6f05e56",
+    "line" : 13,
+    "diffHunk" : "@@ -1,1 +282,286 @@      case e: FetchFailedException =>\n        throw e\n      case f: FileAlreadyExistsException =>\n        // If any output file to write already exists, it does not make sense to re-run this task.\n        // We throw the exception and let Executor throw ExceptionFailure to abort the job."
   }
 ]

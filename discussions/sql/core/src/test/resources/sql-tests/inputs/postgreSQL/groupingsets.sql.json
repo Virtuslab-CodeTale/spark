@@ -1,0 +1,101 @@
+[
+  {
+    "id" : "690db632-9835-47ec-b666-823637e417ef",
+    "prId" : 26352,
+    "prUrl" : "https://github.com/apache/spark/pull/26352#pullrequestreview-311468026",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2b30bfcb-0fda-4ee9-b2ef-32626bc79311",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Does `primary key` affect this query? Otherwise, we can remove `SPARK-19842` here.",
+        "createdAt" : "2019-11-05T01:32:37Z",
+        "updatedAt" : "2019-11-05T02:05:25Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "70b63482-6850-49eb-bc09-578ae519405a",
+        "parentId" : "2b30bfcb-0fda-4ee9-b2ef-32626bc79311",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Yea, that seems to be yes (I didn't know this behaviour though..). Plz see:\r\n```\r\npostgres=# \\d gstest3\r\n              Table \"public.gstest3\"\r\n Column |  Type   | Collation | Nullable | Default \r\n--------+---------+-----------+----------+---------\r\n a      | integer |           |          | \r\n b      | integer |           |          | \r\n c      | integer |           |          | \r\n d      | integer |           |          | \r\n\r\npostgres=# select a, d, grouping(a,b,c) from gstest3 group by grouping sets ((a,b), (a,c));\r\nERROR:  column \"gstest3.d\" must appear in the GROUP BY clause or be used in an aggregate function\r\nLINE 1: select a, d, grouping(a,b,c) from gstest3 group by grouping ...\r\n                  ^\r\npostgres=# alter table gstest3 add primary key (a);\r\nALTER TABLE\r\n\r\npostgres=# select a, d, grouping(a,b,c) from gstest3 group by grouping sets ((a,b), (a,c));\r\n a | d | grouping \r\n---+---+----------\r\n 1 | 1 |        1\r\n 2 | 2 |        1\r\n 1 | 1 |        2\r\n 2 | 2 |        2\r\n(4 rows)\r\n```",
+        "createdAt" : "2019-11-05T01:58:25Z",
+        "updatedAt" : "2019-11-05T02:05:25Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "20da5269-e8d6-4cc1-9682-15776740caad",
+        "parentId" : "2b30bfcb-0fda-4ee9-b2ef-32626bc79311",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "`[SPARK-29702]` might include the issue in `[SPARK-19842]`, so `removing [SPARK-19842]` is ok to me.",
+        "createdAt" : "2019-11-05T01:59:43Z",
+        "updatedAt" : "2019-11-05T02:05:25Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0959f1ed-8399-4c99-b9b6-b9d604da113a",
+        "parentId" : "2b30bfcb-0fda-4ee9-b2ef-32626bc79311",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Got it. No problem. Let's keep it.",
+        "createdAt" : "2019-11-05T02:06:26Z",
+        "updatedAt" : "2019-11-05T02:06:26Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "514d336e-be65-4b4e-b3f3-8b7ff89b90b4",
+        "parentId" : "2b30bfcb-0fda-4ee9-b2ef-32626bc79311",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "ok, thanks for the quick response!",
+        "createdAt" : "2019-11-05T02:07:42Z",
+        "updatedAt" : "2019-11-05T02:07:42Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d7f6909613631b4ea3dfa62a172a9565a213c4ce",
+    "line" : 192,
+    "diffHunk" : "@@ -1,1 +190,194 @@-- check that functionally dependent cols are not nulled\n-- [SPARK-29698] Support grouping function with multiple arguments\n-- [SPARK-19842] Informational Referential Integrity Constraints Support in Spark\n-- [SPARK-29702] Resolve group-by columns with functional dependencies\n-- select a, d, grouping(a,b,c)"
+  },
+  {
+    "id" : "a86317ab-d52d-4a46-9015-940c71409b76",
+    "prId" : 26352,
+    "prUrl" : "https://github.com/apache/spark/pull/26352#pullrequestreview-311467277",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a0ae5970-f6dd-44e7-9431-78c8551e2f8f",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "The reason I asked is that `SPARK-29698` affects line 400 here, too. So, the indentation might be misleading.",
+        "createdAt" : "2019-11-05T01:47:02Z",
+        "updatedAt" : "2019-11-05T02:05:25Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a9a40850-8ab5-4c0a-a79e-07b3219c9551",
+        "parentId" : "a0ae5970-f6dd-44e7-9431-78c8551e2f8f",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Ur, I see. I think so. Thanks!",
+        "createdAt" : "2019-11-05T02:04:12Z",
+        "updatedAt" : "2019-11-05T02:05:25Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d7f6909613631b4ea3dfa62a172a9565a213c4ce",
+    "line" : 400,
+    "diffHunk" : "@@ -1,1 +398,402 @@       count(*), sum(v)\n  from gstest4 group by grouping sets ((unhashable_col),(unsortable_col))\n order by 3, 4, 6 /* 3, 5 */;\n-- explain (costs off)\n--   select unhashable_col, unsortable_col,"
+  }
+]

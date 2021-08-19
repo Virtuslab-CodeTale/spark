@@ -218,5 +218,60 @@
     "commit" : "7fcee0cac5a093481a8740aabda9dd5083bbdaf4",
     "line" : 73,
     "diffHunk" : "@@ -1,1 +78,82 @@   *                                  table schema/partitioning.\n   */\n  Table getTable(\n      StructType schema,\n      Transform[] partitioning,"
+  },
+  {
+    "id" : "7b7317c1-6686-4dad-9a9e-376c5e646506",
+    "prId" : 26297,
+    "prUrl" : "https://github.com/apache/spark/pull/26297#pullrequestreview-316651596",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f80f2c33-6c7b-4555-b9a0-65d0f623bedd",
+        "parentId" : null,
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "I don't think the schema is actually needed. Partitioning and schemas are mostly orthogonal. If anything, you could argue that identity partitions should be in the schema and that `inferSchema` could accept the result of `inferPartitioning`.\r\n\r\nAlso, none of the implementations actually use it besides the one that uses it to create a file index. It seems to me like this is more of a convenience for that implementation than something that is generally needed. Can we remove it from the API?",
+        "createdAt" : "2019-11-01T22:51:52Z",
+        "updatedAt" : "2019-11-27T16:28:24Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b9cc4d47-f159-4883-bd0c-060a131fcf29",
+        "parentId" : "f80f2c33-6c7b-4555-b9a0-65d0f623bedd",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "We can remove the schema parameter and make the API more flexible, but I'm not sure we need such flexibility.\r\n\r\nAs I mentioned in the PR description, Spark only supports\r\n1) infer both schema and partitioning.\r\n2) specifies schema and infer partitioning.\r\n3) specifies both schema and partitioning.\r\n\r\nIt seems very weird if we allow users to specify partitioning and infer schema. Since partitioning is something depending on the schema (e.g. you can't pick a non-existing column as partition column), I think in general it makes sense to have the schema parameter in `inferPartitioning`.",
+        "createdAt" : "2019-11-04T08:16:45Z",
+        "updatedAt" : "2019-11-27T16:28:24Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9ca75567-a266-4d92-af05-bd1a0c2c88e5",
+        "parentId" : "f80f2c33-6c7b-4555-b9a0-65d0f623bedd",
+        "authorId" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "body" : "We've also had bugs in the past where the inference picks a different data type than what you want, therefore it's safer that if a user provides a schema to use the data type in the provided schema for the partition columns",
+        "createdAt" : "2019-11-06T19:51:55Z",
+        "updatedAt" : "2019-11-27T16:28:24Z",
+        "lastEditedBy" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b1c76973-e599-463b-9895-9ad1432d5897",
+        "parentId" : "f80f2c33-6c7b-4555-b9a0-65d0f623bedd",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "> It seems very weird if we allow users to specify partitioning and infer schema.\r\n\r\nThis isn't what I'm suggesting. We can set up rules for when schema and partition inference are called that restrict to just those 3 cases.\r\n\r\nWhat I'm suggesting is that schema inference and partition inference are independent so we don't need to pass a schema in to `inferPartition`. The schema isn't actually used by file sources, and file sources are why we are making these changes.\r\n\r\n> you can't pick a non-existing column as partition column\r\n\r\nThere's no reason why this must be the case. Another partition column could be added to the schema. Data files don't usually store partition columns, so the schema is usually the union of all file schemas plus whatever is inferred for the partition schema. That means schema depends on partitioning, not the other way around.\r\n\r\n> We've also had bugs in the past where the inference picks a different data type than what you want.\r\n\r\nI see what you mean here, but I think is better to reconcile the differences in Spark instead of in the source. If the source infers that a partition is a string, but the user supplies a schema with an integer type, then all the source would do is throw an exception. Spark can do that once the partitioning is passed back, couldn't it?",
+        "createdAt" : "2019-11-14T00:42:52Z",
+        "updatedAt" : "2019-11-27T16:28:24Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "95b62b6dd5a0c58b001f3faddd8527858bbc792c",
+    "line" : 43,
+    "diffHunk" : "@@ -1,1 +55,59 @@   *                It's an immutable case-insensitive string-to-string map.\n   */\n  Transform[] inferPartitioning(StructType schema, CaseInsensitiveStringMap options);\n\n  /**"
   }
 ]
