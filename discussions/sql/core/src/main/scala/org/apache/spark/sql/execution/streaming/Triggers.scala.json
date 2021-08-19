@@ -1,0 +1,46 @@
+[
+  {
+    "id" : "71644080-08a9-4c62-914b-1612c4f8a063",
+    "prId" : 26177,
+    "prUrl" : "https://github.com/apache/spark/pull/26177#pullrequestreview-308095027",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "748a6a68-5b1f-42ff-b4d9-3e30e338d7ea",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "This seems like another way of converting interval to duration: make sure the `months` field is 0. Shall we also take it into account in the new `getDuration` method?",
+        "createdAt" : "2019-10-28T17:00:12Z",
+        "updatedAt" : "2019-10-29T18:56:41Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8d1c2887-28a3-46e7-b9b1-ea3c852d79a4",
+        "parentId" : "748a6a68-5b1f-42ff-b4d9-3e30e338d7ea",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "We can change `getDuration()` to:\r\n```scala\r\n  def getDuration(\r\n      interval: CalendarInterval,\r\n      targetUnit: TimeUnit,\r\n      daysPerMonth: Option[Int] = Some(31)): Long = {\r\n    val monthsDuration = daysPerMonth\r\n      .map { days =>\r\n        Math.multiplyExact(days * DateTimeUtils.MICROS_PER_DAY, interval.months)\r\n      }.getOrElse {\r\n        if (interval.months == 0) {\r\n          0L\r\n        } else {\r\n          throw new IllegalArgumentException(s\"Doesn't support month or year interval: $interval\")\r\n        }\r\n      }\r\n    val result = Math.addExact(interval.microseconds, monthsDuration)\r\n    targetUnit.convert(result, TimeUnit.MICROSECONDS)\r\n  }\r\n```\r\nand call `getDuration(cal, TimeUnit.MILLISECONDS, None)`",
+        "createdAt" : "2019-10-28T18:26:39Z",
+        "updatedAt" : "2019-10-29T18:56:41Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "683263e6-f9c3-4fa5-bfdb-fa6a7dccc348",
+        "parentId" : "748a6a68-5b1f-42ff-b4d9-3e30e338d7ea",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "but I am not sure that this check should be inside of `getDuration()`",
+        "createdAt" : "2019-10-28T19:29:57Z",
+        "updatedAt" : "2019-10-29T18:56:41Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "edad25e70cb07319acc4235b603fc5cd16ed2433",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +32,36 @@  def convert(interval: String): Long = {\n    val cal = IntervalUtils.fromString(interval)\n    if (cal.months != 0) {\n      throw new IllegalArgumentException(s\"Doesn't support month or year interval: $interval\")\n    }"
+  }
+]

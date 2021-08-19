@@ -273,5 +273,115 @@
     "commit" : "a26dd2b38a4ca3a6c27732efa591a9e06fc4dc34",
     "line" : 15,
     "diffHunk" : "@@ -1,1 +377,381 @@\n  private def prepareLogLevel(): Unit = {\n    val debugClasses = sqlContext.conf.debugClasses()\n    if (debugClasses == null || debugClasses == \"\") {\n      SparkUtils.restoreLogLevel()"
+  },
+  {
+    "id" : "7af1bbbf-eb83-45be-aecb-5ecda8b5d63f",
+    "prId" : 26141,
+    "prUrl" : "https://github.com/apache/spark/pull/26141#pullrequestreview-397295255",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4994f32f-aadc-4ad2-8a64-914c93ac3a4e",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "do we need to set it back?",
+        "createdAt" : "2020-01-06T05:29:38Z",
+        "updatedAt" : "2020-04-29T05:08:09Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6e74000e-bbfa-45f4-bf90-6507c7a634dc",
+        "parentId" : "4994f32f-aadc-4ad2-8a64-914c93ac3a4e",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> do we need to set it back?\r\n\r\nNo need, in our env, just changed like this works fine. if we set it back after `execute()`, \r\nmay have problem when re-compute.\r\n\r\nThis class loader is not used in thrift server side code. \r\nin `hive` about module, use `executionHiveClassLoader ` is also reasonable.",
+        "createdAt" : "2020-01-06T06:14:25Z",
+        "updatedAt" : "2020-04-29T05:08:09Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bd92a7f2-eb05-42ab-83f5-fecdb1f53b71",
+        "parentId" : "4994f32f-aadc-4ad2-8a64-914c93ac3a4e",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "\"about module\"?",
+        "createdAt" : "2020-04-21T11:30:30Z",
+        "updatedAt" : "2020-04-29T05:08:09Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "93e26e7e-ef46-4aad-9c3a-0aaf1725ec68",
+        "parentId" : "4994f32f-aadc-4ad2-8a64-914c93ac3a4e",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> \"about module\"?\r\n\r\nemmmm, module about hive..",
+        "createdAt" : "2020-04-21T12:49:06Z",
+        "updatedAt" : "2020-04-29T05:08:09Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "baa9f0602e0d5fed526cef59eb7936b676d869a6",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +277,281 @@      // Always set the session state classloader to `executionHiveClassLoader` even for sync mode\n      if (!runInBackground) {\n        parentSession.getSessionState.getConf.setClassLoader(executionHiveClassLoader)\n      }\n"
+  },
+  {
+    "id" : "70ff59a7-b728-4b13-8664-a35eb528e49b",
+    "prId" : 26141,
+    "prUrl" : "https://github.com/apache/spark/pull/26141#pullrequestreview-397296849",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "04eda80d-7599-45c7-ac7e-d642906ce96e",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Even in sync mode, we don't use the classloader of the current thread?",
+        "createdAt" : "2020-04-21T11:27:58Z",
+        "updatedAt" : "2020-04-29T05:08:09Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6e7b3cfe-98cd-4103-8cbd-19f4ff9665f7",
+        "parentId" : "04eda80d-7599-45c7-ac7e-d642906ce96e",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "> Even in sync mode, we don't use the classloader of the current thread?\r\n\r\nIn code I mentioned in description, it will use SessionState's HiveConf's ClassLoader.\r\nThat's the problem, when it execute in background thread, it will use HiveClientImpl 's SessionState, and the corresponding classLoader is `executionHiveClassLoader`",
+        "createdAt" : "2020-04-21T12:51:06Z",
+        "updatedAt" : "2020-04-29T05:08:09Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "baa9f0602e0d5fed526cef59eb7936b676d869a6",
+    "line" : 2,
+    "diffHunk" : "@@ -1,1 +273,277 @@      // Always use the latest class loader provided by executionHive's state.\n      val executionHiveClassLoader = sqlContext.sharedState.jarClassLoader\n      Thread.currentThread().setContextClassLoader(executionHiveClassLoader)\n\n      // Always set the session state classloader to `executionHiveClassLoader` even for sync mode"
+  },
+  {
+    "id" : "bd89106c-31cd-40c6-b04e-a0081ef666ce",
+    "prId" : 26141,
+    "prUrl" : "https://github.com/apache/spark/pull/26141#pullrequestreview-399674043",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "bb303f51-68f5-4678-bf10-61419f1a6df7",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Can we add a comment?\r\n```\r\n// Always set the session state classloader to `executionHiveClassLoader` even for sync mode\r\n```",
+        "createdAt" : "2020-04-24T06:34:04Z",
+        "updatedAt" : "2020-04-29T05:08:09Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "baa9f0602e0d5fed526cef59eb7936b676d869a6",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +276,280 @@\n      // Always set the session state classloader to `executionHiveClassLoader` even for sync mode\n      if (!runInBackground) {\n        parentSession.getSessionState.getConf.setClassLoader(executionHiveClassLoader)\n      }"
   }
 ]

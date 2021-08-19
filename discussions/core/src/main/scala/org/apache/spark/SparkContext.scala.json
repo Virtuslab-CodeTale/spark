@@ -1461,5 +1461,82 @@
     "commit" : "a26dd2b38a4ca3a6c27732efa591a9e06fc4dc34",
     "line" : 4,
     "diffHunk" : "@@ -1,1 +381,385 @@  }\n\n  def setLogLevel(logLevel: String, className: String): Unit = {\n    // let's allow lowercase or mixed case too\n    val upperCased = logLevel.toUpperCase(Locale.ROOT)"
+  },
+  {
+    "id" : "e7b924fb-fe19-44f4-b3ed-3e7ebbd90ee5",
+    "prId" : 26170,
+    "prUrl" : "https://github.com/apache/spark/pull/26170#pullrequestreview-307848802",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8ae1bb75-1445-4d11-8386-71e4604b82a8",
+        "parentId" : null,
+        "authorId" : "acf5aefc-4c46-451e-a28d-492ceaffd160",
+        "body" : "There are obvious advantages to initialize the driver plugin at this early stage, however this is not an ideal point for registering metrics (for those plugins that want to do so), as the metrics source should ideally be registered with _env.metricsSystem which is only started at later point, after the task scheduler has been started. As it is now, driver plugin metrics do not get the application id, so they are difficult to consume. \r\nHow about, for example, splitting the driver plugin code, so that the metrics registration part (if any is needed) can take advantage of registering with env.metricsSystem.registerSource(...)?",
+        "createdAt" : "2019-10-24T20:40:40Z",
+        "updatedAt" : "2019-10-29T16:43:10Z",
+        "lastEditedBy" : "acf5aefc-4c46-451e-a28d-492ceaffd160",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "67789a97-acc5-42e7-8f93-74c67cd5f725",
+        "parentId" : "8ae1bb75-1445-4d11-8386-71e4604b82a8",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "I can take another look, but I'm 99% sure that when I tried `registerSource` after the metrics system had already been initialized, the metrics were not being picked up by `ConsoleSink`.\r\n\r\nMaybe it's a bug in that particular sink, but I didn't investigate that far.",
+        "createdAt" : "2019-10-24T20:43:59Z",
+        "updatedAt" : "2019-10-29T16:43:10Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ee71a83f-a8ae-4eb5-b3ae-55c9f1e5cea5",
+        "parentId" : "8ae1bb75-1445-4d11-8386-71e4604b82a8",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Also, if you really want to, you can register metrics later. Just install a listener and wait for the \"application start\" event. (You just need at least a dummy metric registered here, or your source won't be initialized. But that can be fixed easily.)",
+        "createdAt" : "2019-10-24T20:45:41Z",
+        "updatedAt" : "2019-10-29T16:43:10Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7d26ef6d-8bf1-43ca-bcaf-94c4c8e89a08",
+        "parentId" : "8ae1bb75-1445-4d11-8386-71e4604b82a8",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "I'll just move the conversation back here because github doesn't have top-level threads and that's annoying.\r\n\r\n> Just to clarify, I was thinking about registering the plugin source in the driver somewhere \"near\" to what was done in #23838\r\n\r\nThat has the problem I ran into - that's done after `metricsSystem.start()` is called, but in my case metrics added after that were not showing up in `ConsoleSink`.\r\n\r\nAnd the thing is, I can't just move the metrics registration to that spot. I'd have to move all plugin initialization to that spot, otherwise there's no place where the plugin can initialize the metrics before the registration. And I can't move the plugin initialization to that spot, because then I can't send the plugin data to executors via config. I could use RPCs for that but it would slow down executor startup unnecessarily.\r\n\r\nSo, ignoring the `ConsoleSink` issue, I still think my suggestion is better: if you need to initialize your metrics later, then use a listener that is installed from your plugin's init method.\r\n\r\nI can change the code to allow for this late initialization, so you don't have to add a dummy metric in the plugin's init.",
+        "createdAt" : "2019-10-24T21:13:35Z",
+        "updatedAt" : "2019-10-29T16:43:10Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5056527e-eb13-4109-9c81-2f5fff95bc1d",
+        "parentId" : "8ae1bb75-1445-4d11-8386-71e4604b82a8",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Ok, here's what happens. If you add a metric to the registry after you register it as a source, those metrics don't show up. At least not in `ConsoleSink`. So it's ok to register the source at the point you mention as long as all metrics have been registered before then.\r\n\r\nI'll add a new method to the driver plugins for explicitly registering metrics; that way initialization can happen early, and metrics initialization later. It diverges a bit from the executor API, but I don't see a much better alternative. To be able to register plugin RPC endpoints before executors are up, initialization needs to happen early.\r\n\r\n(That also avoids a warning from the metrics system in the output when you register a source before an app ID is known.)",
+        "createdAt" : "2019-10-24T21:50:19Z",
+        "updatedAt" : "2019-10-29T16:43:10Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9243a126-868b-4d70-aec8-d0afc253f600",
+        "parentId" : "8ae1bb75-1445-4d11-8386-71e4604b82a8",
+        "authorId" : "acf5aefc-4c46-451e-a28d-492ceaffd160",
+        "body" : "I have just tested it and it works for me. Thanks for the work and explanation.",
+        "createdAt" : "2019-10-28T13:34:46Z",
+        "updatedAt" : "2019-10-29T16:43:10Z",
+        "lastEditedBy" : "acf5aefc-4c46-451e-a28d-492ceaffd160",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "37ad680ec33ec6afac9d031897a549321e782d9c",
+    "line" : 21,
+    "diffHunk" : "@@ -1,1 +543,547 @@\n    // Initialize any plugins before the task scheduler is initialized.\n    _plugins = PluginContainer(this)\n\n    // Create and start the scheduler"
   }
 ]

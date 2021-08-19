@@ -1197,5 +1197,104 @@
     "commit" : "c10f28896b20e124532aa36d586a23d2c7bc2810",
     "line" : 13,
     "diffHunk" : "@@ -1,1 +1787,1791 @@  }\n\n  test(\"global temp view should not be masked by v2 catalog\") {\n    val globalTempDB = spark.sessionState.conf.getConf(StaticSQLConf.GLOBAL_TEMP_DATABASE)\n    spark.conf.set(s\"spark.sql.catalog.$globalTempDB\", classOf[InMemoryTableCatalog].getName)"
+  },
+  {
+    "id" : "8feadb5c-8cdc-4ef5-81aa-e1bd09d5bf9b",
+    "prId" : 26183,
+    "prUrl" : "https://github.com/apache/spark/pull/26183#pullrequestreview-305353919",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8eccde02-11cd-46a1-bada-2b69bd3a8316",
+        "parentId" : null,
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "Any suggestion for a reasonable test here?\r\n\r\n`ALTER TABLE` doesn't require `REFRESH TABLE` in the following existing test, correct?\r\n```Scala\r\n      sql(s\"CREATE TABLE $t (id int, data string) USING $v2Format\")\r\n      sql(s\"ALTER TABLE $t DROP COLUMN data\")\r\n      val table = getTableMetadata(t) // <- this calls TableCatalog.loadTable\r\n```",
+        "createdAt" : "2019-10-22T05:07:28Z",
+        "updatedAt" : "2019-10-23T04:30:46Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7a95500f-00f2-4fc9-a89d-236dd5b4eae9",
+        "parentId" : "8eccde02-11cd-46a1-bada-2b69bd3a8316",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I think a reasonable test is to create a custom v2 implementation which implements `invalidateTable`.",
+        "createdAt" : "2019-10-22T10:54:35Z",
+        "updatedAt" : "2019-10-23T04:30:46Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8007bf38-4612-4c1c-9a56-6af522c38838",
+        "parentId" : "8eccde02-11cd-46a1-bada-2b69bd3a8316",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "We can implement `InMemoryTable.invalidateTable` which simply set a flag on a global object to indicate it has been called.",
+        "createdAt" : "2019-10-22T15:25:58Z",
+        "updatedAt" : "2019-10-23T04:30:46Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f87f708c-d9cc-4d91-b1bc-503b22bbbf2c",
+        "parentId" : "8eccde02-11cd-46a1-bada-2b69bd3a8316",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "Thanks for the suggestion! Exactly what I was planning to do. :)",
+        "createdAt" : "2019-10-22T16:44:57Z",
+        "updatedAt" : "2019-10-23T04:30:46Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "31bfc6f5098701b70a95ac3dd4fc5b3c2ecbdee0",
+    "line" : 13,
+    "diffHunk" : "@@ -1,1 +1122,1126 @@\n      assert(!testCatalog.isTableInvalidated(identifier))\n      sql(s\"REFRESH TABLE $t\")\n      assert(testCatalog.isTableInvalidated(identifier))\n    }"
+  },
+  {
+    "id" : "0b784207-e40c-414f-9b6a-cbe3a39d38c2",
+    "prId" : 26182,
+    "prUrl" : "https://github.com/apache/spark/pull/26182#pullrequestreview-307580815",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "80a63e34-21bd-40f0-83f9-99aa3cb9234a",
+        "parentId" : null,
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "nit: can we move this above `testV1Command` to group v1 command tests together?",
+        "createdAt" : "2019-10-27T16:15:41Z",
+        "updatedAt" : "2019-10-30T18:05:23Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5365243ee4ff41ec244d975745b0fce272a65b81",
+    "line" : 4,
+    "diffHunk" : "@@ -1,1 +1359,1363 @@  }\n\n  test(\"SHOW COLUMNS\") {\n    val t = \"testcat.ns1.ns2.tbl\"\n    withTable(t) {"
+  },
+  {
+    "id" : "9cf8965f-f2a3-482c-a430-30f4e583db01",
+    "prId" : 26166,
+    "prUrl" : "https://github.com/apache/spark/pull/26166#pullrequestreview-303988448",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "72644e9e-5d0f-4e01-9403-47a645b7ad9f",
+        "parentId" : null,
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "I will create a JIRA for this and follow up.",
+        "createdAt" : "2019-10-18T16:02:09Z",
+        "updatedAt" : "2019-10-22T23:23:37Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f7fa8ed72143991522653c49da685a1ace15d057",
+    "line" : 23,
+    "diffHunk" : "@@ -1,1 +775,779 @@    testShowNamespaces(\"SHOW NAMESPACES IN testcat.ns1\", Seq(\"ns1.ns2\"))\n\n    // TODO: Add tests for validating namespace metadata when DESCRIBE NAMESPACE is available.\n  }\n"
   }
 ]

@@ -460,5 +460,126 @@
     "commit" : "f46e08defb724b3df1ea09c19d957dd9195645f0",
     "line" : 15,
     "diffHunk" : "@@ -1,1 +163,167 @@      append(\"\\n\")\n    } catch {\n      case _: AnalysisException =>\n    }\n    QueryPlan.append(analyzed, append, verbose, addSuffix, maxFields)"
+  },
+  {
+    "id" : "c5f6c973-9b7a-471d-87ae-ac426e5c8a59",
+    "prId" : 26127,
+    "prUrl" : "https://github.com/apache/spark/pull/26127#pullrequestreview-337068642",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c8712bb5-c363-47ca-8747-23c410f28390",
+        "parentId" : null,
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "Based on this PR description, `observedMetrics ` sounds like a public API for end users to use. \r\n\r\nHowever, it conflicts with what we commented above [in toRDD]. QueryExecution is not a public class and we discourage users from calling these internal functions. ",
+        "createdAt" : "2019-12-30T00:19:09Z",
+        "updatedAt" : "2019-12-30T00:21:46Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "116bfbe4-1f5e-4780-ac23-2096ddddda57",
+        "parentId" : "c8712bb5-c363-47ca-8747-23c410f28390",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "I think `queryExecution` is exposed in `Dataset` as an unstable API. I think the comments in the class implies that as well:\r\n\r\n>  \\* The primary workflow for executing relational queries using Spark.  Designed to allow easy\r\n>  \\* access to the intermediate phases of query execution for developers.\r\n>  \\*\r\n>  \\* While this is not a public class, we should avoid changing the function names for the sake of\r\n>  \\* changing them, because a lot of developers use the feature for debugging.\r\n\r\nI agree that using methods in this class here is discouraged though. Maybe we had to mark `Dataset.observe` as an unstable API or developer API too for now if it is difficult to avoid adding and using an API here.",
+        "createdAt" : "2019-12-30T02:19:06Z",
+        "updatedAt" : "2019-12-30T02:19:06Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cf3807a3-48f8-4207-b490-f5c076b45045",
+        "parentId" : "c8712bb5-c363-47ca-8747-23c410f28390",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Technically, QueryExecution should be public class, as two methods in QueryExecutionListener are marked as `@DeveloperApi` and the signature of methods contain QueryExecution. If we worry about restriction for modifying QueryException due to being public class, we may need to have other class only for reporting to QueryExecutionListener.",
+        "createdAt" : "2019-12-30T02:19:42Z",
+        "updatedAt" : "2019-12-30T02:19:42Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "30fb501f-859d-46f8-83d1-df92359cff17",
+        "parentId" : "c8712bb5-c363-47ca-8747-23c410f28390",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "`@DeveloperApi` implies:\r\n\r\n> A lower-level, unstable API intended for developers.\r\n\r\nI agree that It might have to be considered a public class but unstable. I am sure most of methods there are discouraged even for developers to use without knowing exactly what it does.",
+        "createdAt" : "2019-12-30T02:32:52Z",
+        "updatedAt" : "2019-12-30T02:39:35Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4cd069b1-b6f4-4a4b-bd80-823af6549ee1",
+        "parentId" : "c8712bb5-c363-47ca-8747-23c410f28390",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Ah my bad. Thanks for pointing it out. \r\n\r\nThough I still feel listener stuff is more alike public API, as it can be used more than debug purpose. QueryExecutionListener and StreamingQueryListener take different approach, QueryExecutionListener directly exposes low-level internal instance and let end users use with caution, whereas StreamingQueryListener has individual classes which only contain information for report only, not exposing internal one.\r\n\r\nIMHO, I feel StreamingQueryListener is the right way to go, but QueryExecutionListener has been served long ago, so no strong opinion.",
+        "createdAt" : "2019-12-30T02:41:55Z",
+        "updatedAt" : "2019-12-30T02:41:55Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8c2f817e-60f5-48b0-af8f-bb3f227f2d2c",
+        "parentId" : "c8712bb5-c363-47ca-8747-23c410f28390",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Yeah, `StreamingQueryProgress.observedMetrics` with `StreamingQueryListener` seems fine. The problem here looks only `QueryExecution.observedMetrics` with `QueryExecutionListener`, which looks having a contradiction about its stability. It seems it has to be fixed by either avoid adding it to `QueryExecution` or explicitly marking `Dataset.observe` as an unstable API (or developer API).",
+        "createdAt" : "2019-12-30T03:02:02Z",
+        "updatedAt" : "2019-12-30T03:02:03Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f6f74ecc-6fa3-4cf7-adb3-792d8507d263",
+        "parentId" : "c8712bb5-c363-47ca-8747-23c410f28390",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "+1. We should make the batch listener not rely on `QueryExecution`.",
+        "createdAt" : "2019-12-30T03:24:51Z",
+        "updatedAt" : "2019-12-30T03:24:52Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d1899d0c-eb2e-430a-997b-5d70352adfc2",
+        "parentId" : "c8712bb5-c363-47ca-8747-23c410f28390",
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "I am not sure what the issue is?\r\n\r\nBy definition anything in `QueryExecution` is internal, unstable, API. The reason that I added it here is that is a good narrow waist to add this, you want to collect the metrics for the entire query. It is public because most other methods in this class are public; this allows for some clever integrations (for the more adventurous developer) and makes debugging easier.\r\n\r\nThe batch listener is marked as experimental. A developer should be warned when (s)he uses this API for anything (including using it to collect observable metrics). I am not sure how realistic stabilizing the batch listener API is if you include `QueryExecution` (or a stabilized version of it). We could expose a stable callback, e,g. `onObservedMetrics(...)`, for observed metrics. On the other hand is kind of annoying that we can't expose this through the Dataframe itself, and that is because when we execute the Dataframe we often use a different one under the hood.\r\n",
+        "createdAt" : "2019-12-30T10:23:38Z",
+        "updatedAt" : "2019-12-30T10:23:38Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9db6a9cd-babf-4719-9f50-67d0059c085e",
+        "parentId" : "c8712bb5-c363-47ca-8747-23c410f28390",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "The issue is not about this PR itself, but about the bath query listener relying on `QueryExecution` which is not going to be public. I think the streaming query listener is better. It's still unstable now but we are going to make it stable in the future.",
+        "createdAt" : "2019-12-30T10:45:07Z",
+        "updatedAt" : "2019-12-30T10:45:08Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5e3dbbe8-7212-4f9c-8e58-b4731f6b91fd",
+        "parentId" : "c8712bb5-c363-47ca-8747-23c410f28390",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "The batch listener is no longer marked as experimental in 3.0, as there have been some of slight modifications (enough for `@Evolving`) but it doesn't change majorly during 4 years of life - see #25558. If we feel concerned it could be rolled back to Experimental/Unstable, though I know there're couple of projects in Spark ecosystem already leveraging it, and it represents that the possibility is not restricted to the debug purpose.\r\n\r\nThe major feature of batch listener is that (unlikely of streaming query listener which summarizes information and stores into a new data structure) it exposes various plans for both logical/physical, and I don't imagine these plans will be used for execution-purposes. Mostly read-only. It may not unrealistic if we could provide these plans for read-only (cloned, can't execute), but yeah, it may not be easy as it seems (not enough familiar with it).",
+        "createdAt" : "2019-12-30T10:55:36Z",
+        "updatedAt" : "2019-12-30T10:57:19Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a07474c6c6131de1ae487ad96c91deb80cce2f1f",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +108,112 @@\n  /** Get the metrics observed during the execution of the query plan. */\n  def observedMetrics: Map[String, Row] = CollectMetricsExec.collect(executedPlan)\n\n  protected def preparations: Seq[Rule[SparkPlan]] = {"
   }
 ]

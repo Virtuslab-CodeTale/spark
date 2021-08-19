@@ -1,0 +1,112 @@
+[
+  {
+    "id" : "7753d269-62a0-433e-a93d-6a8d12417e89",
+    "prId" : 26173,
+    "prUrl" : "https://github.com/apache/spark/pull/26173#pullrequestreview-304426365",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6d6a2e39-45ed-43f0-ab8b-27bed70dbc83",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "This issue is encountered only when whole stage codegen is disabled?",
+        "createdAt" : "2019-10-21T06:25:55Z",
+        "updatedAt" : "2019-10-23T04:43:35Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9fbdb379-deb5-4fa4-83be-150de1e3157f",
+        "parentId" : "6d6a2e39-45ed-43f0-ab8b-27bed70dbc83",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "At least yes for provided reproducer. For other case I'm not sure.",
+        "createdAt" : "2019-10-21T06:27:28Z",
+        "updatedAt" : "2019-10-23T04:43:35Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0256faef-ccf8-4789-8ae4-704919a003fe",
+        "parentId" : "6d6a2e39-45ed-43f0-ab8b-27bed70dbc83",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "I see. For whole stage codegen, CreateNamedStruct is not converted to CreateNamedStructUnsafe, so the nested struct is not unsafe one. ",
+        "createdAt" : "2019-10-21T07:57:07Z",
+        "updatedAt" : "2019-10-23T04:43:35Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "60953c43-f082-4580-a176-e574ba974fba",
+        "parentId" : "6d6a2e39-45ed-43f0-ab8b-27bed70dbc83",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Ah OK got it. Thanks for explanation.",
+        "createdAt" : "2019-10-21T09:18:00Z",
+        "updatedAt" : "2019-10-23T04:43:35Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f10042abe8cd0fdbea4604e57b54e5797279fe93",
+    "line" : 19,
+    "diffHunk" : "@@ -1,1 +71,75 @@\n  test(\"SPARK-29503 nest unsafe struct inside safe array\") {\n    withSQLConf(SQLConf.WHOLESTAGE_CODEGEN_ENABLED.key -> \"false\") {\n      val df = spark.sparkContext.parallelize(Seq(Seq(1, 2, 3))).toDF(\"items\")\n"
+  },
+  {
+    "id" : "d92aefb0-a1fb-4561-91e7-e5cece17605c",
+    "prId" : 26173,
+    "prUrl" : "https://github.com/apache/spark/pull/26173#pullrequestreview-308570231",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ff407c19-6829-4697-8eb1-af2a447c1626",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Hm, while fix seems fine to me too, was this only the reproducer? `MapObjects` is supposed to be internal purpose - it's under catalyst package.",
+        "createdAt" : "2019-10-29T07:01:05Z",
+        "updatedAt" : "2019-10-29T07:01:06Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2edfc6d9-c5d1-414a-95ab-c7f7e335d4ac",
+        "parentId" : "ff407c19-6829-4697-8eb1-af2a447c1626",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "I haven't spent another time to try it (as it seems to be clean and simple reproducer). I'm not sure it's not going to be valid reproducer just due to pulling catalyst package. Catalyst could analyze the query and inject it if necessary in any way.\r\n\r\nI indicated you'd like to revisit #25745 - that was WIP and it didn't have any number of performance gain. I'd rather choose \"safeness\" over \"speed\", and even we haven't figured out there's outstanding difference between twos. It was the only one case MapObjects could have unsafe struct, by allowing this, safe and unsafe are possibly mixed up leading to encounter corner case.",
+        "createdAt" : "2019-10-29T09:31:02Z",
+        "updatedAt" : "2019-10-29T09:31:29Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bc4bd3c2-8eab-40f8-b2d4-baaace991b0e",
+        "parentId" : "ff407c19-6829-4697-8eb1-af2a447c1626",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Yeah, I am not against this change. In that way, I think this fix is fine but wanted to know if this actually affects any user-facing surface.\r\n\r\nWas also wondering if we can benefit from #25745 since some investigations look already made there to completely use unsafe one instead.",
+        "createdAt" : "2019-10-29T09:40:52Z",
+        "updatedAt" : "2019-10-29T09:41:07Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e905f505-903d-41ac-82d1-5bd5b3b2a78a",
+        "parentId" : "ff407c19-6829-4697-8eb1-af2a447c1626",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "My guess of #25745 is, it was based on the assumption that it's safe to replace CreateNamedStruct with CreateNamedStructUnsafe as we already have one path to do this - and this observation broke the assumption. IMHO, once we found it's not safe to do this, the improvement has to prove safety before we take its benefits into account.",
+        "createdAt" : "2019-10-29T14:46:17Z",
+        "updatedAt" : "2019-10-29T14:46:18Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f10042abe8cd0fdbea4604e57b54e5797279fe93",
+    "line" : 25,
+    "diffHunk" : "@@ -1,1 +77,81 @@      val result = df.select(\n        new Column(MapObjects(\n          (item: Expression) => array(struct(new Column(item))).expr,\n          $\"items\".expr,\n          df.schema(\"items\").dataType.asInstanceOf[ArrayType].elementType"
+  }
+]

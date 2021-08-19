@@ -196,5 +196,192 @@
     "commit" : "14871d9d2be6b751687e78dd4d17c2e249b8f205",
     "line" : 17,
     "diffHunk" : "@@ -1,1 +111,115 @@      excludeRowsAlreadyMatched: Boolean = false): Iterator[JoinedRow] = {\n    val numValues = keyToNumValues.get(key)\n    keyWithIndexToValue.getAll(key, numValues).filterNot { keyIdxToValue =>\n      excludeRowsAlreadyMatched && keyIdxToValue.matched\n    }.map { keyIdxToValue =>"
+  },
+  {
+    "id" : "f4aca33a-71cc-46c6-b7a5-a83da60d2d51",
+    "prId" : 26108,
+    "prUrl" : "https://github.com/apache/spark/pull/26108#pullrequestreview-301138278",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ef63630e-df9c-45bd-a667-7ea997028152",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "This is unavoidable refactoring, as we need to deal with both schemas depending on the state format version.\r\nI didn't let inner join use state format version 1 (though it could be one of optimizations), as the inner join query could be changed to outer join which Spark will not be able to determine the change - correctness issue will occur then.",
+        "createdAt" : "2019-10-14T07:32:48Z",
+        "updatedAt" : "2019-11-01T02:28:28Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7213d4266b7bfa2bd05225c68e2184a7abb24469",
+    "line" : 276,
+    "diffHunk" : "@@ -1,1 +450,454 @@  }\n\n  private trait KeyWithIndexToValueRowConverter {\n    def valueAttributes: Seq[Attribute]\n"
+  },
+  {
+    "id" : "dbcdd85e-e81a-4aac-b05d-cd4e826a2a45",
+    "prId" : 26108,
+    "prUrl" : "https://github.com/apache/spark/pull/26108#pullrequestreview-301139538",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9d57d3e5-af55-446b-b45c-bbcafa3e0b55",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Here `matched` also has a default value for state format version 1 - the main version of state format version is 2, so focused to optimize for state format version 2. (`Option[Boolean] vs Boolean`) The value is not used in caller if the state format version is 1, so I think this is OK.",
+        "createdAt" : "2019-10-14T07:36:22Z",
+        "updatedAt" : "2019-11-01T02:28:28Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7213d4266b7bfa2bd05225c68e2184a7abb24469",
+    "line" : 243,
+    "diffHunk" : "@@ -1,1 +419,423 @@    var valueIndex: Long = -1,\n    var value: UnsafeRow = null,\n    var matched: Boolean = false) {\n\n    def withNew("
+  },
+  {
+    "id" : "19885b50-036a-4993-b3a1-0fa9664b8da0",
+    "prId" : 26108,
+    "prUrl" : "https://github.com/apache/spark/pull/26108#pullrequestreview-307426918",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c873dd76-fa36-4735-9a90-943eccb06cc5",
+        "parentId" : null,
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "It would be good to just reference the same values as the config entry.\r\n\r\nIn fact, since the config is internal, you could probably just drop the check there, and rely on the checks in this code to make sure the version if correct.",
+        "createdAt" : "2019-10-24T23:23:26Z",
+        "updatedAt" : "2019-11-01T02:28:28Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b88aafda-95d3-4574-96e0-d8d6ba8299bc",
+        "parentId" : "c873dd76-fa36-4735-9a90-943eccb06cc5",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Same here. Sounds nice, but may want to keep consistency. So I'm in favor of changing all, or leaving it as it is.",
+        "createdAt" : "2019-10-25T11:09:00Z",
+        "updatedAt" : "2019-11-01T02:28:28Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "01afb2f0-8ff1-45f1-b4cc-597a07b39358",
+        "parentId" : "c873dd76-fa36-4735-9a90-943eccb06cc5",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Same comment as before. I'd like the better approach to be used. If you want to go later and fix the other spots in the code, that's up to you.",
+        "createdAt" : "2019-10-25T20:08:25Z",
+        "updatedAt" : "2019-11-01T02:28:28Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7213d4266b7bfa2bd05225c68e2184a7abb24469",
+    "line" : 399,
+    "diffHunk" : "@@ -1,1 +603,607 @@\nobject SymmetricHashJoinStateManager {\n  val supportedVersions = Seq(1, 2)\n  val legacyVersion = 1\n"
+  },
+  {
+    "id" : "db237e60-8f4f-446d-8bee-3ab2df8eca45",
+    "prId" : 26108,
+    "prUrl" : "https://github.com/apache/spark/pull/26108#pullrequestreview-308110018",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "bfe673f0-0cef-4d32-b21d-3cadc46bfb6c",
+        "parentId" : null,
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "So, while replying to your comment, this came to my mind.\r\n\r\nThe way I see this code, when you start from a v1 state store, you'll also be writing back v1 data.\r\n\r\nShouldn't you write out new data, so that you fix the problem going forward once you start the app with the fixed version of Spark?",
+        "createdAt" : "2019-10-25T20:19:16Z",
+        "updatedAt" : "2019-11-01T02:28:28Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a9ec3489-4f95-4905-ba4c-f2a7a7baae79",
+        "parentId" : "bfe673f0-0cef-4d32-b21d-3cadc46bfb6c",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Even we write v2 data here, we only update part of state instead of full rewrite of state. It will leave v1 / v2 data co-exist and make state store not possible to read the entire rows - individual row doesn't have schema information. That's why we separate versions and isolate them. Yes that's bad, but that's the current state.\r\n\r\nActually we don't even have schema information for state store as well so we would encounter undefined behavior if we do such unsafe thing. SPARK-27237 (#24173) proposes to introduce schema information per state (not per row) and fail the query if schema is not compatible.\r\n\r\nWe can still rewrite the state entirely in a batch query (cannot be online modification) - please refer the README of https://github.com/HeartSaVioR/spark-state-tools. I've already implemented the migration of v1 to v2 for streaming aggregation / flatMapGroupsWithState, and I may try to implement this migration as well. I'm also proposing the project as a part of Apache Spark, but not as it is - I'm proposing batch data source for \"state\" first (SPARK-28190), and once we adopt it, we could also consider to have some tools for helping migration. Flink recently added the state API which denotes the necessity of the data source for \"state\".",
+        "createdAt" : "2019-10-26T02:31:21Z",
+        "updatedAt" : "2019-11-01T02:28:28Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f7e33ae1-cd4e-439e-b24e-379297de12ac",
+        "parentId" : "bfe673f0-0cef-4d32-b21d-3cadc46bfb6c",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Ok, think I got it. Seems like even if we add some code that would write new data in the v2 format, the state store still may have data in v1 format that can trigger the correctness issue. So it's a small gain in the end, although that old state data would be constrained to state generated before the \"fixed\" Spark was used.\r\n\r\nGiven that I think that failing the query when the bad combination is detected is better (I see you already made that change).\r\n\r\nOne thing is that a \"rewrite\" of the state in this case, at least, is not a good option. The data is missing from the v1 data, so there's no way to generate correct v2 data from it. The only thing you'd achieve by doing that is to mask errors (since the exception you're adding wouldn't be triggered anymore).\r\n\r\nSo unless it's possible to have a \"mixed\" solution here, where the same store can have both v1 and v2 data, erroring out is the best outcome I can think of. I can think of ways to hack it (you could e.g. compare the column count for the `UnsafeRow` read from the store and see if it matches the count in the expected schema, or if it has the extra fields expected by the v2 data), but haven't thoroughly thought about it.",
+        "createdAt" : "2019-10-28T18:57:15Z",
+        "updatedAt" : "2019-11-01T02:28:28Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "86074402-3dcd-444d-895a-7b62a29ee392",
+        "parentId" : "bfe673f0-0cef-4d32-b21d-3cadc46bfb6c",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "> One thing is that a \"rewrite\" of the state in this case, at least, is not a good option. The data is missing from the v1 data, so there's no way to generate correct v2 data from it.\r\n\r\nYeah you're right. At least for this case rewrite doesn't work. I forgot what I've already found  months ago. Thanks for reminding.\r\n\r\n> I can think of ways to hack it (you could e.g. compare the column count for the UnsafeRow read from the store and see if it matches the count in the expected schema, or if it has the extra fields expected by the v2 data), but haven't thoroughly thought about it.\r\n\r\nI also had thought about it a bit (and that was maybe one of review comment in previous PR) but it can bring side-effect if the query is changed. If end users change the query to let input of join containing one less column, there's a chance Spark may read \"v1 row\" as \"v2 row\" incorrectly whereas Spark should just fail the query since schema has been changed. Relying on column count is unsafe.\r\n",
+        "createdAt" : "2019-10-28T19:20:10Z",
+        "updatedAt" : "2019-11-01T02:28:28Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "73f25f20-5d62-43cc-8005-fef5e0cbe299",
+        "parentId" : "bfe673f0-0cef-4d32-b21d-3cadc46bfb6c",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "You could take that approach if you also had schema validation, as in your other PR. The main advantage is that it would simplify some of the versioning-related changes in this PR (i.e. you would only have to deal with the read path).\r\n\r\nAnyway, it's more important to fix the correctness issue, so that can be done later.",
+        "createdAt" : "2019-10-28T19:57:47Z",
+        "updatedAt" : "2019-11-01T02:28:28Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7213d4266b7bfa2bd05225c68e2184a7abb24469",
+    "line" : 379,
+    "diffHunk" : "@@ -1,1 +562,566 @@    def put(key: UnsafeRow, valueIndex: Long, value: UnsafeRow, matched: Boolean): Unit = {\n      val keyWithIndex = keyWithIndexRow(key, valueIndex)\n      val valueWithMatched = valueRowConverter.convertToValueRow(value, matched)\n      stateStore.put(keyWithIndex, valueWithMatched)\n    }"
+  },
+  {
+    "id" : "93e5229e-469d-4eb5-9eaa-19cad440ab8a",
+    "prId" : 26108,
+    "prUrl" : "https://github.com/apache/spark/pull/26108#pullrequestreview-311429178",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c0f6fda4-ce90-47fa-a275-63c94561bfec",
+        "parentId" : null,
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Can `valuePair` be `null` here? Just like before, `keyWithIndexToValue.get` can return null, but I'm not sure whether in this particular spot it would return null.",
+        "createdAt" : "2019-11-04T23:22:52Z",
+        "updatedAt" : "2019-11-04T23:25:17Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a487516c-73be-4b24-a70b-3e78fbd1d137",
+        "parentId" : "c0f6fda4-ce90-47fa-a275-63c94561bfec",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "I think it would only return null when there's corruption on the state store - `hasMoreValuesForCurrentKey == true` denotes the index is valid (not an out of index), then the return value is not expected to be null.",
+        "createdAt" : "2019-11-04T23:42:40Z",
+        "updatedAt" : "2019-11-04T23:42:41Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7213d4266b7bfa2bd05225c68e2184a7abb24469",
+    "line" : 174,
+    "diffHunk" : "@@ -1,1 +225,229 @@          if (hasMoreValuesForCurrentKey) {\n            // First search the values for the current key.\n            val valuePair = keyWithIndexToValue.get(currentKey, index)\n            if (removalCondition(valuePair.value)) {\n              return valuePair"
   }
 ]
