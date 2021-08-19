@@ -1,0 +1,46 @@
+[
+  {
+    "id" : "e9cb85fa-d7a0-4d3a-b331-2e06acfb499d",
+    "prId" : 25808,
+    "prUrl" : "https://github.com/apache/spark/pull/25808#pullrequestreview-289073122",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "47669dd3-22d8-4b08-aa6c-6cd74aefb620",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Thanks for the updated patch. Much better with artificially reproducing the issue.\r\n\r\nI'm trying to understand the situation - for the sake of understanding, interrupting thread would throw InterruptedException when thread is waiting via `obj.wait()` and stdinWriterThread will catch it, and run() will finish. \r\n\r\nI'm trying to understand the problematic situation as well - if Thread.interrupt() occurs before obj.wait(), the thread will keep running until there's some method understanding Thread's interrupted state (like Object.wait() which will throw InterruptedException even it was thrown earlier) so there's possible delay for thread to be finished. Could you confirm my understanding?",
+        "createdAt" : "2019-09-17T06:30:04Z",
+        "updatedAt" : "2019-09-17T06:30:04Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ded380a7-86d8-4a37-8c8e-200cb7cfcf25",
+        "parentId" : "47669dd3-22d8-4b08-aa6c-6cd74aefb620",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "The second flow is correct. However, the first one is slightly differently described. `stdinWriterThread` is not catching the exception. The task thread is just marked as `interrupted` status and restarts from the after `obj.wait` bytecode with `InterruptedException`. However, this `Task` thread can be slow and the test code grabs the `Thread.getAllStackTraces` before the `Task` thread escaped from the run function.",
+        "createdAt" : "2019-09-17T07:14:39Z",
+        "updatedAt" : "2019-09-17T07:14:39Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b6556b01-e1f9-43ae-a8ff-4a004cd5e490",
+        "parentId" : "47669dd3-22d8-4b08-aa6c-6cd74aefb620",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "I played with debugger for the first case as second case cannot be reproduced easily but first case would be always reproduced. It's slightly different though no big deal.\r\n\r\nWith debugger, for normal case with current master branch, `stdinWriterThread` catches the InterruptedException and escape run() function after executing catch/finally statements. `stderrReaderThread` doesn't catch the InterruptedException as it's already destroyed when we try to interrupt.\r\n\r\nWe don't join these threads for task completion anyway so it seems to be also possible even for first case to let test code verify earlier than let stdinWriterThread be destroyed. Maybe you've already explained same and I misunderstood ;( If that's the case, I'm sorry to bother you.",
+        "createdAt" : "2019-09-17T07:43:01Z",
+        "updatedAt" : "2019-09-17T07:43:01Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "918cbd795a00771660569d51004070ffc7206691",
+    "line" : 30,
+    "diffHunk" : "@@ -1,1 +104,108 @@\n    // SPARK-29104 PipedRDD will invoke `stdinWriterThread.interrupt()` at task completion,\n    // and `obj.wait` will get InterruptedException. However, there exists a possibility\n    // which the thread termination gets delayed because the thread starts from `obj.wait()`\n    // with that exception. To prevent test flakiness, we need to use `eventually`."
+  }
+]

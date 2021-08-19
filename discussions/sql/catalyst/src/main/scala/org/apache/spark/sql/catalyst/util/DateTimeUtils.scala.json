@@ -1296,5 +1296,49 @@
     "commit" : "1cbd35b672c8e47d7d93859f0d494aeb8ac8fb8b",
     "line" : 42,
     "diffHunk" : "@@ -1,1 +1185,1189 @@      // The rest contains exactly `digitsInFraction`: `0000` = 10 ^ digitsInFraction\n      // So, the result is `(1234 * 1000000) / (10 ^ digitsInFraction)\n      d / Decimal.POW_10(digitsInFraction)\n    }\n  }"
+  },
+  {
+    "id" : "0c7804f5-2086-4df5-806c-f3d1ecbb21e2",
+    "prId" : 25871,
+    "prUrl" : "https://github.com/apache/spark/pull/25871#pullrequestreview-291473204",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4d451784-2842-493b-a47c-3a40da46af41",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "@MaxGekk, is it safe? Seems previously it could return `null` but now we cannot return null in some conditions. For instance:\r\n\r\n```scala\r\nscala> Decimal(9223372036854775L)\r\nres27: org.apache.spark.sql.types.Decimal = 9223372036854775\r\n\r\nscala> Decimal(9223372036854775L, 8, 3)\r\njava.lang.ArithmeticException: Unscaled value too large for precision\r\n  at org.apache.spark.sql.types.Decimal.set(Decimal.scala:79)\r\n  at org.apache.spark.sql.types.Decimal$.apply(Decimal.scala:564)\r\n  ... 49 elided\r\n```\r\n\r\nwhereas `toPrecision` seems able to return `null` for overflow.",
+        "createdAt" : "2019-09-21T14:45:29Z",
+        "updatedAt" : "2019-09-22T04:05:59Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dcaf47ae-9458-444f-962a-93674900b54f",
+        "parentId" : "4d451784-2842-493b-a47c-3a40da46af41",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "I think so, `getMicroseconds` returns an int in the range [0, 60000000) for which Decimal(..., 8, 3) is always valid, for example:\r\n```scala\r\nscala> Decimal(60000000, 8, 3)\r\nres1: org.apache.spark.sql.types.Decimal = 60000.000\r\n```",
+        "createdAt" : "2019-09-21T17:02:28Z",
+        "updatedAt" : "2019-09-22T04:05:59Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d0399aff-dce1-47aa-a9a0-ed507ba19e66",
+        "parentId" : "4d451784-2842-493b-a47c-3a40da46af41",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Oh, yes. I checked other cases too and seems fine.",
+        "createdAt" : "2019-09-21T17:11:50Z",
+        "updatedAt" : "2019-09-22T04:05:59Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "fb64679708384e571ed4a61cabeaaa18164fd832",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +466,470 @@   */\n  def getMilliseconds(timestamp: SQLTimestamp, timeZone: TimeZone): Decimal = {\n    Decimal(getMicroseconds(timestamp, timeZone), 8, 3)\n  }\n"
   }
 ]

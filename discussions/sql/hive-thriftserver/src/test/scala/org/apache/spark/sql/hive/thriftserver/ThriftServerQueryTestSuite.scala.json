@@ -383,5 +383,137 @@
     "commit" : "0f54af89b8641ee7df80991dcca63e183a03d5ff",
     "line" : 6,
     "diffHunk" : "@@ -1,1 +95,99 @@    \"subquery/in-subquery/in-order-by.sql\",\n    \"subquery/in-subquery/in-set-operations.sql\",\n    // SPARK-29783: need to set conf\n    \"interval-display-iso_8601.sql\",\n    \"interval-display-sql_standard.sql\""
+  },
+  {
+    "id" : "58d1a28a-de35-472f-8f0a-04d351a20047",
+    "prId" : 25868,
+    "prUrl" : "https://github.com/apache/spark/pull/25868#pullrequestreview-303966874",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9b9a2c93-1ede-4d0e-892b-c5cf6749b1f3",
+        "parentId" : null,
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "Does this mean this is broken and the user should also turn if off? If so, should we change the default value? Otherwise, our tests are actually testing something that's rarely used.\r\n\r\n> Hive Thrift server should not executes SQL queries in an asynchronous way because we may set session configuration.\r\n\r\nCould you clarify what's the exact issue? Is it because the background thread is missing some thread-local variables because threads are reused? Can we copy them from the parent thread here? https://github.com/apache/spark/blob/master/sql/hive-thriftserver/src/main/scala/org/apache/spark/sql/hive/thriftserver/SparkExecuteStatementOperation.scala#L186",
+        "createdAt" : "2019-09-24T09:08:54Z",
+        "updatedAt" : "2019-09-24T09:10:14Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "572aac8a-8159-4649-b5f3-9a14b609ff2b",
+        "parentId" : "9b9a2c93-1ede-4d0e-892b-c5cf6749b1f3",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Ur, this suite is not aiming *concurrency* stress test. It's just targeting SQL execution one by one.",
+        "createdAt" : "2019-09-24T23:54:54Z",
+        "updatedAt" : "2019-09-24T23:54:54Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ef6f0c33-7f0e-44bf-85f6-a2fab64ac0a3",
+        "parentId" : "9b9a2c93-1ede-4d0e-892b-c5cf6749b1f3",
+        "authorId" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "body" : "But it exposes some bugs in the default mode. Seems worth to fix the bug. ",
+        "createdAt" : "2019-09-25T00:18:32Z",
+        "updatedAt" : "2019-09-25T00:18:32Z",
+        "lastEditedBy" : "2d6b46ba-4100-4c4d-9341-fff5e39647ec",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "386d7083-386e-4785-b0e7-5a28d5e3113a",
+        "parentId" : "9b9a2c93-1ede-4d0e-892b-c5cf6749b1f3",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "For me, that doesn't imply a bug in the default mode. That means we want to run one by one simply in this test suite.",
+        "createdAt" : "2019-09-25T01:22:23Z",
+        "updatedAt" : "2019-09-25T01:22:23Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "363d6674-da14-4d4f-b91c-f4376faf2d9f",
+        "parentId" : "9b9a2c93-1ede-4d0e-892b-c5cf6749b1f3",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Of course, if there is a bug, definitely we should fix it. But, let's not enable that in this test suite. That is completely a separate issue, isn't it? With a separate UT and a patch, that should be handled.",
+        "createdAt" : "2019-09-25T01:23:45Z",
+        "updatedAt" : "2019-09-25T01:24:43Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "92dbe7b5-613e-441a-a365-cfdd40984583",
+        "parentId" : "9b9a2c93-1ede-4d0e-892b-c5cf6749b1f3",
+        "authorId" : "e5beb795-ac0e-4bd6-ad66-708215b8ae58",
+        "body" : "With `HiveUtils.HIVE_THRIFT_SERVER_ASYNC` enabled the Thriftserver will still execute queries one by one. The difference is that it will not block the request:\r\n- With HIVE_THRIFT_SERVER_ASYNC=false client sends a query in an TExecuteStatementReq. The query executes, and only after it finishes the server responds with a TExecuteStatementResp. Then the client calls TGetOperationStatusReq to see if the result was a success or failure, and then potentially continues fetching results...\r\n- With HIVE_THRIFT_SERVER_ASYNC=true client sends a query in an TExecuteStatementReq, and the server starts it in a background thread and immediately returns a handle in the response. Then the client periodically polls with TGetOperationStatusReq until the query is finished, an then potentailly continues fetching results...\r\n\r\nIn both cases, the Hive JDBC driver executes one query at once and there is no concurrency.\r\n\r\nI think this setting does not need to be set.",
+        "createdAt" : "2019-10-18T15:26:02Z",
+        "updatedAt" : "2019-10-18T15:34:42Z",
+        "lastEditedBy" : "e5beb795-ac0e-4bd6-ad66-708215b8ae58",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2eac612a33320e64a464df7ba9da683f36aa6b05",
+    "line" : 58,
+    "diffHunk" : "@@ -1,1 +79,83 @@    // Hive Thrift server should not executes SQL queries in an asynchronous way\n    // because we may set session configuration.\n    .set(HiveUtils.HIVE_THRIFT_SERVER_ASYNC, false)\n\n  override val isTestWithConfigSets = false"
+  },
+  {
+    "id" : "bcfabe3b-1cea-4210-9a92-fb47f4278c0b",
+    "prId" : 25868,
+    "prUrl" : "https://github.com/apache/spark/pull/25868#pullrequestreview-304196619",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "db0147f4-ba63-4bce-af18-cb316f51850a",
+        "parentId" : null,
+        "authorId" : "e5beb795-ac0e-4bd6-ad66-708215b8ae58",
+        "body" : "In an earlier PR I commented that the flakiness may be because of async issues.\r\nI meant that calling `startThriftServer` actually starts some things asynchronously in the background before the server becomes ready.\r\nMoving it to `beforeAll` instead of `beforeEach` should help the flakiness by having this race only at the start of the suite and not before every test, but I think adding a 3 or 5 s sleep would make sure it never happens.",
+        "createdAt" : "2019-10-18T15:34:17Z",
+        "updatedAt" : "2019-10-18T15:34:42Z",
+        "lastEditedBy" : "e5beb795-ac0e-4bd6-ad66-708215b8ae58",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c8a5a520-0014-429b-8a28-c1562d54ce42",
+        "parentId" : "db0147f4-ba63-4bce-af18-cb316f51850a",
+        "authorId" : "e5beb795-ac0e-4bd6-ad66-708215b8ae58",
+        "body" : "I seem to be hitting it in the first test of the suite quite often:\r\n```\r\n[info] ThriftServerQueryTestSuite:\r\n[info] - query_regex_column.sql *** FAILED *** (184 milliseconds)\r\n[info]   java.sql.SQLException: Could not open client transport with JDBC Uri: jdbc:hive2://localhost:15421: java.net.ConnectException: Connection refused (Connection refused)\r\n```",
+        "createdAt" : "2019-10-18T19:21:50Z",
+        "updatedAt" : "2019-10-18T19:21:50Z",
+        "lastEditedBy" : "e5beb795-ac0e-4bd6-ad66-708215b8ae58",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c3b155f9-f104-4d98-b019-975fbadf8cb1",
+        "parentId" : "db0147f4-ba63-4bce-af18-cb316f51850a",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "`pgSQL/text.sql` should fail if `spark.sql.hive.thriftServer.async` is enabled: https://github.com/apache/spark/pull/25567#issuecomment-524507309",
+        "createdAt" : "2019-10-19T05:16:31Z",
+        "updatedAt" : "2019-10-19T05:16:31Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b55fe791-2658-4402-9ffe-59bbe4f38e48",
+        "parentId" : "db0147f4-ba63-4bce-af18-cb316f51850a",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "Anyway, let's try to enable it: https://github.com/apache/spark/pull/26172",
+        "createdAt" : "2019-10-19T05:17:41Z",
+        "updatedAt" : "2019-10-19T05:17:41Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "2eac612a33320e64a464df7ba9da683f36aa6b05",
+    "line" : 37,
+    "diffHunk" : "@@ -1,1 +51,55 @@\n  override def beforeAll(): Unit = {\n    super.beforeAll()\n    // Chooses a random port between 10000 and 19999\n    var listeningPort = 10000 + Random.nextInt(10000)"
   }
 ]

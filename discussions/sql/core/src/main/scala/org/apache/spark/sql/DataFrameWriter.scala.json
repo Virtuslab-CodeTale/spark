@@ -493,5 +493,60 @@
     "commit" : "b752271e848dc4562fdfe1df242d173a70a8dca0",
     "line" : 8,
     "diffHunk" : "@@ -1,1 +88,92 @@      case \"append\" => mode(SaveMode.Append)\n      case \"ignore\" => mode(SaveMode.Ignore)\n      case \"error\" | \"errorifexists\" | \"default\" => mode(SaveMode.ErrorIfExists)\n      case _ => throw new IllegalArgumentException(s\"Unknown save mode: $saveMode. Accepted \" +\n        \"save modes are 'overwrite', 'append', 'ignore', 'error', 'errorifexists', 'default'.\")"
+  },
+  {
+    "id" : "5093dda8-e9b4-4529-a9ec-ddf5debc4c38",
+    "prId" : 25876,
+    "prUrl" : "https://github.com/apache/spark/pull/25876#pullrequestreview-293278794",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c339b64f-5e70-453e-b675-dd5ba7881a57",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "A note to future readers: this is the old behavior, that non-overwrite mode means append. This is due to the bad design of `DataFrameWriter`: we only need to know overwrite or not when calling `insert`, but `DataFrameWriter` gives you a save mode. Since the default save mode is `ErrorIfExists`, treating non-overwrite mode as append is a reasonable compromise.\r\n\r\nNote that, we don't have this problem in the new `DataFrameWriterV2`.",
+        "createdAt" : "2019-09-24T17:09:25Z",
+        "updatedAt" : "2019-09-25T19:16:06Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e65e1083-dc84-45a0-b4bb-9afd3041df04",
+        "parentId" : "c339b64f-5e70-453e-b675-dd5ba7881a57",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "Looks like the previous version used this:\r\n\r\n```\r\n      InsertIntoTable(\r\n        table = UnresolvedRelation(tableIdent),\r\n        partition = Map.empty[String, Option[String]],\r\n        query = df.logicalPlan,\r\n        overwrite = mode == SaveMode.Overwrite, // << Either overwrite or append\r\n        ifPartitionNotExists = false)\r\n```\r\n\r\nSo I agree that this is using the same behavior that v1 did.",
+        "createdAt" : "2019-09-25T18:29:30Z",
+        "updatedAt" : "2019-09-25T19:16:06Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3e054c75cd16ab9aa028e2914f525ce2f56862cc",
+    "line" : 44,
+    "diffHunk" : "@@ -1,1 +385,389 @@\n    val command = mode match {\n      case SaveMode.Append | SaveMode.ErrorIfExists | SaveMode.Ignore =>\n        AppendData.byPosition(table, df.logicalPlan, extraOptions.toMap)\n"
+  },
+  {
+    "id" : "730e9bd5-1953-4abe-bfd2-fd3b0aa62ccc",
+    "prId" : 25833,
+    "prUrl" : "https://github.com/apache/spark/pull/25833#pullrequestreview-290241820",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8599359e-5786-4283-a166-a378c1c1fab7",
+        "parentId" : null,
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "Why not use `AppendData` when mode is append?",
+        "createdAt" : "2019-09-18T22:45:11Z",
+        "updatedAt" : "2019-09-18T22:45:12Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e48a5c490334a33f3edade649d1ed8cefaf672d0",
+    "line" : 60,
+    "diffHunk" : "@@ -1,1 +281,285 @@                orCreate = true)      // Create the table if it doesn't exist\n\n            case (other, _) =>\n              CreateTableAsSelect(\n                canCreateTable,"
   }
 ]

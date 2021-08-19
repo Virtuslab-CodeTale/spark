@@ -75,5 +75,137 @@
     "commit" : "9edfa7b2dd951955f6dae7674e2fb5890b966dfe",
     "line" : 41,
     "diffHunk" : "@@ -1,1 +127,131 @@            true\n          }\n        case (SaveMode.Overwrite, _) | (SaveMode.ErrorIfExists, false) =>\n          true\n        case (SaveMode.Ignore, exists) =>"
+  },
+  {
+    "id" : "d0f87f90-b088-4fec-b9fd-1aafa6304ed8",
+    "prId" : 25863,
+    "prUrl" : "https://github.com/apache/spark/pull/25863#pullrequestreview-293184422",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a7fc0587-0ae8-4f93-9e66-8780c656c768",
+        "parentId" : null,
+        "authorId" : "b6393788-12cc-4066-9294-857f4baec092",
+        "body" : "We should catch the exception here to ensure that InsertFileSourceConflictException be thrown.\r\n\r\n",
+        "createdAt" : "2019-09-25T15:51:00Z",
+        "updatedAt" : "2019-12-09T16:11:48Z",
+        "lastEditedBy" : "b6393788-12cc-4066-9294-857f4baec092",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f45ca9bf6c51d3efb064a87de56b985e17b60788",
+    "line" : 388,
+    "diffHunk" : "@@ -1,1 +443,447 @@      case e: Exception =>\n        logWarning(\"Exception occurred when finding conflicted staging output paths.\", e)\n    }\n  }\n}"
+  },
+  {
+    "id" : "abdd0afc-1123-4f24-b688-c1cb9b3f973b",
+    "prId" : 25863,
+    "prUrl" : "https://github.com/apache/spark/pull/25863#pullrequestreview-294625638",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5e463315-696b-4b76-a557-71b3bf72f318",
+        "parentId" : null,
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "All this is happening before the `committer.setupJob` call, right?\r\n\r\nDoesn't that mean that two applications may concurrently pass this test, and then mess up each other when they actually start running the job?\r\n\r\nIt feels like there need to be a fancier protocol here to define who can continue past this point, which would actually involve writing to the underlying file system. e.g. by creating the needed staging directory(ies) before doing this check (throwing an error if the directory already exists).",
+        "createdAt" : "2019-09-27T00:23:58Z",
+        "updatedAt" : "2019-12-09T16:11:48Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8226f8d2-1d61-4a1a-b316-ea7e65eebe40",
+        "parentId" : "5e463315-696b-4b76-a557-71b3bf72f318",
+        "authorId" : "b6393788-12cc-4066-9294-857f4baec092",
+        "body" : "yes, you are right. Thanks.",
+        "createdAt" : "2019-09-27T06:26:23Z",
+        "updatedAt" : "2019-12-09T16:11:48Z",
+        "lastEditedBy" : "b6393788-12cc-4066-9294-857f4baec092",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e81fc12c-8fac-4c69-b64f-6de1861eebdf",
+        "parentId" : "5e463315-696b-4b76-a557-71b3bf72f318",
+        "authorId" : "b6393788-12cc-4066-9294-857f4baec092",
+        "body" : "fixed",
+        "createdAt" : "2019-09-28T07:18:31Z",
+        "updatedAt" : "2019-12-09T16:11:48Z",
+        "lastEditedBy" : "b6393788-12cc-4066-9294-857f4baec092",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f45ca9bf6c51d3efb064a87de56b985e17b60788",
+    "line" : 258,
+    "diffHunk" : "@@ -1,1 +313,317 @@   * a non-partitioned table.\n   */\n  private def detectConflict(\n      commitProtocol: FileCommitProtocol,\n      fs: FileSystem,"
+  },
+  {
+    "id" : "56ba11fd-1d3f-48b5-82ca-763ad0d2243e",
+    "prId" : 25863,
+    "prUrl" : "https://github.com/apache/spark/pull/25863#pullrequestreview-294669097",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e9ba7ff5-6ea5-4d9a-a1df-968188c074c4",
+        "parentId" : null,
+        "authorId" : "8e87861a-4202-49a2-baf7-6d51f6aaa5a2",
+        "body" : "Can this modification be simplified?\r\n\r\nWe keep the `val doInsertion = ...` intact, issues `detectConflict` when doInsertion is true.",
+        "createdAt" : "2019-09-29T03:12:48Z",
+        "updatedAt" : "2019-12-09T16:11:48Z",
+        "lastEditedBy" : "8e87861a-4202-49a2-baf7-6d51f6aaa5a2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9942b3f5-205a-4770-8a88-1dfedff7bb97",
+        "parentId" : "e9ba7ff5-6ea5-4d9a-a1df-968188c074c4",
+        "authorId" : "b6393788-12cc-4066-9294-857f4baec092",
+        "body" : "we need detectConflict before delete matching partitions.\r\n\r\nMaybe we can define a flag `doDeleteMatchingPartitions` and \r\nthen  `if (doDeleteMatchingPartitions) deleteMatchingPartitions; if (doInsertion) detectConflict`.",
+        "createdAt" : "2019-09-29T06:54:12Z",
+        "updatedAt" : "2019-12-09T16:11:48Z",
+        "lastEditedBy" : "b6393788-12cc-4066-9294-857f4baec092",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f45ca9bf6c51d3efb064a87de56b985e17b60788",
+    "line" : 78,
+    "diffHunk" : "@@ -1,1 +137,141 @@    try {\n      var doDeleteMatchingPartitions: Boolean = false\n      val doInsertion = if (mode == SaveMode.Append) {\n        true\n      } else {"
+  },
+  {
+    "id" : "eee161eb-730a-4c0d-bb15-8eecefa53bb0",
+    "prId" : 25863,
+    "prUrl" : "https://github.com/apache/spark/pull/25863#pullrequestreview-298613896",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c3af23de-f71b-4a20-9c66-115279c4aa8d",
+        "parentId" : null,
+        "authorId" : "224991ce-ad69-410b-8143-bf394b6b5c59",
+        "body" : "listStatus will raise an FNFE if the path isn't there. So you could optimise away that previous exists check if depth != 0",
+        "createdAt" : "2019-09-30T13:39:44Z",
+        "updatedAt" : "2019-12-09T16:11:48Z",
+        "lastEditedBy" : "224991ce-ad69-410b-8143-bf394b6b5c59",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6b4e7623-7d0c-4735-8fd9-7aab20ea8fb6",
+        "parentId" : "c3af23de-f71b-4a20-9c66-115279c4aa8d",
+        "authorId" : "b6393788-12cc-4066-9294-857f4baec092",
+        "body" : "I checked whether this path is existed firstly and caught all exceptions in this code block.",
+        "createdAt" : "2019-10-08T08:44:55Z",
+        "updatedAt" : "2019-12-09T16:11:48Z",
+        "lastEditedBy" : "b6393788-12cc-4066-9294-857f4baec092",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f45ca9bf6c51d3efb064a87de56b985e17b60788",
+    "line" : 380,
+    "diffHunk" : "@@ -1,1 +435,439 @@          paths += path\n        } else {\n          for (file <- fs.listStatus(path)) {\n            findConflictedStagingOutputPaths(fs, file.getPath, depth - 1, paths)\n          }"
   }
 ]

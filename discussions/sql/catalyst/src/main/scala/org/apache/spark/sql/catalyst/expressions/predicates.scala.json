@@ -570,5 +570,71 @@
     "commit" : "164507ce26ddcf20e9c970cccf7746cc78a6119d",
     "line" : 59,
     "diffHunk" : "@@ -1,1 +86,90 @@    createObject(bindReference(e, inputSchema))\n  }\n\n  /**\n   * Returns a BasePredicate for a given bound Expression."
+  },
+  {
+    "id" : "3ddaa023-9256-4c83-a084-663e4a77b326",
+    "prId" : 25806,
+    "prUrl" : "https://github.com/apache/spark/pull/25806#pullrequestreview-288988304",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "eadb3edb-1563-41e9-b368-c06867459ce9",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "We don't need to compute `caseBranches`, too, if hset is empty?\r\n```\r\n    val valueGen = child.genCode(ctx)\r\n    val switchCode = if (hset.isEmpty) {\r\n      val caseValuesGen = hset.filter(_ != null).map(Literal(_).genCode(ctx))\r\n      val caseBranches = caseValuesGen.map(literal =>\r\n        code\"\"\"\r\n          case ${literal.value}:\r\n            ${ev.value} = true;\r\n            break;\r\n       \"\"\")\r\n\r\n      code\"\"\"\r\n        switch (${valueGen.value}) {\r\n          ${caseBranches.mkString(\"\\n\")}\r\n          default:\r\n            ${ev.isNull} = $hasNull;\r\n        }\r\n       \"\"\"\r\n    } else {\r\n      s\"${ev.isNull} = $hasNull;\"\r\n    }\r\n```",
+        "createdAt" : "2019-09-17T02:02:47Z",
+        "updatedAt" : "2019-09-17T02:02:47Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "21cbfecd-1e67-4d80-a75b-485c30fc6aa9",
+        "parentId" : "eadb3edb-1563-41e9-b368-c06867459ce9",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "btw, can we fold this expr in the optimizer when hset is empty?",
+        "createdAt" : "2019-09-17T02:04:18Z",
+        "updatedAt" : "2019-09-17T02:04:18Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "897dae53-5750-4783-9ae3-8840a76d8c8e",
+        "parentId" : "eadb3edb-1563-41e9-b368-c06867459ce9",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "if `hset` is empty, the computation of `caseBranches` is noop, right?",
+        "createdAt" : "2019-09-17T02:07:58Z",
+        "updatedAt" : "2019-09-17T02:07:58Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "62b4ac09-0f38-4668-b9d2-0cf72e8fe017",
+        "parentId" : "eadb3edb-1563-41e9-b368-c06867459ce9",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "This is a special case. Usually `InSet` wouldn't have empty set, as we have a threshold to convert `In` to `Inset`.",
+        "createdAt" : "2019-09-17T02:09:53Z",
+        "updatedAt" : "2019-09-17T02:09:53Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "baee98de-a54b-4ed7-a513-305f40a21ac1",
+        "parentId" : "eadb3edb-1563-41e9-b368-c06867459ce9",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Ur, I see.",
+        "createdAt" : "2019-09-17T02:18:56Z",
+        "updatedAt" : "2019-09-17T02:18:56Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5ad7538300ce7a15e0262846d89c0d274ed2db6c",
+    "line" : 4,
+    "diffHunk" : "@@ -1,1 +458,462 @@       \"\"\")\n\n    val switchCode = if (caseBranches.size > 0) {\n      code\"\"\"\n        switch (${valueGen.value}) {"
   }
 ]

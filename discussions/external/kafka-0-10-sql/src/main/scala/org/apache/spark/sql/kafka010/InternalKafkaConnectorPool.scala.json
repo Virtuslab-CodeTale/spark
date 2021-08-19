@@ -1,0 +1,90 @@
+[
+  {
+    "id" : "9ae4d6cc-4853-4661-9ac9-830dac3af37d",
+    "prId" : 25853,
+    "prUrl" : "https://github.com/apache/spark/pull/25853#pullrequestreview-291057982",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "23963ce5-f050-4211-81a4-52d80c3bbceb",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "For other reviewers: this is pretty same as previous InternalKafkaConsumerPool.PoolConfig, except it brings some abstract methods to enable reading values from different configuration keys.",
+        "createdAt" : "2019-09-21T03:11:25Z",
+        "updatedAt" : "2019-11-07T13:51:09Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ebe9708c96e8127b9ef5c43fc26cff2811a79d82",
+    "line" : 137,
+    "diffHunk" : "@@ -1,1 +135,139 @@}\n\nprivate[kafka010] abstract class PoolConfig[V] extends GenericKeyedObjectPoolConfig[V] {\n\n  init()"
+  },
+  {
+    "id" : "ed42bd38-041f-4bb6-ae7c-691598eaf986",
+    "prId" : 25853,
+    "prUrl" : "https://github.com/apache/spark/pull/25853#pullrequestreview-309223125",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "74c484ae-4e7e-47cc-a5cb-6b5d3d06335f",
+        "parentId" : null,
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "I just noticed that there's no call site for this in your change; and also there's no code calling this in the repo, that I can find.\r\n\r\nIs something missing or can this method go away?\r\n\r\n(e.g. `KafkaDataWriter` calls `checkForErrors` which throws an exception if an error exists; that sounds like it should be calling this instead of just using the default `finally` block and calling `releaseProducer`?)",
+        "createdAt" : "2019-10-28T21:54:58Z",
+        "updatedAt" : "2019-11-07T13:51:09Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "426f6143-ca74-4c30-a6c1-1c4fa2661934",
+        "parentId" : "74c484ae-4e7e-47cc-a5cb-6b5d3d06335f",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "You've touched an important point here and I have a plan for this.\r\nIn the consumer area we've already done a similar solution what I plan to add here. Namely when a task realizes any exception it just returns the object into the pool (not returned object will stay in cache infinitely). In the next round when Spark realizes that it's a re-attempt it will invalidate the cache key and creates new instances. Please see the example [here](https://github.com/apache/spark/blob/44a27bdccdc39d5394ee95d935455eb7ff4b84c2/external/kafka-0-10-sql/src/main/scala/org/apache/spark/sql/kafka010/KafkaDataConsumer.scala#L628-L637). I've already opened SPARK-27042 to add this functionality but only after if this merged.\r\n\r\n`destroyObject` is needed when an item is not used till its timeout and the pool initiates the eviction.\r\n",
+        "createdAt" : "2019-10-30T14:01:31Z",
+        "updatedAt" : "2019-11-07T13:51:09Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ebe9708c96e8127b9ef5c43fc26cff2811a79d82",
+    "line" : 197,
+    "diffHunk" : "@@ -1,1 +195,199 @@  }\n\n  override def destroyObject(key: K, p: PooledObject[V]): Unit = {\n    p.getObject.close()\n  }"
+  },
+  {
+    "id" : "514261ed-bc98-4e72-90b1-ca950492f92d",
+    "prId" : 25853,
+    "prUrl" : "https://github.com/apache/spark/pull/25853#pullrequestreview-309223632",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "62d6e65b-89cb-4171-89a1-309442d614bb",
+        "parentId" : null,
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Add an empty line to separate from class declaration.",
+        "createdAt" : "2019-10-28T21:55:16Z",
+        "updatedAt" : "2019-11-07T13:51:09Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c0f61615-1a87-40c6-bbf7-222e39ebe922",
+        "parentId" : "62d6e65b-89cb-4171-89a1-309442d614bb",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "Added.",
+        "createdAt" : "2019-10-30T14:02:07Z",
+        "updatedAt" : "2019-11-07T13:51:09Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ebe9708c96e8127b9ef5c43fc26cff2811a79d82",
+    "line" : 207,
+    "diffHunk" : "@@ -1,1 +205,209 @@  extends SwallowedExceptionListener with Logging {\n\n  override def onSwallowException(e: Exception): Unit = {\n    logWarning(s\"Error closing Kafka $connectorType\", e)\n  }"
+  }
+]

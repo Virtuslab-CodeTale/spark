@@ -1,0 +1,46 @@
+[
+  {
+    "id" : "d05c2acb-2eb8-45dd-98a9-e83b483f4753",
+    "prId" : 25853,
+    "prUrl" : "https://github.com/apache/spark/pull/25853#pullrequestreview-311900184",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1b227f48-5d8e-4ab8-af06-29f654920df9",
+        "parentId" : null,
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "I'm a little confused, what exactly is this achieving? Do you somehow have different `Map` implementations being used by the code, and they somehow don't have consistent `hashCode` / `equals` behavior?",
+        "createdAt" : "2019-10-28T21:47:58Z",
+        "updatedAt" : "2019-11-07T13:51:09Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "13dbca62-1e37-4985-a04d-4d920ee73d81",
+        "parentId" : "1b227f48-5d8e-4ab8-af06-29f654920df9",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "Sorted `Seq` as key is coming from the original implementation. I understand the same way, namely different `Map` implementations or different number of buckets (this is dynamically changing when `loadFactor` reached) may end-up in different order which trigger a cache miss. The sorted `Seq` approach is one way to overcame this situation.\r\n\r\nI was thinking about to use `Map` as key but didn't change because:\r\n* To use the same `Map` implementation is not enforced on API level and I think it would be an overkill to introduce it (depending on implementation detail on class API would make the code less flexible)\r\n* Depending on implementations which provide insertion order is just error prone because multiple code places must match in terms of order and I can hardly believe devs will aware of this constraint\r\n* The only option what I see is a `Map` implementation which makes ordering in insertion time for example `TreeMap` (but considering the first point I'm not really a big fan of that).\r\n",
+        "createdAt" : "2019-10-30T13:44:15Z",
+        "updatedAt" : "2019-11-07T13:51:09Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c4acf601-30a4-44a2-8e14-b7fa015fce2f",
+        "parentId" : "1b227f48-5d8e-4ab8-af06-29f654920df9",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Not sure I follow you, because consistency in the behavior of `equals` and `hashCode` is defined in the `java.util.Map` interface itself. So I was wondering if you actually ran into any problem that required this, but if it comes from previous code...\r\n\r\nYou can try it yourself.\r\n\r\n```\r\nscala> val hm = new java.util.HashMap[String, String]()\r\nhm: java.util.HashMap[String,String] = {}\r\n\r\nscala> val tm = new java.util.TreeMap[String, String]()\r\ntm: java.util.TreeMap[String,String] = {}\r\n\r\nscala> hm == tm\r\nres0: Boolean = true\r\n\r\nscala> hm.put(\"1\", \"1\")\r\nres1: String = null\r\n\r\nscala> tm.put(\"1\", \"1\")\r\nres2: String = null\r\n\r\nscala> hm == tm\r\nres3: Boolean = true\r\n\r\nscala> hm.hashCode()\r\nres4: Int = 0\r\n\r\nscala> tm.hashCode()\r\nres5: Int = 0\r\n```",
+        "createdAt" : "2019-11-05T17:22:10Z",
+        "updatedAt" : "2019-11-07T13:51:09Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ebe9708c96e8127b9ef5c43fc26cff2811a79d82",
+    "line" : 65,
+    "diffHunk" : "@@ -1,1 +63,67 @@  type CacheKey = Seq[(String, Object)]\n\n  def toCacheKey(params: ju.Map[String, Object]): CacheKey = {\n    params.asScala.toSeq.sortBy(x => x._1)\n  }"
+  }
+]
