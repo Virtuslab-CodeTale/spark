@@ -295,5 +295,93 @@
     "commit" : "cf34aa3fced16d61b75e362a418d8c67a7de7023",
     "line" : 95,
     "diffHunk" : "@@ -1,1 +191,195 @@          null, // CHAR_OCTET_LENGTH\n          pos.asInstanceOf[AnyRef], // ORDINAL_POSITION\n          \"YES\", // IS_NULLABLE\n          null, // SCOPE_CATALOG\n          null, // SCOPE_SCHEMA"
+  },
+  {
+    "id" : "851333d3-1475-4b1c-b22c-e1a8ec6f229a",
+    "prId" : 24906,
+    "prUrl" : "https://github.com/apache/spark/pull/24906#pullrequestreview-252882928",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "491abb04-d894-4909-9489-d6cc98b0661d",
+        "parentId" : null,
+        "authorId" : "e5beb795-ac0e-4bd6-ad66-708215b8ae58",
+        "body" : "BTW: I believe that this doesn't take the global temp views into account.\r\nI think it could be solved by\r\n```\r\n    val matchingDbs = {\r\n      val databases = catalog.listDatabases(schemaPattern)\r\n      // Add global temp view schema if matches\r\n      val databasePattern = Pattern.compile(CLIServiceUtils.patternToRegex(sparkSchemaName))\r\n      if (databasePattern.matcher(catalog.globalTempViewManager.database).matches()) {\r\n        databases :+ catalog.globalTempViewManager.database\r\n      } else {\r\n        databases\r\n      }\r\n    }\r\n```\r\n(same problem seems to exist in SparkGetTablesOperation and SparkGetSchemasOperation)",
+        "createdAt" : "2019-06-20T08:59:06Z",
+        "updatedAt" : "2019-06-21T15:33:29Z",
+        "lastEditedBy" : "e5beb795-ac0e-4bd6-ad66-708215b8ae58",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9b68e960-de0a-432c-8b27-86c82807c6bc",
+        "parentId" : "491abb04-d894-4909-9489-d6cc98b0661d",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "Thank you @juliuszsompolski It seems need more changes:\r\n```java\r\n19/06/21 22:51:53 WARN ThriftCLIService: Error getting tables: \r\njava.lang.RuntimeException: org.apache.spark.sql.AnalysisException: org.apache.hadoop.hive.ql.metadata.HiveException: Unable to fetch tables of db global_temp;\r\n        at org.apache.hive.service.cli.session.HiveSessionProxy.invoke(HiveSessionProxy.java:83)\r\n        at org.apache.hive.service.cli.session.HiveSessionProxy.access$000(HiveSessionProxy.java:36)\r\n        at org.apache.hive.service.cli.session.HiveSessionProxy$1.run(HiveSessionProxy.java:63)\r\n        at java.security.AccessController.doPrivileged(Native Method)\r\n        at javax.security.auth.Subject.doAs(Subject.java:422)\r\n        at org.apache.hadoop.security.UserGroupInformation.doAs(UserGroupInformation.java:1746)\r\n        at org.apache.hive.service.cli.session.HiveSessionProxy.invoke(HiveSessionProxy.java:59)\r\n        at com.sun.proxy.$Proxy23.getTables(Unknown Source)\r\n        at org.apache.hive.service.cli.CLIService.getTables(CLIService.java:326)\r\n        at org.apache.hive.service.cli.thrift.ThriftCLIService.GetTables(ThriftCLIService.java:495)\r\n        at org.apache.hive.service.cli.thrift.TCLIService$Processor$GetTables.getResult(TCLIService.java:1393)\r\n        at org.apache.hive.service.cli.thrift.TCLIService$Processor$GetTables.getResult(TCLIService.java:1378)\r\n        at org.apache.thrift.ProcessFunction.process(ProcessFunction.java:38)\r\n        at org.apache.thrift.TBaseProcessor.process(TBaseProcessor.java:39)\r\n        at org.apache.hive.service.auth.TSetIpAddressProcessor.process(TSetIpAddressProcessor.java:53)\r\n        at org.apache.thrift.server.TThreadPoolServer$WorkerProcess.run(TThreadPoolServer.java:310)\r\n        at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\r\n        at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\r\n        at java.lang.Thread.run(Thread.java:748)\r\nCaused by: org.apache.spark.sql.AnalysisException: org.apache.hadoop.hive.ql.metadata.HiveException: Unable to fetch tables of db global_temp;\r\n        at org.apache.spark.sql.hive.HiveExternalCatalog.withClient(HiveExternalCatalog.scala:109)\r\n        at org.apache.spark.sql.hive.HiveExternalCatalog.getTablesByName(HiveExternalCatalog.scala:710)\r\n        at org.apache.spark.sql.catalyst.catalog.ExternalCatalogWithListener.getTablesByName(ExternalCatalogWithListener.scala:142)\r\n        at org.apache.spark.sql.catalyst.catalog.SessionCatalog.getTablesByName(SessionCatalog.scala:459)\r\n        at org.apache.spark.sql.hive.thriftserver.SparkGetTablesOperation.$anonfun$runInternal$1(SparkGetTablesOperation.scala:89)\r\n        at org.apache.spark.sql.hive.thriftserver.SparkGetTablesOperation.$anonfun$runInternal$1$adapted(SparkGetTablesOperation.scala:87)\r\n        at scala.collection.mutable.ResizableArray.foreach(ResizableArray.scala:62)\r\n        at scala.collection.mutable.ResizableArray.foreach$(ResizableArray.scala:55)\r\n        at scala.collection.mutable.ArrayBuffer.foreach(ArrayBuffer.scala:49)\r\n        at org.apache.spark.sql.hive.thriftserver.SparkGetTablesOperation.runInternal(SparkGetTablesOperation.scala:87)\r\n        at org.apache.hive.service.cli.operation.Operation.run(Operation.java:257)\r\n        at org.apache.hive.service.cli.session.HiveSessionImpl.getTables(HiveSessionImpl.java:556)\r\n        at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)\r\n        at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)\r\n        at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)\r\n        at java.lang.reflect.Method.invoke(Method.java:498)\r\n        at org.apache.hive.service.cli.session.HiveSessionProxy.invoke(HiveSessionProxy.java:78)\r\n        ... 18 more\r\nCaused by: org.apache.hadoop.hive.ql.metadata.HiveException: Unable to fetch tables of db global_temp\r\n        at org.apache.spark.sql.hive.client.HiveClientImpl.getRawTablesByName(HiveClientImpl.scala:401)\r\n        at org.apache.spark.sql.hive.client.HiveClientImpl.$anonfun$getTablesByName$1(HiveClientImpl.scala:412)\r\n        at org.apache.spark.sql.hive.client.HiveClientImpl.$anonfun$withHiveState$1(HiveClientImpl.scala:310)\r\n        at org.apache.spark.sql.hive.client.HiveClientImpl.liftedTree1$1(HiveClientImpl.scala:244)\r\n        at org.apache.spark.sql.hive.client.HiveClientImpl.retryLocked(HiveClientImpl.scala:243)\r\n        at org.apache.spark.sql.hive.client.HiveClientImpl.withHiveState(HiveClientImpl.scala:293)\r\n        at org.apache.spark.sql.hive.client.HiveClientImpl.getTablesByName(HiveClientImpl.scala:412)\r\n        at org.apache.spark.sql.hive.HiveExternalCatalog.getRawTablesByNames(HiveExternalCatalog.scala:124)\r\n        at org.apache.spark.sql.hive.HiveExternalCatalog.$anonfun$getTablesByName$1(HiveExternalCatalog.scala:710)\r\n        at org.apache.spark.sql.hive.HiveExternalCatalog.withClient(HiveExternalCatalog.scala:99)\r\n        ... 34 more\r\nCaused by: UnknownDBException(message:Could not find database global_temp)\r\n        at org.apache.hadoop.hive.metastore.ObjectStore.getTableObjectsByName(ObjectStore.java:1022)\r\n        at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)\r\n        at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)\r\n        at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)\r\n        at java.lang.reflect.Method.invoke(Method.java:498)\r\n        at org.apache.hadoop.hive.metastore.RawStoreProxy.invoke(RawStoreProxy.java:114)\r\n        at com.sun.proxy.$Proxy13.getTableObjectsByName(Unknown Source)\r\n        at org.apache.hadoop.hive.metastore.HiveMetaStore$HMSHandler.get_table_objects_by_name(HiveMetaStore.java:1854)\r\n        at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)\r\n        at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)\r\n        at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)\r\n        at java.lang.reflect.Method.invoke(Method.java:498)\r\n        at org.apache.hadoop.hive.metastore.RetryingHMSHandler.invoke(RetryingHMSHandler.java:107)\r\n        at com.sun.proxy.$Proxy15.get_table_objects_by_name(Unknown Source)\r\n        at org.apache.hadoop.hive.metastore.HiveMetaStoreClient.getTableObjectsByName(HiveMetaStoreClient.java:1223)\r\n        at org.apache.hadoop.hive.ql.metadata.SessionHiveMetaStoreClient.getTableObjectsByName(SessionHiveMetaStoreClient.java:197)\r\n        at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)\r\n        at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)\r\n        at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)\r\n        at java.lang.reflect.Method.invoke(Method.java:498)\r\n        at org.apache.hadoop.hive.metastore.RetryingMetaStoreClient.invoke(RetryingMetaStoreClient.java:156)\r\n        at com.sun.proxy.$Proxy16.getTableObjectsByName(Unknown Source)\r\n        at org.apache.spark.sql.hive.client.HiveClientImpl.getRawTablesByName(HiveClientImpl.scala:397)\r\n        ... 43 more\r\n```\r\n\r\nHow about support `GLOBAL TEMP VIEW` and `TEMPORARY VIEW` in the next PR?",
+        "createdAt" : "2019-06-21T14:59:44Z",
+        "updatedAt" : "2019-06-21T15:33:29Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "89682f5f-80b8-4ddb-87c0-b62f2575bee6",
+        "parentId" : "491abb04-d894-4909-9489-d6cc98b0661d",
+        "authorId" : "e5beb795-ac0e-4bd6-ad66-708215b8ae58",
+        "body" : "Sure, makes sense; to then add it to all three operations.",
+        "createdAt" : "2019-06-21T15:11:54Z",
+        "updatedAt" : "2019-06-21T15:33:29Z",
+        "lastEditedBy" : "e5beb795-ac0e-4bd6-ad66-708215b8ae58",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e9810e1a-3144-4024-86c3-6b5e91e02a12",
+        "parentId" : "491abb04-d894-4909-9489-d6cc98b0661d",
+        "authorId" : "e5beb795-ac0e-4bd6-ad66-708215b8ae58",
+        "body" : "Seems `getTablesByName` needs a similar check like `listTables` https://github.com/apache/spark/blob/master/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/catalog/SessionCatalog.scala#L788",
+        "createdAt" : "2019-06-21T15:15:45Z",
+        "updatedAt" : "2019-06-21T15:33:29Z",
+        "lastEditedBy" : "e5beb795-ac0e-4bd6-ad66-708215b8ae58",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b00d4a2da2f7c69cc5fc48403d4e07386d85ce16",
+    "line" : 81,
+    "diffHunk" : "@@ -1,1 +79,83 @@    val db2Tabs = catalog.listDatabases(schemaPattern).map { dbName =>\n      (dbName, catalog.listTables(dbName, tablePattern))\n    }.toMap\n\n    if (isAuthV2Enabled) {"
+  },
+  {
+    "id" : "38e48482-bbeb-487a-ac4e-d66a9f7c258f",
+    "prId" : 24906,
+    "prUrl" : "https://github.com/apache/spark/pull/24906#pullrequestreview-253723030",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f6bd4e41-a5e6-457d-ae67-6a1b586ff476",
+        "parentId" : null,
+        "authorId" : "e5beb795-ac0e-4bd6-ad66-708215b8ae58",
+        "body" : "Actually, currently the metadata operations are not visible in the SparkUI. We could log this same string as `statement` for `HiveThriftServer2.listener.onStatementStart`, here and also in GetTables and GetSchemas operation.\r\n@wangyum @gatorsmile do you think it would be a good followup?",
+        "createdAt" : "2019-06-24T11:26:54Z",
+        "updatedAt" : "2019-06-24T11:26:55Z",
+        "lastEditedBy" : "e5beb795-ac0e-4bd6-ad66-708215b8ae58",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "038dbf77-174a-4bdd-8dec-e4af0f76455f",
+        "parentId" : "f6bd4e41-a5e6-457d-ae67-6a1b586ff476",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "+1",
+        "createdAt" : "2019-06-25T00:43:14Z",
+        "updatedAt" : "2019-06-25T00:43:15Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b00d4a2da2f7c69cc5fc48403d4e07386d85ce16",
+    "line" : 64,
+    "diffHunk" : "@@ -1,1 +62,66 @@    val cmdStr = s\"catalog : $catalogName, schemaPattern : $schemaName, tablePattern : $tableName\" +\n      s\", columnName : $columnName\"\n    logInfo(s\"GetColumnsOperation: $cmdStr\")\n\n    setState(OperationState.RUNNING)"
   }
 ]

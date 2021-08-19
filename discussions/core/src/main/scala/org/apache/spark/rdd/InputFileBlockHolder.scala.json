@@ -1,0 +1,112 @@
+[
+  {
+    "id" : "007cebf1-16ba-4247-84a0-0dce6083d1c6",
+    "prId" : 24958,
+    "prUrl" : "https://github.com/apache/spark/pull/24958#pullrequestreview-254025619",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4c1e1261-b49f-4593-aa23-7480b9be25a2",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Does it mean, parent and child threads share the same `FileBlock` object?",
+        "createdAt" : "2019-06-25T13:45:56Z",
+        "updatedAt" : "2019-07-23T01:09:39Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "95f3e99b-5f69-4dee-9312-beea1383d598",
+        "parentId" : "4c1e1261-b49f-4593-aa23-7480b9be25a2",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "More specifically, it means it holds one reference where `FileBlock` instance is atomically set and unset.",
+        "createdAt" : "2019-06-25T14:01:13Z",
+        "updatedAt" : "2019-07-23T01:09:39Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "cb4cfdee34b02d3be7372eeb972c7908b63469d5",
+    "line" : 24,
+    "diffHunk" : "@@ -1,1 +51,55 @@   */\n  private[this] val inputBlock: InheritableThreadLocal[AtomicReference[FileBlock]] =\n    new InheritableThreadLocal[AtomicReference[FileBlock]] {\n      override protected def initialValue(): AtomicReference[FileBlock] =\n        new AtomicReference(new FileBlock)"
+  },
+  {
+    "id" : "490f6970-819a-4e29-9426-47a331f07d60",
+    "prId" : 24958,
+    "prUrl" : "https://github.com/apache/spark/pull/24958#pullrequestreview-254014949",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "74b30ce4-3388-4889-824c-233ae6d3cd9b",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "It may not intuitive to understand this thread local variable now, can we add a short comment to explain why an `AtomicReference` here?",
+        "createdAt" : "2019-06-25T13:46:57Z",
+        "updatedAt" : "2019-07-23T01:09:39Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "cb4cfdee34b02d3be7372eeb972c7908b63469d5",
+    "line" : 12,
+    "diffHunk" : "@@ -1,1 +42,46 @@  /**\n   * The thread variable for the name of the current file being read. This is used by\n   * the InputFileName function in Spark SQL.\n   *\n   * @note `inputBlock` works somewhat complicatedly. It guarantees that `initialValue`"
+  },
+  {
+    "id" : "0685be61-7f7b-4eb8-9742-04e9db27a4f8",
+    "prId" : 24958,
+    "prUrl" : "https://github.com/apache/spark/pull/24958#pullrequestreview-254027314",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e74d6dc3-7480-4c2a-9dab-483699089bbd",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Do we need this? The parent thread should always create thread local variable before the child thread, right?",
+        "createdAt" : "2019-06-25T13:49:55Z",
+        "updatedAt" : "2019-07-23T01:09:39Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fd52916b-6867-4e39-bf7f-b8f0bf83bc47",
+        "parentId" : "e74d6dc3-7480-4c2a-9dab-483699089bbd",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Oh, no, sorry, before `get` is invoked, the thread local variable doesn't get initial value.",
+        "createdAt" : "2019-06-25T13:56:57Z",
+        "updatedAt" : "2019-07-23T01:09:39Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ad6ccc8c-c76d-44c2-9ca0-880848f28164",
+        "parentId" : "e74d6dc3-7480-4c2a-9dab-483699089bbd",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "We need this. Here was where I was stuck and confused for a while. We create the thread local but it doesn't call `initialValue`.\r\n\r\nSo, previously, here's what happens:\r\n\r\n1. Input iterator that calls `InputFileBlockHolder.set` is executed in a child thread (in Python writer thread)\r\n2. The child thread calls **`initialValue`** (not `childValue`) and sets new reference\r\n3. After that, the parent thread reads it (say, `InputFileBlockHolder.getXXX`). Here, the parent threads calls **`initialValue`** again because `initialValue` was never called.\r\n\r\nAfter the fix,\r\n\r\n1. At the start of the task, the parent thread calls `initialValue`\r\n2. After that, the child thread calls **`childValue`** (not `initialValue`); therefore, it points the same reference.\r\n3. After that, the parent threads can access to the same reference.\r\n\r\nI double checked those so if I am not like totally mistaken, should be correct ^.",
+        "createdAt" : "2019-06-25T13:59:29Z",
+        "updatedAt" : "2019-07-23T01:09:39Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3338ac0d-1af0-48d4-9d32-581f3e5b2d42",
+        "parentId" : "e74d6dc3-7480-4c2a-9dab-483699089bbd",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "oh haha you were faster than me ..",
+        "createdAt" : "2019-06-25T14:03:40Z",
+        "updatedAt" : "2019-07-23T01:09:39Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "cb4cfdee34b02d3be7372eeb972c7908b63469d5",
+    "line" : 66,
+    "diffHunk" : "@@ -1,1 +90,94 @@   * initialValue in the parent thread.\n   */\n  def initialize(): Unit = inputBlock.get()\n}"
+  }
+]

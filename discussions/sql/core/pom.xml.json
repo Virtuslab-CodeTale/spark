@@ -42,5 +42,71 @@
     "commit" : "21e1728cddab0fcd39886d914190a899aaac6d59",
     "line" : 7,
     "diffHunk" : "@@ -1,1 +39,43 @@      <groupId>org.rocksdb</groupId>\n      <artifactId>rocksdbjni</artifactId>\n      <version>6.2.2</version>\n    </dependency>\n    <dependency>"
+  },
+  {
+    "id" : "ab0224ac-5dab-4512-b74d-c3228ad07c8d",
+    "prId" : 24922,
+    "prUrl" : "https://github.com/apache/spark/pull/24922#pullrequestreview-300523660",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5318f997-37c9-4b85-a93f-872c72711496",
+        "parentId" : null,
+        "authorId" : "63281e91-e961-4e6e-b0bb-6855587910d1",
+        "body" : "This dependency has all the files packed for all major OSs. Flink uses a [custom build ](https://github.com/apache/flink/blob/master/flink-state-backends/flink-statebackend-rocksdb/pom.xml#L60). Digging into this a bit more I see some additions  [modifications](https://github.com/dataArtisans/frocksdb/pull/3) as described [here](https://github.com/azagrebin/frocksdb/commits/release). I understand this is flink specific but how about the TTL thing mentioned there, https://issues.apache.org/jira/browse/FLINK-10471 looks interesting. Structured Streaming fetches all state [here](https://github.com/apache/spark/blob/5f3658a8d8bc6b11b20eb0d3935662e08d319460/sql/core/src/main/scala/org/apache/spark/sql/execution/streaming/FlatMapGroupsWithStateExec.scala#L188) (memory) and filters out the timed out ones, is RockDB performing well there? Shouldnt we have the same mechanism or a similar one so we dont fectch everything and delegate this to state backend (which could run in the background btw)?",
+        "createdAt" : "2019-06-20T10:42:13Z",
+        "updatedAt" : "2019-09-26T06:35:25Z",
+        "lastEditedBy" : "63281e91-e961-4e6e-b0bb-6855587910d1",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "597a5d65-f638-4e2a-84ca-f455094dab0c",
+        "parentId" : "5318f997-37c9-4b85-a93f-872c72711496",
+        "authorId" : "be7041e0-9315-4dbe-8cde-5135813054ec",
+        "body" : "I will take a look at the Flink build and see if I can pick only relevant packages in rocksdb dependency. \r\n\r\nIMO, abstracting out how state backend should filter out timed out states can be treated as a separate problem so that we don't end up increasing the scope of this PR. Once the abstraction is added, we can file a separate jira to implement it for rocksdb state backend.",
+        "createdAt" : "2019-06-21T04:36:42Z",
+        "updatedAt" : "2019-09-26T06:35:25Z",
+        "lastEditedBy" : "be7041e0-9315-4dbe-8cde-5135813054ec",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fc78daff-8217-4718-82da-bb68151f5bc6",
+        "parentId" : "5318f997-37c9-4b85-a93f-872c72711496",
+        "authorId" : "63281e91-e961-4e6e-b0bb-6855587910d1",
+        "body" : "ok makes sense.",
+        "createdAt" : "2019-06-21T11:11:17Z",
+        "updatedAt" : "2019-09-26T06:35:25Z",
+        "lastEditedBy" : "63281e91-e961-4e6e-b0bb-6855587910d1",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b724107c-fa49-4fa8-bec3-a39753b4c4a8",
+        "parentId" : "5318f997-37c9-4b85-a93f-872c72711496",
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "RocksDB might not be the best backend. Instead of adding the extra dependency, I think we should just do it as a separate third-party package. The community can always build their own backend based on their needs. Doing it is simple. \r\n\r\nCan you submit it to https://spark-packages.org/?\r\n\r\ncc @marmbrus @tdas @zsxwing ",
+        "createdAt" : "2019-10-10T23:10:45Z",
+        "updatedAt" : "2019-10-10T23:10:46Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cab67a82-bc03-4112-aa76-91907f2fc18c",
+        "parentId" : "5318f997-37c9-4b85-a93f-872c72711496",
+        "authorId" : "be7041e0-9315-4dbe-8cde-5135813054ec",
+        "body" : "@gatorsmile - what are the alternatives if rocksdb is not the best backend. Other streaming technologies such as flink and kstreams are using rocksdb as primary storage engine. \r\n\r\nWith integration in spark codebase, we can probably change the code in any way later, but if we take the separate jar route, the kind of extensions you can make are limited by the current contract. For example @skonto mentioned one of way where we can abstract  state storage implementation to get the best out of rocksdb. How can we support such improvement of we take spark package route?\r\n\r\nCurrent implementation based on in memory hashmap is not scalable beyond a point. How shall we go about solving it? \r\n",
+        "createdAt" : "2019-10-11T07:58:35Z",
+        "updatedAt" : "2019-10-11T07:58:35Z",
+        "lastEditedBy" : "be7041e0-9315-4dbe-8cde-5135813054ec",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "45e0d054a38958ac9e1b7c6a9429a3a3df9b8ff1",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +150,154 @@    <dependency>\n      <groupId>org.rocksdb</groupId>\n      <artifactId>rocksdbjni</artifactId>\n      <version>${rocksdb.version}</version>\n    </dependency>"
   }
 ]

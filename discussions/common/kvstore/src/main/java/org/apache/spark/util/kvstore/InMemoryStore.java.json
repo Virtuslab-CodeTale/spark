@@ -174,5 +174,93 @@
     "commit" : "c0d375535d4cc20f8fd18a011fc3165da1ab2b7e",
     "line" : 36,
     "diffHunk" : "@@ -1,1 +231,235 @@    }\n\n    int countingRemoveAllByIndexValues(String index, Collection<?> indexValues) {\n      if (hasNaturalParentIndex && naturalParentIndexName.equals(index)) {\n        // If there is a parent index for the natural index and `index` happens to be it,"
+  },
+  {
+    "id" : "f178de24-a1ac-4418-9666-6ac5ccc434ae",
+    "prId" : 24982,
+    "prUrl" : "https://github.com/apache/spark/pull/24982#pullrequestreview-255838062",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3e1493d4-b790-4c72-a52c-255a14305151",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Rather than leave the code above duplicating this, have it call this one with a null condition and handle it here. Subclasses would only override `viewWithCondition` then.",
+        "createdAt" : "2019-06-27T14:39:17Z",
+        "updatedAt" : "2019-06-28T11:03:40Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "429635dd-5775-4111-b7c0-1aa02e436436",
+        "parentId" : "3e1493d4-b790-4c72-a52c-255a14305151",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "I’ve tried like `view(Class<T> type, Optional<Predicate<T>> condition)`, but how can I add a default parameter value in Java like `condition: Option[Predicate[T]] = None` in Scala? Otherwise, it needs to change many places so I choose to add a new function called `viewWithCondition`.",
+        "createdAt" : "2019-06-27T15:50:52Z",
+        "updatedAt" : "2019-06-28T11:03:40Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "56366538-8627-4323-a560-81f7d27ce427",
+        "parentId" : "3e1493d4-b790-4c72-a52c-255a14305151",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "You can't create a default parameter value, but you can keep both methods. I'm just suggesting there's no need to duplicate their logic here and in subclasses.",
+        "createdAt" : "2019-06-27T16:10:10Z",
+        "updatedAt" : "2019-06-28T11:03:40Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "449a2f63-4642-4957-b41d-ee80d8770481",
+        "parentId" : "3e1493d4-b790-4c72-a52c-255a14305151",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "Do you mean dedup like this?\r\n```scala\r\n  @Override\r\n  public <T> KVStoreView<T> view(Class<T> type){\r\n    return viewWithCondition(type, t -> true);\r\n  }\r\n```\r\nWe cannot invoke `view` in `viewWithCondition` since `list.view(type)` will create much more instances than `list.viewWithCondition` indeed.",
+        "createdAt" : "2019-06-28T02:14:45Z",
+        "updatedAt" : "2019-06-28T11:03:40Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bc48fbfb-ac2c-4a7b-a8f5-bc18291f53d7",
+        "parentId" : "3e1493d4-b790-4c72-a52c-255a14305151",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "Dedup like this causes thing worse since `view()` would traverse all items. It was just return `map.values()`",
+        "createdAt" : "2019-06-28T07:17:19Z",
+        "updatedAt" : "2019-06-28T11:03:40Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "062dad04-5219-45ce-8371-4e14c5a307ab",
+        "parentId" : "3e1493d4-b790-4c72-a52c-255a14305151",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "You're still going to exam all items, right? I don't see where this can be pushed down enough to make it faster.",
+        "createdAt" : "2019-06-28T13:00:28Z",
+        "updatedAt" : "2019-06-28T13:00:31Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6b08a1cd-ad86-4d78-ae2c-003f5c32c245",
+        "parentId" : "3e1493d4-b790-4c72-a52c-255a14305151",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "There are low level APIs, the different between their efficiencies doesn’t depend on the API self, it depends on the invocation layer. For example the logic of invocation layer uses `view` to get all items and creates some kinds of objects for them, then it executes multiple heavy logic, finally it uses a filter to get less result. So using `viewWithCondiction` is very like SQL prediction pushdown optimization rule. Even the cost of the filter operation itself always fixed. But filter out as earlier as possible still could save memory and time.",
+        "createdAt" : "2019-06-28T15:36:14Z",
+        "updatedAt" : "2019-06-28T15:36:14Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "dac3fe3ba6bd8ee270f92109333279d6510a6c43",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +109,113 @@  @Override\n  public <T> KVStoreView<T> viewWithCondition(Class<T> type, Predicate<T> condition) {\n    InstanceList<T> list = inMemoryLists.get(type);\n    return list != null ? list.viewWithCondition(condition) : emptyView();\n  }"
   }
 ]

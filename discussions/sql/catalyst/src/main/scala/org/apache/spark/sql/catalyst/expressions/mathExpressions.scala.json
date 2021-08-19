@@ -559,5 +559,126 @@
     "commit" : "cd97401dd87cd16959f30c64884f7c5507e14590",
     "line" : 53,
     "diffHunk" : "@@ -1,1 +600,604 @@    case _ => math.log(x + math.sqrt(x * x + 1.0)) }, \"ASINH\") {\n  override def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {\n    defineCodeGen(ctx, ev, c =>\n      s\"$c == Double.NEGATIVE_INFINITY ? Double.NEGATIVE_INFINITY : \" +\n      s\"java.lang.Math.log($c + java.lang.Math.sqrt($c * $c + 1.0))\")"
+  },
+  {
+    "id" : "5e6466dc-db23-4397-9639-487d9612c957",
+    "prId" : 24994,
+    "prUrl" : "https://github.com/apache/spark/pull/24994#pullrequestreview-256053308",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "054e80b0-cbb8-447a-9d8b-8b0e6bf2c853",
+        "parentId" : null,
+        "authorId" : "24e1dd39-ae3f-4bbb-a391-f60afb62d075",
+        "body" : "what if the input is negative?",
+        "createdAt" : "2019-06-28T08:19:28Z",
+        "updatedAt" : "2019-07-03T03:53:57Z",
+        "lastEditedBy" : "24e1dd39-ae3f-4bbb-a391-f60afb62d075",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c84387a5-013b-41b0-a1a6-970f11c7079a",
+        "parentId" : "054e80b0-cbb8-447a-9d8b-8b0e6bf2c853",
+        "authorId" : "bd48244c-ec04-47b7-a7f0-ae8e070e5394",
+        "body" : "It will return NaN, the same behavior as for existing sinh implementation.",
+        "createdAt" : "2019-06-28T21:37:24Z",
+        "updatedAt" : "2019-07-03T03:53:57Z",
+        "lastEditedBy" : "bd48244c-ec04-47b7-a7f0-ae8e070e5394",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "103edbbe-3313-44ef-8793-8dfec7083dcf",
+        "parentId" : "054e80b0-cbb8-447a-9d8b-8b0e6bf2c853",
+        "authorId" : "24e1dd39-ae3f-4bbb-a391-f60afb62d075",
+        "body" : "mmh..what do other DBs do in this case? I checked the implementation of `FastMath` and it handles negatives...",
+        "createdAt" : "2019-06-28T22:52:09Z",
+        "updatedAt" : "2019-07-03T03:53:57Z",
+        "lastEditedBy" : "24e1dd39-ae3f-4bbb-a391-f60afb62d075",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dbbe1a23-aa92-4e10-8919-adf5148f4e02",
+        "parentId" : "054e80b0-cbb8-447a-9d8b-8b0e6bf2c853",
+        "authorId" : "bd48244c-ec04-47b7-a7f0-ae8e070e5394",
+        "body" : "thanks for reminding me of FastMath lib. Maybe we can simply use that lib here, without this hand-crafted calculation?",
+        "createdAt" : "2019-06-28T23:01:47Z",
+        "updatedAt" : "2019-07-03T03:53:57Z",
+        "lastEditedBy" : "bd48244c-ec04-47b7-a7f0-ae8e070e5394",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "227fc3d1-1a93-4acc-97fa-1543438e9973",
+        "parentId" : "054e80b0-cbb8-447a-9d8b-8b0e6bf2c853",
+        "authorId" : "bd48244c-ec04-47b7-a7f0-ae8e070e5394",
+        "body" : "Also I just tried the code with several negative values, i got correct return values.",
+        "createdAt" : "2019-06-28T23:44:13Z",
+        "updatedAt" : "2019-07-03T03:53:57Z",
+        "lastEditedBy" : "bd48244c-ec04-47b7-a7f0-ae8e070e5394",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8d4e2266-93f5-44c7-b971-cd11d5488306",
+        "parentId" : "054e80b0-cbb8-447a-9d8b-8b0e6bf2c853",
+        "authorId" : "24e1dd39-ae3f-4bbb-a391-f60afb62d075",
+        "body" : "> Also I just tried the code with several negative values, i got correct return values.\r\n\r\nSorry what did you try?\r\n\r\nAnyway, if we don't have a dependency on it, I am not sure it is a good idea to add a dependency for only a couple of functions...",
+        "createdAt" : "2019-06-29T08:24:40Z",
+        "updatedAt" : "2019-07-03T03:53:57Z",
+        "lastEditedBy" : "24e1dd39-ae3f-4bbb-a391-f60afb62d075",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "55e4317f-ee39-474e-8806-b470e425f701",
+        "parentId" : "054e80b0-cbb8-447a-9d8b-8b0e6bf2c853",
+        "authorId" : "bd48244c-ec04-47b7-a7f0-ae8e070e5394",
+        "body" : "took a closer look at asinh\\atanh implementation in FastMath. the negative handling inside is to apply calculation optimization on abs(double a) and then apply proper sign at the end of the function to return, which should produce the same value as the original formula i'm using here (https://en.wikipedia.org/wiki/Inverse_hyperbolic_functions#Definitions_in_terms_of_logarithms). But FastMath runs faster than the original functions though.",
+        "createdAt" : "2019-06-29T23:33:47Z",
+        "updatedAt" : "2019-07-03T03:53:57Z",
+        "lastEditedBy" : "bd48244c-ec04-47b7-a7f0-ae8e070e5394",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3b07ee33322de6d15d80bc65e32413fc5697880c",
+    "line" : 53,
+    "diffHunk" : "@@ -1,1 +600,604 @@  override def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {\n    defineCodeGen(ctx, ev, c =>\n      s\"${ev.value} = java.lang.Math.log($c + java.lang.Math.sqrt($c * $c + 1.0));\")\n  }\n}"
+  },
+  {
+    "id" : "7d8b6f1b-42f7-48c9-a479-000fdfeb777c",
+    "prId" : 24994,
+    "prUrl" : "https://github.com/apache/spark/pull/24994#pullrequestreview-255984162",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "78c81781-2f20-4f06-937a-55f75fd6a99a",
+        "parentId" : null,
+        "authorId" : "24e1dd39-ae3f-4bbb-a391-f60afb62d075",
+        "body" : "again, what if the input is negative?",
+        "createdAt" : "2019-06-28T08:21:08Z",
+        "updatedAt" : "2019-07-03T03:53:57Z",
+        "lastEditedBy" : "24e1dd39-ae3f-4bbb-a391-f60afb62d075",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "61c0369d-5296-472e-bb4a-c82299f0a2af",
+        "parentId" : "78c81781-2f20-4f06-937a-55f75fd6a99a",
+        "authorId" : "bd48244c-ec04-47b7-a7f0-ae8e070e5394",
+        "body" : "same as above.",
+        "createdAt" : "2019-06-28T21:37:32Z",
+        "updatedAt" : "2019-07-03T03:53:57Z",
+        "lastEditedBy" : "bd48244c-ec04-47b7-a7f0-ae8e070e5394",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3b07ee33322de6d15d80bc65e32413fc5697880c",
+    "line" : 81,
+    "diffHunk" : "@@ -1,1 +681,685 @@  since = \"3.0.0\")\ncase class Atanh(child: Expression)\n  extends UnaryMathExpression((x: Double) => 0.5 * math.log((1.0 + x) / (1.0 - x)), \"ATANH\") {\n  override def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {\n    defineCodeGen(ctx, ev, c =>"
   }
 ]

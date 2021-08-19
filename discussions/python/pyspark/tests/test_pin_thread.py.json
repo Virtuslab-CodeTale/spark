@@ -1,0 +1,101 @@
+[
+  {
+    "id" : "7b4877f3-1307-45e0-b0a6-70b1a036fb8a",
+    "prId" : 24898,
+    "prUrl" : "https://github.com/apache/spark/pull/24898#pullrequestreview-308269535",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7e3285da-42ae-47c0-a98b-d2be900f8fd9",
+        "parentId" : null,
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "just a general question about pyspark code -- how come we don't use docstrings for these class & method comments?  Seems we do in a few cases, but not consistently, mostly they're just comments.",
+        "createdAt" : "2019-10-25T14:52:24Z",
+        "updatedAt" : "2019-11-07T10:32:20Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "37049b4d-aff9-4494-940d-706354d59d32",
+        "parentId" : "7e3285da-42ae-47c0-a98b-d2be900f8fd9",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Yeah, agree. I don't think there's kind of a consistent rule for that. I usually just write comments when the contents are not directly related to the description of the class or method. e.g.) \"this class contains tests blah blah\" -> docstring, \"this test class don't use something because blah blah\" -> comments . But I guess it's just me :-).\r\n\r\n\r\nActually I don't bother docstrings often in test classes because it's unlikely the docstrings in class are read via pydoc (e.g., `help(PinThreadTests)` in Python shall) or generated as a doc.\r\n\r\n",
+        "createdAt" : "2019-10-29T04:24:23Z",
+        "updatedAt" : "2019-11-07T10:32:20Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9e2d83277635b02cc03f35502294892dc7d8a3d2",
+    "line" : 28,
+    "diffHunk" : "@@ -1,1 +26,30 @@class PinThreadTests(unittest.TestCase):\n    # These tests are in a separate class because it uses\n    # 'PYSPARK_PIN_THREAD' environment variable to test thread pin feature.\n\n    @classmethod"
+  },
+  {
+    "id" : "6f9f648b-92ad-4a84-80db-b64c2ed23b53",
+    "prId" : 24898,
+    "prUrl" : "https://github.com/apache/spark/pull/24898#pullrequestreview-313618928",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c8d8d3a9-bd09-44be-aed2-ce09f5e3de0a",
+        "parentId" : null,
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "I have always been confused about the guarantees of python around mutating a variable like this from multiple threads -- I can't find anything which makes it clear that this mutation is *visible* to other threads.  The section on the GIL says they'll be atomic (https://docs.python.org/3/faq/library.html#what-kinds-of-global-value-mutation-are-thread-safe) but that isn't quite the same.\r\n\r\nI guess this OK?  again something to be aware of it we see flakiness",
+        "createdAt" : "2019-11-06T20:11:51Z",
+        "updatedAt" : "2019-11-07T10:32:20Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bd8f4997-0853-4616-bfb7-5bc4b1487b46",
+        "parentId" : "c8d8d3a9-bd09-44be-aed2-ce09f5e3de0a",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Ah, yeah, such pattern is considered safe given my experience. I think `D[x] = y` infers this case .. ? I think it's fine anyway.",
+        "createdAt" : "2019-11-07T10:30:49Z",
+        "updatedAt" : "2019-11-07T10:32:20Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9c6adb7f-ea95-4e97-83f5-fcf38b57af87",
+        "parentId" : "c8d8d3a9-bd09-44be-aed2-ce09f5e3de0a",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "BTW, there's `dis` package to check Python's opcodes (e.g., `import dis; func = lambda: 1 + 1;  dis.dis(func)`). seems assignment is a single atomic instruction in Python so looks fine.",
+        "createdAt" : "2019-11-07T10:44:12Z",
+        "updatedAt" : "2019-11-07T10:44:13Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2b3cf023-6770-4305-834e-79592476b058",
+        "parentId" : "c8d8d3a9-bd09-44be-aed2-ce09f5e3de0a",
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "that link above says it'll be atomic, but that's not exactly the same as knowing the change is *visible* -- there will be some per-core cache which isn't always flushed.  Or, at least, its not in lower-level languages, but maybe it really is in python?  I guess it must be (or flushed every time the GIL changes threads); otherwise this would have to be discussed *somewhere* in python docs",
+        "createdAt" : "2019-11-07T17:34:44Z",
+        "updatedAt" : "2019-11-07T17:34:45Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fce3b6e7-59df-494f-b883-c1642af289d5",
+        "parentId" : "c8d8d3a9-bd09-44be-aed2-ce09f5e3de0a",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Ah, I see. Yeah, we were talking about visibility. I think it must be ...",
+        "createdAt" : "2019-11-07T20:34:10Z",
+        "updatedAt" : "2019-11-07T20:34:10Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9e2d83277635b02cc03f35502294892dc7d8a3d2",
+    "line" : 110,
+    "diffHunk" : "@@ -1,1 +108,112 @@            except Exception:\n                # Assume that exception means job cancellation.\n                is_job_cancelled[index] = True\n\n        # Test if job succeeded when not cancelled."
+  }
+]

@@ -251,5 +251,49 @@
     "commit" : "f86cb82de6fb1ee9550b3c266eb9b3fb0019909f",
     "line" : 52,
     "diffHunk" : "@@ -1,1 +101,105 @@ * A variant of [[PhysicalOperation]]. It matches any number of project or filter\n * operations even if they are non-deterministic, as long as they satisfy the\n * requirement of CollapseProject and CombineFilters.\n */\nobject ScanOperation extends OperationHelper with PredicateHelper {"
+  },
+  {
+    "id" : "f7e3b15e-d3c2-4404-a298-99ecae0404da",
+    "prId" : 24973,
+    "prUrl" : "https://github.com/apache/spark/pull/24973#pullrequestreview-257854286",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b8f5c982-2dd8-4255-8151-d8b6d6818b13",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Let's be more clear about the approach here. We try to weaken a predicate so that it only refers to partition columns, by removing some branches in AND. Let's also mention the corner case when there is no partition column attribute in the predicate(we should return Nil in this case?).",
+        "createdAt" : "2019-07-01T01:07:30Z",
+        "updatedAt" : "2019-07-01T01:43:47Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6103c48b-c868-40cd-a97f-6729e9c1cfdf",
+        "parentId" : "b8f5c982-2dd8-4255-8151-d8b6d6818b13",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "@cloud-fan  \r\nIn this place it will return (DT = 20190601 OR DT = 20190602). \r\nBut this whole condition will still return to filter.\r\nWhat I want to do is purely to avoid  read unnecessary partitions. When this case we only read partition(dt=20190601 + dt=20190602), If we don't push down this, we will read all data.\r\n\r\nIn  condition \" **(DT = 20190602 AND C = \"TEST\")** \", **DT = 20190602**  is **C = \"TEST\"**'s precondition. \r\n\r\nIf the whole condition is **DT = 20190601 OR (DT = 20190602 OR C = \"TEST\")**. We should return null, since **DT = 20190602**  is not  **C = \"TEST\"**'s  constraint. ",
+        "createdAt" : "2019-07-01T01:39:06Z",
+        "updatedAt" : "2019-07-01T01:43:47Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5c3bc345-8f80-4127-8fa3-cc59a98ecdd3",
+        "parentId" : "b8f5c982-2dd8-4255-8151-d8b6d6818b13",
+        "authorId" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "body" : "@cloud-fan \r\nIn my code. coming predicate Set[Expression] has a potential **AND** logical.\r\nFor one Expression, it will be   restricted by other same level Expression.\r\nand  :\r\n\r\n- if it is a combine of **AND** each side can be a constraint to others, so it one side is tenable, it can return a tenable condition.\r\n- if it is a combine of **OR**, if one side is out of control(such as have no condition about partition cols) this whole **OR** Expression should return NONE.  Only  when both side of **OR** 's child is reasonable, it can return a  tenable combine of **OR**. \r\n- if it 's a multilayer nested Expression combined by BinaryOperator.  It will visit the lowest level, if it found one level's **OR** Expression is untenable, it will break this Expression totally and return null.\r\n\r\n\r\n",
+        "createdAt" : "2019-07-04T06:47:50Z",
+        "updatedAt" : "2019-07-04T06:47:50Z",
+        "lastEditedBy" : "594db420-88ec-4875-8cd3-0d8b0bec131c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "01386d3ee93b6fc96349ee5f3a02978ca8cefe63",
+    "line" : 34,
+    "diffHunk" : "@@ -1,1 +332,336 @@ *   WHERE DT = 20190601 OR (DT = 20190602 AND C = \"TEST\")\n *\n * Where condition \"DT = 20190601 OR (DT = 20190602 AND C = \"TEST\")\"\n * can't be pushed down since it's reference is not subsetOf partition cols\n * [[ExtractPartitionPredicates]] is to help extract hided partition logic in Or expression."
   }
 ]

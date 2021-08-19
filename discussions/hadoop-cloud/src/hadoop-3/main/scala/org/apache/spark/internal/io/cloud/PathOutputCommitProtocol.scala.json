@@ -1,0 +1,35 @@
+[
+  {
+    "id" : "1482443d-4a87-441b-ab26-a758dd78c920",
+    "prId" : 24970,
+    "prUrl" : "https://github.com/apache/spark/pull/24970#pullrequestreview-269057768",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3df2e88e-e185-4654-8a12-c5793e3fea46",
+        "parentId" : null,
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "what's the situation in which this does something different than `PathOutputCommitterFactory.createCommitter`?  Looks like it should be the same? https://github.com/apache/hadoop/blob/trunk/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-core/src/main/java/org/apache/hadoop/mapreduce/lib/output/PathOutputCommitterFactory.java#L197",
+        "createdAt" : "2019-06-28T20:10:10Z",
+        "updatedAt" : "2019-08-09T14:38:11Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9087c093-328e-4544-82ae-e4ecc4cf00fa",
+        "parentId" : "3df2e88e-e185-4654-8a12-c5793e3fea46",
+        "authorId" : "224991ce-ad69-410b-8143-bf394b6b5c59",
+        "body" : "It's more sometimes you want the option to say \"really, really reject the classic\"; a guard against that default actually happening.\r\n\r\nThe MR committer factories get to choose their own committers; currently the S3A one defaults to (still) using the rename one as switching over to a newer one. I think with HADOOP-16357 we've got the staging committer consistent with what MR expects w.r.t whether or not the destination directory is empty on startup& so for MR and spark work you should be able to switch over to it without worries. A little option here lets you fail fast on job launch to make sure that your job really has done that.\r\n\r\nwithout that, you only get to find out that you are still using it in the good case (it takes a lot longer and you find that `_SUCCESS` is a 0-byte file), or the bad case (it takes a lot longer, you find that `_SUCCESS` is a 0-byte file and because of failures during task commit, your output has been silently corrupted) (*)\r\n\r\n(*) I am of the believe that failure condition holds for FileOutputCommitter v2 and any store, it's just that for S3 and other slow-to-rename stores the window of vulnerability is a lot longer, and, without heartbeats coming back, there's a risk of the rename actually triggering a timeout. Never heard of that with Spark, but it has been known to happen with Distcp of a many GB file",
+        "createdAt" : "2019-07-31T14:35:27Z",
+        "updatedAt" : "2019-08-09T14:38:11Z",
+        "lastEditedBy" : "224991ce-ad69-410b-8143-bf394b6b5c59",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ee247d9c473f665791da1bbc84e1f61b35ff8dc1",
+    "line" : 101,
+    "diffHunk" : "@@ -1,1 +99,103 @@        context.getConfiguration)\n      logTrace(s\"Using committer factory $factory\")\n      committer = factory.createOutputCommitter(destPath, context)\n    }\n"
+  }
+]

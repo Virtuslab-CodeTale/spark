@@ -1,0 +1,156 @@
+[
+  {
+    "id" : "54c5835f-c9b3-4247-b067-675198050acd",
+    "prId" : 24934,
+    "prUrl" : "https://github.com/apache/spark/pull/24934#pullrequestreview-268822871",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "53e5aa4e-a7a2-4369-8bbe-c83004a9a021",
+        "parentId" : null,
+        "authorId" : "224991ce-ad69-410b-8143-bf394b6b5c59",
+        "body" : "I'm going to point you at the S3A logic to interpret AWS exceptions and remap\r\nhttps://github.com/steveloughran/hadoop/blob/trunk/hadoop-tools/hadoop-aws/src/main/java/org/apache/hadoop/fs/s3a/S3AUtils.java#L179\r\n\r\nAnd then retry policy we've evolved over time\r\nhttps://github.com/steveloughran/hadoop/blob/trunk/hadoop-tools/hadoop-aws/src/main/java/org/apache/hadoop/fs/s3a/S3ARetryPolicy.java#L158\r\n\r\nEach AWS service has its own failure modes which you get to learn over time.",
+        "createdAt" : "2019-07-26T10:46:26Z",
+        "updatedAt" : "2019-07-26T10:46:27Z",
+        "lastEditedBy" : "224991ce-ad69-410b-8143-bf394b6b5c59",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0c8d8704-a207-49c9-8b55-03028d94f446",
+        "parentId" : "53e5aa4e-a7a2-4369-8bbe-c83004a9a021",
+        "authorId" : "71ef6418-ac41-4086-b89d-6a90e0b47fa5",
+        "body" : "I was following aws docs for covering various exception handling cases, they may not be very exhaustive though. Thanks for pointing to this code, it looks like a more sophisticated way to write the exception handling code.",
+        "createdAt" : "2019-07-31T07:16:13Z",
+        "updatedAt" : "2019-07-31T07:16:13Z",
+        "lastEditedBy" : "71ef6418-ac41-4086-b89d-6a90e0b47fa5",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "1f4628fb6ee306450652171e9789f94c648f89d6",
+    "line" : 97,
+    "diffHunk" : "@@ -1,1 +95,99 @@      messages\n    } catch {\n      case ase: AmazonServiceException =>\n        val message =\n        \"\"\""
+  },
+  {
+    "id" : "5d599cbd-42b9-4f25-afd2-a21a25ec2aed",
+    "prId" : 24934,
+    "prUrl" : "https://github.com/apache/spark/pull/24934#pullrequestreview-267119139",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "154531c2-a661-487f-bf59-533bbb3c29a6",
+        "parentId" : null,
+        "authorId" : "224991ce-ad69-410b-8143-bf394b6b5c59",
+        "body" : "you should be using the fs.s3a values, given that that the S3n connector has been deleted from hadoop, though I'll add some more comments on that topic later",
+        "createdAt" : "2019-07-26T10:47:46Z",
+        "updatedAt" : "2019-07-26T10:47:46Z",
+        "lastEditedBy" : "224991ce-ad69-410b-8143-bf394b6b5c59",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "1f4628fb6ee306450652171e9789f94c648f89d6",
+    "line" : 205,
+    "diffHunk" : "@@ -1,1 +203,207 @@        \"fs.s3n.isClusterOnEc2Role\", false) || sourceOptions.useInstanceProfileCredentials\n      if (!isClusterOnEc2Role) {\n        val accessKey = hadoopConf.getTrimmed(\"fs.s3n.awsAccessKeyId\")\n        val secretAccessKey = new String(hadoopConf.getPassword(\"fs.s3n.awsSecretAccessKey\")).trim\n        logInfo(\"Using credentials from keys provided\")"
+  },
+  {
+    "id" : "a125584a-0efe-419b-928b-3974c5988a28",
+    "prId" : 24934,
+    "prUrl" : "https://github.com/apache/spark/pull/24934#pullrequestreview-268821545",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4a2f2c93-c088-4970-9902-ce015fcc8419",
+        "parentId" : null,
+        "authorId" : "224991ce-ad69-410b-8143-bf394b6b5c59",
+        "body" : "See: https://github.com/steveloughran/hadoop/blob/trunk/hadoop-tools/hadoop-aws/src/main/java/org/apache/hadoop/fs/s3a/S3AUtils.java#L1206\r\n\r\nproxy support is essential; you can grab the keys from org.apache.hadoop.fs.s3a.Constants; things like timeout and buffer size a matter of preference",
+        "createdAt" : "2019-07-26T10:49:53Z",
+        "updatedAt" : "2019-07-26T10:49:53Z",
+        "lastEditedBy" : "224991ce-ad69-410b-8143-bf394b6b5c59",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "98b5f307-4d7a-4bf2-8426-5f66a93feffc",
+        "parentId" : "4a2f2c93-c088-4970-9902-ce015fcc8419",
+        "authorId" : "71ef6418-ac41-4086-b89d-6a90e0b47fa5",
+        "body" : "yeah thanks for pointing out, will pick this",
+        "createdAt" : "2019-07-31T07:12:44Z",
+        "updatedAt" : "2019-07-31T07:12:44Z",
+        "lastEditedBy" : "71ef6418-ac41-4086-b89d-6a90e0b47fa5",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "1f4628fb6ee306450652171e9789f94c648f89d6",
+    "line" : 219,
+    "diffHunk" : "@@ -1,1 +217,221 @@        logInfo(\"Using the credentials attached to the instance\")\n        val instanceProfileCredentialsProvider = new InstanceProfileCredentialsProviderWithRetries()\n        AmazonSQSClientBuilder\n          .standard()\n          .withClientConfiguration(new ClientConfiguration().withMaxConnections(maxConnections))"
+  },
+  {
+    "id" : "d8126634-5339-4b52-9738-72bf2ea19cd2",
+    "prId" : 24934,
+    "prUrl" : "https://github.com/apache/spark/pull/24934#pullrequestreview-268819833",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d93422c4-8991-41fc-958b-c43970c43a6f",
+        "parentId" : null,
+        "authorId" : "224991ce-ad69-410b-8143-bf394b6b5c59",
+        "body" : "needs to include the inner exception",
+        "createdAt" : "2019-07-26T10:50:12Z",
+        "updatedAt" : "2019-07-26T10:50:12Z",
+        "lastEditedBy" : "224991ce-ad69-410b-8143-bf394b6b5c59",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ee00afd4-0178-4055-82c1-b444bf2a6b8e",
+        "parentId" : "d93422c4-8991-41fc-958b-c43970c43a6f",
+        "authorId" : "71ef6418-ac41-4086-b89d-6a90e0b47fa5",
+        "body" : "will pick this change",
+        "createdAt" : "2019-07-31T07:08:00Z",
+        "updatedAt" : "2019-07-31T07:08:00Z",
+        "lastEditedBy" : "71ef6418-ac41-4086-b89d-6a90e0b47fa5",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "1f4628fb6ee306450652171e9789f94c648f89d6",
+    "line" : 227,
+    "diffHunk" : "@@ -1,1 +225,229 @@    } catch {\n      case e: Exception =>\n        throw new SparkException(s\"Error occured while creating Amazon SQS Client ${e.getMessage}\")\n    }\n  }"
+  },
+  {
+    "id" : "f137be1b-ebef-469d-b3ec-b211104efe71",
+    "prId" : 24934,
+    "prUrl" : "https://github.com/apache/spark/pull/24934#pullrequestreview-268819762",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "da975404-1e33-4b1f-9893-c074d0c6173e",
+        "parentId" : null,
+        "authorId" : "224991ce-ad69-410b-8143-bf394b6b5c59",
+        "body" : "should log the exception. Also, some java exceptions (including NullPointerException) actually have a null .getMessage; the toString value is better",
+        "createdAt" : "2019-07-26T10:50:59Z",
+        "updatedAt" : "2019-07-26T10:50:59Z",
+        "lastEditedBy" : "224991ce-ad69-410b-8143-bf394b6b5c59",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "41bc1bd7-fb2c-4f5a-b268-590e445e1f22",
+        "parentId" : "da975404-1e33-4b1f-9893-c074d0c6173e",
+        "authorId" : "71ef6418-ac41-4086-b89d-6a90e0b47fa5",
+        "body" : "will pick this change",
+        "createdAt" : "2019-07-31T07:07:50Z",
+        "updatedAt" : "2019-07-31T07:07:51Z",
+        "lastEditedBy" : "71ef6418-ac41-4086-b89d-6a90e0b47fa5",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "1f4628fb6ee306450652171e9789f94c648f89d6",
+    "line" : 256,
+    "diffHunk" : "@@ -1,1 +254,258 @@    } catch {\n      case e: Exception =>\n        logWarning(s\"Unable to delete message from SQS ${e.getMessage}\")\n    }\n    deleteMessageQueue.clear()"
+  }
+]

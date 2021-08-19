@@ -207,5 +207,390 @@
     "commit" : "ba1bda815fe4219961222ed9c872f2810cfab1d5",
     "line" : 33,
     "diffHunk" : "@@ -1,1 +83,87 @@      // we should skip it when calculating the `partitionStartIndices`.\n      val validMetrics = shuffleMetrics.filter(_ != null)\n      if (validMetrics.nonEmpty) {\n        val partitionStartIndices = estimatePartitionStartIndices(validMetrics.toArray)\n        // This transformation adds new nodes, so we must use `transformUp` here."
+  },
+  {
+    "id" : "5b3aca29-6460-42f9-8051-036b02e6f9b1",
+    "prId" : 24978,
+    "prUrl" : "https://github.com/apache/spark/pull/24978#pullrequestreview-256009663",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e14e6137-e2bd-4d81-88d8-d95581db2c8e",
+        "parentId" : null,
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "How about first collecting all the leaves, then checking if they are all `QueryStageExec` nodes, and if they are collect the map stats outputs? That seems more efficient.",
+        "createdAt" : "2019-06-27T08:00:23Z",
+        "updatedAt" : "2019-07-04T00:36:36Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "037c3774-d2c5-492e-ba87-6603a49c1e61",
+        "parentId" : "e14e6137-e2bd-4d81-88d8-d95581db2c8e",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "+1",
+        "createdAt" : "2019-06-27T08:16:02Z",
+        "updatedAt" : "2019-07-04T00:36:36Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "91b92379-5fce-4ff4-b104-cecc1320e8a9",
+        "parentId" : "e14e6137-e2bd-4d81-88d8-d95581db2c8e",
+        "authorId" : "863271f8-065a-4cc6-a85e-e2ed034131f6",
+        "body" : "Good point!",
+        "createdAt" : "2019-06-28T23:43:36Z",
+        "updatedAt" : "2019-07-04T00:36:36Z",
+        "lastEditedBy" : "863271f8-065a-4cc6-a85e-e2ed034131f6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4b001ca824ea53716510b563105a092cce1d46a6",
+    "line" : 60,
+    "diffHunk" : "@@ -1,1 +58,62 @@      return plan\n    }\n    if (!plan.collectLeaves().forall(_.isInstanceOf[QueryStageExec])) {\n      // If not all leaf nodes are query stages, it's not safe to reduce the number of\n      // shuffle partitions, because we may break the assumption that all children of a spark plan"
+  },
+  {
+    "id" : "98590856-566c-43ff-b19f-b1c5e10b8a45",
+    "prId" : 24978,
+    "prUrl" : "https://github.com/apache/spark/pull/24978#pullrequestreview-256010572",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7fba14c3-8287-43c4-ad81-8866beab40e6",
+        "parentId" : null,
+        "authorId" : "1b84a7ff-6bf9-4417-bf9f-e46e997e5974",
+        "body" : "When the leaf node is `BroadcastQueryStageExec`, Do we need to adjust the reduce number ?",
+        "createdAt" : "2019-06-27T08:07:48Z",
+        "updatedAt" : "2019-07-04T00:36:36Z",
+        "lastEditedBy" : "1b84a7ff-6bf9-4417-bf9f-e46e997e5974",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "88c97c85-f798-4440-bb57-992780418a64",
+        "parentId" : "7fba14c3-8287-43c4-ad81-8866beab40e6",
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "We are ignoring `BroadcastQueryStageExec` right?",
+        "createdAt" : "2019-06-27T13:16:33Z",
+        "updatedAt" : "2019-07-04T00:36:36Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b7080b3d-5b40-4acb-a732-cb0207b81c54",
+        "parentId" : "7fba14c3-8287-43c4-ad81-8866beab40e6",
+        "authorId" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "body" : "We can have situations with BHJ where:\r\n1. The BHJ is from compile-time and one side is a broadcast stage;\r\n2. The BHJ is from a former AQE optimization, then one side is shuffle stage and the other is a broadcast stage.\r\n\r\nI believe scenario 2 may still be applicable here, so maybe we can change the condition to \" isAllQueryStage && shuffleStageCount > 0\"?",
+        "createdAt" : "2019-06-27T21:57:02Z",
+        "updatedAt" : "2019-07-04T00:36:36Z",
+        "lastEditedBy" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b13780db-4c3f-4c42-9c2f-0e9cc53146ef",
+        "parentId" : "7fba14c3-8287-43c4-ad81-8866beab40e6",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Obviously we don't want to adjust num shuffle partitions if there is no shuffle in this stage, so +1 to change the condition to `isAllQueryStage && shuffleStageCount > 0`.",
+        "createdAt" : "2019-06-28T02:18:49Z",
+        "updatedAt" : "2019-07-04T00:36:36Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b1378282-5f55-4252-a07d-9eb248eb5ea5",
+        "parentId" : "7fba14c3-8287-43c4-ad81-8866beab40e6",
+        "authorId" : "863271f8-065a-4cc6-a85e-e2ed034131f6",
+        "body" : "I believe we are safe here. After checking `isAllQueryStage`, we will get shuffle metrics from shuffle stages and we will only adjust num shuffle partitions if num shuffle metrics > 0.",
+        "createdAt" : "2019-06-28T23:50:43Z",
+        "updatedAt" : "2019-07-04T00:36:36Z",
+        "lastEditedBy" : "863271f8-065a-4cc6-a85e-e2ed034131f6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4b001ca824ea53716510b563105a092cce1d46a6",
+    "line" : 60,
+    "diffHunk" : "@@ -1,1 +58,62 @@      return plan\n    }\n    if (!plan.collectLeaves().forall(_.isInstanceOf[QueryStageExec])) {\n      // If not all leaf nodes are query stages, it's not safe to reduce the number of\n      // shuffle partitions, because we may break the assumption that all children of a spark plan"
+  },
+  {
+    "id" : "2789b15b-cfb9-459e-96af-3e51b25efd7f",
+    "prId" : 24978,
+    "prUrl" : "https://github.com/apache/spark/pull/24978#pullrequestreview-256046512",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "17ed4e62-d005-4e85-8a11-a11a65f1a220",
+        "parentId" : null,
+        "authorId" : "1b84a7ff-6bf9-4417-bf9f-e46e997e5974",
+        "body" : "We may need add a check of whether all the pre-shuffle partitions is same before calling the `estimatePartitionStartIndices` method to avoid the assert exception in Line 130.",
+        "createdAt" : "2019-06-27T08:12:59Z",
+        "updatedAt" : "2019-07-04T00:36:36Z",
+        "lastEditedBy" : "1b84a7ff-6bf9-4417-bf9f-e46e997e5974",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "aa85423e-90b0-4283-b214-89000d8fd8cb",
+        "parentId" : "17ed4e62-d005-4e85-8a11-a11a65f1a220",
+        "authorId" : "863271f8-065a-4cc6-a85e-e2ed034131f6",
+        "body" : "Good catch. I'll add the check and the unit test. ",
+        "createdAt" : "2019-06-29T18:29:33Z",
+        "updatedAt" : "2019-07-04T00:36:36Z",
+        "lastEditedBy" : "863271f8-065a-4cc6-a85e-e2ed034131f6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4b001ca824ea53716510b563105a092cce1d46a6",
+    "line" : 85,
+    "diffHunk" : "@@ -1,1 +83,87 @@\n      if (validMetrics.nonEmpty && distinctNumPreShufflePartitions.length == 1) {\n        val partitionStartIndices = estimatePartitionStartIndices(validMetrics.toArray)\n        // This transformation adds new nodes, so we must use `transformUp` here.\n        plan.transformUp {"
+  },
+  {
+    "id" : "19b6343f-9135-4d5c-a870-4f43610ea6c8",
+    "prId" : 24978,
+    "prUrl" : "https://github.com/apache/spark/pull/24978#pullrequestreview-257149861",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1fc66c62-98f6-499f-9dc7-0bed341c81a7",
+        "parentId" : null,
+        "authorId" : "34f85564-3e6b-4cb5-99f3-d5e383ee52fa",
+        "body" : "Does this mean the case like https://github.com/Intel-bigdata/spark-adaptive/pull/54 ? \r\n:nit Maybe we can say `If not all leaf nodes are query stages, for example when some depending stage is already bucketed, there isn't a shuffle or query stage for that branch` to be clear because normally all leaves are QS.",
+        "createdAt" : "2019-07-02T03:33:15Z",
+        "updatedAt" : "2019-07-04T00:36:36Z",
+        "lastEditedBy" : "34f85564-3e6b-4cb5-99f3-d5e383ee52fa",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d190afe5-50c0-4026-86d0-41458f8328bc",
+        "parentId" : "1fc66c62-98f6-499f-9dc7-0bed341c81a7",
+        "authorId" : "863271f8-065a-4cc6-a85e-e2ed034131f6",
+        "body" : "Yes, that case is covered. There are many cases the leaves are not query stage, for example in the stage that does a table scan, the leaf is a table scan operator. The comment seems to cover these.",
+        "createdAt" : "2019-07-02T21:06:32Z",
+        "updatedAt" : "2019-07-04T00:36:36Z",
+        "lastEditedBy" : "863271f8-065a-4cc6-a85e-e2ed034131f6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4b001ca824ea53716510b563105a092cce1d46a6",
+    "line" : 61,
+    "diffHunk" : "@@ -1,1 +59,63 @@    }\n    if (!plan.collectLeaves().forall(_.isInstanceOf[QueryStageExec])) {\n      // If not all leaf nodes are query stages, it's not safe to reduce the number of\n      // shuffle partitions, because we may break the assumption that all children of a spark plan\n      // have same number of output partitions."
+  },
+  {
+    "id" : "e8d2a4a1-5189-47ef-a3cb-6fde49f9a2a8",
+    "prId" : 24978,
+    "prUrl" : "https://github.com/apache/spark/pull/24978#pullrequestreview-257393831",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "921b5062-acac-4e0a-a2a6-29255594abd0",
+        "parentId" : null,
+        "authorId" : "34f85564-3e6b-4cb5-99f3-d5e383ee52fa",
+        "body" : "If a user calls `val datasetAfter = datasetBefore.repartition(300)`, then he wants the post-shuffle partitionNum to be 300 exactly. But in this case we will go inside this branch, and then the partition merging on reduce side will break the user's expectation? cc @cloud-fan \r\nShould we check the original operation, if it's `repartition` we don't do Adaptive Execution then?",
+        "createdAt" : "2019-07-02T03:48:19Z",
+        "updatedAt" : "2019-07-04T00:36:36Z",
+        "lastEditedBy" : "34f85564-3e6b-4cb5-99f3-d5e383ee52fa",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2de727d5-53ff-48bd-a746-045f3fd7604b",
+        "parentId" : "921b5062-acac-4e0a-a2a6-29255594abd0",
+        "authorId" : "863271f8-065a-4cc6-a85e-e2ed034131f6",
+        "body" : "This was also discussed in the original PR. For df.repartition(500), AE does use the specified number for repartition. That is, each stage will writes the map output with 500 partitions. However, in the following up stage, AE may launch tasks less than 500 as one task can process multiple continues blocks. I think we can still do adaptive execution when it is possible. We can add a option to disable AE for repartition later if that is necessary. ",
+        "createdAt" : "2019-07-02T21:21:35Z",
+        "updatedAt" : "2019-07-04T00:36:36Z",
+        "lastEditedBy" : "863271f8-065a-4cc6-a85e-e2ed034131f6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fca820c0-2792-4eff-be10-4e4d6674e0d9",
+        "parentId" : "921b5062-acac-4e0a-a2a6-29255594abd0",
+        "authorId" : "34f85564-3e6b-4cb5-99f3-d5e383ee52fa",
+        "body" : "It's pretty good to add a config entry, I think it's the best to make it internal(hidden). At the same time, we can add a function called `repartitonWithAdvice`, the different between  it and `repartition` is whether the newly added config entry is set to true. \r\n\r\n`RepartitionWithAdvice` means enabling AdaptiveExecution, to be different from the accurate `repartition`.",
+        "createdAt" : "2019-07-03T08:41:39Z",
+        "updatedAt" : "2019-07-04T00:36:36Z",
+        "lastEditedBy" : "34f85564-3e6b-4cb5-99f3-d5e383ee52fa",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "17fd1ec6-5dcd-474c-a197-843233aa839c",
+        "parentId" : "921b5062-acac-4e0a-a2a6-29255594abd0",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Do we have this problem in `ExchangeCoordinator`? At physical phase we have no idea if the shuffle comes from a `df.repartition` or is added by `EnsureRequirements`. We may need to add a boolean flag in `ShuffleExchangeExec` to indicate that this shuffle can't change its num partitions. Maybe we can fix it in a followup.",
+        "createdAt" : "2019-07-03T10:19:30Z",
+        "updatedAt" : "2019-07-04T00:36:36Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4b001ca824ea53716510b563105a092cce1d46a6",
+    "line" : 84,
+    "diffHunk" : "@@ -1,1 +82,86 @@        validMetrics.map(stats => stats.bytesByPartitionId.length).distinct\n\n      if (validMetrics.nonEmpty && distinctNumPreShufflePartitions.length == 1) {\n        val partitionStartIndices = estimatePartitionStartIndices(validMetrics.toArray)\n        // This transformation adds new nodes, so we must use `transformUp` here."
+  },
+  {
+    "id" : "66a64bb9-51eb-4c54-a145-cfd5869284b3",
+    "prId" : 24978,
+    "prUrl" : "https://github.com/apache/spark/pull/24978#pullrequestreview-257332440",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8176bfb7-ce8f-4cd0-b425-32a6cc7daa93",
+        "parentId" : null,
+        "authorId" : "34f85564-3e6b-4cb5-99f3-d5e383ee52fa",
+        "body" : "There are 2 conditions we don't do Adaptive Execution, so `plan` is directly returned.\r\nMaybe better to aggregate these conditions?",
+        "createdAt" : "2019-07-02T03:51:10Z",
+        "updatedAt" : "2019-07-04T00:36:36Z",
+        "lastEditedBy" : "34f85564-3e6b-4cb5-99f3-d5e383ee52fa",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e427b181-c384-4711-b082-75cafe2f3ffa",
+        "parentId" : "8176bfb7-ce8f-4cd0-b425-32a6cc7daa93",
+        "authorId" : "863271f8-065a-4cc6-a85e-e2ed034131f6",
+        "body" : "What do you mean by aggregate ?",
+        "createdAt" : "2019-07-02T21:22:24Z",
+        "updatedAt" : "2019-07-04T00:36:36Z",
+        "lastEditedBy" : "863271f8-065a-4cc6-a85e-e2ed034131f6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bad7aa2a-a446-4f0c-a229-70752cd31a6a",
+        "parentId" : "8176bfb7-ce8f-4cd0-b425-32a6cc7daa93",
+        "authorId" : "34f85564-3e6b-4cb5-99f3-d5e383ee52fa",
+        "body" : "Never mind~",
+        "createdAt" : "2019-07-03T08:27:58Z",
+        "updatedAt" : "2019-07-04T00:36:36Z",
+        "lastEditedBy" : "34f85564-3e6b-4cb5-99f3-d5e383ee52fa",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4b001ca824ea53716510b563105a092cce1d46a6",
+    "line" : 82,
+    "diffHunk" : "@@ -1,1 +80,84 @@      // We don't reduce shuffle partition number in that case.\n      val distinctNumPreShufflePartitions =\n        validMetrics.map(stats => stats.bytesByPartitionId.length).distinct\n\n      if (validMetrics.nonEmpty && distinctNumPreShufflePartitions.length == 1) {"
+  },
+  {
+    "id" : "5d5e52f6-9825-4ae4-90d5-0614e827104d",
+    "prId" : 24978,
+    "prUrl" : "https://github.com/apache/spark/pull/24978#pullrequestreview-257270641",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a7cc3d6e-6830-4f02-81c8-740ce7d36868",
+        "parentId" : null,
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "This does not work well with Union right? Is there a way we can identify subtrees in the stage where all the input partitions are the same?",
+        "createdAt" : "2019-07-02T09:46:13Z",
+        "updatedAt" : "2019-07-04T00:36:36Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c457423d-4bec-4ac9-980c-1d08446c66ad",
+        "parentId" : "a7cc3d6e-6830-4f02-81c8-740ce7d36868",
+        "authorId" : "863271f8-065a-4cc6-a85e-e2ed034131f6",
+        "body" : "Right, Union may have child stages with different partition number, see the unit test added. Currently we check the shuffle metrics to ensure the pre-shuffle partition number of the stages are the same. ",
+        "createdAt" : "2019-07-02T21:30:25Z",
+        "updatedAt" : "2019-07-04T00:36:36Z",
+        "lastEditedBy" : "863271f8-065a-4cc6-a85e-e2ed034131f6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "22ef79ea-8a75-4e46-8b2b-c1abdd146dcf",
+        "parentId" : "a7cc3d6e-6830-4f02-81c8-740ce7d36868",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "This can get pretty complicated if we have multiple Union and Join in one stage. For now I'm OK with this simple approach that we always require all shuffles in one stage have the same number of partitions. BTW this is an existing issue.",
+        "createdAt" : "2019-07-03T05:49:02Z",
+        "updatedAt" : "2019-07-04T00:36:36Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4b001ca824ea53716510b563105a092cce1d46a6",
+    "line" : 66,
+    "diffHunk" : "@@ -1,1 +64,68 @@      plan\n    } else {\n      val shuffleStages = plan.collect {\n        case stage: ShuffleQueryStageExec => stage\n        case ReusedQueryStageExec(_, stage: ShuffleQueryStageExec, _) => stage"
+  },
+  {
+    "id" : "4cbbbf5d-f818-4fe0-98dc-32ca1a0263e6",
+    "prId" : 24978,
+    "prUrl" : "https://github.com/apache/spark/pull/24978#pullrequestreview-257161263",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "792944ee-fe53-435f-a0fa-33dc07feee53",
+        "parentId" : null,
+        "authorId" : "31afe32d-3af0-4fcf-93e2-115f5d7bab18",
+        "body" : "`return`  is  not needed.",
+        "createdAt" : "2019-07-02T11:24:13Z",
+        "updatedAt" : "2019-07-04T00:36:36Z",
+        "lastEditedBy" : "31afe32d-3af0-4fcf-93e2-115f5d7bab18",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8b3c98a0-b022-4ec2-be3b-be0606b7d728",
+        "parentId" : "792944ee-fe53-435f-a0fa-33dc07feee53",
+        "authorId" : "863271f8-065a-4cc6-a85e-e2ed034131f6",
+        "body" : "Without return, I'll need a else with more indentation. I saw a few rules write like this, so I was just copying that. ",
+        "createdAt" : "2019-07-02T21:32:23Z",
+        "updatedAt" : "2019-07-04T00:36:36Z",
+        "lastEditedBy" : "863271f8-065a-4cc6-a85e-e2ed034131f6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4b001ca824ea53716510b563105a092cce1d46a6",
+    "line" : 58,
+    "diffHunk" : "@@ -1,1 +56,60 @@  override def apply(plan: SparkPlan): SparkPlan = {\n    if (!conf.reducePostShufflePartitionsEnabled) {\n      return plan\n    }\n    if (!plan.collectLeaves().forall(_.isInstanceOf[QueryStageExec])) {"
+  },
+  {
+    "id" : "fb74a1f6-915b-4dec-9115-3a525e160810",
+    "prId" : 24978,
+    "prUrl" : "https://github.com/apache/spark/pull/24978#pullrequestreview-257166912",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "cede814c-76f7-4fee-8b88-7f423d558f3a",
+        "parentId" : null,
+        "authorId" : "31afe32d-3af0-4fcf-93e2-115f5d7bab18",
+        "body" : "\r\n```\r\n    var nextShuffleInputSize = 0L\r\n      var j = 0\r\n      while (j < mapOutputStatistics.length) {\r\n        nextShuffleInputSize += mapOutputStatistics(j).bytesByPartitionId(i)\r\n        j += 1\r\n      }\r\n```\r\n=>\r\n`val nextShuffleInputSize = mapOutputStatistics.map(_.bytesByPartitionId(i)).sum`",
+        "createdAt" : "2019-07-02T11:35:24Z",
+        "updatedAt" : "2019-07-04T00:36:36Z",
+        "lastEditedBy" : "31afe32d-3af0-4fcf-93e2-115f5d7bab18",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3af0d8d2-1bee-4400-88ce-c497f92690f1",
+        "parentId" : "cede814c-76f7-4fee-8b88-7f423d558f3a",
+        "authorId" : "863271f8-065a-4cc6-a85e-e2ed034131f6",
+        "body" : "This code was original there in `ExchangeCoordinator`. Not sure if it is in purpose to avoid creating many additional arrays when we write as you proposed. So let's leave it as is.",
+        "createdAt" : "2019-07-02T21:46:16Z",
+        "updatedAt" : "2019-07-04T00:36:36Z",
+        "lastEditedBy" : "863271f8-065a-4cc6-a85e-e2ed034131f6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4b001ca824ea53716510b563105a092cce1d46a6",
+    "line" : 157,
+    "diffHunk" : "@@ -1,1 +155,159 @@        j += 1\n      }\n\n      // If including the nextShuffleInputSize would exceed the target partition size, then start a\n      // new partition."
   }
 ]

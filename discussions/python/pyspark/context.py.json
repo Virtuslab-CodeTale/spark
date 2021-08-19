@@ -295,5 +295,82 @@
     "commit" : "c65be0d6ac8e78f56ca8cd063d9db1012b65f0ab",
     "line" : 16,
     "diffHunk" : "@@ -1,1 +869,873 @@        cls = SparkContext._jvm.org.apache.spark.api.java.JavaRDD\n        is_jrdd = is_instance_of(gw, rdds[0]._jrdd, cls)\n        jrdds = gw.new_array(cls, len(rdds))\n        for i in range(0, len(rdds)):\n            if is_jrdd:"
+  },
+  {
+    "id" : "7849d37c-f44f-4c50-a61c-acdf22e12546",
+    "prId" : 24898,
+    "prUrl" : "https://github.com/apache/spark/pull/24898#pullrequestreview-312700010",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e6833edc-a9bd-4653-9ef6-319869d9ff16",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "@squito, if I should write a warning, I think it will be like this. I don't feel strongly about this so I am not sure.\r\n\r\nFYI, in case Python, with default setting, the warning will be issued once. So if we're worried about being too noisy, it's fine.",
+        "createdAt" : "2019-10-23T01:09:23Z",
+        "updatedAt" : "2019-11-07T10:32:20Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ae11e5ff-7014-4300-916e-102ee8fff769",
+        "parentId" : "e6833edc-a9bd-4653-9ef6-319869d9ff16",
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "Unless you feel strongly about it, I'd rather have a hard failure if you try to call this, when you are not in pinned mode.\r\n\r\nDid you intentionally want a warning even if you are in pinned mode, just to include the info about inherited threads?  I think warning is too strong in that case, how about info?  Also the docstring should be updated to include the caveat on inherited threads",
+        "createdAt" : "2019-10-24T16:04:09Z",
+        "updatedAt" : "2019-11-07T10:32:20Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f1988782-2eca-43eb-9e3c-44765f30f7fe",
+        "parentId" : "e6833edc-a9bd-4653-9ef6-319869d9ff16",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "What I am worries are .. \r\n\r\nFirstly, people use it although it's buggy because it kind of works okay in single thread without a pin-thread mode. Seems like there is still possibility that another thread is launched and local properties are reset though.\r\n\r\nSecondly, even with pin-thread mode, it does not work properly about inherited threads, yes, as you said.\r\n\r\nAbout warning vs info, PySpark currently does not have a proper logging system .. so we should rely on manual printing out or `warning` module (which can be integrated logging system later if we happen to add it to PySpark).\r\nIf we use manual printing way, it's tricky for users to control it. In case of warning, they can control, for instance, if they want to print out the warning only for the initial call or every call.",
+        "createdAt" : "2019-10-25T00:14:00Z",
+        "updatedAt" : "2019-11-07T10:32:20Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "27835f62-4444-4b9b-87b8-4ec1bedfa6f5",
+        "parentId" : "e6833edc-a9bd-4653-9ef6-319869d9ff16",
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "ok, I see your point.  I don't feel great about any of our options here, but perhaps you are right.  I do wish there was a way we could warn more loudly when using this in non-pinned mode.\r\n\r\nI'm just brainstorming here -- another thing we could do is just have the spark UI display some big warning for all of these fields whenever you're using pyspark in non-pinned mode (if we can reliabaly detect this).  Eg. job group would just say \"Unavailable with pyspark in non-pinned mode -- see docs (link)\".\r\n\r\n(Even if we want to do that, doesn't need to be done here.)",
+        "createdAt" : "2019-10-25T14:49:45Z",
+        "updatedAt" : "2019-11-07T10:32:20Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a34b7fc2-2686-4ee6-82c8-3579685dd94b",
+        "parentId" : "e6833edc-a9bd-4653-9ef6-319869d9ff16",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "I don't know yet because this job group things (with non-pinned mode) work kind of fine in a single thread (without multiple threads). We might have to detect if the current thread is child thread (by checking if current thread is the main thread) .. but I think it will miss some corner cases ..",
+        "createdAt" : "2019-10-29T03:41:13Z",
+        "updatedAt" : "2019-11-07T10:32:20Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "40a21376-f3ff-4821-b791-17834a083d5a",
+        "parentId" : "e6833edc-a9bd-4653-9ef6-319869d9ff16",
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "I still think the docstrings should mention PYSPARK_PIN_THREAD.",
+        "createdAt" : "2019-11-06T19:52:07Z",
+        "updatedAt" : "2019-11-07T10:32:20Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9e2d83277635b02cc03f35502294892dc7d8a3d2",
+    "line" : 15,
+    "diffHunk" : "@@ -1,1 +1020,1024 @@            properties from the parent thread to the child thread when you create another thread.\n        \"\"\"\n        warnings.warn(\n            \"Currently, setting a group ID (set to local properties) with a thread does \"\n            \"not properly work. \""
   }
 ]
