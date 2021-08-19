@@ -53,5 +53,137 @@
     "commit" : "5177fb5d8e3400a56f6287e256c420baca4f7820",
     "line" : 11,
     "diffHunk" : "@@ -1,1 +117,121 @@   *          with type `Double`.\n   */\n  private[spark] def foreach(f: (Int, Double) => Unit): Unit =\n    iterator.foreach { case (i, v) => f(i, v) }\n"
+  },
+  {
+    "id" : "8f1bfbab-22b2-4650-8290-6aa39b3e562c",
+    "prId" : 26550,
+    "prUrl" : "https://github.com/apache/spark/pull/26550#pullrequestreview-322144993",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3a129edd-0b53-4798-ae49-77b0b4b2e401",
+        "parentId" : null,
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "what about also adding `def +(a: Double)`, `def -(a: Double)` for scalar input and `def *(v: Vector)`, `def /(v: Vector)` as element-wise ops?",
+        "createdAt" : "2019-11-19T06:39:04Z",
+        "updatedAt" : "2019-11-19T06:39:09Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c6a9d723-673b-4c85-8075-6f56e183e4b5",
+        "parentId" : "3a129edd-0b53-4798-ae49-77b0b4b2e401",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Seems reasonable. I'd generally prefer to focus on parity with Python; is that what __add__ supports for example?",
+        "createdAt" : "2019-11-19T13:00:29Z",
+        "updatedAt" : "2019-11-19T13:00:29Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b42cbe7e-a7a1-492a-8e1e-2696b60e961a",
+        "parentId" : "3a129edd-0b53-4798-ae49-77b0b4b2e401",
+        "authorId" : "2ae444ce-ef30-412f-a6a4-bcc3204c2bee",
+        "body" : "I am not a python expert by any means, but I think this type of behavior is automatically supported with [broadcasting](https://docs.scipy.org/doc/numpy/reference/generated/numpy.add.html)?  @zhengruifeng Can you verify?\r\n\r\nIf so I am happy to implement.",
+        "createdAt" : "2019-11-19T14:33:18Z",
+        "updatedAt" : "2019-11-19T14:33:19Z",
+        "lastEditedBy" : "2ae444ce-ef30-412f-a6a4-bcc3204c2bee",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e76f297b-3fe1-4391-8918-9012bbf31fbd",
+        "parentId" : "3a129edd-0b53-4798-ae49-77b0b4b2e401",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "Sorry for late reply.\r\nYes numpy support broadcasting.\r\nBut I guess what @srowen means is those `Vector`/`Vectors` class defined in 'spark/python/pyspark/ml/linalg/__init__.py'",
+        "createdAt" : "2019-11-25T09:42:20Z",
+        "updatedAt" : "2019-11-25T09:42:21Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a1bb25e4b85238988df31ea587d6837bcaed4eb9",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +188,192 @@  def dot(v: Vector): Double = BLAS.dot(this, v)\n\n  /**\n   * Multiply a vector by a scalar.\n   */"
+  },
+  {
+    "id" : "c94c184b-991c-45fc-824b-ffca7db6d5ab",
+    "prId" : 26550,
+    "prUrl" : "https://github.com/apache/spark/pull/26550#pullrequestreview-335839318",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ba0b33bb-2f97-43ee-b1e0-5f6e8b838441",
+        "parentId" : null,
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "Current impl: 1, needs distinct and sort, 2, complexity = O(nnz * log(nnz))\r\nIt maybe faster to add two `SparseVector` in this way:\r\n```scala\r\n  def add(v: SparseVector): SparseVector = {\r\n    require(size == v.size)\r\n    if (v.indices.isEmpty) {\r\n      copy\r\n    } else if (indices.isEmpty) {\r\n      v.copy\r\n    } else {\r\n      val thisIndices = indices\r\n      val thatIndices = v.indices\r\n      val thisValues = values\r\n      val thatValues = v.values\r\n\r\n      val indicesBuilder = mutable.ArrayBuilder.make[Int]\r\n      val valuesBuilder = mutable.ArrayBuilder.make[Double]\r\n      var thisCur = 0\r\n      var thatCur = 0\r\n\r\n      while (thisCur < thisIndices.length && thatCur < thatIndices.length) {\r\n        val thisIndex = thisIndices(thisCur)\r\n        val thatIndex = thatIndices(thatCur)\r\n        val (index, value) = if (thisIndex == thatIndex) {\r\n          val sum = thisValues(thisCur) + thatValues(thatCur)\r\n          thisCur += 1\r\n          thatCur += 1\r\n          (thisIndex, sum)\r\n        } else if (thisIndex < thatIndex) {\r\n          val sum = thisValues(thisCur)\r\n          thisCur += 1\r\n          (thisIndex, sum)\r\n        } else {\r\n          val sum = thatValues(thatCur)\r\n          thatCur += 1\r\n          (thatIndex, sum)\r\n        }\r\n\r\n        if (value != 0.0) {\r\n          indicesBuilder += index\r\n          valuesBuilder += value\r\n        }\r\n      }\r\n\r\n      if (thisCur < thisIndices.length) {\r\n        while (thisCur < thisIndices.length) {\r\n          val index = thisIndices(thisCur)\r\n          val value = thisValues(thisCur)\r\n          if (value != 0.0) {\r\n            indicesBuilder += index\r\n            valuesBuilder += value\r\n          }\r\n          thisCur += 1\r\n        }\r\n      } else if (thatCur < thatIndices.length) {\r\n        while (thatCur < thatIndices.length) {\r\n          val index = thatIndices(thatCur)\r\n          val value = thatValues(thatCur)\r\n          if (value != 0.0) {\r\n            indicesBuilder += index\r\n            valuesBuilder += value\r\n          }\r\n          thatCur += 1\r\n        }\r\n      }\r\n\r\n      new SparseVector(size, indicesBuilder.result(), valuesBuilder.result())\r\n    }\r\n  }\r\n```",
+        "createdAt" : "2019-12-03T09:12:48Z",
+        "updatedAt" : "2019-12-03T09:12:48Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fc7a0246-c010-42cb-b6e0-bb34ba2b474b",
+        "parentId" : "ba0b33bb-2f97-43ee-b1e0-5f6e8b838441",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "I think we can leave it (my impl based on cursors) alone at first.\r\n\r\nBut I suggest using a mutable.Map[Int, Double] to keep the sum.",
+        "createdAt" : "2019-12-23T12:02:13Z",
+        "updatedAt" : "2019-12-23T12:05:13Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "62f0d77a-4a6b-4291-aa8d-e970dc4e5f8e",
+        "parentId" : "ba0b33bb-2f97-43ee-b1e0-5f6e8b838441",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "```scala\r\n    val sum = mutable.OpenHashMap.empty[Int, Double] // or org.apache.spark.util.collection.OpenHashMap\r\n    this.foreachActive { case (i, v) => sum.update(i, v) }\r\n    o.foreachActive { case (i, v) => val s = sum.getOrElse(i, 0.0) + v; sum.update(i, s) }\r\n    Vectors.sparse(size, sum.toSeq.filter(_._2 != 0))\r\n```",
+        "createdAt" : "2019-12-23T12:16:01Z",
+        "updatedAt" : "2019-12-23T12:16:01Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "60e151f1-0eb2-406d-a97b-2ebbae014c47",
+        "parentId" : "ba0b33bb-2f97-43ee-b1e0-5f6e8b838441",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "using foreachActive should be faster than collecting the indices and call apply for each index.",
+        "createdAt" : "2019-12-23T12:23:43Z",
+        "updatedAt" : "2019-12-23T12:23:43Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a1bb25e4b85238988df31ea587d6837bcaed4eb9",
+    "line" : 72,
+    "diffHunk" : "@@ -1,1 +808,812 @@        for (i <- this.indices) arr(i) += this(i)\n        Vectors.dense(arr)\n      case sv: SparseVector =>\n        val indices = (this.indices ++ sv.indices).distinct.sorted\n        val nonZeroPairs = for {"
+  },
+  {
+    "id" : "c9651d0e-4ea9-4423-bcec-1b86470fba5a",
+    "prId" : 26550,
+    "prUrl" : "https://github.com/apache/spark/pull/26550#pullrequestreview-335840138",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "aeab98e1-8d3c-4897-ab8b-efa41557e97e",
+        "parentId" : null,
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "`case 1 => this` ?",
+        "createdAt" : "2019-12-23T12:26:12Z",
+        "updatedAt" : "2019-12-23T12:26:13Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a1bb25e4b85238988df31ea587d6837bcaed4eb9",
+    "line" : 22,
+    "diffHunk" : "@@ -1,1 +205,209 @@    a match {\n      case 0 => throw new IllegalArgumentException(\"division by zero\")\n      case _ => this * (1 / a)\n    }\n  }"
   }
 ]

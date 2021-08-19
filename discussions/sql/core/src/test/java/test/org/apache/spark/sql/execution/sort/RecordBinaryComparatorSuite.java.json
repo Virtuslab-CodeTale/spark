@@ -141,5 +141,126 @@
     "commit" : "5d2956015cbe2d0f73650fd2f1f369eaebbee114",
     "line" : 25,
     "diffHunk" : "@@ -1,1 +276,280 @@    long row1Data = 11L;\n    long row2Data = 11L + Integer.MAX_VALUE;\n    if (ByteOrder.nativeOrder().equals(ByteOrder.LITTLE_ENDIAN)) {\n      row1Data = Long.reverseBytes(row1Data);\n      row2Data = Long.reverseBytes(row2Data);"
+  },
+  {
+    "id" : "96d24bc3-637c-4890-a648-53ed3d90a6e5",
+    "prId" : 26548,
+    "prUrl" : "https://github.com/apache/spark/pull/26548#pullrequestreview-317892388",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "804290a8-f50e-4a9f-99c2-631f60bbf5b8",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "So, do you mean this is wrong before this PR?",
+        "createdAt" : "2019-11-15T18:28:41Z",
+        "updatedAt" : "2019-11-19T03:02:40Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0b342ae3-edb2-43f7-a563-0f484d627bda",
+        "parentId" : "804290a8-f50e-4a9f-99c2-631f60bbf5b8",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "The change definitely changes the ordering, as bytes are compared in a different order.",
+        "createdAt" : "2019-11-15T20:36:46Z",
+        "updatedAt" : "2019-11-19T03:02:40Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d7d73da2-41ed-47c9-91c9-a5f54e1cdc8a",
+        "parentId" : "804290a8-f50e-4a9f-99c2-631f60bbf5b8",
+        "authorId" : "31f9c2ba-7775-44e4-b6fa-5e9ab26c8dff",
+        "body" : "> So, do you mean this is wrong before this PR?\r\n\r\n`RecordBinaryComparator` is used as a local sort comparator in `RoundRobinPartition` to make sure the order of each records are the same after rerun. But the *relative order* is not important. ",
+        "createdAt" : "2019-11-15T21:59:47Z",
+        "updatedAt" : "2019-11-19T03:02:40Z",
+        "lastEditedBy" : "31f9c2ba-7775-44e4-b6fa-5e9ab26c8dff",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "753883d7f84552c7392295aa42f5023c0909c615",
+    "line" : 13,
+    "diffHunk" : "@@ -1,1 +275,279 @@    insertRow(row2);\n\n    assert(compare(0, 1) > 0);\n  }\n"
+  },
+  {
+    "id" : "4c5e443b-8e29-4ede-b01a-a408d2ad9a29",
+    "prId" : 26548,
+    "prUrl" : "https://github.com/apache/spark/pull/26548#pullrequestreview-318498611",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2002e256-6d6b-4d6f-ad82-0648a1cff10f",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "I think several of these lines are too long (> 100 chars)",
+        "createdAt" : "2019-11-18T17:20:41Z",
+        "updatedAt" : "2019-11-19T03:02:40Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "753883d7f84552c7392295aa42f5023c0909c615",
+    "line" : 53,
+    "diffHunk" : "@@ -1,1 +355,359 @@    Platform.putLong(arr2, arrayOffset + 4, 0x0000000000000000L);\n    // both leftBaseOffset and rightBaseOffset are aligned, so it will start by comparing long\n    int result1 = binaryComparator.compare(arr1, arrayOffset + 4, 8, arr2, arrayOffset + 4, 8);\n\n    long[] arr3 = new long[2];"
+  },
+  {
+    "id" : "1abf08c8-17d4-4d21-9a26-58d6dee85279",
+    "prId" : 26548,
+    "prUrl" : "https://github.com/apache/spark/pull/26548#pullrequestreview-328558825",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e66918aa-503a-4ced-ac42-b0002ec6bc6a",
+        "parentId" : null,
+        "authorId" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "body" : "Do we need to consider the uaoSize here?",
+        "createdAt" : "2019-12-07T00:49:37Z",
+        "updatedAt" : "2019-12-07T00:49:37Z",
+        "lastEditedBy" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c5ad08e5-6f51-4cb6-b2fc-9f9ab905efc2",
+        "parentId" : "e66918aa-503a-4ced-ac42-b0002ec6bc6a",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Hm, good question. I don't think it comes up here as it's just messing with an `long[]` that was allocated normally? rather than data we wrote into an arbitrary location. But I may not be fully aware of the issue you have in mind.",
+        "createdAt" : "2019-12-07T14:21:00Z",
+        "updatedAt" : "2019-12-07T14:21:00Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "753883d7f84552c7392295aa42f5023c0909c615",
+    "line" : 39,
+    "diffHunk" : "@@ -1,1 +341,345 @@    Platform.putLong(arr4, arrayOffset, 0x0000000000000001L);\n    // both left and right offset is not aligned, it will start with byte-by-byte comparison\n    int result2 = binaryComparator.compare(arr3, arrayOffset, 8, arr4, arrayOffset, 8);\n\n    Assert.assertEquals(result1, result2);"
+  },
+  {
+    "id" : "e27d16e5-a87a-4117-9897-34606d1769f2",
+    "prId" : 26548,
+    "prUrl" : "https://github.com/apache/spark/pull/26548#pullrequestreview-334345333",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6b6aac3d-42cd-4d1c-af21-2f9f8ae8c143",
+        "parentId" : null,
+        "authorId" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "body" : "The test cases in this PR look problematic: the `long arrayOffset = 12;` is hard coded with implicit assumption on the underlying JVM's object layout in memory.\r\nThe object layout isn't guaranteed to be the same among different JVM, and in fact can be different even with the same JVM on the same machine but just different VM options.\r\n\r\nIt's preferable to use `Platform.LONG_ARRAY_OFFSET` as your mental model of where \"0-offset\" is. You should never write anything into the offset range `[0, Platform.LONG_ARRAY_OFFSET[` because there's no guarantee what's there.\r\ne.g. on the HotSpot JVM, that's where the object header lives.\r\n\r\nFor example, on the HotSpot JVM, the object header size for `long[]` is:\r\n- 32-bit: 16 bytes = 4 mark work + 4 klassptr + 4 array length + 4 padding\r\n- 64-bit with Compressed Class pointer: 16 bytes = 8 mark word + 4 klassptr + 4 array length\r\n- 64-bit without Compressed Class pointer: 24 bytes = 8 mark work + 8 klassptr + 4 array length + 4 padding.\r\n12 is always a bad offset to use in this test case on HotSpot, regardless of which mode above it's in -- writing to this offset will corrupt the header of the `long[]` and if you happen to go into a GC right after the corruption, you'll find the VM doing weird stuff (including crashing with a SIGSEGV).",
+        "createdAt" : "2019-12-19T00:22:39Z",
+        "updatedAt" : "2019-12-19T00:23:28Z",
+        "lastEditedBy" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "753883d7f84552c7392295aa42f5023c0909c615",
+    "line" : 24,
+    "diffHunk" : "@@ -1,1 +326,330 @@  @Test\n  public void testCompareLongsAsLittleEndian() {\n    long arrayOffset = 12;\n\n    long[] arr1 = new long[2];"
   }
 ]

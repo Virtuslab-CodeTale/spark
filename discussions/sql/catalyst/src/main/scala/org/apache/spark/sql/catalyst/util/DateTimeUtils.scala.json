@@ -1153,5 +1153,148 @@
     "commit" : "38cd6dab1b7c16fbd36ed43ef289630ac2de3aaa",
     "line" : 18,
     "diffHunk" : "@@ -1,1 +694,698 @@    def truncToYearLevel(divider: Int, adjust: Int): SQLDate = {\n      val oldYear = getYear(d)\n      var newYear = Math.floorDiv(oldYear, divider) * divider\n      if (adjust > 0 && newYear == oldYear) {\n        newYear -= divider"
+  },
+  {
+    "id" : "8b1ff536-d2d7-4fa6-bd39-f13690b9f223",
+    "prId" : 26507,
+    "prUrl" : "https://github.com/apache/spark/pull/26507#pullrequestreview-316893843",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "927a26d6-eff3-4ca4-8240-81b163f8578a",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "IIUC, here we are trying to simulate the Java 8 DateTimeFormatter behavior, although we use FastDateFormat under the hood.\r\n\r\nwhat's the behavior of java 8 DateTimeFormatter if the actual value has more digits in the fraction than the number of `S` in the format string?",
+        "createdAt" : "2019-11-14T09:51:07Z",
+        "updatedAt" : "2019-11-15T18:30:44Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cda50b96-7f22-498b-abed-bb0774b86cac",
+        "parentId" : "927a26d6-eff3-4ca4-8240-81b163f8578a",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "It depends on the mode: https://github.com/apache/spark/blob/60be6d2ea3560143515c1ce9d0a7da416f8f595a/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/util/DateTimeFormatterHelper.scala#L80 . We set `strict` in the master, so, Spark should reject such input.",
+        "createdAt" : "2019-11-14T10:01:22Z",
+        "updatedAt" : "2019-11-15T18:30:44Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "aaef7cc0-602c-47e6-a870-47e78f3a6386",
+        "parentId" : "927a26d6-eff3-4ca4-8240-81b163f8578a",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "from the doc:\r\n```\r\nFraction: Outputs the nano-of-second field as a fraction-of-second. The nano-of-second value has nine digits, thus the count of pattern letters is from 1 to 9. If it is less than 9, then the nano-of-second value is truncated, with only the most significant digits being output.\r\n```\r\n\r\nSo we need to truncate.\r\n\r\nCan we add some comments to explain what we are doing here? It's really tricky.",
+        "createdAt" : "2019-11-14T10:02:16Z",
+        "updatedAt" : "2019-11-15T18:30:44Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1cf54696-5a62-4e01-a1be-db49116ae18f",
+        "parentId" : "927a26d6-eff3-4ca4-8240-81b163f8578a",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "another question is the ending 0s. As a fraction, `1.2` and `1.20` has no difference. Is it also true to timestamp seconds?",
+        "createdAt" : "2019-11-14T10:04:19Z",
+        "updatedAt" : "2019-11-15T18:30:44Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "38662105-ede4-4239-ae39-5f4194ad9ef4",
+        "parentId" : "927a26d6-eff3-4ca4-8240-81b163f8578a",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "Correct, I will add special checks for this:\r\n```\r\n    check(\"yyyy-MM-dd'T'HH:mm:ss.SX\", \"2019-10-14T09:39:07.1Z\", \"2019-10-14T09:39:07.1Z\")\r\n    check(\"yyyy-MM-dd'T'HH:mm:ss.SSX\", \"2019-10-14T09:39:07.10Z\", \"2019-10-14T09:39:07.1Z\")\r\n```",
+        "createdAt" : "2019-11-14T11:44:49Z",
+        "updatedAt" : "2019-11-15T18:30:44Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "1cbd35b672c8e47d7d93859f0d494aeb8ac8fb8b",
+    "line" : 36,
+    "diffHunk" : "@@ -1,1 +1179,1183 @@    // For example if the fraction pattern is `SSSS` then `digitsInFraction` = 4, and\n    // if the `MILLISECOND` field was parsed to `1234`.\n    def getMicros(digitsInFraction: Int): SQLTimestamp = {\n      // Append 6 zeros to the field: 1234 -> 1234000000\n      val d = fields(Calendar.MILLISECOND) * MICROS_PER_SECOND"
+  },
+  {
+    "id" : "ea7fe525-8dad-4fd7-bf7d-c28f0b41103c",
+    "prId" : 26507,
+    "prUrl" : "https://github.com/apache/spark/pull/26507#pullrequestreview-317246634",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c6a87099-dc56-4807-bb13-1a95c2135fd1",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "This is really mysterious. How does it work?",
+        "createdAt" : "2019-11-14T14:05:38Z",
+        "updatedAt" : "2019-11-15T18:30:44Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f51a5f47-88f9-437c-89f6-e05654e34174",
+        "parentId" : "c6a87099-dc56-4807-bb13-1a95c2135fd1",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "AFAIK `fields(Calendar.MILLISECOND)` is simply the result of parsing the digits after dot to int. For example:\r\n- `.1234` returns 1234\r\n- `.100` returns 100\r\n- `.01` returns 1\r\n\r\nThe last case is tricky as we don't know what the original string is. e.g. both `.01` and `.1` returns 1. How can we correct the value in this case?",
+        "createdAt" : "2019-11-14T14:14:23Z",
+        "updatedAt" : "2019-11-15T18:30:44Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d9097407-508d-499d-be60-d4cb2ae257c6",
+        "parentId" : "c6a87099-dc56-4807-bb13-1a95c2135fd1",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "> The last case is tricky as we don't know what the original string is ...\r\n\r\nRight, we don't know but we know how many digits must be. We count number of 'S' in the pattern: https://github.com/apache/spark/pull/26507/files#diff-da60f07e1826788aaeb07f295fae4b8aR1191\r\n\r\nFor the pattern `SS`, the algorithm work correctly only when the input string has at least 2 digits in the seconds fraction. If you remove trailing zeros, the result is incorrect because we cannot distinguish `.01` and `.1`. So, inputs for the pattern `SS` must be `.01`, `.10`, `.00`, `.99` and so on.\r\n\r\nExisting round trip tests in JSON and CSV datasource are passed successfully because `SimpleDateFormat/FastDateFormat` produce the same number of digits as specified in the pattern without removing trailing zeros.\r\n\r\nActually, the same rule for number of digits is applicable for parsing milliseconds **without my changes** , see my comment: https://github.com/apache/spark/pull/26507#discussion_r345982915 . Besides of supporting microseconds, this PR also supports patterns `S`, `SS`, `SSSS`, `SSSSS`. 2.4 works correctly only for `SSS` and number of digits in the input string equals to 3, nothing more. \r\n",
+        "createdAt" : "2019-11-14T14:50:05Z",
+        "updatedAt" : "2019-11-15T18:30:44Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d9da7bb7-4b16-47b7-a5b7-66824340f610",
+        "parentId" : "c6a87099-dc56-4807-bb13-1a95c2135fd1",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "> This is really mysterious. How does it work?\r\n\r\nThe idea is similar to what we have for parsing interval's seconds with the fractional part. Let's say the pattern is `SSSS` and the input is `1234`:\r\n1. Add 6 zeros at the end for the worse case: `1234` -> `1234000000`\r\n2. Take the first 6 digits  `1234000000` -> `123400`. The rest is `0000` with the length is the number of digits in the pattern. Actually `123400` = `1234000000` / 10 ^ 4\r\n",
+        "createdAt" : "2019-11-14T15:00:40Z",
+        "updatedAt" : "2019-11-15T18:30:44Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "14e2d737-b1c0-4c5c-a1a3-53eb243633f9",
+        "parentId" : "c6a87099-dc56-4807-bb13-1a95c2135fd1",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "> So, inputs for the pattern SS must be .01, .10, .00, .99 and so on.\r\n\r\nWhat if it's not satisfied? Will we fail or return wrong anwser?\r\n\r\nTo be clear I'm fine with it. It's better than before. At least we give users a way to get the correct result, by setting the format string correctly.",
+        "createdAt" : "2019-11-14T15:35:37Z",
+        "updatedAt" : "2019-11-15T18:30:44Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6295d0ea-9488-4f30-a0ce-4e854534ce93",
+        "parentId" : "c6a87099-dc56-4807-bb13-1a95c2135fd1",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "If an user sets the pattern incorrectly, the result will be incorrect too. Before the changes, we can observe the same behavior, see https://github.com/apache/spark/pull/26507#discussion_r345982915 . The difference between old and new behavior is we allow to set a correct fraction patterns `S`, `SS`, `SSS`, `SSSS`, `SSSSS`, and `SSSSSS`. ",
+        "createdAt" : "2019-11-14T20:42:22Z",
+        "updatedAt" : "2019-11-15T18:30:44Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "1cbd35b672c8e47d7d93859f0d494aeb8ac8fb8b",
+    "line" : 42,
+    "diffHunk" : "@@ -1,1 +1185,1189 @@      // The rest contains exactly `digitsInFraction`: `0000` = 10 ^ digitsInFraction\n      // So, the result is `(1234 * 1000000) / (10 ^ digitsInFraction)\n      d / Decimal.POW_10(digitsInFraction)\n    }\n  }"
   }
 ]

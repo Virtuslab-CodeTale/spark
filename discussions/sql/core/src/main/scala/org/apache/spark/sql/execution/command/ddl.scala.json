@@ -614,5 +614,148 @@
     "commit" : "c0f1305ed8abf571e226d211a74d6dbd98b55e33",
     "line" : 16,
     "diffHunk" : "@@ -1,1 +236,240 @@    }\n\n    if (isTempView || isTableExist) {\n      try {\n        sparkSession.sharedState.cacheManager.uncacheQuery("
+  },
+  {
+    "id" : "cfaf03df-6b5c-4dd1-9b13-d7f3bfa7f072",
+    "prId" : 26569,
+    "prUrl" : "https://github.com/apache/spark/pull/26569#pullrequestreview-342279662",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "340a4877-dc27-490b-9443-f29dddf4bc5e",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "can we make it configurable?",
+        "createdAt" : "2019-11-20T07:12:32Z",
+        "updatedAt" : "2019-12-12T11:22:59Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8e42b3be-db22-442d-aa23-fea49d2ae598",
+        "parentId" : "340a4877-dc27-490b-9443-f29dddf4bc5e",
+        "authorId" : "ad4cb313-47b2-4cfa-9c1f-0a3596794a67",
+        "body" : "Done.",
+        "createdAt" : "2019-11-21T13:02:37Z",
+        "updatedAt" : "2019-12-12T11:22:59Z",
+        "lastEditedBy" : "ad4cb313-47b2-4cfa-9c1f-0a3596794a67",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2cc3f0f3-51e2-4b96-9cb9-cb6347628125",
+        "parentId" : "340a4877-dc27-490b-9443-f29dddf4bc5e",
+        "authorId" : "ad4cb313-47b2-4cfa-9c1f-0a3596794a67",
+        "body" : "Reverted making config for batch size after some experiments and discussion with @srowen .\r\n\r\nwe noticed that different batch size doesn't change the overall performance. So we don't need to make this configurable. Probably thats the reason it was not made configurable in  [AlterTableRecoverPartitions earlier](https://github.com/apache/spark/blob/v2.4.4/sql/core/src/main/scala/org/apache/spark/sql/execution/command/ddl.scala#L740).",
+        "createdAt" : "2019-12-12T11:43:16Z",
+        "updatedAt" : "2019-12-12T11:43:16Z",
+        "lastEditedBy" : "ad4cb313-47b2-4cfa-9c1f-0a3596794a67",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "15ebbf5d-7975-4fc9-ab2b-9793f92a9132",
+        "parentId" : "340a4877-dc27-490b-9443-f29dddf4bc5e",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Yeah I don't think it's worth yet another config if it's not going to have much meaning to set. ",
+        "createdAt" : "2019-12-12T14:49:31Z",
+        "updatedAt" : "2019-12-12T14:49:31Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "48c5af6e-7951-4f35-99b8-da8fbb42d748",
+        "parentId" : "340a4877-dc27-490b-9443-f29dddf4bc5e",
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "instead of hard-coding this, we should still make it configurable. Let us add an internal conf. ",
+        "createdAt" : "2020-01-14T03:56:18Z",
+        "updatedAt" : "2020-01-14T03:56:18Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "1fc4b1808835c6052f0c5d241b55ae980d5a53d0",
+    "line" : 9,
+    "diffHunk" : "@@ -1,1 +481,485 @@    // Also the request to metastore times out when adding lot of partitions in one shot.\n    // we should split them into smaller batches\n    val batchSize = 100\n    parts.toIterator.grouped(batchSize).foreach { batch =>\n      catalog.createPartitions(table.identifier, batch, ignoreIfExists = ifNotExists)"
+  },
+  {
+    "id" : "164ad445-e234-49c3-9c99-34ae209a2290",
+    "prId" : 26569,
+    "prUrl" : "https://github.com/apache/spark/pull/26569#pullrequestreview-331021632",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a8fcd38d-54d8-44af-9208-22eb2304d3e0",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "This seems somewhat separate; is it closely related to batching requests to the metastore?",
+        "createdAt" : "2019-12-11T15:46:46Z",
+        "updatedAt" : "2019-12-12T11:22:59Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8697d7e8-1461-4acc-9228-090f688eb3ca",
+        "parentId" : "a8fcd38d-54d8-44af-9208-22eb2304d3e0",
+        "authorId" : "ad4cb313-47b2-4cfa-9c1f-0a3596794a67",
+        "body" : "@srowen  Yes this is not exactly related to batching. This is to parallelize the file listing and  improve overall performance. A similar change is done in AlterTableRecoverPartition in the past - https://github.com/apache/spark/blob/v2.4.4/sql/core/src/main/scala/org/apache/spark/sql/execution/command/ddl.scala#L621",
+        "createdAt" : "2019-12-12T06:50:40Z",
+        "updatedAt" : "2019-12-12T11:22:59Z",
+        "lastEditedBy" : "ad4cb313-47b2-4cfa-9c1f-0a3596794a67",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "1fc4b1808835c6052f0c5d241b55ae980d5a53d0",
+    "line" : 23,
+    "diffHunk" : "@@ -1,1 +491,495 @@          sparkSession.sessionState, table.identifier, part.storage.locationUri)\n        val threshold = sparkSession.sparkContext.conf.get(RDD_PARALLEL_LISTING_THRESHOLD)\n        val partSizes = if (parts.length > threshold) {\n            ThreadUtils.parmap(parts, \"gatheringNewPartitionStats\", 8)(calculatePartSize)\n          } else {"
+  },
+  {
+    "id" : "29db3f80-2ecb-4211-b0d0-f18fa659a04f",
+    "prId" : 26569,
+    "prUrl" : "https://github.com/apache/spark/pull/26569#pullrequestreview-345213481",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ac6fac09-c7e2-4e34-8347-5d81f275cb56",
+        "parentId" : null,
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "We should avoid duplicating the same logic in the code base. The fix looks not good to me. We should reuse InMemoryFileIndex.bulkListLeafFiles",
+        "createdAt" : "2020-01-14T03:29:57Z",
+        "updatedAt" : "2020-01-14T03:29:57Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "94de3394-ade2-4742-9992-e6beb37c2cf4",
+        "parentId" : "ac6fac09-c7e2-4e34-8347-5d81f275cb56",
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "cc @Ngone51 Could you submit a PR to rewrite the whole logic? ",
+        "createdAt" : "2020-01-14T03:34:21Z",
+        "updatedAt" : "2020-01-14T03:34:22Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9d57e489-d8ae-4747-af02-f44dbfe30fd9",
+        "parentId" : "ac6fac09-c7e2-4e34-8347-5d81f275cb56",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Submitted #27293",
+        "createdAt" : "2020-01-20T10:31:52Z",
+        "updatedAt" : "2020-01-20T10:31:53Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "1fc4b1808835c6052f0c5d241b55ae980d5a53d0",
+    "line" : 24,
+    "diffHunk" : "@@ -1,1 +492,496 @@        val threshold = sparkSession.sparkContext.conf.get(RDD_PARALLEL_LISTING_THRESHOLD)\n        val partSizes = if (parts.length > threshold) {\n            ThreadUtils.parmap(parts, \"gatheringNewPartitionStats\", 8)(calculatePartSize)\n          } else {\n            parts.map(calculatePartSize)"
   }
 ]

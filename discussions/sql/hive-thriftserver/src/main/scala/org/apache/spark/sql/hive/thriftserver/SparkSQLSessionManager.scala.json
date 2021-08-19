@@ -119,5 +119,170 @@
     "commit" : "1f2fa6cfc6dd841bda5c82fa8f428a54e1dfa8a5",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +70,74 @@    setConfMap(ctx, hiveSessionState.getHiveVariables)\n    if (sessionConf != null && sessionConf.containsKey(\"use:database\")) {\n      ctx.sessionState.catalog.setCurrentDatabase(sessionConf.get(\"use:database\"))\n    }\n    sparkSqlOperationManager.sessionToContexts.put(sessionHandle, ctx)"
+  },
+  {
+    "id" : "e3fc660f-1ac4-432a-a74b-6060343db823",
+    "prId" : 26543,
+    "prUrl" : "https://github.com/apache/spark/pull/26543#pullrequestreview-319866272",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "18cfce19-8b1d-4985-9dff-d1a2cd24b119",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Oh, I meant call uncacheTable inside clearTempTables. Is it possible?",
+        "createdAt" : "2019-11-15T14:10:56Z",
+        "updatedAt" : "2019-11-19T01:53:39Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "73da0256-4ee1-4a30-8bb3-122ed5e60691",
+        "parentId" : "18cfce19-8b1d-4985-9dff-d1a2cd24b119",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "I think it can not call `uncacheTable ` inside `clearTempTables`. There is no sqlContext reference in `SessionCatalog`",
+        "createdAt" : "2019-11-17T14:04:50Z",
+        "updatedAt" : "2019-11-19T01:53:39Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4eb7a939-c869-4670-b39a-cdb0e80b685d",
+        "parentId" : "18cfce19-8b1d-4985-9dff-d1a2cd24b119",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Ah right. The `clearTempTables()` call doesn't really matter then. Maybe revert that part just to keep the change simple.\r\n\r\nIt seems like a good thing to fix and this is straightforward, I just keep wondering if there's a slightly better place to manage it, or whether there are more cases like this that need to be addressed. Eh, @cloud-fan do you have an opinion or is this a fine way to do it?",
+        "createdAt" : "2019-11-17T14:40:38Z",
+        "updatedAt" : "2019-11-19T01:53:39Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b33138bc-625e-4af4-b22a-b9ebc8f23cdb",
+        "parentId" : "18cfce19-8b1d-4985-9dff-d1a2cd24b119",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "reverted",
+        "createdAt" : "2019-11-17T14:52:09Z",
+        "updatedAt" : "2019-11-19T01:53:39Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0cdf0398-e758-49d5-9678-163986f8d0b9",
+        "parentId" : "18cfce19-8b1d-4985-9dff-d1a2cd24b119",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "shall we do it in `SparkSesson.stop`? The code path here seems thrift server specific.",
+        "createdAt" : "2019-11-18T08:17:38Z",
+        "updatedAt" : "2019-11-19T01:53:39Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fea72c3a-7931-4849-a1a1-429ef6d8846a",
+        "parentId" : "18cfce19-8b1d-4985-9dff-d1a2cd24b119",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "`SparkSesson.stop` will stop underlying `SparkContext`. I don't think it's the right place.\r\nhttps://github.com/apache/spark/blob/882f54b0a323fb5cd827d600b3c3332e1fcdf65a/sql/core/src/main/scala/org/apache/spark/sql/SparkSession.scala#L672",
+        "createdAt" : "2019-11-19T01:34:22Z",
+        "updatedAt" : "2019-11-19T01:53:39Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3d13b90d-fbaf-49e1-993e-f608d498c830",
+        "parentId" : "18cfce19-8b1d-4985-9dff-d1a2cd24b119",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "What's more, SQL session close in thrift server doesn't reach `SparkSesson.stop`.",
+        "createdAt" : "2019-11-19T01:49:59Z",
+        "updatedAt" : "2019-11-19T01:53:39Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "08b9b739-7057-491a-915c-cad81f508474",
+        "parentId" : "18cfce19-8b1d-4985-9dff-d1a2cd24b119",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "hmm the behavior is really weird. I think we should track all the active sessions and only stop the spark context if the session being closed is the last one.",
+        "createdAt" : "2019-11-19T07:00:27Z",
+        "updatedAt" : "2019-11-19T07:00:27Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a296aa66-e048-4130-b613-0f492a85d3ae",
+        "parentId" : "18cfce19-8b1d-4985-9dff-d1a2cd24b119",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "I can work that in another ticket. In current `SparkSQLSessionManager` implementation, each hive session connection will create a new SparkSession and store in the map `SparkSQLOperationManager.sessionToContexts`. When a session close, this session will be removed from this map and GC later. `SparkSesson.stop` won't be invoked at all.",
+        "createdAt" : "2019-11-19T08:35:45Z",
+        "updatedAt" : "2019-11-19T08:37:05Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3698aa3c-6404-451e-bfcd-fb495cddf7e7",
+        "parentId" : "18cfce19-8b1d-4985-9dff-d1a2cd24b119",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "@cloud-fan is that a somewhat different point? I'm not an expert here. Seems like this is about unpersisting cached temp views in the session when the session is done, not stopping Spark when all active sessions are closed. As in, is it valid to re-start a new session in the same context?",
+        "createdAt" : "2019-11-19T15:03:10Z",
+        "updatedAt" : "2019-11-19T15:03:11Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ad34770c-6c7b-4f83-9207-2e85c2fde5e4",
+        "parentId" : "18cfce19-8b1d-4985-9dff-d1a2cd24b119",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Ideally we should uncache the temp views when the session is closed, but seems we don't have such an action called \"close session\" in Spark SQL. `SparkSession.close` closes the SparkContext and thus closes all sessions.\r\n\r\nIf we have \"close session\" action in thrift server, I think it's corrected to put the logic here.",
+        "createdAt" : "2019-11-20T08:02:13Z",
+        "updatedAt" : "2019-11-20T08:02:13Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a30e83fa-9c4a-46a3-83db-17c99441b33e",
+        "parentId" : "18cfce19-8b1d-4985-9dff-d1a2cd24b119",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "Thanks @cloud-fan and @srowen . So the patch is correct so far, right?",
+        "createdAt" : "2019-11-20T13:56:41Z",
+        "updatedAt" : "2019-11-20T13:56:41Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "298bde47-f3c8-454b-bdb3-35ad347d5869",
+        "parentId" : "18cfce19-8b1d-4985-9dff-d1a2cd24b119",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "Since there is no place to trace all live spark sessions in a non-thrift-server application. For example spark session can be stored in thread local variable and be garbage collection when user's thread exit. So it still has memory leak problem in an application. I think I can open a new ticket to manage/trace all created spark session. For now, could we accept this due to thrift server is official implemented multiple session application.",
+        "createdAt" : "2019-11-20T14:06:01Z",
+        "updatedAt" : "2019-11-20T14:06:02Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "673a608a-2b06-4eea-a73c-a09d308bb370",
+        "parentId" : "18cfce19-8b1d-4985-9dff-d1a2cd24b119",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "https://issues.apache.org/jira/browse/SPARK-29972",
+        "createdAt" : "2019-11-20T14:10:56Z",
+        "updatedAt" : "2019-11-20T14:10:57Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "fa3e0dc2f509b35a69df99d8be7b539fe34359dd",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +77,81 @@    HiveThriftServer2.listener.onSessionClosed(sessionHandle.getSessionId.toString)\n    val ctx = sparkSqlOperationManager.sessionToContexts.getOrDefault(sessionHandle, sqlContext)\n    ctx.sparkSession.sessionState.catalog.getTempViewNames().foreach(ctx.uncacheTable)\n    super.closeSession(sessionHandle)\n    sparkSqlOperationManager.sessionToActivePool.remove(sessionHandle)"
   }
 ]

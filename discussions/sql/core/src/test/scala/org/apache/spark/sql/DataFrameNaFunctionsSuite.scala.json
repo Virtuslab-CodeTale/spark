@@ -240,5 +240,38 @@
     "commit" : "b3709a16e89284584922995f4877c31b5095aafe",
     "line" : 6,
     "diffHunk" : "@@ -1,1 +40,44 @@  def createNaNDF(): DataFrame = {\n    Seq[(java.lang.Integer, java.lang.Long, java.lang.Short,\n      java.lang.Byte, java.lang.Float, java.lang.Double)](\n      (1, 1L, 1.toShort, 1.toByte, 1.0f, 1.0),\n      (0, 0L, 0.toShort, 0.toByte, Float.NaN, Double.NaN)"
+  },
+  {
+    "id" : "344f125e-9f9b-4a70-9e77-758a420d24c3",
+    "prId" : 26593,
+    "prUrl" : "https://github.com/apache/spark/pull/26593#pullrequestreview-321704346",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f822c281-ac20-48b8-ad89-4313ccc41ce0",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "We can expose the bug if the data is\r\n```\r\nval data = Seq(\r\n  Row(Row(null, \"a2\")),\r\n  Row(Row(\"b1\", \"b2\")),\r\n  Row(null))\r\n```",
+        "createdAt" : "2019-11-22T11:31:34Z",
+        "updatedAt" : "2019-11-25T06:19:50Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "56c90973-1d31-4ee7-808a-4428c9a5e8ea",
+        "parentId" : "f822c281-ac20-48b8-ad89-4313ccc41ce0",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "This example works fine, and you also need to update the previous line to:\r\n```\r\ncheckAnswer(df.select(\"c1.c1-1\"),\r\n  Row(null) :: Row(\"b1\") :: Row(null) :: Nil)\r\n```\r\n(This is just to illustrate the nested type, but I can remove it if you think it's confusing.)\r\n\r\nThe reason the nested types are ignored is the following check:\r\n```Scala\r\n  case (NumericType, dt) => dt.isInstanceOf[NumericType]\r\n  case (StringType, dt) => dt == StringType\r\n  case (BooleanType, dt) => dt == BooleanType\r\n```\r\nThe datatype for the nested column that is resolved to `Attribute` is `StructType`, so this will not be matched.\r\n",
+        "createdAt" : "2019-11-22T17:41:12Z",
+        "updatedAt" : "2019-11-25T06:19:50Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "033beb57c3c855c417b596d0bc450417eadb94da",
+    "line" : 36,
+    "diffHunk" : "@@ -1,1 +292,296 @@\n    // Nested columns are ignored for fill().\n    checkAnswer(df.na.fill(\"a1\", Seq(\"c1.c1-1\")), data)\n  }\n"
   }
 ]

@@ -1,0 +1,68 @@
+[
+  {
+    "id" : "b523d589-d865-4c77-9e48-0fa6ba2ed2c8",
+    "prId" : 26497,
+    "prUrl" : "https://github.com/apache/spark/pull/26497#pullrequestreview-316747965",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2851821c-9d4b-4818-9862-6f991bc51daa",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Since `inputs/decimalArithmeticOperations.sql` has some nondeterministic output with ansi=true, I inlined the ANSI-related queries in it.",
+        "createdAt" : "2019-11-14T01:28:03Z",
+        "updatedAt" : "2019-11-14T01:28:03Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "537e65ab-719e-48d9-a0de-f9cd439c6b63",
+        "parentId" : "2851821c-9d4b-4818-9862-6f991bc51daa",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "this is surprising. what causes the nondeterminice?",
+        "createdAt" : "2019-11-14T03:26:05Z",
+        "updatedAt" : "2019-11-14T03:26:05Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "79859e26-9810-4167-9e84-eeefe871babe",
+        "parentId" : "2851821c-9d4b-4818-9862-6f991bc51daa",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "For example, the queries below in `inputs/decimalArithmeticOperations.sql` throws multiple exceptions with a different error message in executors with ansi=true;\r\n```\r\nsql(\"SET spark.sql.decimalOperations.allowPrecisionLoss=false\")\r\nsql(\"SET spark.sql.ansi.enabled=true\")\r\nsql(\"create table decimals_test(id int, a decimal(38,18), b decimal(38,18)) using parquet\")\r\nsql(\"insert into decimals_test values(1, 100.0, 999.0), (2, 12345.123, 12345.123), (3, 0.1234567891011, 1234.1), (4, 123456789123456789.0, 1.123456789123456789)\")\r\nsql(\"select id, a+b, a-b, a*b, a/b from decimals_test order by id\").show()\r\n\r\njava.lang.ArithmeticException: Decimal(expanded,138698367904130467.51562262075019052100,38,20}) cannot be represented as Decimal(38, 36).\r\n\tat org.apache.spark.sql.types.Decimal.toPrecision(Decimal.scala:357)\r\n\tat org.apache.spark.sql.catalyst.expressions.GeneratedClass$GeneratedIteratorForCodegenStage1.processNext(Unknown Source)\r\n...\r\njava.lang.ArithmeticException: Decimal(expanded,99900.000000000000000000000000000000000,38,33}) cannot be represented as Decimal(38, 36).\r\n\tat org.apache.spark.sql.types.Decimal.toPrecision(Decimal.scala:357)\r\n\tat org.apache.spark.sql.catalyst.expressions.GeneratedClass$GeneratedIteratorForCodegenStage1.processNext(Unknown Source)\r\n\tat org.apache.spark.sql.execution.BufferedRowIterator.hasNext(BufferedRowIterator.java:43)\r\n...\r\njava.lang.ArithmeticException: Decimal(expanded,152.35802342966751000000000000000000000,38,35}) cannot be represented as Decimal(38, 36).\r\n\tat org.apache.spark.sql.types.Decimal.toPrecision(Decimal.scala:357)\r\n\tat org.apache.spark.sql.catalyst.expressions.GeneratedClass$GeneratedIteratorForCodegenStage1.processNext(Unknown Source)\r\n\tat org.apache.spark.sql.execution.BufferedRowIterator.hasNext(BufferedRowIterator.java:43)\r\n...\r\n<more exceptions below>\r\n```\r\nSo, the output string printed in `decimalArithmeticOperations.sql.out` depends on timing.",
+        "createdAt" : "2019-11-14T05:34:05Z",
+        "updatedAt" : "2019-11-14T05:34:05Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "47db9d70-1ca2-4e1a-b2cb-8129a277b0c4",
+        "parentId" : "2851821c-9d4b-4818-9862-6f991bc51daa",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "ah this is nasty, but no better ideas.",
+        "createdAt" : "2019-11-14T06:23:33Z",
+        "updatedAt" : "2019-11-14T06:23:34Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d18f17e5-e8a6-4c99-9552-85aa23742f40",
+        "parentId" : "2851821c-9d4b-4818-9862-6f991bc51daa",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Yea, I have no idea, too.",
+        "createdAt" : "2019-11-14T07:11:04Z",
+        "updatedAt" : "2019-11-14T07:11:28Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ab0730be8b017be319c6cbc7828dfdea39625617",
+    "line" : 4,
+    "diffHunk" : "@@ -1,1 +2,6 @@-- an exception should be thrown instead of returning NULL.\n-- This is what most of the SQL DBs do (eg. SQLServer, DB2).\n\n-- tests for decimals handling in operations\ncreate table decimals_test(id int, a decimal(38,18), b decimal(38,18)) using parquet;"
+  }
+]

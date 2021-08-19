@@ -1,0 +1,79 @@
+[
+  {
+    "id" : "5dfacf2f-e5b3-42c1-9fcf-642cf7f97402",
+    "prId" : 26525,
+    "prUrl" : "https://github.com/apache/spark/pull/26525#pullrequestreview-318776819",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8176e053-5f58-40a8-86df-e2aa73ae395b",
+        "parentId" : null,
+        "authorId" : "fd6ebc48-7da4-490b-8d41-2e8530d92720",
+        "body" : "Sorry to ask tangential questions, but I'm curious: Will the Metastore track this property somehow? i.e. If I create a table with `'recursiveFileLookup'='true'` using Spark, can I query it from Presto and see the same data, provided that both are pointed at the same Metastore? Will the Metastore just track the table property, or will it also track the list of data paths that were detected when the table was created or refreshed?",
+        "createdAt" : "2019-11-18T03:28:16Z",
+        "updatedAt" : "2019-11-18T03:28:17Z",
+        "lastEditedBy" : "fd6ebc48-7da4-490b-8d41-2e8530d92720",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ba2dfd94-f213-4684-a417-d6f4c6d1b814",
+        "parentId" : "8176e053-5f58-40a8-86df-e2aa73ae395b",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "Thanks to point me this. Maybe 'spark.recursiveFileLookup' is much more meaningful for user.",
+        "createdAt" : "2019-11-19T04:20:28Z",
+        "updatedAt" : "2019-11-19T04:20:28Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "217815e56f5c81e7a14b90de9bde5298ddd6a694",
+    "line" : 17,
+    "diffHunk" : "@@ -1,1 +372,376 @@               |STORED AS PARQUET LOCATION '$baseDir'\n               |TBLPROPERTIES (\n               | 'recursiveFileLookup'='true')\n               |\"\"\".stripMargin)\n          checkAnswer(spark.table(\"test1\"), Seq(Row(0), Row(1), Row(2)))"
+  },
+  {
+    "id" : "2b43383e-0453-481e-bb92-6c5b8c99bfed",
+    "prId" : 26499,
+    "prUrl" : "https://github.com/apache/spark/pull/26499#pullrequestreview-317044804",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ad9d3aa7-c2b1-4aa4-a77a-20501d896ecf",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Isn't it a malformed table? Does hive ignore the directories for non-partitioned tables?",
+        "createdAt" : "2019-11-14T10:09:13Z",
+        "updatedAt" : "2019-11-19T03:11:44Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7f3452c7-52ed-471d-b6b1-c97466f74e8b",
+        "parentId" : "ad9d3aa7-c2b1-4aa4-a77a-20501d896ecf",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "Seems Hive return none when query this table(1.2.1):\r\n> hive> select * from `xxxxx`.`xxxx`;\r\nOK\r\nTime taken: 25.301 seconds\r\n\r\nBut no assertion error",
+        "createdAt" : "2019-11-14T10:25:29Z",
+        "updatedAt" : "2019-11-19T03:11:44Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7eb7ef92-dc38-4fc6-a390-8f3d93dc2ba3",
+        "parentId" : "ad9d3aa7-c2b1-4aa4-a77a-20501d896ecf",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "Maybe you are right. Actually the table LOCATION is `/path/tablename/dt=yyyymmdd`, But its data file paths are `/path/tablename/dt=yyyymmdd/dt=yyyymmdd/xxx.parquet`. I guess Hive does not recursively lookup load the data. So it return empty but not error.\r\nAnd I found if when enable recursively lookup by `.option(\"recursiveFileLookup\", true)`, the inferPartitioning will be disable. So `dt=yyyymmdd` won't be treated as partitionSpec.\r\n\r\nSo should I revert the code changes and only keep the assert detail information? Or throws exception instead of assertion, and catch it then rollback to do not use built-in Parquet reader to read?",
+        "createdAt" : "2019-11-14T15:32:22Z",
+        "updatedAt" : "2019-11-19T03:11:44Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "3288ffddf66d0db058dcf7190992f4a0bf49445f",
+    "line" : 23,
+    "diffHunk" : "@@ -1,1 +369,373 @@          spark.sql(\n            s\"\"\"\n               |CREATE TABLE non_partition_table (id bigint)\n               |STORED AS PARQUET LOCATION '$baseDir'\n               |\"\"\".stripMargin)"
+  }
+]

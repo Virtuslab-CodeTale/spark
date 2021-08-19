@@ -152,5 +152,93 @@
     "commit" : "b3709a16e89284584922995f4877c31b5095aafe",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +457,461 @@    def buildExpr(v: Any) = Cast(Literal(v), keyExpr.dataType)\n    val branches = replacementMap.flatMap { case (source, target) =>\n      Seq(Literal(source), buildExpr(target))\n    }.toSeq\n    new Column(CaseKeyWhen(keyExpr, branches :+ keyExpr)).as(col.name)"
+  },
+  {
+    "id" : "93ec2a31-2b0f-4e43-be33-161f9aa8bbaa",
+    "prId" : 26593,
+    "prUrl" : "https://github.com/apache/spark/pull/26593#pullrequestreview-321310989",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "496124ee-1c3a-4b83-bcce-5b91f205f6eb",
+        "parentId" : null,
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "@cloud-fan I noticed that `drop()` is resolving column names by `cols.map(name => df.resolve(name)` instead of `df.col(name)`.  The difference (other than the return type) is that `df.col()` will try to resolve using regex and adding metadata. Do you think we need to make this consistent?",
+        "createdAt" : "2019-11-20T19:29:43Z",
+        "updatedAt" : "2019-11-25T06:19:50Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4547c3c0-d0bb-44bb-baa3-ec19a66e16c2",
+        "parentId" : "496124ee-1c3a-4b83-bcce-5b91f205f6eb",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "We should. To avoid breaking change, I think we should change `drop` to follow `fill` to make it more powerful.",
+        "createdAt" : "2019-11-22T02:47:05Z",
+        "updatedAt" : "2019-11-25T06:19:50Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "96388fa8-01cc-479f-9bbe-cd56f626e322",
+        "parentId" : "496124ee-1c3a-4b83-bcce-5b91f205f6eb",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "OK. I will do this in a separate PR which will address the issue with handling duplicate columns in `drop` when no columns are specified.",
+        "createdAt" : "2019-11-22T02:53:51Z",
+        "updatedAt" : "2019-11-25T06:19:50Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "033beb57c3c855c417b596d0bc450417eadb94da",
+    "line" : 105,
+    "diffHunk" : "@@ -1,1 +482,486 @@      case a: Attribute => a\n    }\n  }\n\n  private def outputAttributes: Seq[Attribute] = {"
+  },
+  {
+    "id" : "a66f1b48-8e0a-4872-a776-4cb44000e101",
+    "prId" : 26593,
+    "prUrl" : "https://github.com/apache/spark/pull/26593#pullrequestreview-320662809",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "611b731e-b9ef-4618-87d3-cb320ff0b848",
+        "parentId" : null,
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "@cloud-fan what's the behavior of \"*\" for `fill()`?\r\n\r\n```\r\nscala> right.show\r\n+----+----+\r\n|col1|col2|\r\n+----+----+\r\n|   1|   2|\r\n|   3|null|\r\n+----+----+\r\n\r\n\r\nscala> right.na.fill(\"hello\", Seq(\"*\")).show\r\n+----+----+\r\n|col1|col2|\r\n+----+----+\r\n|   1|   2|\r\n|   3|null|\r\n+----+----+\r\n```\r\nShould `*` work for `fill` such that all columns are affected? ",
+        "createdAt" : "2019-11-20T19:40:10Z",
+        "updatedAt" : "2019-11-25T06:19:50Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "20b7fad8-6ac8-43a9-9f72-074ef7a4d4e4",
+        "parentId" : "611b731e-b9ef-4618-87d3-cb320ff0b848",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "Actually, `drop` shows different behavior for `*` since it's using `df.resolve` instead of `df.col`:\r\n```Scala\r\nscala> right.na.drop(Seq(\"*\")).show\r\norg.apache.spark.sql.AnalysisException: Cannot resolve column name \"*\" among (col1, col2);\r\n  at org.apache.spark.sql.Dataset$$anonfun$resolve$1.apply(Dataset.scala:223)\r\n\r\n```",
+        "createdAt" : "2019-11-20T20:17:58Z",
+        "updatedAt" : "2019-11-25T06:19:50Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e934394b-f50b-47e6-92ca-12819817ae95",
+        "parentId" : "611b731e-b9ef-4618-87d3-cb320ff0b848",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "good question. Personally I think we don't need to resolve `*` here, but to be safe let's keep the previous behavior unchanged.",
+        "createdAt" : "2019-11-21T06:29:01Z",
+        "updatedAt" : "2019-11-25T06:19:50Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "033beb57c3c855c417b596d0bc450417eadb94da",
+    "line" : 1,
+    "diffHunk" : "@@ -1,1 +128,132 @@  /**\n   * Returns a new `DataFrame` that replaces null or NaN values in numeric columns with `value`.\n   *\n   * @since 2.2.0\n   */"
   }
 ]
