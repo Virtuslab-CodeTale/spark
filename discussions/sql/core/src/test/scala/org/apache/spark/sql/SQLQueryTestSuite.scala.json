@@ -1120,5 +1120,104 @@
     "commit" : "f5b9b706f9fc7e2a37f2d7215282f6d18f1ba121",
     "line" : 9,
     "diffHunk" : "@@ -1,1 +435,439 @@      // This is a workaround for SPARK-28894. Seems scalatest produces JUnit XML report\n      // correctly; however, Jenkins seems misunderstanding the dot in the test name.\n      val testCaseName = testFilename.stripSuffix(\".sql\")\n\n      if (file.getAbsolutePath.startsWith("
+  },
+  {
+    "id" : "ab700c25-c25c-48f5-8ed0-462048d93629",
+    "prId" : 25357,
+    "prUrl" : "https://github.com/apache/spark/pull/25357#pullrequestreview-271770019",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "512e81f2-cab8-45f4-9cae-189130e87edb",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "I feel this is a little complicated, so could you describe what this code does in the comment?",
+        "createdAt" : "2019-08-06T06:41:57Z",
+        "updatedAt" : "2019-08-07T08:19:47Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bbfb96ad-8534-4f6a-a77a-e8d00e97600d",
+        "parentId" : "512e81f2-cab8-45f4-9cae-189130e87edb",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "OK",
+        "createdAt" : "2019-08-06T10:32:39Z",
+        "updatedAt" : "2019-08-07T08:19:47Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d2ccb7bb-bcba-482e-b2b6-966d5e5ce26c",
+        "parentId" : "512e81f2-cab8-45f4-9cae-189130e87edb",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "The description is a little misleading.\r\n`The comment at the end of the query` looks like `SELECT 1; -- okay`.\r\nTechnically, it's split by line 231 (not line 233).\r\n\r\nGiven that, the following is a simpler solution, isn't it?\r\n```scala\r\n- val queries = code.mkString(\"\\n\").split(\"(?<=[^\\\\\\\\]);\").map(_.trim).filter(_ != \"\").toSeq\r\n+ val queries = code.mkString(\"\\n\").split(\"(?<=[^\\\\\\\\]);\").map(_.trim).filter(_ != \"\").filterNot(_.startsWith(\"--\")).toSeq\r\n```",
+        "createdAt" : "2019-08-07T06:42:36Z",
+        "updatedAt" : "2019-08-07T08:19:47Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6db66464-db49-4fb1-b796-59d3156504f1",
+        "parentId" : "512e81f2-cab8-45f4-9cae-189130e87edb",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Hmm. Let me test some. There might be a missing thing. I'll be back after testing.",
+        "createdAt" : "2019-08-07T06:44:20Z",
+        "updatedAt" : "2019-08-07T08:19:47Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "678869b3-7b0c-49cf-adf3-702ab4f884dd",
+        "parentId" : "512e81f2-cab8-45f4-9cae-189130e87edb",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "While testing my idea, I found that we (this PR and my idea) still miss the following cases.\r\n- https://github.com/apache/spark/blob/master/sql/core/src/test/resources/sql-tests/inputs/pgSQL/with.sql#L137-L141\r\n```\r\nCREATE TABLE department (\r\n\tid INTEGER,  -- department ID\r\n\tparent_department INTEGER, -- upper department ID\r\n\tname string -- department name\r\n) USING parquet;\r\n```\r\n\r\nTechnically, this PR is able to remove a single comment or a comment after `;`.\r\nAlso, the comments in the middle seems to be harmless.",
+        "createdAt" : "2019-08-07T06:56:45Z",
+        "updatedAt" : "2019-08-07T08:19:47Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1de58bd2-db0a-41c5-970e-97ef8d758ea6",
+        "parentId" : "512e81f2-cab8-45f4-9cae-189130e87edb",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "The current implementation turns out stronger. I'm trying to simplify this PR (with more elimination).",
+        "createdAt" : "2019-08-07T07:18:49Z",
+        "updatedAt" : "2019-08-07T08:19:47Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "60e38af3dbbfec150e99c20b571afa9b1feaeafa",
+    "line" : 11,
+    "diffHunk" : "@@ -1,1 +232,236 @@    val queries = code.mkString(\"\\n\").split(\"(?<=[^\\\\\\\\]);\").map(_.trim).filter(_ != \"\").toSeq\n      // Fix misplacement when comment is at the end of the query.\n      .map(_.split(\"\\n\").filterNot(_.startsWith(\"--\")).mkString(\"\\n\")).map(_.trim).filter(_ != \"\")\n\n    // When we are regenerating the golden files, we don't need to set any config as they"
+  },
+  {
+    "id" : "a7036924-4323-48cb-b1b4-b38084e908d4",
+    "prId" : 25357,
+    "prUrl" : "https://github.com/apache/spark/pull/25357#pullrequestreview-271774970",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "72f2525e-84b1-4fcd-8e0a-f9313968488a",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Shall you change line 227 together in this PR in order to remove the comment-only lines? It will remove 41 lines additionally.\r\n```scala\r\n-    val (comments, code) = input.split(\"\\n\").partition(_.startsWith(\"--\"))\r\n+    val (comments, code) = input.split(\"\\n\").partition(_.trim.startsWith(\"--\"))\r\n```",
+        "createdAt" : "2019-08-07T07:30:23Z",
+        "updatedAt" : "2019-08-07T08:19:47Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "60e38af3dbbfec150e99c20b571afa9b1feaeafa",
+    "line" : 7,
+    "diffHunk" : "@@ -1,1 +228,232 @@    val (comments, code) = input.split(\"\\n\").partition(_.trim.startsWith(\"--\"))\n\n    // List of SQL queries to run\n    // note: this is not a robust way to split queries using semicolon, but works for now.\n    val queries = code.mkString(\"\\n\").split(\"(?<=[^\\\\\\\\]);\").map(_.trim).filter(_ != \"\").toSeq"
   }
 ]

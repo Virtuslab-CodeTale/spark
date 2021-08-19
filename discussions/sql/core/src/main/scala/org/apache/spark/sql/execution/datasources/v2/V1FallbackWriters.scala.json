@@ -53,5 +53,159 @@
     "commit" : "2bd20c016a3b3df08d38cde4a005271a49f47f81",
     "line" : 55,
     "diffHunk" : "@@ -1,1 +113,117 @@\n  protected def writeWithV1(relation: InsertableRelation): RDD[InternalRow] = {\n    relation.insert(AlreadyPlanned.dataFrame(sqlContext.sparkSession, query), overwrite = false)\n    sparkContext.emptyRDD\n  }"
+  },
+  {
+    "id" : "0471b101-10b2-4179-bcd1-b557edffd34a",
+    "prId" : 25348,
+    "prUrl" : "https://github.com/apache/spark/pull/25348#pullrequestreview-272302467",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7bc34a2a-fc4e-4e35-8814-96dfcf12ddf1",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I think it's OK to have special physical plans for v1 fallback write. However it will not work for the read side. DS v1 has its own planner rule to apply operator pushdown, and we must fall back to v1 read at the logical plan level. Otherwise users must implement the v2 operator pushdown API.",
+        "createdAt" : "2019-08-07T05:27:38Z",
+        "updatedAt" : "2019-08-21T00:55:24Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a6f2acda-b0b5-48c1-980f-43783231032f",
+        "parentId" : "7bc34a2a-fc4e-4e35-8814-96dfcf12ddf1",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "Let's discuss this when implementing the read path. Right now, I don't see a downside to requiring the v2 operator pushdown API.",
+        "createdAt" : "2019-08-07T16:53:21Z",
+        "updatedAt" : "2019-08-21T00:55:24Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ef308846-3218-44d7-ad15-d8fb1fa21700",
+        "parentId" : "7bc34a2a-fc4e-4e35-8814-96dfcf12ddf1",
+        "authorId" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "body" : "Yeah, I think there are enough parallels in the code already, where supporting these shouldn't be too hard.",
+        "createdAt" : "2019-08-08T01:20:10Z",
+        "updatedAt" : "2019-08-21T00:55:24Z",
+        "lastEditedBy" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "27598ce9b5ef7bc8224e37df6f14907e766ddd54",
+    "line" : 41,
+    "diffHunk" : "@@ -1,1 +39,43 @@ * Rows in the output data set are appended.\n */\ncase class AppendDataExecV1(\n    table: SupportsWrite,\n    writeOptions: CaseInsensitiveStringMap,"
+  },
+  {
+    "id" : "b0f2623f-1a4a-418a-9410-091f8aee17d1",
+    "prId" : 25348,
+    "prUrl" : "https://github.com/apache/spark/pull/25348#pullrequestreview-272144089",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6c3e158d-ac45-417c-b8e4-841624ba97c9",
+        "parentId" : null,
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "Instead of passing the logical plan that will be run through the planner again, can we add a LogicalPlan that wraps a physical plan and a rule to convert that back to a physical plan?",
+        "createdAt" : "2019-08-07T16:49:44Z",
+        "updatedAt" : "2019-08-21T00:55:24Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bb279b62-2c74-41a5-b7d0-9d7019992cf0",
+        "parentId" : "6c3e158d-ac45-417c-b8e4-841624ba97c9",
+        "authorId" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "body" : "I think that's a great idea, and would be a useful node to have: `AlreadyPlanned` or something like that. I'd love to do that as a follow up.",
+        "createdAt" : "2019-08-07T17:22:48Z",
+        "updatedAt" : "2019-08-21T00:55:24Z",
+        "lastEditedBy" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2033bbab-d128-4170-9157-36b20f881801",
+        "parentId" : "6c3e158d-ac45-417c-b8e4-841624ba97c9",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "Sounds good to me.",
+        "createdAt" : "2019-08-07T18:18:59Z",
+        "updatedAt" : "2019-08-21T00:55:24Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "27598ce9b5ef7bc8224e37df6f14907e766ddd54",
+    "line" : 118,
+    "diffHunk" : "@@ -1,1 +116,120 @@\n  protected def writeWithV1(relation: InsertableRelation): RDD[InternalRow] = {\n    relation.insert(Dataset.ofRows(sqlContext.sparkSession, plan), overwrite = false)\n    sparkContext.emptyRDD\n  }"
+  },
+  {
+    "id" : "5cabb7e4-7870-4bf8-9a8e-3082a27cd82f",
+    "prId" : 25348,
+    "prUrl" : "https://github.com/apache/spark/pull/25348#pullrequestreview-276865420",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3ea7dcc0-ca5b-4bf0-ac0c-0f6c01d81332",
+        "parentId" : null,
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "Minor: Is `asV1Builder` needed since the builder passed in is a `V1WriteBuilder`?",
+        "createdAt" : "2019-08-19T23:08:00Z",
+        "updatedAt" : "2019-08-21T00:55:24Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1a5e5b46-8385-446a-b2dd-d704d5c827b9",
+        "parentId" : "3ea7dcc0-ca5b-4bf0-ac0c-0f6c01d81332",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "Update: if the builder can't be passed in, then `asV1Builder` is still needed.",
+        "createdAt" : "2019-08-19T23:31:06Z",
+        "updatedAt" : "2019-08-21T00:55:24Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "27598ce9b5ef7bc8224e37df6f14907e766ddd54",
+    "line" : 75,
+    "diffHunk" : "@@ -1,1 +73,77 @@    newWriteBuilder() match {\n      case builder: SupportsTruncate if isTruncate(deleteWhere) =>\n        writeWithV1(builder.truncate().asV1Builder.buildForV1Write())\n\n      case builder: SupportsOverwrite =>"
+  },
+  {
+    "id" : "d74adf2f-0fdd-4208-85af-4665bc9ad7dc",
+    "prId" : 25348,
+    "prUrl" : "https://github.com/apache/spark/pull/25348#pullrequestreview-277373495",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5862893a-91f5-4f39-9f27-4f3ec6abcf0e",
+        "parentId" : null,
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "I think that this node should also be passed the target table so that it shows up in the query plan. Right now, the DSv2 write plans use the default implementation of `simpleString` that will show all of the case class's parameters. Without the table, I think you'll only get whatever the write builder's `toString` implementation produces.\r\n\r\nMaybe we should implement `simpleString` in a follow-up for all DSv2 plans?",
+        "createdAt" : "2019-08-19T23:17:00Z",
+        "updatedAt" : "2019-08-21T00:55:24Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ec6f319d-c3bd-43b1-8b43-b96d645e42a2",
+        "parentId" : "5862893a-91f5-4f39-9f27-4f3ec6abcf0e",
+        "authorId" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "body" : "I think that'd be great to have when looking at explain plans",
+        "createdAt" : "2019-08-20T18:56:00Z",
+        "updatedAt" : "2019-08-21T00:55:24Z",
+        "lastEditedBy" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "27598ce9b5ef7bc8224e37df6f14907e766ddd54",
+    "line" : 44,
+    "diffHunk" : "@@ -1,1 +42,46 @@    table: SupportsWrite,\n    writeOptions: CaseInsensitiveStringMap,\n    plan: LogicalPlan) extends V1FallbackWriters {\n\n  override protected def doExecute(): RDD[InternalRow] = {"
   }
 ]

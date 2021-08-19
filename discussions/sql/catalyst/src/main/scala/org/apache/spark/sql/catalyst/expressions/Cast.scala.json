@@ -1406,5 +1406,467 @@
     "commit" : "9f4002c30bb44c120ccf5489874c86d1061f216f",
     "line" : 151,
     "diffHunk" : "@@ -1,1 +1280,1284 @@    assert(fractionType == \"float\" || fractionType == \"double\")\n    val typeIndicator = fractionType.charAt(0)\n    val (min, max) = integralType.toLowerCase(Locale.ROOT) match {\n      case \"long\" => (Long.MinValue, Long.MaxValue)\n      case \"int\" => (Int.MinValue, Int.MaxValue)"
+  },
+  {
+    "id" : "d42e479e-93df-46c8-9dc8-26a56df9a88f",
+    "prId" : 25331,
+    "prUrl" : "https://github.com/apache/spark/pull/25331#pullrequestreview-273048488",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "16b46643-5bdc-4015-8e23-44ae8375d7f4",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Should we explicitly match strings we want? We can avoid try-catch of an exception for the known strings.",
+        "createdAt" : "2019-08-02T19:56:46Z",
+        "updatedAt" : "2019-08-13T05:04:51Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0bf206a4-0cfa-4291-a715-499056e0dcae",
+        "parentId" : "16b46643-5bdc-4015-8e23-44ae8375d7f4",
+        "authorId" : "a2fcc15e-a51a-42f0-87a6-137048a28e30",
+        "body" : "@viirya So my idea here was that.. since we don't expect these kind of literals a lot i.e its not a common case .. we don't change our normal processing path to add any possible runtime costs. Thats why we keep all these in the exception processing.",
+        "createdAt" : "2019-08-02T20:40:59Z",
+        "updatedAt" : "2019-08-13T05:04:51Z",
+        "lastEditedBy" : "a2fcc15e-a51a-42f0-87a6-137048a28e30",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "aac9314e-0dcd-47da-8432-ca6d32793154",
+        "parentId" : "16b46643-5bdc-4015-8e23-44ae8375d7f4",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "I like the @viirya approach for readability, but I understand your concern for the performance. So, could you check actual performance changes?",
+        "createdAt" : "2019-08-03T13:01:23Z",
+        "updatedAt" : "2019-08-13T05:04:51Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "de69f56a-a0fe-4ae4-a733-f1d9fa97059e",
+        "parentId" : "16b46643-5bdc-4015-8e23-44ae8375d7f4",
+        "authorId" : "a2fcc15e-a51a-42f0-87a6-137048a28e30",
+        "body" : "@maropu Oops.. didn't see this comment. I suppose i have to use the benchmark framework for this ? Appreciate any tip on this..",
+        "createdAt" : "2019-08-06T05:25:54Z",
+        "updatedAt" : "2019-08-13T05:04:51Z",
+        "lastEditedBy" : "a2fcc15e-a51a-42f0-87a6-137048a28e30",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "50136415-4652-468a-9810-7a7e2079fd08",
+        "parentId" : "16b46643-5bdc-4015-8e23-44ae8375d7f4",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Could we check the numbers by a simple query?, e.g.,\r\n```\r\nscala> spark.range(10).selectExpr(\"CAST(double(id) AS STRING) a\").write.save(\"/tmp/test\")\r\nscala> spark.read.load(\"/tmp/test\").selectExpr(\"CAST(a AS DOUBLE)\").write.format(\"noop\").save()\r\n```\r\nIn another pr, I observed that a logic depending on exceptions cause high performance penalties: https://github.com/lz4/lz4-java/pull/143\r\nSo, I'm a bit worried that this current logic has the same issue.",
+        "createdAt" : "2019-08-06T23:35:30Z",
+        "updatedAt" : "2019-08-13T05:04:51Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7e4fd649-651d-4a25-bb44-9da8b57188f0",
+        "parentId" : "16b46643-5bdc-4015-8e23-44ae8375d7f4",
+        "authorId" : "a2fcc15e-a51a-42f0-87a6-137048a28e30",
+        "body" : "@maropu Ok.. i will give it a try. One thing to note here is that, we didn't introduce a try/catch in this PR. That was existing before. We just added some extra code in the catch block. However, i will give it a try and get back.",
+        "createdAt" : "2019-08-07T00:04:22Z",
+        "updatedAt" : "2019-08-13T05:04:51Z",
+        "lastEditedBy" : "a2fcc15e-a51a-42f0-87a6-137048a28e30",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "503bc7ad-21a2-406c-bc5a-1b66616cd7ba",
+        "parentId" : "16b46643-5bdc-4015-8e23-44ae8375d7f4",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Yea, I mean the performance for known strings as @viirya said.",
+        "createdAt" : "2019-08-07T00:15:57Z",
+        "updatedAt" : "2019-08-13T05:04:51Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d8f4d7a6-7e55-41e3-b9bd-6154820e3dcb",
+        "parentId" : "16b46643-5bdc-4015-8e23-44ae8375d7f4",
+        "authorId" : "a2fcc15e-a51a-42f0-87a6-137048a28e30",
+        "body" : "@maropu I did the comparison. So our current implementation of handling these special values in the catch block seems to perform better than putting these in the main code path.  Here are the results. I didn't make the change to the codegen path. So lets ignore the second line. The first set of numbers are for the run with current code path. 2nd set of numbers are when these special values are handled in the main code path.\r\n```\r\nJava HotSpot(TM) 64-Bit Server VM 1.8.0_202-b08 on Mac OS X 10.14.6\r\n[info] Intel(R) Core(TM) i7-4870HQ CPU @ 2.50GHz\r\n[info] cast from string to double:               Best Time(ms)   Avg Time(ms)   Stdev(ms)    Rate(M/s)   Per Row(ns)   Relative\r\n[info] ------------------------------------------------------------------------------------------------------------------------\r\n[info] cast from string to double wholestage off           5076           5394         450          0.0       50759.0       1.0X\r\n[info] cast from string to double wholestage on           4709           4876         194          0.0       47093.1       1.1X\r\n[info]\r\n\r\n\r\nJava HotSpot(TM) 64-Bit Server VM 1.8.0_202-b08 on Mac OS X 10.14.6\r\n[info] Intel(R) Core(TM) i7-4870HQ CPU @ 2.50GHz\r\n[info] cast from string to double:               Best Time(ms)   Avg Time(ms)   Stdev(ms)    Rate(M/s)   Per Row(ns)   Relative\r\n[info] ------------------------------------------------------------------------------------------------------------------------\r\n[info] cast from string to double wholestage off           5002           5040          53          0.0       50023.6       1.0X\r\n[info] cast from string to double wholestage on           4926           4976          45          0.0       49258.8       1.0X\r\n~                                                                                                                                 \r\n```\r\n\r\nPlease let me know. Sorry for the delay in getting this to run.",
+        "createdAt" : "2019-08-08T09:41:21Z",
+        "updatedAt" : "2019-08-13T05:04:51Z",
+        "lastEditedBy" : "a2fcc15e-a51a-42f0-87a6-137048a28e30",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ebeee84d-4e9e-4954-a5a2-1f193ee7adce",
+        "parentId" : "16b46643-5bdc-4015-8e23-44ae8375d7f4",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Many thanks! I see. What was input data? Some parts of input data include `inf`/`-inf`?",
+        "createdAt" : "2019-08-09T01:01:36Z",
+        "updatedAt" : "2019-08-13T05:04:51Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ba1145b4-26c8-4d2c-8194-c0b6d5af7694",
+        "parentId" : "16b46643-5bdc-4015-8e23-44ae8375d7f4",
+        "authorId" : "a2fcc15e-a51a-42f0-87a6-137048a28e30",
+        "body" : "@maropu Actually my input data didn't contain any of these special literals. Basically i was testing with the condition when we don't hit the catch block. Basically we are trying optimize for the best case ?",
+        "createdAt" : "2019-08-09T03:55:01Z",
+        "updatedAt" : "2019-08-13T05:04:51Z",
+        "lastEditedBy" : "a2fcc15e-a51a-42f0-87a6-137048a28e30",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c0c7a6eb-818e-4ae2-911e-cdefbd67e7a2",
+        "parentId" : "16b46643-5bdc-4015-8e23-44ae8375d7f4",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "I just make sure that a small number of `inf/-inf` does not worse the prformance. If this is true, I think the current code looks ok to me.",
+        "createdAt" : "2019-08-09T04:27:58Z",
+        "updatedAt" : "2019-08-13T05:04:51Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1730c11b-01ad-43c3-94c3-c66353c9d6ce",
+        "parentId" : "16b46643-5bdc-4015-8e23-44ae8375d7f4",
+        "authorId" : "a2fcc15e-a51a-42f0-87a6-137048a28e30",
+        "body" : "@maropu In the mean time i had tried with 1% of data being 'inf' and i can confirm that it does not hurt the performance :-)",
+        "createdAt" : "2019-08-09T05:29:00Z",
+        "updatedAt" : "2019-08-13T05:04:51Z",
+        "lastEditedBy" : "a2fcc15e-a51a-42f0-87a6-137048a28e30",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "acb2dd4f-6e6c-49e0-b262-93cb91f8c9ae",
+        "parentId" : "16b46643-5bdc-4015-8e23-44ae8375d7f4",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Sounds good.",
+        "createdAt" : "2019-08-09T06:01:57Z",
+        "updatedAt" : "2019-08-13T05:04:51Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f60aa399-07bf-4a4a-989e-2d4c9ca89191",
+        "parentId" : "16b46643-5bdc-4015-8e23-44ae8375d7f4",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Sounds nice, too ;)",
+        "createdAt" : "2019-08-09T09:56:35Z",
+        "updatedAt" : "2019-08-13T05:04:51Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "1a5d978707d519fc6cea5eb7caa1b3fe1eb4933f",
+    "line" : 55,
+    "diffHunk" : "@@ -1,1 +603,607 @@        val floatStr = s.toString\n        try floatStr.toFloat catch {\n          case _: NumberFormatException =>\n            Cast.processFloatingPointSpecialLiterals(floatStr, true)\n        }"
+  },
+  {
+    "id" : "e0fd9f05-0fba-47eb-b263-f555cdafac76",
+    "prId" : 25331,
+    "prUrl" : "https://github.com/apache/spark/pull/25331#pullrequestreview-272966430",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c58bc43e-b204-47f6-a61d-2a1cd0330a29",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Actually some literals like InFiniTy can be casted, it looks a bit weird. However, postgresql accepts such things. Maybe add a comment here to explain why allowing case insensitive match?",
+        "createdAt" : "2019-08-09T06:05:40Z",
+        "updatedAt" : "2019-08-13T05:04:51Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f4a30cd1-c217-40a2-8598-fe3f9d142cd1",
+        "parentId" : "c58bc43e-b204-47f6-a61d-2a1cd0330a29",
+        "authorId" : "a2fcc15e-a51a-42f0-87a6-137048a28e30",
+        "body" : "@viirya Does this look ok ?\r\n\r\nWe process literals such as 'Infinity', 'Inf', '-Infinity' and 'NaN' in case insensitive manner to be compatible with other database systems such as Postgres and DB2.",
+        "createdAt" : "2019-08-09T06:22:52Z",
+        "updatedAt" : "2019-08-13T05:04:51Z",
+        "lastEditedBy" : "a2fcc15e-a51a-42f0-87a6-137048a28e30",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a4b7309d-5aa8-4e19-9cff-86a775ddcd15",
+        "parentId" : "c58bc43e-b204-47f6-a61d-2a1cd0330a29",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "I feel ok. Other reviewers may also have advice too.",
+        "createdAt" : "2019-08-09T06:41:27Z",
+        "updatedAt" : "2019-08-13T05:04:51Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "1a5d978707d519fc6cea5eb7caa1b3fe1eb4933f",
+    "line" : 17,
+    "diffHunk" : "@@ -1,1 +199,203 @@   * insensitive manner to be compatible with other database systems such as PostgreSQL and DB2.\n   */\n  def processFloatingPointSpecialLiterals(v: String, isFloat: Boolean): Any = {\n    v.trim.toLowerCase(Locale.ROOT) match {\n      case \"inf\" | \"+inf\" | \"infinity\" | \"+infinity\" =>"
+  },
+  {
+    "id" : "5cca87a1-14e6-4e57-b3e4-2eb301ee00aa",
+    "prId" : 25300,
+    "prUrl" : "https://github.com/apache/spark/pull/25300#pullrequestreview-268784184",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "56fc98bf-d1c1-435b-a2ca-f255652c2662",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "no chance to has the same value accidentally?",
+        "createdAt" : "2019-07-31T03:36:57Z",
+        "updatedAt" : "2019-08-02T07:09:25Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5c286e36-f3f1-4d7a-8508-526b8289e856",
+        "parentId" : "56fc98bf-d1c1-435b-a2ca-f255652c2662",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "Do you mean: is it possible that`longValue == longValue.toInt` when longValue can't fit into `Int`? \r\nThe `longValue` is long type, so it is impossible.",
+        "createdAt" : "2019-07-31T04:49:41Z",
+        "updatedAt" : "2019-08-02T07:09:25Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2346a85a-f578-43bf-9fef-963c02c074f1",
+        "parentId" : "56fc98bf-d1c1-435b-a2ca-f255652c2662",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "oh, right. I misunderstood it. Thanks!",
+        "createdAt" : "2019-07-31T04:53:28Z",
+        "updatedAt" : "2019-08-02T07:09:25Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "63a6e62dd127f1d774ddf6c823527276d481af1d",
+    "line" : 66,
+    "diffHunk" : "@@ -1,1 +490,494 @@      buildCast[Long](_, t => {\n        val longValue = timestampToLong(t)\n        if (longValue == longValue.toInt) {\n          longValue.toInt\n        } else {"
+  },
+  {
+    "id" : "cab28c51-835e-4ad1-8402-0a1952af963f",
+    "prId" : 25300,
+    "prUrl" : "https://github.com/apache/spark/pull/25300#pullrequestreview-268828262",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c63fb254-e357-40ad-b430-3d93b95883b7",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "This question might be out-of-scope in this pr though... we don't need round-up here?\r\n```\r\npostgres=# select CAST(3.9 AS INT);\r\n int4 \r\n------\r\n    4\r\n(1 row)\r\n```",
+        "createdAt" : "2019-07-31T03:55:34Z",
+        "updatedAt" : "2019-08-02T07:09:25Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2f09e3e4-932e-4b5b-9006-688f06287725",
+        "parentId" : "c63fb254-e357-40ad-b430-3d93b95883b7",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "Actually it is tricty to compare float and int if the float value is around Int.MaxValue or Int.MinValue.\r\n```\r\nscala> BigDecimal((Int.MaxValue + 1L).toString).toFloat <= Int.MaxValue\r\nres1: Boolean = true\r\n```\r\nThis is because `float` is also 32 bits long, and it uses 8 bit to represent the exponent field. While `int` is 32 bits long. So the comparison won't be accurate.We don't have to worry about the rounding for Float -> Int.\r\n",
+        "createdAt" : "2019-07-31T05:28:01Z",
+        "updatedAt" : "2019-08-02T07:09:25Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5cb8c322-1287-4ea7-8e82-09ade828eb05",
+        "parentId" : "c63fb254-e357-40ad-b430-3d93b95883b7",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Ur, I see. That behaivour looks interesting...\r\nBut, what I'm just worried about is that the query below has different output;\r\n```\r\n// this pr\r\nscala> sql(\"SELECT CAST(float(3.5) AS INT)\").show\r\n+-------------------------------+\r\n|CAST(CAST(3.5 AS FLOAT) AS INT)|\r\n+-------------------------------+\r\n|                              3|\r\n+-------------------------------+\r\n\r\n// postgresql\r\npostgres=# SELECT CAST(float4 '3.5' AS INT);\r\n int4 \r\n------\r\n    4\r\n(1 row)\r\n\r\n// mysql (no float literal in mysql?)\r\nmysql> SELECT CAST(3.5 AS SIGNED INT);\r\n+-------------------------+\r\n| CAST(3.5 AS SIGNED INT) |\r\n+-------------------------+\r\n|                       4 |\r\n+-------------------------+\r\n1 row in set (0.00 sec)\r\n```\r\nYou mean that, since that comparison is inaccurate, this output difference is ok?",
+        "createdAt" : "2019-07-31T07:07:08Z",
+        "updatedAt" : "2019-08-02T07:09:25Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "acf9740c-0108-45a8-80cb-70152fdc60c4",
+        "parentId" : "c63fb254-e357-40ad-b430-3d93b95883b7",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "Oh I thought you were talking about the corner case.\r\nAs per the SQL standard in section 9.2\r\n> it is implementation- defined whether the approximation is obtained by rounding or by truncation\r\n\r\nSpark always uses truncation. So I think we can simply follow the previous behavior on this. It is out of the scope of this PR.",
+        "createdAt" : "2019-07-31T07:20:16Z",
+        "updatedAt" : "2019-08-02T07:09:25Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b9c488d2-ff85-4e6b-bb8a-9a8a3ff8ecd5",
+        "parentId" : "c63fb254-e357-40ad-b430-3d93b95883b7",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "yea, ok. thx for your check!",
+        "createdAt" : "2019-07-31T07:28:46Z",
+        "updatedAt" : "2019-08-02T07:09:25Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "63a6e62dd127f1d774ddf6c823527276d481af1d",
+    "line" : 87,
+    "diffHunk" : "@@ -1,1 +511,515 @@      buildCast[Float](_, f =>\n        if (f <= Int.MaxValue && f >= Int.MinValue) {\n          f.toInt\n        } else {\n          null"
+  },
+  {
+    "id" : "abd4445e-5163-4559-b530-46b75875588d",
+    "prId" : 25300,
+    "prUrl" : "https://github.com/apache/spark/pull/25300#pullrequestreview-268781900",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5aa7ff7f-5803-4adc-98d1-190efff84258",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Is this related to this pr?",
+        "createdAt" : "2019-07-31T03:59:07Z",
+        "updatedAt" : "2019-08-02T07:09:25Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "33beacc6-0188-4e01-b82d-27cf109b6c85",
+        "parentId" : "5aa7ff7f-5803-4adc-98d1-190efff84258",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "Yes, converting TimeStamp to Byte/Short/Int type can be null",
+        "createdAt" : "2019-07-31T04:41:19Z",
+        "updatedAt" : "2019-08-02T07:09:25Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "63a6e62dd127f1d774ddf6c823527276d481af1d",
+    "line" : 4,
+    "diffHunk" : "@@ -1,1 +181,185 @@    case (FloatType | DoubleType, TimestampType) => true\n    case (TimestampType, DateType) => false\n    case (TimestampType, _: IntegralType) if to != LongType => true\n    case (_, DateType) => true\n    case (DateType, TimestampType) => false"
+  },
+  {
+    "id" : "a24b74bd-145f-40d7-bd0e-7b4f4f452d8a",
+    "prId" : 25300,
+    "prUrl" : "https://github.com/apache/spark/pull/25300#pullrequestreview-270154735",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "81246983-5514-42c5-8a36-216b229b62f0",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "We need the three entries above? `case x: NumericType` you removed in this pr is enough for those cases?",
+        "createdAt" : "2019-08-02T02:24:28Z",
+        "updatedAt" : "2019-08-02T07:09:25Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0a55c580-3d3c-4713-9aae-06c0fc0b09de",
+        "parentId" : "81246983-5514-42c5-8a36-216b229b62f0",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "Not sure if there is performance difference here. The motivation is that there are only there types here and by doing this might slightly improve the performance. @rednaxelafx @kiszk ",
+        "createdAt" : "2019-08-02T03:22:40Z",
+        "updatedAt" : "2019-08-02T07:09:25Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cce93697-c1d3-4541-b90b-832a0e33ba2e",
+        "parentId" : "81246983-5514-42c5-8a36-216b229b62f0",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Ur, I see. Good idea to ask the JVM guys, hahaha",
+        "createdAt" : "2019-08-02T03:24:15Z",
+        "updatedAt" : "2019-08-02T07:09:25Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "90f20413-8ca4-40b1-b765-a91fcc6edace",
+        "parentId" : "81246983-5514-42c5-8a36-216b229b62f0",
+        "authorId" : "99e31844-a5b3-48a2-af71-412edb607a13",
+        "body" : "In summary, I think that this slightly improve improve performance.\r\n\r\nMy guess (I have not seen generated code by HotSpot) is that this cast (e.g. `b.asInstanceOf[Int]`) removes table lookup of invocation of `toLong`. As a result, we expect the code in `toLong` is inlined to caller. On the other hand, the original code (`asInstanceOf[Numeric[Any]].toLong(b)`) has a table lookup for invoking `toLong`. Thus, it is not expected to apply inlining.",
+        "createdAt" : "2019-08-02T12:44:29Z",
+        "updatedAt" : "2019-08-02T12:44:37Z",
+        "lastEditedBy" : "99e31844-a5b3-48a2-af71-412edb607a13",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "63a6e62dd127f1d774ddf6c823527276d481af1d",
+    "line" : 27,
+    "diffHunk" : "@@ -1,1 +449,453 @@      b => b.asInstanceOf[Short].toLong\n    case IntegerType =>\n      b => b.asInstanceOf[Int].toLong\n    case FloatType =>\n      buildCast[Float](_, f =>"
+  },
+  {
+    "id" : "f06b4eec-1c1b-4e52-91f4-fe9cf13273fc",
+    "prId" : 25300,
+    "prUrl" : "https://github.com/apache/spark/pull/25300#pullrequestreview-273287160",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a65aa8c5-d230-455b-9c1f-c19c863fb626",
+        "parentId" : null,
+        "authorId" : "99e31844-a5b3-48a2-af71-412edb607a13",
+        "body" : "Why don't we use the similar condition to others, like `if (f < Int.MaxValue + 1L && f > Int.MinValue - 1L) {`?",
+        "createdAt" : "2019-08-09T17:41:07Z",
+        "updatedAt" : "2019-08-09T17:41:08Z",
+        "lastEditedBy" : "99e31844-a5b3-48a2-af71-412edb607a13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2ecbc5f4-06d2-4400-aa7d-bc9b4c6f80c7",
+        "parentId" : "a65aa8c5-d230-455b-9c1f-c19c863fb626",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "It is quite tricky here. I did some corner tests and decide to do it in this way.  \r\n```\r\nscala> 2147483647.5f < Int.MaxValue + 1L\r\nres2: Boolean = false\r\n\r\nscala> 2147483647.5f <= Int.MaxValue \r\nres3: Boolean = true\r\n```",
+        "createdAt" : "2019-08-09T18:09:18Z",
+        "updatedAt" : "2019-08-09T18:09:18Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "63a6e62dd127f1d774ddf6c823527276d481af1d",
+    "line" : 86,
+    "diffHunk" : "@@ -1,1 +510,514 @@    case FloatType =>\n      buildCast[Float](_, f =>\n        if (f <= Int.MaxValue && f >= Int.MinValue) {\n          f.toInt\n        } else {"
+  },
+  {
+    "id" : "6f84d55f-8383-4735-a87c-81c76946ccdb",
+    "prId" : 25300,
+    "prUrl" : "https://github.com/apache/spark/pull/25300#pullrequestreview-273283092",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "316a3a5d-2830-4882-af1d-71db1df17823",
+        "parentId" : null,
+        "authorId" : "99e31844-a5b3-48a2-af71-412edb607a13",
+        "body" : "Among `castToByteCode`, `castToShortCode`, and `castToIntCode`, can we do refactoring by introducing a helper function that has arguments type as `String`, `MaxValue`, `MinValue`? As a result, we can reduce a similar code.",
+        "createdAt" : "2019-08-09T18:00:18Z",
+        "updatedAt" : "2019-08-09T18:00:18Z",
+        "lastEditedBy" : "99e31844-a5b3-48a2-af71-412edb607a13",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "63a6e62dd127f1d774ddf6c823527276d481af1d",
+    "line" : 258,
+    "diffHunk" : "@@ -1,1 +1339,1343 @@      (c, evPrim, evNull) => code\"$evNull = true;\"\n    case TimestampType =>\n      val longValue = ctx.freshName(\"longValue\")\n      (c, evPrim, evNull) =>\n        code\"\"\""
   }
 ]

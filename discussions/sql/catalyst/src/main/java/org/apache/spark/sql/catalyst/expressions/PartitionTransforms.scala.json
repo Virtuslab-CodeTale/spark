@@ -20,5 +20,93 @@
     "commit" : "ab7c3e89888d5233cefe64a8a91789e8e7a5504f",
     "line" : 42,
     "diffHunk" : "@@ -1,1 +40,44 @@ * Expression for the v2 partition transform years.\n */\ncase class Years(child: Expression) extends PartitionTransformExpression {\n  override def dataType: DataType = IntegerType\n  override def children: Seq[Expression] = Seq(child)"
+  },
+  {
+    "id" : "cf201621-161e-4667-8d97-6eb58e739977",
+    "prId" : 25354,
+    "prUrl" : "https://github.com/apache/spark/pull/25354#pullrequestreview-277935628",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f275cd38-58fc-44af-9cc7-883a87025a97",
+        "parentId" : null,
+        "authorId" : "1aba4faa-ea5e-4487-baf9-d552ca566126",
+        "body" : "Hi Ryan, maybe naive question, why not supporting granularity down to minutes or seconds?",
+        "createdAt" : "2019-08-21T05:01:39Z",
+        "updatedAt" : "2019-08-31T02:18:57Z",
+        "lastEditedBy" : "1aba4faa-ea5e-4487-baf9-d552ca566126",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4d83a58d-a3eb-4a1b-8246-240553e747c8",
+        "parentId" : "f275cd38-58fc-44af-9cc7-883a87025a97",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "I've not seen an example of a table that requires partitioning down to minutes or seconds. I'm not opposed to adding them, but it seems to me that those would not be very useful and would probably get people that use them into trouble by over-partitioning.",
+        "createdAt" : "2019-08-21T16:07:26Z",
+        "updatedAt" : "2019-08-31T02:18:57Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d8d14702-77db-49dc-adc4-b547dedcae02",
+        "parentId" : "f275cd38-58fc-44af-9cc7-883a87025a97",
+        "authorId" : "1aba4faa-ea5e-4487-baf9-d552ca566126",
+        "body" : "got it, thanks. agree that if not many use cases for minutes or seconds then we can ignore it.",
+        "createdAt" : "2019-08-21T16:58:53Z",
+        "updatedAt" : "2019-08-31T02:18:57Z",
+        "lastEditedBy" : "1aba4faa-ea5e-4487-baf9-d552ca566126",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9864d42501feff1acd01e11aedd2a7dc84a88bd5",
+    "line" : 66,
+    "diffHunk" : "@@ -1,1 +64,68 @@ * Expression for the v2 partition transform hours.\n */\ncase class Hours(child: Expression) extends PartitionTransformExpression {\n  override def dataType: DataType = IntegerType\n  override def children: Seq[Expression] = Seq(child)"
+  },
+  {
+    "id" : "2348afa2-f530-4131-a08f-17538dc4553e",
+    "prId" : 25354,
+    "prUrl" : "https://github.com/apache/spark/pull/25354#pullrequestreview-278748204",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8d54e8c2-25ab-4547-887f-37c68fc1c208",
+        "parentId" : null,
+        "authorId" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "body" : "Question about bucketing. I assume Spark will be leveraging this bucketing information in the future to potentially optimize joins and stuff. If we're leaving the behavior of bucketing to the underlying data source, couldn't that cause potential correctness issues?\r\nFor example, imagine a datasource implementing bucketing through hash partitioning, whereas another data source doing range partitioning. Do we need additional identifiers?",
+        "createdAt" : "2019-08-22T23:53:09Z",
+        "updatedAt" : "2019-08-31T02:18:57Z",
+        "lastEditedBy" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bcd841ba-aac8-44ab-b043-22a4fd6e37c7",
+        "parentId" : "8d54e8c2-25ab-4547-887f-37c68fc1c208",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "Unfortunately, Spark can't force sources to use a specific bucket function. A great example is Hive tables, which use a Hive-specific function. So the partitioning transforms are general. It's up to the source what function to use when bucketing.\r\n\r\nWhen we add support for bucketed joins, for example, we will need a way to look up a UDF with the source's bucketing function implementation. The FunctionCatalog interface I proposed does that. Spark would look up the \"bucket\" function in the table's catalog to get a concrete implementation that it can use to partition the other side of the bucketed join. If that side is also bucketed, we will want a way to compare the bucket functions to see if they are the same. `equals` will probably work.",
+        "createdAt" : "2019-08-23T00:24:45Z",
+        "updatedAt" : "2019-08-31T02:18:57Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4673016d-6469-4a5b-884b-b6c7e7836b08",
+        "parentId" : "8d54e8c2-25ab-4547-887f-37c68fc1c208",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "Here's the FunctionCatalog PR: https://github.com/apache/spark/pull/24559",
+        "createdAt" : "2019-08-23T00:25:32Z",
+        "updatedAt" : "2019-08-31T02:18:57Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9864d42501feff1acd01e11aedd2a7dc84a88bd5",
+    "line" : 74,
+    "diffHunk" : "@@ -1,1 +72,76 @@ * Expression for the v2 partition transform bucket.\n */\ncase class Bucket(numBuckets: Literal, child: Expression) extends PartitionTransformExpression {\n  override def dataType: DataType = IntegerType\n  override def children: Seq[Expression] = Seq(numBuckets, child)"
   }
 ]

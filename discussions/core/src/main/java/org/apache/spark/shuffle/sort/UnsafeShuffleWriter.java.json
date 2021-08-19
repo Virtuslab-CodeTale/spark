@@ -1,0 +1,101 @@
+[
+  {
+    "id" : "c003dacd-14b6-4a0a-aab3-16f377d8f744",
+    "prId" : 25304,
+    "prUrl" : "https://github.com/apache/spark/pull/25304#pullrequestreview-279782618",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "fa4bbb14-9e92-43b6-abbf-d190847143c7",
+        "parentId" : null,
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "this comment is only true for the local disk implementation. eg. if some other implementation did take advantage of the single merged file somehow, and wrote it all to a remote store, it would be doing another write.\r\n\r\nBut I am not really worried about this, as I don't think any other store will actually use this ...",
+        "createdAt" : "2019-08-06T15:32:58Z",
+        "updatedAt" : "2019-09-10T02:00:19Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2ba105cc-6d33-413f-be7f-54974f8961e6",
+        "parentId" : "fa4bbb14-9e92-43b6-abbf-d190847143c7",
+        "authorId" : "806aa501-9ea7-4cec-b017-a84d9a1602d8",
+        "body" : "Where could we move this?",
+        "createdAt" : "2019-08-17T00:13:45Z",
+        "updatedAt" : "2019-09-10T02:00:19Z",
+        "lastEditedBy" : "806aa501-9ea7-4cec-b017-a84d9a1602d8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "90b87e07-8271-4587-b155-8528b5466d12",
+        "parentId" : "fa4bbb14-9e92-43b6-abbf-d190847143c7",
+        "authorId" : "34f85564-3e6b-4cb5-99f3-d5e383ee52fa",
+        "body" : "@squito I think this `SingleSpillShuffleMapOutputWriter` can be pretty useful, it may avoid some byte-to-byte read/write, instead the custom store can have implementation with more performant.",
+        "createdAt" : "2019-08-17T02:41:55Z",
+        "updatedAt" : "2019-09-10T02:00:19Z",
+        "lastEditedBy" : "34f85564-3e6b-4cb5-99f3-d5e383ee52fa",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "41022ede-3458-4865-8052-851f9f464bd4",
+        "parentId" : "fa4bbb14-9e92-43b6-abbf-d190847143c7",
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "I dunno if there is a great alternative.  We could say its the job of individual implementations to increment the metrics, and then move this comment into `LocalDiskSingleSpillMapOutputWriter` on why the metrics aren't incremented.  But we're specifically trying to avoid exposing metrics to the api.  you could also have `transferMapSpillFile()` return the number of bytes written, and then the existing implementation would return 0.\r\n\r\nIt all kinda feels like overkill to me.  @gczsjdy I agree its possible for another store to take advantage of this, but do you have a specific case in mind?  I'd like to avoid adding too many things to the api and keep things simple (with odd cases just to support the existing implementation).",
+        "createdAt" : "2019-08-26T19:24:01Z",
+        "updatedAt" : "2019-09-10T02:00:19Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "85a101dff8a7a58d293c283857a219b6e73510de",
+    "line" : 175,
+    "diffHunk" : "@@ -1,1 +276,280 @@      if (maybeSingleFileWriter.isPresent()) {\n        // Here, we don't need to perform any metrics updates because the bytes written to this\n        // output file would have already been counted as shuffle bytes written.\n        partitionLengths = spills[0].partitionLengths;\n        maybeSingleFileWriter.get().transferMapSpillFile(spills[0].file, partitionLengths);"
+  },
+  {
+    "id" : "5319639a-5127-4e53-932a-957fa2342325",
+    "prId" : 25304,
+    "prUrl" : "https://github.com/apache/spark/pull/25304#pullrequestreview-285691453",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c5ea1465-1759-4b45-88de-ee4ce42c6521",
+        "parentId" : null,
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "I commented on another PR about this, but `StreamFallbackChannelWrapper` is probably going to be slower than calling `mergeSpillsWithFileStream` in this case, because of the extra buffering the `Channels.createChannel` wrapper adds.\r\n\r\nProbably not a huge deal, but seems easy to call `mergeSpillsWithFileStream` if the implementation does not return a channel wrapper.",
+        "createdAt" : "2019-09-04T17:39:08Z",
+        "updatedAt" : "2019-09-10T02:00:19Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f96db345-9c72-45da-87d3-41fbf5d0c3d3",
+        "parentId" : "c5ea1465-1759-4b45-88de-ee4ce42c6521",
+        "authorId" : "806aa501-9ea7-4cec-b017-a84d9a1602d8",
+        "body" : "The tricky part here is that you only know if the channel wrapper is supported when we've started looking through the partitions in this loop - which would mean we would have to abort iteration early and switch the merge strategy. Can we leave it as-is?",
+        "createdAt" : "2019-09-07T00:51:38Z",
+        "updatedAt" : "2019-09-10T02:00:19Z",
+        "lastEditedBy" : "806aa501-9ea7-4cec-b017-a84d9a1602d8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "72ad7704-9024-4bf8-9893-68236b3571f0",
+        "parentId" : "c5ea1465-1759-4b45-88de-ee4ce42c6521",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Argh, another reason why I prefer explicit capability checks over using optionals. Ok to leave like this for now, I guess.",
+        "createdAt" : "2019-09-09T18:15:31Z",
+        "updatedAt" : "2019-09-10T02:00:19Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "85a101dff8a7a58d293c283857a219b6e73510de",
+    "line" : 462,
+    "diffHunk" : "@@ -1,1 +451,455 @@        ShufflePartitionWriter writer = mapWriter.getPartitionWriter(partition);\n        WritableByteChannelWrapper resolvedChannel = writer.openChannelWrapper()\n            .orElseGet(() -> new StreamFallbackChannelWrapper(openStreamUnchecked(writer)));\n        try {\n          for (int i = 0; i < spills.length; i++) {"
+  }
+]

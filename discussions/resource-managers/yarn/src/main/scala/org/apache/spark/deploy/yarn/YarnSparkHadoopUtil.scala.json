@@ -20,5 +20,126 @@
     "commit" : "e25dafbac32534eaa998b00da98d4e90114a2c64",
     "line" : 20,
     "diffHunk" : "@@ -1,1 +197,201 @@   * return 0 if MEMORY_OFFHEAP_ENABLED is false.\n   */\n  def executorOffHeapMemorySizeAsMb(sparkConf: SparkConf,\n    execRequest: ExecutorResourceRequest): Long = {\n    checkOffHeapEnabled(sparkConf, execRequest.amount)"
+  },
+  {
+    "id" : "a02d41c4-e9c5-4595-9c1a-6c6dc5c18598",
+    "prId" : 25309,
+    "prUrl" : "https://github.com/apache/spark/pull/25309#pullrequestreview-278816243",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3306d433-6565-44e5-ab47-6fa3036bef03",
+        "parentId" : null,
+        "authorId" : "b4e64da3-d07f-4391-82fc-7bfc071fcb0b",
+        "body" : "Please check if `MEMORY_OFFHEAP_SIZE` could equal to 0. The definition of `MEMORY_OFFHEAP_SIZE` checks that it could be `>= 0`.",
+        "createdAt" : "2019-08-08T09:49:05Z",
+        "updatedAt" : "2019-09-04T03:35:58Z",
+        "lastEditedBy" : "b4e64da3-d07f-4391-82fc-7bfc071fcb0b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "11e5517d-1968-4576-b8f0-4e1743777b3b",
+        "parentId" : "3306d433-6565-44e5-ab47-6fa3036bef03",
+        "authorId" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "body" : "A little conflict with the `MemoryManager` as following:\r\n![image](https://user-images.githubusercontent.com/1475305/62699935-3225e500-ba13-11e9-858e-95da11b2e1ce.png)\r\n\r\nif `MEMORY_OFFHEAP_ENABLED` is enable, `MemoryManager.tungstenMemoryMode` will enter `OFF_HEAP` branch and need `MEMORY_OFFHEAP_SIZE  > 0` and I think we should be consistent.",
+        "createdAt" : "2019-08-08T11:34:17Z",
+        "updatedAt" : "2019-09-04T03:35:58Z",
+        "lastEditedBy" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1166b32f-d6f5-463e-ba40-3d1538207615",
+        "parentId" : "3306d433-6565-44e5-ab47-6fa3036bef03",
+        "authorId" : "b4e64da3-d07f-4391-82fc-7bfc071fcb0b",
+        "body" : "Then I think we should change the code here.\r\n\r\nhttps://github.com/apache/spark/blob/1941d35d1e250f707c0d70782e568c0887741dfa/core/src/main/scala/org/apache/spark/internal/config/package.scala#L234",
+        "createdAt" : "2019-08-08T11:42:53Z",
+        "updatedAt" : "2019-09-04T03:35:58Z",
+        "lastEditedBy" : "b4e64da3-d07f-4391-82fc-7bfc071fcb0b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "452bc7e8-6cb6-49b8-95cd-df6bd24689e9",
+        "parentId" : "3306d433-6565-44e5-ab47-6fa3036bef03",
+        "authorId" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "body" : "0 is defaultValue,  change to \r\n```\r\n.checkValue(_ > 0, \"The off-heap memory size must be positive\")\r\n.createWithDefault(1)\r\n```\r\n? \r\notherwise will throw `IllegalArgumentException` when offHeapEnabled is false and defaultValue is 0.",
+        "createdAt" : "2019-08-08T12:23:47Z",
+        "updatedAt" : "2019-09-04T03:35:58Z",
+        "lastEditedBy" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5a36ca07-562b-454d-abc6-6ed48d4e79db",
+        "parentId" : "3306d433-6565-44e5-ab47-6fa3036bef03",
+        "authorId" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "body" : "Maybe we should give a suitable defaultValue ,like 1073741824(1g)?",
+        "createdAt" : "2019-08-08T12:47:16Z",
+        "updatedAt" : "2019-09-04T03:35:58Z",
+        "lastEditedBy" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "10873579-acc7-479d-a46a-62f168d33153",
+        "parentId" : "3306d433-6565-44e5-ab47-6fa3036bef03",
+        "authorId" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "body" : "@jerryshao Do we need to change 0 to a  suitable defaultValue?",
+        "createdAt" : "2019-08-13T11:16:03Z",
+        "updatedAt" : "2019-09-04T03:35:58Z",
+        "lastEditedBy" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a7718c90-cd2f-4b16-84eb-4f19ca9cea9c",
+        "parentId" : "3306d433-6565-44e5-ab47-6fa3036bef03",
+        "authorId" : "b4e64da3-d07f-4391-82fc-7bfc071fcb0b",
+        "body" : "I see, then I would suggest not to change it. Seems there's no good value which could cover most of the scenarios, so good to leave as it is.",
+        "createdAt" : "2019-08-13T11:51:27Z",
+        "updatedAt" : "2019-09-04T03:35:58Z",
+        "lastEditedBy" : "b4e64da3-d07f-4391-82fc-7bfc071fcb0b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2cdd13b5-6a84-4ea4-ab3c-c94b10304c59",
+        "parentId" : "3306d433-6565-44e5-ab47-6fa3036bef03",
+        "authorId" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "body" : "ok~",
+        "createdAt" : "2019-08-13T15:20:17Z",
+        "updatedAt" : "2019-09-04T03:35:58Z",
+        "lastEditedBy" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "837abc28-ccce-4e06-b8ff-07942629690b",
+        "parentId" : "3306d433-6565-44e5-ab47-6fa3036bef03",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "its odd that check is >= 0 in the config, seems like we should change but can you file a separate jira for that?",
+        "createdAt" : "2019-08-22T14:53:24Z",
+        "updatedAt" : "2019-09-04T03:35:58Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6a0a063b-e23c-4336-966e-62b2fd615ee7",
+        "parentId" : "3306d433-6565-44e5-ab47-6fa3036bef03",
+        "authorId" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "body" : "OK~ I will add a new jira to discuss this issue.",
+        "createdAt" : "2019-08-23T06:31:13Z",
+        "updatedAt" : "2019-09-04T03:35:58Z",
+        "lastEditedBy" : "c7afbd1a-ab9f-4878-b837-32685ae783b0",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "bb2948811e42eba2b99a1d118a5eb4559cae57bb",
+    "line" : 22,
+    "diffHunk" : "@@ -1,1 +191,195 @@      val sizeInMB = Utils.memoryStringToMb(sparkConf.get(MEMORY_OFFHEAP_SIZE).toString)\n      require(sizeInMB > 0,\n        s\"${MEMORY_OFFHEAP_SIZE.key} must be > 0 when ${MEMORY_OFFHEAP_ENABLED.key} == true\")\n      sizeInMB\n    } else {"
   }
 ]

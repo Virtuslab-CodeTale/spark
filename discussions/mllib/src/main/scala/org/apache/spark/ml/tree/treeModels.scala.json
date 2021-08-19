@@ -86,5 +86,60 @@
     "commit" : "027ec1cf9333fbc0c3435a662f8f3c418d3e7c7e",
     "line" : 19,
     "diffHunk" : "@@ -1,1 +404,408 @@\n    val dataPath = new Path(path, \"data\").toString\n    var df = sparkSession.read.parquet(dataPath)\n    val (major, minor) = VersionUtils.majorMinorVersion(metadata.sparkVersion)\n    if (major.toInt < 3) {"
+  },
+  {
+    "id" : "1a5ec39e-26d3-479e-b52a-39cf72df6bd1",
+    "prId" : 25383,
+    "prUrl" : "https://github.com/apache/spark/pull/25383#pullrequestreview-275360683",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4704970f-773d-4bcb-ab79-6d8d3c624526",
+        "parentId" : null,
+        "authorId" : "24e1dd39-ae3f-4bbb-a391-f60afb62d075",
+        "body" : "I am a bit worried by the extra memory pressure caused by this, in case trees are big.... can't we rather assign an index to the `LeafNode` class?",
+        "createdAt" : "2019-08-10T08:24:43Z",
+        "updatedAt" : "2019-08-21T02:51:20Z",
+        "lastEditedBy" : "24e1dd39-ae3f-4bbb-a391-f60afb62d075",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "67bdd2ca-bb42-4029-b529-3fef31758409",
+        "parentId" : "4704970f-773d-4bcb-ab79-6d8d3c624526",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "I had impled another leaf-transformation in the .mllib side https://github.com/apache/spark/pull/11520, and it used the sorted `leafId` as the output.\r\nHowever, in the .ml side, the `LeafNode` class do not contain a Id, and is exposed to the end user. So I tend to leave current `LeafNode` class alone.\r\nAs to the extra memory pressure, I think its size O(#numLeaves * #numTrees) is much smaller than the model itself.\r\nWDYT @srowen ",
+        "createdAt" : "2019-08-12T03:02:46Z",
+        "updatedAt" : "2019-08-21T02:51:20Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b2ef8a04-a455-457c-af29-4f87132859c1",
+        "parentId" : "4704970f-773d-4bcb-ab79-6d8d3c624526",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "If it's lazy, it won't affect usages that don't set the leaf col (right?). I think it's reasonable.",
+        "createdAt" : "2019-08-14T14:28:12Z",
+        "updatedAt" : "2019-08-21T02:51:20Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "eb5f71b2-56da-484d-9f0f-9c0b0513ff55",
+        "parentId" : "4704970f-773d-4bcb-ab79-6d8d3c624526",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "yes, this var is only generated when needed. and I make it transient, so it don't cause extra network/storage overhead.",
+        "createdAt" : "2019-08-15T10:29:49Z",
+        "updatedAt" : "2019-08-21T02:51:20Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4eb97be97cc4e509e74181dbab428548e6da28e3",
+    "line" : 26,
+    "diffHunk" : "@@ -1,1 +90,94 @@  }\n\n  @transient private lazy val leafIndices: Map[LeafNode, Int] = {\n    leafIterator(rootNode).zipWithIndex.toMap\n  }"
   }
 ]

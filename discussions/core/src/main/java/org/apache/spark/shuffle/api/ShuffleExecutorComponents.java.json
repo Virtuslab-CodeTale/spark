@@ -31,5 +31,137 @@
     "commit" : "28c9f9c2da1215a836fef7925e95a40c7c6dd87e",
     "line" : 8,
     "diffHunk" : "@@ -1,1 +43,47 @@   *\n   * @param shuffleId Unique identifier for the shuffle the map task is a part of\n   * @param mapId An ID of the map task. The ID is unique within this Spark application.\n   * @param numPartitions The number of partitions that will be written by the map task. Some of\n   *                      these partitions may be empty."
+  },
+  {
+    "id" : "6bcc8b23-7eb0-4d7e-9db1-5353d54dba08",
+    "prId" : 25361,
+    "prUrl" : "https://github.com/apache/spark/pull/25361#pullrequestreview-271104572",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "64cf4555-a04f-48e8-8270-2a99ef8f15d4",
+        "parentId" : null,
+        "authorId" : "806aa501-9ea7-4cec-b017-a84d9a1602d8",
+        "body" : "Why can't we just use the `mapTaskAttemptId`? (In fact I wonder if we can just remove `shuffleId` and `mapId` and just use `mapTaskAttemptId` as a global identifier, but that might be a bit ambitious.)",
+        "createdAt" : "2019-08-05T17:51:48Z",
+        "updatedAt" : "2019-08-05T17:54:36Z",
+        "lastEditedBy" : "806aa501-9ea7-4cec-b017-a84d9a1602d8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "90cf2db0-d0c9-41dd-acfc-95152b314c61",
+        "parentId" : "64cf4555-a04f-48e8-8270-2a99ef8f15d4",
+        "authorId" : "806aa501-9ea7-4cec-b017-a84d9a1602d8",
+        "body" : "Specifically taking a look at the linked PR for indeterminate retries - I'd expect that on a rolled back map stage, the implementation of this plugin will be given a different `mapTaskAttemptId` anyways since that's going to be updated on the resubmit. So, we'll end up opening a new writer regardless, but, we could have gotten the same behavior just by using the `mapTaskAttemptId`.",
+        "createdAt" : "2019-08-05T17:56:53Z",
+        "updatedAt" : "2019-08-05T17:56:53Z",
+        "lastEditedBy" : "806aa501-9ea7-4cec-b017-a84d9a1602d8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dd49e304-3e61-454f-84b6-a6576bec4ddb",
+        "parentId" : "64cf4555-a04f-48e8-8270-2a99ef8f15d4",
+        "authorId" : "806aa501-9ea7-4cec-b017-a84d9a1602d8",
+        "body" : "Actually let's move discussion over to #24892",
+        "createdAt" : "2019-08-06T00:19:33Z",
+        "updatedAt" : "2019-08-06T00:19:33Z",
+        "lastEditedBy" : "806aa501-9ea7-4cec-b017-a84d9a1602d8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b4d56445-4600-4a0d-af50-580e1c345ab9",
+        "parentId" : "64cf4555-a04f-48e8-8270-2a99ef8f15d4",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "Yep, thanks for your faster review, I describe the requirement in https://github.com/apache/spark/pull/24892#issuecomment-518487347",
+        "createdAt" : "2019-08-06T03:55:39Z",
+        "updatedAt" : "2019-08-06T03:55:39Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6e9bab29be47b1479a5893c108dc8d0ca47a97ea",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +41,45 @@   * partitioned bytes written by that map task.\n   * @param shuffleId Unique identifier for the shuffle the map task is a part of\n   * @param shuffleGenerationId The shuffle generation ID of the stage that this task belongs to,\n   *                            it equals the stage attempt number while the stage is indeterminate\n   *                            and -1 on the contrary."
+  },
+  {
+    "id" : "3b6044a7-5228-4b4d-91b8-a48f9c3eb814",
+    "prId" : 25304,
+    "prUrl" : "https://github.com/apache/spark/pull/25304#pullrequestreview-279768951",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "808f3f20-8e32-4de0-9263-085c78c6a730",
+        "parentId" : null,
+        "authorId" : "34f85564-3e6b-4cb5-99f3-d5e383ee52fa",
+        "body" : "Probably it's better to indicate what kinds of implementations may support this optimization? Otherwise it's confusing. I think the storage that has API like `move` supports this optimization, is this right?",
+        "createdAt" : "2019-08-17T02:44:37Z",
+        "updatedAt" : "2019-09-10T02:00:19Z",
+        "lastEditedBy" : "34f85564-3e6b-4cb5-99f3-d5e383ee52fa",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5f51cf64-6c50-489e-b4f7-14170195f684",
+        "parentId" : "808f3f20-8e32-4de0-9263-085c78c6a730",
+        "authorId" : "806aa501-9ea7-4cec-b017-a84d9a1602d8",
+        "body" : "Truth be told, even plugins that support remote FS move would unlikely be able to support this well - one would still have to transfer the whole file up to the remote storage layer, but that could just as easily be done by writing the data from the file through an output stream.\r\n\r\nI think only implementations that stage the files locally could support this in any meaningful way at all.",
+        "createdAt" : "2019-08-22T12:36:20Z",
+        "updatedAt" : "2019-09-10T02:00:19Z",
+        "lastEditedBy" : "806aa501-9ea7-4cec-b017-a84d9a1602d8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a584165a-6bdc-4a79-a05a-72784fc01816",
+        "parentId" : "808f3f20-8e32-4de0-9263-085c78c6a730",
+        "authorId" : "806aa501-9ea7-4cec-b017-a84d9a1602d8",
+        "body" : "I'm ok with leaving out the docs if only because very very few implementations should even care about this API.",
+        "createdAt" : "2019-08-22T12:37:02Z",
+        "updatedAt" : "2019-09-10T02:00:19Z",
+        "lastEditedBy" : "806aa501-9ea7-4cec-b017-a84d9a1602d8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d64f3a71-33b5-4c37-b207-f5c8c4a8ea65",
+        "parentId" : "808f3f20-8e32-4de0-9263-085c78c6a730",
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "yeah I don't think its necessary to go into more details.   I would say the \"casual\" plugin developer wouldn't bother with this, and if they're really serious, they can look at what the existing implementation does.  The comment is sufficient for that.",
+        "createdAt" : "2019-08-26T18:49:13Z",
+        "updatedAt" : "2019-09-10T02:00:19Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "85a101dff8a7a58d293c283857a219b6e73510de",
+    "line" : 36,
+    "diffHunk" : "@@ -1,1 +61,65 @@   * <p>\n   * Most implementations should return the default {@link Optional#empty()} to indicate that\n   * they do not support this optimization. This primarily is for backwards-compatibility in\n   * preserving an optimization in the local disk shuffle storage implementation.\n   *"
+  },
+  {
+    "id" : "1939e883-fc1b-459b-b36e-1967f6930e7a",
+    "prId" : 25304,
+    "prUrl" : "https://github.com/apache/spark/pull/25304#pullrequestreview-285691916",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b7e92675-446e-484f-b318-e44c6bf20629",
+        "parentId" : null,
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "nit: import grouping",
+        "createdAt" : "2019-09-09T18:16:23Z",
+        "updatedAt" : "2019-09-10T02:00:19Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "85a101dff8a7a58d293c283857a219b6e73510de",
+    "line" : 4,
+    "diffHunk" : "@@ -1,1 +19,23 @@\nimport java.io.IOException;\nimport java.util.Optional;\n\nimport org.apache.spark.annotation.Private;"
   }
 ]

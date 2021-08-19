@@ -306,5 +306,214 @@
     "commit" : "e633d1fb5374fa7faa6cd6e15d90f4f04703aa1b",
     "line" : 12,
     "diffHunk" : "@@ -1,1 +36,40 @@    val listener: Option[AppStatusListener] = None) {\n\n  def applicationInfo(): v1.ApplicationInfo = {\n    try {\n      // The ApplicationInfo may not be available when Spark is starting up."
+  },
+  {
+    "id" : "ed117a97-70eb-4115-a7d4-138b43182500",
+    "prId" : 25369,
+    "prUrl" : "https://github.com/apache/spark/pull/25369#pullrequestreview-273471839",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "954db411-509e-48cb-b283-183fd301c4b1",
+        "parentId" : null,
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "After reading the comment in https://github.com/apache/spark/pull/23088/files#diff-3bd1667878f7bda9a56f95e93a80b475R233, I think it is on purpose that only count the \"SUCCESS\" task when with `InMemoryStore`.\r\ncc @shahidki31 \r\n",
+        "createdAt" : "2019-08-07T08:43:55Z",
+        "updatedAt" : "2019-08-11T17:04:03Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "054d6d38-c50e-4745-b68b-2dfd9efd4955",
+        "parentId" : "954db411-509e-48cb-b283-183fd301c4b1",
+        "authorId" : "d0d56018-475d-4da3-93a6-5e843402b7f2",
+        "body" : "Thanks @gengliangwang . History server uses `InMemory` store by default. For Disk store case,  this isn't an optimal way for finding success task. I am yet to raise a PR for supporting for Disk store case.  \r\n\r\nI think you just need to add,\r\n `isInMemoryStore: Boolean =  listener.isDefined || store.isInstanceOf[InMemoryStore]`\r\n\r\nWill test your code with all the scenarios.\r\nAny case, this would be temporary as we need to support for Diskstore also.",
+        "createdAt" : "2019-08-07T10:26:21Z",
+        "updatedAt" : "2019-08-11T17:04:03Z",
+        "lastEditedBy" : "d0d56018-475d-4da3-93a6-5e843402b7f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b5fa98fa-d82f-4455-9ae3-688bb2eb573f",
+        "parentId" : "954db411-509e-48cb-b283-183fd301c4b1",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "@shahidki31 Thanks for the suggestion.\r\n\r\nI am aware that #23088 is to follow the behavior of previous versions of spark.  But I wonder if we can simply show the summary metrics for all the tasks instead of only the \"SUCCESS\" ones, as all the tasks are listed in the task table. By doing that should also make sense to users. The implementation will be simpler and we don't have to worry about the performance of the disk store.\r\nAlso cc @vanzin @srowen ",
+        "createdAt" : "2019-08-07T17:39:03Z",
+        "updatedAt" : "2019-08-11T17:04:03Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2749db7f-2e86-43b6-8ec8-df4703951222",
+        "parentId" : "954db411-509e-48cb-b283-183fd301c4b1",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "I don't know enough to evaluate this one, sorry. The code change itself looks plausible.",
+        "createdAt" : "2019-08-07T18:51:59Z",
+        "updatedAt" : "2019-08-11T17:04:03Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "073a00e3-f315-418b-ae26-75937cbc7413",
+        "parentId" : "954db411-509e-48cb-b283-183fd301c4b1",
+        "authorId" : "d0d56018-475d-4da3-93a6-5e843402b7f2",
+        "body" : "@gengliangwang If I understand correctly,  ~~#23008~~ #23088 is actually fixing this issue. right ?(At least history server case).\r\nBecause, `count` is always filtering out the running tasks, as `ExecutorRunTime` will be defined for only finished tasks. But `scan tasks` contains all the tasks, including running tasks. \r\nhttps://github.com/apache/spark/blob/a59fdc4b5783be591a236bfc60d1107caa818412/core/src/main/scala/org/apache/spark/status/AppStatusStore.scala#L169\r\n\r\nhttps://github.com/apache/spark/blob/a59fdc4b5783be591a236bfc60d1107caa818412/core/src/main/scala/org/apache/spark/status/AppStatusStore.scala#L263-L265\r\n\r\nSo, reverting ~~23008~~ 23088 and hence this PR, would not fix the issue? Please correct me if I am wrong.",
+        "createdAt" : "2019-08-07T19:14:04Z",
+        "updatedAt" : "2019-08-11T17:04:03Z",
+        "lastEditedBy" : "d0d56018-475d-4da3-93a6-5e843402b7f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6fc09461-ceb7-41cf-a239-933947db2a9b",
+        "parentId" : "954db411-509e-48cb-b283-183fd301c4b1",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "@shahidki31 Do you mean #23088?\r\n> as ExecutorRunTime will be defined for only finished tasks\r\n\r\nThat's not true. It is also defined in running tasks as I observed.\r\n\r\n> reverting 23008 and hence this PR, would not fix the issue\r\n\r\nI am not trying to revert anything. Just out of curiosity for the feature.\r\n",
+        "createdAt" : "2019-08-08T02:19:05Z",
+        "updatedAt" : "2019-08-11T17:04:03Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "679abb38-ae32-442b-9c66-aee9f6a04f3f",
+        "parentId" : "954db411-509e-48cb-b283-183fd301c4b1",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "I guess the underlying question you guys are asking is: should the metrics count only successful tasks, or all non-failed tasks?\r\n\r\nI don't remember the behavior in 2.2 (which is what #23088 was trying to emulate?), which should have the correct answer.",
+        "createdAt" : "2019-08-08T21:19:10Z",
+        "updatedAt" : "2019-08-11T17:04:03Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f62ae7a5-52ba-4fe0-a0bb-c29c76c1dae8",
+        "parentId" : "954db411-509e-48cb-b283-183fd301c4b1",
+        "authorId" : "d0d56018-475d-4da3-93a6-5e843402b7f2",
+        "body" : "@vanzin In Spark-2.2, as per this line, it doesn't count metrics of a running task. That was the intend behind #23088 (which eventually fixes this issue as well)\r\nhttps://github.com/apache/spark/blob/7c7d7f6a878b02ece881266ee538f3e1443aa8c1/core/src/main/scala/org/apache/spark/ui/jobs/StagePage.scala#L340\r\n\r\nverified locally also, \r\n `sc.parallelize(1 to 160, 1).map( i => Thread.sleep(1000)).collect()`\r\n\r\n![Screenshot 2019-08-09 at 4 03 09 AM](https://user-images.githubusercontent.com/23054875/62742208-4beb1a80-ba5b-11e9-97a7-b01f9515b5fd.png)\r\n",
+        "createdAt" : "2019-08-08T22:39:54Z",
+        "updatedAt" : "2019-08-11T17:04:03Z",
+        "lastEditedBy" : "d0d56018-475d-4da3-93a6-5e843402b7f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "03971c79-ca38-4fb4-bd08-3f6ec8bbeada",
+        "parentId" : "954db411-509e-48cb-b283-183fd301c4b1",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "So sounds like the current behavior is consistent with how Spark has behaved in the past, and this change is proposing a different approach.\r\n\r\nA quick look at the history shows the current behavior has been that in forever...\r\n\r\nAlso, that pointed me at another thing that can be seen in the screenshots. The table header says \"Summary Metrics for X *Completed* Tasks\". So this change would be making that wrong...",
+        "createdAt" : "2019-08-08T23:19:57Z",
+        "updatedAt" : "2019-08-11T17:04:03Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "abe5a887-8d99-4ccf-9350-35f18c285718",
+        "parentId" : "954db411-509e-48cb-b283-183fd301c4b1",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Ok, I need to backtrack here a little. My bad, I think I know why I'm confused.\r\n\r\nI've been starting from the PR title, and it confused me a little bit. Could you change it so it describes what the change is doing? e.g. \"Ignore non-succeeded tasks when calculating metric summaries.\"\r\n\r\nLet me re-review trying to ignore that and focusing just on the code.",
+        "createdAt" : "2019-08-09T17:23:37Z",
+        "updatedAt" : "2019-08-11T17:04:03Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6f8e52fc-330c-4fac-b81a-2ab634ca9353",
+        "parentId" : "954db411-509e-48cb-b283-183fd301c4b1",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "@vanzin Got it. I have updated the title.\r\nThe PR itself is about mismatching the kvstore, and leading to the wrong cache for task summary.",
+        "createdAt" : "2019-08-09T17:43:09Z",
+        "updatedAt" : "2019-08-11T17:04:03Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dc776cc8-5454-476c-8324-0186d5628178",
+        "parentId" : "954db411-509e-48cb-b283-183fd301c4b1",
+        "authorId" : "d0d56018-475d-4da3-93a6-5e843402b7f2",
+        "body" : "May be we need to add a test in the AppStatusStoreSuite? There all the stores are tested against InMemory store only, I think.",
+        "createdAt" : "2019-08-09T17:56:12Z",
+        "updatedAt" : "2019-08-11T17:04:03Z",
+        "lastEditedBy" : "d0d56018-475d-4da3-93a6-5e843402b7f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4ef5eaa0-b4cf-4d3f-afdd-81272914e24a",
+        "parentId" : "954db411-509e-48cb-b283-183fd301c4b1",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "@shahidki31 sure, I have added test cases.",
+        "createdAt" : "2019-08-11T17:03:53Z",
+        "updatedAt" : "2019-08-11T17:04:03Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "08eca6e7909098ae2cabac6d593c41cdf5a7aee0",
+    "line" : 18,
+    "diffHunk" : "@@ -1,1 +163,167 @@    val count = {\n      Utils.tryWithResource(\n        if (isInMemoryStore) {\n          // For Live UI, we should count the tasks with status \"SUCCESS\" only.\n          store.view(classOf[TaskDataWrapper])"
+  },
+  {
+    "id" : "26647dfa-4c5a-4d8b-a80e-9d49f19d35c1",
+    "prId" : 25369,
+    "prUrl" : "https://github.com/apache/spark/pull/25369#pullrequestreview-273471831",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "676bcf9a-9aee-4764-963b-96828e3dd747",
+        "parentId" : null,
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "This check isn't whether it's an in-memory store, but whether you're running a live UI (vs. in-memory store in the SHS). Is that your intent? (The method name should match what you intend to check.)",
+        "createdAt" : "2019-08-08T21:17:49Z",
+        "updatedAt" : "2019-08-11T17:04:03Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f329dfe3-7c7c-4fd8-866a-932aa0e00702",
+        "parentId" : "676bcf9a-9aee-4764-963b-96828e3dd747",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "I checked if it is live UI in the first commit. \r\nAs per the comment in https://github.com/apache/spark/pull/23088/files#diff-3bd1667878f7bda9a56f95e93a80b475R233 and https://github.com/apache/spark/pull/25369#discussion_r311479709, I change it to checking if it is InMemoryStore/Live UI. \r\nBut later on, I don't like the idea that live UI is inconsistent with SHS. So I raise a question.",
+        "createdAt" : "2019-08-09T03:59:34Z",
+        "updatedAt" : "2019-08-11T17:04:03Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "720ca4f7-ccb0-4581-b1aa-f44cf7463313",
+        "parentId" : "676bcf9a-9aee-4764-963b-96828e3dd747",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Ok, I looked at this again ignoring the PR title and this makes sense. Sorry for flip-flopping here, but could you put this in a local variable in `taskSummary` with a comment explaining it? e.g.\r\n\r\n```\r\n// SPARK-26119: we only want to consider successful tasks when calculating the metrics summary,\r\n// but currently this is very expensive when using a disk store. So we only trigger the slower code\r\n// path when we know we have all data in memory. This check is an approximation of when the know\r\n// that the data will be in memory.\r\nval isInMemoryStore = store.isInstanceOf[InMemoryStore] || listener.isDefined\r\n```",
+        "createdAt" : "2019-08-09T17:28:24Z",
+        "updatedAt" : "2019-08-11T17:04:03Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7cfe4cf4-aa73-41d5-8236-c50f12acf8ad",
+        "parentId" : "676bcf9a-9aee-4764-963b-96828e3dd747",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "Thanks, I have added comments",
+        "createdAt" : "2019-08-11T17:03:35Z",
+        "updatedAt" : "2019-08-11T17:04:03Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "08eca6e7909098ae2cabac6d593c41cdf5a7aee0",
+    "line" : 8,
+    "diffHunk" : "@@ -1,1 +141,145 @@  // code path when we know we have all data in memory. The following method checks whether all\n  // the data will be in memory.\n  private def isInMemoryStore: Boolean = store.isInstanceOf[InMemoryStore] || listener.isDefined\n\n  /**"
   }
 ]

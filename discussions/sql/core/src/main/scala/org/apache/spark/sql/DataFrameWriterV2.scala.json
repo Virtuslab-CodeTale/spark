@@ -207,5 +207,258 @@
     "commit" : "ab7c3e89888d5233cefe64a8a91789e8e7a5504f",
     "line" : 96,
     "diffHunk" : "@@ -1,1 +94,98 @@  }\n\n  override def tableProperty(property: String, value: String): DataFrameWriterV2[T] = {\n    this.properties.put(property, value)\n    this"
+  },
+  {
+    "id" : "7efcf0f4-8eab-4c00-ac66-63fafea7155e",
+    "prId" : 25354,
+    "prUrl" : "https://github.com/apache/spark/pull/25354#pullrequestreview-270884591",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "027c2ba5-2dd8-4357-8610-be7e456a4b45",
+        "parentId" : null,
+        "authorId" : "f5b3f57a-75a6-496c-af94-c32580ada13a",
+        "body" : "Is this name intended to be different from `DataFrameWriter.partitionBy`?",
+        "createdAt" : "2019-08-05T16:43:06Z",
+        "updatedAt" : "2019-08-31T02:18:57Z",
+        "lastEditedBy" : "f5b3f57a-75a6-496c-af94-c32580ada13a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "59a7b5d0-83f4-42f7-b46c-249981398c44",
+        "parentId" : "027c2ba5-2dd8-4357-8610-be7e456a4b45",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "The intent is to match `CREATE TABLE` SQL, which uses `PARTITIONED BY`.",
+        "createdAt" : "2019-08-05T16:47:40Z",
+        "updatedAt" : "2019-08-31T02:18:57Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9864d42501feff1acd01e11aedd2a7dc84a88bd5",
+    "line" : 100,
+    "diffHunk" : "@@ -1,1 +98,102 @@\n  @scala.annotation.varargs\n  override def partitionedBy(column: Column, columns: Column*): CreateTableWriter[T] = {\n    val asTransforms = (column +: columns).map(_.expr).map {\n      case Years(attr: Attribute) =>"
+  },
+  {
+    "id" : "64d1ed0e-6f79-414e-a5da-7d4253dc08f4",
+    "prId" : 25354,
+    "prUrl" : "https://github.com/apache/spark/pull/25354#pullrequestreview-272185722",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "93393f58-ba0a-40a6-9ba0-5d60cf68ef4f",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "By reading this, sounds like there is another Writer for insert/overwrite extending WriteConfigMethods, like CreateTableWriter? ",
+        "createdAt" : "2019-08-07T04:54:53Z",
+        "updatedAt" : "2019-08-31T02:18:57Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "06ae6651-c24f-44a1-acce-9171ca90c780",
+        "parentId" : "93393f58-ba0a-40a6-9ba0-5d60cf68ef4f",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "Yes. `DataFrameWriterV2` and `CreateTableWriter` implement these methods. When a `CreateTableWriter` method is called, like `partitionedBy`, the result is always a `CreateTableWriter` and not a `DataFrameWriterV2` so that `append` can't be called with unsupported options.",
+        "createdAt" : "2019-08-07T19:39:26Z",
+        "updatedAt" : "2019-08-31T02:18:57Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9864d42501feff1acd01e11aedd2a7dc84a88bd5",
+    "line" : 242,
+    "diffHunk" : "@@ -1,1 +240,244 @@\n/**\n * Configuration methods common to create/replace operations and insert/overwrite operations.\n * @tparam R builder type to return\n */"
+  },
+  {
+    "id" : "0b7fff41-881a-4f49-a733-8b0c9bb66142",
+    "prId" : 25354,
+    "prUrl" : "https://github.com/apache/spark/pull/25354#pullrequestreview-272183523",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "99647c62-b72f-47cb-b5f0-f6b73ba5f6f6",
+        "parentId" : null,
+        "authorId" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "body" : "Can we not use the existing:\r\n```\r\nyear\r\nmonth\r\ndayofmonth\r\nhour\r\n```\r\nfunctions that already exist? The closeness of the function names worry me. I understand the separation of concerns, but something to consider. Maybe these were already discussed in the SPIP.",
+        "createdAt" : "2019-08-07T18:43:28Z",
+        "updatedAt" : "2019-08-31T02:18:57Z",
+        "lastEditedBy" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "11f39c79-fdd4-4294-ae24-747d4b0cc10b",
+        "parentId" : "99647c62-b72f-47cb-b5f0-f6b73ba5f6f6",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "No, we can't.\r\n\r\nFirst, those are concrete functions that have different meanings. `hour(ts)` is hour of day, not hourly partitions, and day of month is not a function you would partition on either.\r\n\r\nSecond, using those functions would not correspond to the transform names that are supported in SQL, which are `years`, `months`, `days`, and `hours`.",
+        "createdAt" : "2019-08-07T19:34:47Z",
+        "updatedAt" : "2019-08-31T02:18:57Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9864d42501feff1acd01e11aedd2a7dc84a88bd5",
+    "line" : 102,
+    "diffHunk" : "@@ -1,1 +100,104 @@  override def partitionedBy(column: Column, columns: Column*): CreateTableWriter[T] = {\n    val asTransforms = (column +: columns).map(_.expr).map {\n      case Years(attr: Attribute) =>\n        LogicalExpressions.years(attr.name)\n      case Months(attr: Attribute) =>"
+  },
+  {
+    "id" : "48121b11-a945-4238-a6f3-fde0fe6bdcaf",
+    "prId" : 25354,
+    "prUrl" : "https://github.com/apache/spark/pull/25354#pullrequestreview-278747145",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "59e79578-878e-422d-a4e2-a2ddeea86f53",
+        "parentId" : null,
+        "authorId" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "body" : "what about location, if this is meant to be an external table",
+        "createdAt" : "2019-08-07T18:48:11Z",
+        "updatedAt" : "2019-08-31T02:18:57Z",
+        "lastEditedBy" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7c085687-241a-4eb4-bf65-d740bee67afa",
+        "parentId" : "59e79578-878e-422d-a4e2-a2ddeea86f53",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "We can add a `location(String)` method to this that is translated to a location property. Does this need to be in the initial version?",
+        "createdAt" : "2019-08-07T19:35:44Z",
+        "updatedAt" : "2019-08-31T02:18:57Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ecfe79ca-ceaa-4683-b261-ce01f34916ae",
+        "parentId" : "59e79578-878e-422d-a4e2-a2ddeea86f53",
+        "authorId" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "body" : "doesn't need to be initial. We should however standardize on whether:\r\n - `option(\"path\", ...)` would/should show up as \"location\" as a table property\r\n - Or should it be set by `tableProperty(\"location\", ...)`\r\n - or `tableProperty(\"path\", ...)`",
+        "createdAt" : "2019-08-21T22:41:41Z",
+        "updatedAt" : "2019-08-31T02:18:57Z",
+        "lastEditedBy" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "372c72fd-e08e-4997-a4bf-8e0d6778877c",
+        "parentId" : "59e79578-878e-422d-a4e2-a2ddeea86f53",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "I think it should be `tableProperty(\"location\")` because that's what we've standardized on elsewhere.",
+        "createdAt" : "2019-08-21T23:29:12Z",
+        "updatedAt" : "2019-08-31T02:18:57Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0649abf4-06e0-44fa-8e1c-bb4c32f10c46",
+        "parentId" : "59e79578-878e-422d-a4e2-a2ddeea86f53",
+        "authorId" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "body" : "In the DFWriter we have a config:\r\n`df.sparkSession.sessionState.conf.defaultDataSourceName`\r\ndo you want to use that here, or do you think the catalog is free to create whatever datasource if the provider isn't available?",
+        "createdAt" : "2019-08-22T20:51:09Z",
+        "updatedAt" : "2019-08-31T02:18:57Z",
+        "lastEditedBy" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0da4f6a4-9bdf-4653-becf-bce118e047f1",
+        "parentId" : "59e79578-878e-422d-a4e2-a2ddeea86f53",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "I don't think so. It is up to the catalog what to use for the provider when one isn't specified. This API doesn't need to do that -- it should be filled in by the v2 session catalog.",
+        "createdAt" : "2019-08-22T21:04:51Z",
+        "updatedAt" : "2019-08-31T02:18:57Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6af51c87-7d42-4387-8e77-b23805dbdfdc",
+        "parentId" : "59e79578-878e-422d-a4e2-a2ddeea86f53",
+        "authorId" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "body" : "Can this be documented somewhere?",
+        "createdAt" : "2019-08-22T23:54:00Z",
+        "updatedAt" : "2019-08-31T02:18:57Z",
+        "lastEditedBy" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9697d483-ae79-48fa-9e9b-fdf32f51a57d",
+        "parentId" : "59e79578-878e-422d-a4e2-a2ddeea86f53",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "Yes, this will be in the v2 documentation because we have to explain how USING is passed.",
+        "createdAt" : "2019-08-23T00:20:03Z",
+        "updatedAt" : "2019-08-31T02:18:57Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9864d42501feff1acd01e11aedd2a7dc84a88bd5",
+    "line" : 132,
+    "diffHunk" : "@@ -1,1 +130,134 @@        partitioning.getOrElse(Seq.empty),\n        logicalPlan,\n        properties = provider.map(p => properties + (\"provider\" -> p)).getOrElse(properties).toMap,\n        writeOptions = options.toMap,\n        ignoreIfExists = false)"
+  },
+  {
+    "id" : "0c84bc7e-8f2e-4462-af49-60ddd03d49ca",
+    "prId" : 25354,
+    "prUrl" : "https://github.com/apache/spark/pull/25354#pullrequestreview-278106588",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1be48dde-ceec-4d7e-9756-dd2b33f713f8",
+        "parentId" : null,
+        "authorId" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "body" : "The schema will be assumed to be nullable though",
+        "createdAt" : "2019-08-21T22:32:32Z",
+        "updatedAt" : "2019-08-31T02:18:57Z",
+        "lastEditedBy" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9864d42501feff1acd01e11aedd2a7dc84a88bd5",
+    "line" : 296,
+    "diffHunk" : "@@ -1,1 +294,298 @@   * Create a new table from the contents of the data frame.\n   *\n   * The new table's schema, partition layout, properties, and other configuration will be\n   * based on the configuration set on this writer.\n   *"
+  },
+  {
+    "id" : "2b6e2fbe-b6a4-47e7-8f48-065bb0d763d4",
+    "prId" : 25354,
+    "prUrl" : "https://github.com/apache/spark/pull/25354#pullrequestreview-282403313",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6ebd572e-9011-4c29-8997-88de15b98fac",
+        "parentId" : null,
+        "authorId" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "body" : "should return a `CreateTableWriter`?",
+        "createdAt" : "2019-08-21T22:38:30Z",
+        "updatedAt" : "2019-08-31T02:18:57Z",
+        "lastEditedBy" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "66a5e997-a046-4b2e-bdf1-aaa173467e35",
+        "parentId" : "6ebd572e-9011-4c29-8997-88de15b98fac",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "+1",
+        "createdAt" : "2019-09-02T05:10:01Z",
+        "updatedAt" : "2019-09-02T05:10:01Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9864d42501feff1acd01e11aedd2a7dc84a88bd5",
+    "line" : 94,
+    "diffHunk" : "@@ -1,1 +92,96 @@  }\n\n  override def tableProperty(property: String, value: String): DataFrameWriterV2[T] = {\n    this.properties.put(property, value)\n    this"
   }
 ]
