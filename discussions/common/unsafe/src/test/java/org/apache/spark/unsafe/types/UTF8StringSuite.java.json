@@ -108,5 +108,49 @@
     "commit" : "51247b3e4b28751150d8f3104d5e5f1ec1a5be35",
     "line" : 16,
     "diffHunk" : "@@ -1,1 +369,373 @@    assertEquals(EMPTY_UTF8, fromString(\"数据砖头\").rpad(-10, fromString(\"孙行者\")));\n    assertEquals(EMPTY_UTF8, fromString(\"数据砖头\").rpad(-10, EMPTY_UTF8));\n    assertEquals(fromString(null), fromString(\"数据砖头\").rpad(5, EMPTY_UTF8));\n    assertEquals(fromString(null), fromString(\"数据砖头\").rpad(3, EMPTY_UTF8));\n    assertEquals(fromString(null), EMPTY_UTF8.rpad(3, EMPTY_UTF8));"
+  },
+  {
+    "id" : "8b15c93c-d51b-48a3-9ceb-7fe436f171e7",
+    "prId" : 24707,
+    "prUrl" : "https://github.com/apache/spark/pull/24707#pullrequestreview-251993150",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "077eb3a7-615d-40e9-86a8-8fdfaa83cc5b",
+        "parentId" : null,
+        "authorId" : "a11722a8-ecfa-4827-88e3-4d708f023846",
+        "body" : "I realized that Apache Commons StringUtils differs from Java `.replace()` in the special case where the search sring is empty: In Java, this would prepend the replacement string to each character, e.g. `\"ABC.replace(\"\", 1\")` is \"1A1B1C\".\r\n\r\nI also spotted a case where `UTF8String` diverges from Java strings: in Java, we have\r\n\r\n```\r\n@ \"\".replace(\"\", \"!\")\r\nres2: String = \"!\"\r\n```\r\n\r\nbut the existing Spark `UTF8String.replace()` always returns an empty string when passed an empty input string. I'm going to preserve that existing behavior.",
+        "createdAt" : "2019-06-19T21:47:20Z",
+        "updatedAt" : "2019-06-19T21:47:21Z",
+        "lastEditedBy" : "a11722a8-ecfa-4827-88e3-4d708f023846",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a88fd8a7-a6b4-4396-ad41-0bc3be7281e7",
+        "parentId" : "077eb3a7-615d-40e9-86a8-8fdfaa83cc5b",
+        "authorId" : "a11722a8-ecfa-4827-88e3-4d708f023846",
+        "body" : "**Update**: I confused myself andI had this backwards:\r\n\r\n I ran a couple of tests in `spark-shell` with the SQL replace expression:\r\n\r\n```\r\n%sql select replace('ABC', '', '1')\r\nABC\r\n```\r\n\r\nbecause the old Spark code had a `if (EMPTY_UTF8.equals(search)) { return this }` branch (so Spark's behavior matches StringUtils in this case).\r\n\r\nIf you don't permit empty search strings then also it's safe to bail out early if the input string is empty (since an empty input string can only become non-empty via an empty search string, something we already disallowed).\r\n\r\nAs a result, I think that the logic here is correct. Sorry for the false-alarm!",
+        "createdAt" : "2019-06-19T21:55:14Z",
+        "updatedAt" : "2019-06-19T21:55:41Z",
+        "lastEditedBy" : "a11722a8-ecfa-4827-88e3-4d708f023846",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "971d2441-1d73-4b63-bddc-a0a83abe53b3",
+        "parentId" : "077eb3a7-615d-40e9-86a8-8fdfaa83cc5b",
+        "authorId" : "a11722a8-ecfa-4827-88e3-4d708f023846",
+        "body" : "In fact, this behavior is also tested at https://github.com/apache/spark/blob/fe5145ede2be50185d77ad3843e95be060d4a73e/sql/catalyst/src/test/scala/org/apache/spark/sql/catalyst/expressions/StringExpressionsSuite.scala#L415 and I didn't change those tests in this PR, so we can be extra confident that the new short-circuit check is correct.",
+        "createdAt" : "2019-06-19T21:57:55Z",
+        "updatedAt" : "2019-06-19T21:57:56Z",
+        "lastEditedBy" : "a11722a8-ecfa-4827-88e3-4d708f023846",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6188dcdd321967eb78535d7cf55b73f20047f449",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +414,418 @@    assertEquals(\n      fromString(\"replace\"),\n      fromString(\"replace\").replace(fromString(\"\"), fromString(\"123\")));\n    // tests for multiple replacements\n    assertEquals("
   }
 ]

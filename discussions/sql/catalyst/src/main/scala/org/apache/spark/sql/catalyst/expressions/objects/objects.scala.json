@@ -636,5 +636,170 @@
     "commit" : "a6b5a2095bf811d67bbc7f9154e7336c25d779c3",
     "line" : 13,
     "diffHunk" : "@@ -1,1 +756,760 @@\n  private lazy val mapElements: Seq[_] => Any = customCollectionCls match {\n    case Some(cls) if classOf[WrappedArray[_]].isAssignableFrom(cls) =>\n      // Scala WrappedArray\n      inputCollection => WrappedArray.make(executeFuncOnCollection(inputCollection).toArray)"
+  },
+  {
+    "id" : "a076dbae-30de-4907-a2f3-abbfbd2a589f",
+    "prId" : 24735,
+    "prUrl" : "https://github.com/apache/spark/pull/24735#pullrequestreview-243589787",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b574fc2f-aeae-497c-aac2-79f2f5632811",
+        "parentId" : null,
+        "authorId" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "body" : "There an implicitly assumption here that within a plan, all the `LambdaVariable`s either hold IDs that were the original IDs (positive) or the reassigned ones (negative). We should probably add a comment on that, because if the positive/negative ones are mixed together, you can actually get a conflict when you do `abs`.",
+        "createdAt" : "2019-05-29T18:21:28Z",
+        "updatedAt" : "2019-06-24T04:14:37Z",
+        "lastEditedBy" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "df38759e-c057-444b-91c6-f1bc91de9bdf",
+        "parentId" : "b574fc2f-aeae-497c-aac2-79f2f5632811",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "fixed.",
+        "createdAt" : "2019-05-30T01:30:11Z",
+        "updatedAt" : "2019-06-24T04:14:37Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "73c74df575459d4cc3c8d1ece93d4e2d43e3b7f4",
+    "line" : 56,
+    "diffHunk" : "@@ -1,1 +626,630 @@    // If `LambdaVariable` IDs are reassigned by the `ReassignLambdaVariableID` rule, the IDs will\n    // all be negative.\n    val suffix = \"lambda_variable_\" + math.abs(id)\n    val isNull = if (nullable) {\n      JavaCode.isNullVariable(s\"isNull_${name}_$suffix\")"
+  },
+  {
+    "id" : "a0b00c3e-c64e-428c-8193-2c4e3744c343",
+    "prId" : 24735,
+    "prUrl" : "https://github.com/apache/spark/pull/24735#pullrequestreview-243579538",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "aa8665cd-fc19-45a9-8aae-8b077b9f6221",
+        "parentId" : null,
+        "authorId" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "body" : "I don't like this part. It might make codegen a bit easier to write but you're making unnecessary hoisting of local variables to Java object fields. Doesn't sound like a good idea to me.",
+        "createdAt" : "2019-05-29T18:23:48Z",
+        "updatedAt" : "2019-06-24T04:14:37Z",
+        "lastEditedBy" : "3a12ce0f-9e73-4cfb-a4b4-b19368cddc2f",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0a58a38f-d6ed-415e-b3a8-0b8988d4c09d",
+        "parentId" : "aa8665cd-fc19-45a9-8aae-8b077b9f6221",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Note that this just moves code around: we already blindly put `LambdaVariable` to the mutable states. I agree that there is room to optimize this part, we can do it in followups.",
+        "createdAt" : "2019-05-30T00:35:58Z",
+        "updatedAt" : "2019-06-24T04:14:37Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "73c74df575459d4cc3c8d1ece93d4e2d43e3b7f4",
+    "line" : 7,
+    "diffHunk" : "@@ -1,1 +579,583 @@  private val curId = new java.util.concurrent.atomic.AtomicLong()\n\n  // Returns the codegen-ed `LambdaVariable` and add it to mutable states, so that it can be\n  // accessed anywhere in the generated code.\n  def prepareLambdaVariable(ctx: CodegenContext, variable: LambdaVariable): ExprCode = {"
+  },
+  {
+    "id" : "209a341a-101e-40d5-9dcd-7b4700825694",
+    "prId" : 24735,
+    "prUrl" : "https://github.com/apache/spark/pull/24735#pullrequestreview-243886247",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "728933c4-70b3-4e8e-ad2d-0ada02386123",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Probably add comment about the `id`? The allocated `id`s here can't be directly used. It needs going through `ReassignLambdaVariableID` to reassign. If the expressions including `LambdaVariable` skip the normal query processing steps, we still make sure `ReassignLambdaVariableID` is applied.",
+        "createdAt" : "2019-05-30T06:38:22Z",
+        "updatedAt" : "2019-06-24T04:14:37Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "19e2fef9-5042-4b12-a8df-11f7c9ea5e27",
+        "parentId" : "728933c4-70b3-4e8e-ad2d-0ada02386123",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "> The allocated ids here can't be directly used\r\n\r\nYes they can. A globally unique ID is fine here, it just breaks the codegen cache.",
+        "createdAt" : "2019-05-30T09:47:42Z",
+        "updatedAt" : "2019-06-24T04:14:37Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5483a5a9-6105-476e-96bb-4a0c00ec5f0d",
+        "parentId" : "728933c4-70b3-4e8e-ad2d-0ada02386123",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "There we do `abs` on positive and negative ids, if globally unique id is used, won't it probably get conflict?",
+        "createdAt" : "2019-05-30T15:57:22Z",
+        "updatedAt" : "2019-06-24T04:14:37Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a089dfd8-88ef-4854-94d8-db88aebd31d1",
+        "parentId" : "728933c4-70b3-4e8e-ad2d-0ada02386123",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "see the newly added check. If `ReassignLambdaVariableID` is applied, then all IDs are negative and unique. If the rule is not applied, then all IDs are positive and unique.",
+        "createdAt" : "2019-05-30T16:12:06Z",
+        "updatedAt" : "2019-06-24T04:14:37Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "907047f2-0f06-4c43-a1dd-f9a6557c3ef3",
+        "parentId" : "728933c4-70b3-4e8e-ad2d-0ada02386123",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "AFAIK this is safe as we never combine optimized plans.",
+        "createdAt" : "2019-05-30T16:12:36Z",
+        "updatedAt" : "2019-06-24T04:14:37Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "73c74df575459d4cc3c8d1ece93d4e2d43e3b7f4",
+    "line" : 44,
+    "diffHunk" : "@@ -1,1 +612,616 @@    dataType: DataType,\n    nullable: Boolean,\n    id: Long = LambdaVariable.curId.incrementAndGet) extends LeafExpression with NonSQLExpression {\n\n  private val accessor: (InternalRow, Int) => Any = InternalRow.getAccessor(dataType, nullable)"
+  },
+  {
+    "id" : "89917a88-b935-46a6-845b-7c58f4475555",
+    "prId" : 24735,
+    "prUrl" : "https://github.com/apache/spark/pull/24735#pullrequestreview-243712876",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7b0d1138-78c2-45bb-9ed8-63fce46fe9e9",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Should we just add sanity-check if `id` is negative?",
+        "createdAt" : "2019-05-30T06:41:49Z",
+        "updatedAt" : "2019-06-24T04:14:37Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7ae9a843-c39e-41c5-ad57-33050bc037f8",
+        "parentId" : "7b0d1138-78c2-45bb-9ed8-63fce46fe9e9",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I've added a check in the rule.",
+        "createdAt" : "2019-05-30T09:48:26Z",
+        "updatedAt" : "2019-06-24T04:14:37Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "73c74df575459d4cc3c8d1ece93d4e2d43e3b7f4",
+    "line" : 56,
+    "diffHunk" : "@@ -1,1 +626,630 @@    // If `LambdaVariable` IDs are reassigned by the `ReassignLambdaVariableID` rule, the IDs will\n    // all be negative.\n    val suffix = \"lambda_variable_\" + math.abs(id)\n    val isNull = if (nullable) {\n      JavaCode.isNullVariable(s\"isNull_${name}_$suffix\")"
   }
 ]

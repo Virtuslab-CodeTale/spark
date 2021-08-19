@@ -647,5 +647,434 @@
     "commit" : "6154bf486e68dbb5a4c16dc9e71030cc20d8ca58",
     "line" : 148,
     "diffHunk" : "@@ -1,1 +237,241 @@      executors.asScala.foreach { case (id, exec) =>\n        if (exec.hasActiveShuffle) {\n          exec.updateActiveShuffles(activeShuffles)\n          if (!exec.hasActiveShuffle) {\n            deactivatedExecs += id"
+  },
+  {
+    "id" : "44268599-4331-4797-8aab-29d46d102174",
+    "prId" : 24704,
+    "prUrl" : "https://github.com/apache/spark/pull/24704#pullrequestreview-243501678",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e2d53d29-e270-4115-b71f-546946768243",
+        "parentId" : null,
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "do you want to do this when `storageLevel.isValid && fetchFromShuffleSvcEnabled && storageLevel.useDisk`?  I If its the first time the block is cached, then its a no-op.  If it has already been cached in memory, then this would no longer apply the cached timeout to this executor.  I guess that is desired?  just want to check.",
+        "createdAt" : "2019-05-29T18:03:05Z",
+        "updatedAt" : "2019-06-05T01:27:44Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ed0ed96b-35e1-47ff-a9ce-242f4cdfbf02",
+        "parentId" : "e2d53d29-e270-4115-b71f-546946768243",
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "ok I see this is explicitly checked in a test too.",
+        "createdAt" : "2019-05-29T18:40:14Z",
+        "updatedAt" : "2019-06-05T01:27:44Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d0fac18d-bdf9-46a7-b57b-c2c88e31cce2",
+        "parentId" : "e2d53d29-e270-4115-b71f-546946768243",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Yep, that's basically what SPARK-27677 does.",
+        "createdAt" : "2019-05-29T20:34:07Z",
+        "updatedAt" : "2019-06-05T01:27:44Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9ae62d930aec531c5c19a718a76ea4ac01c2695d",
+    "line" : 183,
+    "diffHunk" : "@@ -1,1 +181,185 @@      }\n    } else {\n      exec.cachedBlocks.get(blockId.rddId).foreach { blocks =>\n        blocks -= blockId.splitIndex\n        if (blocks.isEmpty) {"
+  },
+  {
+    "id" : "83695f87-9476-454e-a0f3-59571e668f3c",
+    "prId" : 24704,
+    "prUrl" : "https://github.com/apache/spark/pull/24704#pullrequestreview-243401974",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "07f0a9eb-02aa-4f6a-98c5-ca7b8032100e",
+        "parentId" : null,
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "would help to add a comment that its rdd_id -> partition_ids",
+        "createdAt" : "2019-05-29T18:04:43Z",
+        "updatedAt" : "2019-06-05T01:27:44Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9ae62d930aec531c5c19a718a76ea4ac01c2695d",
+    "line" : 253,
+    "diffHunk" : "@@ -1,1 +251,255 @@    // Maps RDD IDs to the partition IDs stored in the executor.\n    // This should only be used in the event thread.\n    val cachedBlocks = new mutable.HashMap[Int, mutable.BitSet]()\n\n    // For testing."
+  },
+  {
+    "id" : "423c6287-bb3a-4d63-879b-103fecd68a22",
+    "prId" : 24704,
+    "prUrl" : "https://github.com/apache/spark/pull/24704#pullrequestreview-244608368",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f8271d74-339b-49ae-9519-1c92ee2ab5f7",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Why set current `nextTimeout` to `MinValue` ? Do you mean we need eagerly recompute timed out executors at next round to `update the list of timed out executors` ? But, as far as I know from the code, each time EAM thread invoke on `timedOutExecutors()`, it gets the list of timed out executors and asks cluster manager to kill them by `ExecutorAllocationClient` immediately. So, if an executor has already been considered timed out and killing after last round, will there be any difference for that executor if we eagerly `update the list of timed out executors` in next round ?\r\n\r\nI guess, here, you mean to handle the case that an event comes making the executor to be non timed out again after the  executor just considered to be timeout nearly **after scanning**. But, as I mentioned above, I think it won't work.  Instead of **after scanning**, I think, maybe, we can do optimization for the case when it happens **during scanning**.  For example, wrapping a `while` loop on scanning and exit until all timed out executors' `timeOut` to be `true`:\r\n\r\n```\r\n// this check guard against event which updates deadline during scanning\r\nwhile(!checkTimedOut(timedOutExecs)) {\r\n ...\r\n timedOutExecs = scanning {\r\n }\r\n ...\r\n}\r\n```\r\n\r\nWDYT ?",
+        "createdAt" : "2019-05-30T06:29:31Z",
+        "updatedAt" : "2019-06-05T01:27:44Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "861746f9-5523-4656-a30c-4e34bc2d4bfe",
+        "parentId" : "f8271d74-339b-49ae-9519-1c92ee2ab5f7",
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "> it gets the list of timed out executors and asks cluster manager to kill them by ExecutorAllocationClient immediately. So, if an executor has already been considered timed out and killing after last round, will there be any difference for that executor if we eagerly update the list of timed out executors in next round ?\r\n\r\nonly the CoarseGrainedSchedulerBackend has a consistent view of which executors are actually running tasks, and so it has ultimate say in whether or not to kill an executor.  You might not have killed an executor earlier because it was actually busy.\r\n\r\nSo here is where you \"catch up\" with the view of the CGSB, so you know that executor shouldn't be considered timed out and requested to be killed next time around.\r\n\r\n(at least I think so, marcelo can confirm ...)",
+        "createdAt" : "2019-05-30T17:13:08Z",
+        "updatedAt" : "2019-06-05T01:27:44Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "474e7bed-ab18-4c1f-bd73-0f2b0914b57c",
+        "parentId" : "f8271d74-339b-49ae-9519-1c92ee2ab5f7",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "What Imran said, with a complication.\r\n\r\nThe scenario here is decidedly rare. The EAM thread sees a timed out executor at the same time a new task is starting on it. So the EAM tries to kill it, but the CGSB says no.\r\n\r\nWhile that's happening the task start event arrives, and the monitor now knows the executor is not idle anymore. But the executor is still there in the list of timed out executors, so on every cycle, the EAM would still try to kill it and the CGSB will keep saying no. Until it becomes idle again (but not timed out!), and then it will be killed, but at the wrong time.\r\n\r\nSo it needs to be removed from the timed out list to avoid that problem.\r\n\r\nThere's still a case where the task start event isn't processed until after the task has actually ended, and the EAM thread runs again and actually manages to kill an executor before it should. But that should be even rarer, and I'm not sure that can be fixed, since it involves synchronization with threads that this code has no control over.",
+        "createdAt" : "2019-05-30T18:29:54Z",
+        "updatedAt" : "2019-06-05T01:27:44Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e36dea78-b7b5-40de-ba50-1949468524e5",
+        "parentId" : "f8271d74-339b-49ae-9519-1c92ee2ab5f7",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Make sense.@squito @vanzin\r\n\r\n> But the executor is still there in the list of timed out executors, so on every cycle, the EAM would still try to kill it and the CGSB will keep saying no. \r\n\r\nI just realized that we have a cached `timedOutExecs` list in monitor. ~~But there's one last point we may overlook. Once an executor has considered to be timed out in a previous scanning round, its `pendingRemoval` would be marked as `true`. So, in next scanning round, we'll filter it out before checking its `deadline`. Then, it won't appear in `timedOutExecs` due to `pendingRemoval` rather than its new `deadline`. We should cover this.~~\r\n\r\nBut, why we need to cache `timedOutExecs` in monitor ? Could we always return a latest timed out execs list to EAM on every cycle(e.g. return empty when now < nextTimeout.get) ?",
+        "createdAt" : "2019-05-31T14:16:31Z",
+        "updatedAt" : "2019-06-05T01:27:44Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f7de80f2-3b1a-4a9d-8c96-b481dc818af1",
+        "parentId" : "f8271d74-339b-49ae-9519-1c92ee2ab5f7",
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "> So, in next scanning round, we'll filter it out before checking its deadline. Then, it won't appear in timedOutExecs due to pendingRemoval rather than its new deadline. We should cover this.\r\n\r\nI'm not sure I understand this part.  `pendingRemoval` is after the CGSB has acknowledged that it will remove the executor.  We shouldn't need to send any more messages about killing the executor after this.\r\n\r\n> But, why we need to cache timedOutExecs in monitor ? Could we always return a latest timed out execs list to EAM on every cycle(e.g. return empty when now < nextTimeout.get) ?\r\n\r\nI think you might be right about this, I would need to read it more carefully ... but in any case, I think that would make it significantly harder to follow.  Its a lot easier to reason about if `ExecutorMonitor.timedOutExecutors()` consistently returns the right list.",
+        "createdAt" : "2019-05-31T16:41:03Z",
+        "updatedAt" : "2019-06-05T01:27:44Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a2e68a5b-246f-402b-aeb6-1591aa7671e5",
+        "parentId" : "f8271d74-339b-49ae-9519-1c92ee2ab5f7",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "> pendingRemoval is after the CGSB has acknowledged that it will remove the executor. We shouldn't need to send any more messages about killing the executor after this.\r\n\r\nI revisit the code, you @squito are right. Thanks for pointing it out.",
+        "createdAt" : "2019-05-31T16:55:52Z",
+        "updatedAt" : "2019-06-05T01:27:44Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9ee0ac33-cf8e-40fa-b3e1-721cb9b1b9fa",
+        "parentId" : "f8271d74-339b-49ae-9519-1c92ee2ab5f7",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "> But, why we need to cache timedOutExecs in monitor ?\r\n\r\nAs explained the a comment where the `timedOutExecs` variable is declared, that's to avoid scanning the whole list of executors every 100ms.",
+        "createdAt" : "2019-05-31T17:16:31Z",
+        "updatedAt" : "2019-06-05T01:27:44Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fc63fc06-368c-4fc0-8f5f-b537335d8d1d",
+        "parentId" : "f8271d74-339b-49ae-9519-1c92ee2ab5f7",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "> that's to avoid scanning the whole list of executors every 100ms.\r\n\r\nThis doesn't make sense. Take for a not appropriate example, if we always got `now >= nextTimeout.get()`, then, we have to scanning every 100ms. I mean, that, we can't avoid `scanning the whole list of executors every 100ms` just by the cached `timedOutExecs`.  We can avoid scanning if and only if `now < nextTimeout.get()` and we can just return empty list to EAM if `now < nextTimeout.get()` without scanning.\r\n",
+        "createdAt" : "2019-05-31T17:29:15Z",
+        "updatedAt" : "2019-06-05T01:27:44Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2304f7d8-13a4-42fd-8661-436600dfc103",
+        "parentId" : "f8271d74-339b-49ae-9519-1c92ee2ab5f7",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Hmmm, possibly. I think after some recent changes were made to the way I'm using `nextTimeout` it can replace the cached list. Let me take a look.",
+        "createdAt" : "2019-05-31T17:44:01Z",
+        "updatedAt" : "2019-06-05T01:27:44Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "65d4eb01-94c8-4a71-a757-ab2c757c5e62",
+        "parentId" : "f8271d74-339b-49ae-9519-1c92ee2ab5f7",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Yeah, this doesn't work because of an edge case.\r\n\r\nWhen calculating the timed out executors, the next timeout is set for when the next /non-timed out/ executor will time out. That is the important part.\r\n\r\nNow imagine that you return 3 timed out executors and the EAM doesn't kill any of them (either because of limits, or because the CGSB doesn't do it). Now you will not get a call to `executorsKilled`, so the next timeout will not be reset.\r\n\r\nWhich means that next time you call `timedOutExecutors()` it will return an empty list, instead of the 3 timed out executors.\r\n\r\nSo you need that cache.",
+        "createdAt" : "2019-05-31T22:56:56Z",
+        "updatedAt" : "2019-06-05T01:27:44Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "124bdb88-19ac-4c7f-a6cf-09eadd3e6d16",
+        "parentId" : "f8271d74-339b-49ae-9519-1c92ee2ab5f7",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "BTW you could say \"just call `executorsKilled` with an empty list\" but then that means the optimization doesn't work, and you're basically calculating the timed out list on every EAM schedule call.",
+        "createdAt" : "2019-05-31T22:59:50Z",
+        "updatedAt" : "2019-06-05T01:27:44Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1610ff53-81af-4071-b7dd-39169cef1540",
+        "parentId" : "f8271d74-339b-49ae-9519-1c92ee2ab5f7",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Okay, I see the problem here. But, things here I care about is that, with a cached list, EAM may performs unnecessary executors removing for many many times before nextTimeout change. For example, we have 3 executors in monitor, and EAM gets those 3 timeout executors in a single round scanning. That's means, we can not update nextTimeout during this scanning and nextTimeout would just be `Long.MaxValue` before new events(which updates nextTimeout) comes. And, for EAM, before nextTimeout updates, it always gets those 3 cached timed out executors on every 100ms, and performs unnecessary executor removing again and again. This case may be rare, or have less impact on EAM,  but I do worry about this similar possible unnecessary behavior  with that cache list.\r\n\r\nI think remove that cache list can be achieved with a little more change:\r\n\r\n```\r\nif (deadline > now) {\r\n newNextTimeout = math.min(newNextTimeout, deadline)\r\n exec.timedOut = false\r\n false\r\n} else {\r\n exec.timedOut = true\r\n true\r\n}\r\n```\r\n\r\n1. instead of only updating `newNextTimeout` for non timed out executors, we should update it for timed out executors, too\r\n\r\n2. when we get a call to `executorsKilled(executorIds)`,  updates `nextTimeout` comparing to those killed executors' `timeoutAt`, rather than just set to Long.MinValue\r\n\r\n\r\n\r\n",
+        "createdAt" : "2019-06-01T16:38:33Z",
+        "updatedAt" : "2019-06-05T01:27:44Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3dfc5ce4-ebf9-4195-b507-47cc02c80494",
+        "parentId" : "f8271d74-339b-49ae-9519-1c92ee2ab5f7",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "> with a cached list, EAM may performs unnecessary executors removing for many many times before nextTimeout change\r\n\r\nThat's actually the point. If the EAM did not kill the executors, it most probably means that there's an event that will be delivered to the listener and cause the next timeout to be updated (e.g. a task start).\r\n\r\nIf such event doesn't arrive, then the executors are still timed out, and will be always returned to the EAM. Then it may just decide not to kill them again (e.g. because the lower limit of executors has been reached).\r\n\r\nAll that is fine, and cheap computationally.\r\n\r\n> instead of only updating newNextTimeout for non timed out executors, we should update it for timed out executors, too\r\n\r\nThat means that if no executors are killed, you'll be re-scanning the whole executor list on every EAM interval until something changes, which is the exact thing the cache is trying to avoid.",
+        "createdAt" : "2019-06-01T17:51:16Z",
+        "updatedAt" : "2019-06-05T01:27:44Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "05b87a49-8564-40d2-8525-2bd34c4f54bd",
+        "parentId" : "f8271d74-339b-49ae-9519-1c92ee2ab5f7",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Make sense.",
+        "createdAt" : "2019-06-02T03:29:14Z",
+        "updatedAt" : "2019-06-05T01:27:44Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9ae62d930aec531c5c19a718a76ea4ac01c2695d",
+    "line" : 277,
+    "diffHunk" : "@@ -1,1 +275,279 @@      // old one, ask the EAM thread to update the list of timed out executors.\n      if (newDeadline > oldDeadline && timedOut) {\n        nextTimeout.set(Long.MinValue)\n      } else {\n        updateNextTimeout(newDeadline)"
+  },
+  {
+    "id" : "23393fc1-bafb-4fd3-8a04-52eb474d7978",
+    "prId" : 24704,
+    "prUrl" : "https://github.com/apache/spark/pull/24704#pullrequestreview-243875603",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2a066798-f934-4ad1-858f-37c4559aed8b",
+        "parentId" : null,
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "I think its worth a comment that this can only be called from the EAM scheduling thread.",
+        "createdAt" : "2019-05-30T15:52:11Z",
+        "updatedAt" : "2019-06-05T01:27:44Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9ae62d930aec531c5c19a718a76ea4ac01c2695d",
+    "line" : 77,
+    "diffHunk" : "@@ -1,1 +75,79 @@   * Should only be called from the EAM thread.\n   */\n  def timedOutExecutors(): Seq[String] = {\n    val now = clock.getTimeMillis()\n    if (now >= nextTimeout.get()) {"
+  },
+  {
+    "id" : "c72a7321-7d87-47ac-8f4b-9f5cfc06c983",
+    "prId" : 24704,
+    "prUrl" : "https://github.com/apache/spark/pull/24704#pullrequestreview-244334290",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6defe239-fe3b-4121-a65f-09a6e5251e8f",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Change is good here. Previously I thought it overlap with some behavior in Tracker. And, now, it is quite simple and more readable and easy to understand.",
+        "createdAt" : "2019-05-31T14:19:23Z",
+        "updatedAt" : "2019-06-05T01:27:44Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9ae62d930aec531c5c19a718a76ea4ac01c2695d",
+    "line" : 96,
+    "diffHunk" : "@@ -1,1 +94,98 @@            false\n          } else {\n            exec.timedOut = true\n            true\n          }"
+  },
+  {
+    "id" : "f9cce48f-6d08-4c56-8193-ead4f36a9673",
+    "prId" : 24704,
+    "prUrl" : "https://github.com/apache/spark/pull/24704#pullrequestreview-244423770",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9a534e17-fe05-41f0-b7da-c2fbf8aa83d8",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "```\r\nif (deadline > now) {\r\n newNextTimeout = math.min(newNextTimeout, deadline)\r\n exec.timedOut = false\r\n false\r\n} else {\r\n exec.timedOut = true\r\n true\r\n}\r\n```\r\nMaybe ?\r\n```\r\nif (deadline > now) {\r\n newNextTimeout = math.min(newNextTimeout, deadline)\r\n exec.timedOut = false\r\n} else {\r\n exec.timedOut = true\r\n}\r\nexec.timedOut\r\n```",
+        "createdAt" : "2019-05-31T14:21:47Z",
+        "updatedAt" : "2019-06-05T01:27:44Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5091470e-b089-43a6-87ec-bd2f83fa3748",
+        "parentId" : "9a534e17-fe05-41f0-b7da-c2fbf8aa83d8",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "I was trying to avoid another read of a volatile variable.",
+        "createdAt" : "2019-05-31T17:17:55Z",
+        "updatedAt" : "2019-06-05T01:27:44Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9ae62d930aec531c5c19a718a76ea4ac01c2695d",
+    "line" : 98,
+    "diffHunk" : "@@ -1,1 +96,100 @@            exec.timedOut = true\n            true\n          }\n        }\n        .keys"
+  },
+  {
+    "id" : "1b090598-904c-42be-b40a-059b0d7c5e0c",
+    "prId" : 24704,
+    "prUrl" : "https://github.com/apache/spark/pull/24704#pullrequestreview-244428092",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3194c7ea-a2f6-4109-8fd7-b48a2b515b8c",
+        "parentId" : null,
+        "authorId" : "ad79e8d4-cf06-458d-a4bf-c8cc54588fc6",
+        "body" : "`idleStart` seems to be redundant. We could just use `runningTasks == 0`",
+        "createdAt" : "2019-05-31T16:09:43Z",
+        "updatedAt" : "2019-06-05T01:27:44Z",
+        "lastEditedBy" : "ad79e8d4-cf06-458d-a4bf-c8cc54588fc6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2198ba85-bd8b-46fb-a168-b17aae384f33",
+        "parentId" : "3194c7ea-a2f6-4109-8fd7-b48a2b515b8c",
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "I think you need it when updating the timeout, specifically when you drop cached blocks.  You want to track the original time the executor went idle.  (you could make the approximation to just restart the idle time when the blocks get dropped, but might as well do it right)",
+        "createdAt" : "2019-05-31T16:24:24Z",
+        "updatedAt" : "2019-06-05T01:27:44Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b7036358-4bf4-4086-8fb0-73796411c63c",
+        "parentId" : "3194c7ea-a2f6-4109-8fd7-b48a2b515b8c",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Yeah, it's not redundant. When checking for idleness, this check is the same as `runningTasks == 0`, but we need both pieces of information for the timeout calculation to be correct.",
+        "createdAt" : "2019-05-31T17:26:56Z",
+        "updatedAt" : "2019-06-05T01:27:44Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9ae62d930aec531c5c19a718a76ea4ac01c2695d",
+    "line" : 266,
+    "diffHunk" : "@@ -1,1 +264,268 @@    def updateTimeout(): Unit = {\n      val oldDeadline = timeoutAt\n      val newDeadline = if (idleStart >= 0) {\n        idleStart + (if (cachedBlocks.nonEmpty) storageTimeoutMs else idleTimeoutMs)\n      } else {"
+  },
+  {
+    "id" : "fa0767ce-7220-4166-8916-8c9752853874",
+    "prId" : 24704,
+    "prUrl" : "https://github.com/apache/spark/pull/24704#pullrequestreview-244393247",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8f942acf-73dd-4959-a8d0-d4694a1f2dcb",
+        "parentId" : null,
+        "authorId" : "ad79e8d4-cf06-458d-a4bf-c8cc54588fc6",
+        "body" : "Can replace it with `runningTasks == 0`",
+        "createdAt" : "2019-05-31T16:10:25Z",
+        "updatedAt" : "2019-06-05T01:27:44Z",
+        "lastEditedBy" : "ad79e8d4-cf06-458d-a4bf-c8cc54588fc6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9ae62d930aec531c5c19a718a76ea4ac01c2695d",
+    "line" : 256,
+    "diffHunk" : "@@ -1,1 +254,258 @@\n    // For testing.\n    def isIdle: Boolean = idleStart >= 0\n\n    def updateRunningTasks(delta: Int): Unit = {"
+  },
+  {
+    "id" : "bcf96ccd-19a1-4666-819b-2869f841145f",
+    "prId" : 24704,
+    "prUrl" : "https://github.com/apache/spark/pull/24704#pullrequestreview-245126557",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "dd68b405-2870-44dc-863e-51c193ddf66c",
+        "parentId" : null,
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "I think this should be volatile too -- its accessed by the EAM thread and the listenerbus thread",
+        "createdAt" : "2019-06-03T14:46:56Z",
+        "updatedAt" : "2019-06-05T01:27:44Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3949ee2c-a02c-49da-a4c8-d1b2f22146e1",
+        "parentId" : "dd68b405-2870-44dc-863e-51c193ddf66c",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "I don't think it needs to. I tried very hard to avoid volatile when not necessary; in this code, it's generally only needed when ordering is important when checking multiple variables. That is not the case for this one, since it doesn't really depend on any other variables.\r\n\r\nAt first I also didn't have `timedOut` and `timeoutAt` as volatiles, but I couldn't 100% convince me that it was not needed. But in this case I'm pretty sure it doesn't do anything useful.",
+        "createdAt" : "2019-06-03T17:02:00Z",
+        "updatedAt" : "2019-06-05T01:27:44Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "21c2461f-115b-4824-8b99-4173ea850d66",
+        "parentId" : "dd68b405-2870-44dc-863e-51c193ddf66c",
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "ok, I guess the one access which is in the listener thread is in `onExecutorRemoved()`.  If that sees the stale value, then it will incorrectly set the `nextTimeout`, telling the monitor to recompute the list.  But while that is inefficient, its never incorrect.  And the hope is, its rare enough that its still better to avoid making it volatile.\r\n\r\nis that right?\r\n\r\nI'd say it at least deserves a comment in onExecutorRemoved.",
+        "createdAt" : "2019-06-03T20:58:32Z",
+        "updatedAt" : "2019-06-05T01:27:44Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2c329d45-6eb2-400b-9608-0acac3a295cf",
+        "parentId" : "dd68b405-2870-44dc-863e-51c193ddf66c",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : ">  If that sees the stale value, then it will incorrectly set the nextTimeout\r\n\r\nRight, but notice that isn't really related to the variable being volatile or not, it's just a race that can also occur if the variable is volatile.\r\n\r\nWriting to that variable is an atomic operation. Volatile controls what happens to other reads / writes around that volatile write. That's why it's needed when the order of the reads and writes is important. But here it isn't.",
+        "createdAt" : "2019-06-03T21:09:08Z",
+        "updatedAt" : "2019-06-05T01:27:44Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9ae62d930aec531c5c19a718a76ea4ac01c2695d",
+    "line" : 246,
+    "diffHunk" : "@@ -1,1 +244,248 @@    @volatile var timedOut: Boolean = false\n\n    var pendingRemoval: Boolean = false\n\n    private var idleStart: Long = -1"
   }
 ]

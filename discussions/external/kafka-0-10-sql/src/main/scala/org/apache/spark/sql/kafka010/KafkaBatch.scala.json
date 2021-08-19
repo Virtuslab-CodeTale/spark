@@ -42,5 +42,60 @@
     "commit" : "e0e8a8851f975311be990c5a4889d4c9870c3bea",
     "line" : 11,
     "diffHunk" : "@@ -1,1 +29,33 @@private[kafka010] class KafkaBatch(\n    strategy: ConsumerStrategy,\n    sourceOptions: CaseInsensitiveMap[String],\n    specifiedKafkaParams: Map[String, String],\n    failOnDataLoss: Boolean,"
+  },
+  {
+    "id" : "3f48c5f8-2fdc-4553-80de-5836715a9c16",
+    "prId" : 24738,
+    "prUrl" : "https://github.com/apache/spark/pull/24738#pullrequestreview-256422797",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "80ee8eba-14e1-44df-bd4f-81ed0c0adc6c",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Does this class contain some similar code in kafka source v1?",
+        "createdAt" : "2019-07-01T11:46:14Z",
+        "updatedAt" : "2019-07-01T12:57:50Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0ccead5f-5b30-487a-a3de-f59d256386a3",
+        "parentId" : "80ee8eba-14e1-44df-bd4f-81ed0c0adc6c",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "You're right, there is. Originally I've considered it, made steps towards but realized that only this part can be extracted cleanly:\r\n```\r\n    val kafkaOffsetReader = new KafkaOffsetReader(\r\n      strategy,\r\n      KafkaSourceProvider.kafkaParamsForDriver(specifiedKafkaParams),\r\n      sourceOptions,\r\n      driverGroupIdPrefix = s\"$uniqueGroupId-driver\")\r\n\r\n    // Leverage the KafkaReader to obtain the relevant partition offsets\r\n    val (fromPartitionOffsets, untilPartitionOffsets) = {\r\n      try {\r\n        (kafkaOffsetReader.fetchPartitionOffsets(startingOffsets),\r\n          kafkaOffsetReader.fetchPartitionOffsets(endingOffsets))\r\n      } finally {\r\n        kafkaOffsetReader.close()\r\n      }\r\n    }\r\n\r\n    // Obtain topicPartitions in both from and until partition offset, ignoring\r\n    // topic partitions that were added and/or deleted between the two above calls.\r\n    if (fromPartitionOffsets.keySet != untilPartitionOffsets.keySet) {\r\n      implicit val topicOrdering: Ordering[TopicPartition] = Ordering.by(t => t.topic())\r\n      val fromTopics = fromPartitionOffsets.keySet.toList.sorted.mkString(\",\")\r\n      val untilTopics = untilPartitionOffsets.keySet.toList.sorted.mkString(\",\")\r\n      throw new IllegalStateException(\"different topic partitions \" +\r\n        s\"for starting offsets topics[${fromTopics}] and \" +\r\n        s\"ending offsets topics[${untilTopics}]\")\r\n    }\r\n```\r\nTo extract it one need either an object function or a trait (abstract class not working because of `KafkaRelation`) which:\r\n* Increase the complexity\r\n* Decrease readability\r\n* Not too much gain\r\n\r\nStill, if you think it worth it can be done. WDYT?\r\n",
+        "createdAt" : "2019-07-01T12:58:50Z",
+        "updatedAt" : "2019-07-01T12:58:50Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "477e2fa3-fe25-4eae-888e-fd4f23a6b82b",
+        "parentId" : "80ee8eba-14e1-44df-bd4f-81ed0c0adc6c",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I think it's fine, let's leave it.",
+        "createdAt" : "2019-07-01T15:08:34Z",
+        "updatedAt" : "2019-07-01T15:08:34Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d009cf49-8758-4a1a-b546-6bf2e3dc6e7c",
+        "parentId" : "80ee8eba-14e1-44df-bd4f-81ed0c0adc6c",
+        "authorId" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "body" : "OK, thanks for the confirmation.",
+        "createdAt" : "2019-07-01T15:49:44Z",
+        "updatedAt" : "2019-07-01T15:49:45Z",
+        "lastEditedBy" : "e6f86365-3ac2-48b4-94f9-21ce737cf1ac",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e8f9774522e738a39d44d750017eb7d5296dbdd1",
+    "line" : 28,
+    "diffHunk" : "@@ -1,1 +26,30 @@\n\nprivate[kafka010] class KafkaBatch(\n    strategy: ConsumerStrategy,\n    sourceOptions: Map[String, String],"
   }
 ]

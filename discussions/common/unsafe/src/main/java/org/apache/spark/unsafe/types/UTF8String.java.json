@@ -372,5 +372,170 @@
     "commit" : "81edf561309cae081d96e0171226c776314db90b",
     "line" : 25,
     "diffHunk" : "@@ -1,1 +550,554 @@      return this;\n    }\n    return copyUTF8String(s, e);\n  }\n"
+  },
+  {
+    "id" : "a8b13a64-ddfc-4ed5-9b1e-f993358a7b2e",
+    "prId" : 24709,
+    "prUrl" : "https://github.com/apache/spark/pull/24709#pullrequestreview-242336101",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0dd59a1e-8d33-40f4-a7ad-563c49947df2",
+        "parentId" : null,
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "It would be interesting to benchmark your implementation against to:\r\n```scala\r\nprivate static boolean isAscii(byte[] bytes) {\r\n    int length = bytes.length;\r\n    int s = 0;\r\n    for (int i = 0; i < length; i++) {\r\n      s |= bytes[i] & 0x80;\r\n    }\r\n    return s == 0;\r\n  }\r\n```\r\nIt doesn't have the problem of branch mispredictions. Maybe it will be faster in general case. ",
+        "createdAt" : "2019-05-26T07:23:50Z",
+        "updatedAt" : "2019-05-26T19:36:50Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "87891f3a-d52e-45cb-8972-f8d9d3f58558",
+        "parentId" : "0dd59a1e-8d33-40f4-a7ad-563c49947df2",
+        "authorId" : "a11722a8-ecfa-4827-88e3-4d708f023846",
+        "body" : "Good idea! I think we can go one step further and move the `& 0x80` out of the loop body and into the final `return` statement, shaving a couple of instructions out of the loop body.\r\n\r\nJust pushed a change implementing this.",
+        "createdAt" : "2019-05-26T19:37:33Z",
+        "updatedAt" : "2019-05-26T19:37:33Z",
+        "lastEditedBy" : "a11722a8-ecfa-4827-88e3-4d708f023846",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "95ea895f-c222-4e96-8f81-09a030e23dc2",
+        "parentId" : "0dd59a1e-8d33-40f4-a7ad-563c49947df2",
+        "authorId" : "99e31844-a5b3-48a2-af71-412edb607a13",
+        "body" : "I think that the HW branch predictor can reduce misprediction since the direction is mostly the same. If we assume that ASCII case is dominant, the compiler optimizer may apply simdization.\r\n\r\nIf this code is faster than the original one, how about applying this to `isAscii(String str)`?",
+        "createdAt" : "2019-05-27T16:01:46Z",
+        "updatedAt" : "2019-05-27T16:01:46Z",
+        "lastEditedBy" : "99e31844-a5b3-48a2-af71-412edb607a13",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "0aa284fd033794fa35696ea7778e68b8c505e547",
+    "line" : 44,
+    "diffHunk" : "@@ -1,1 +180,184 @@   * Returns true if the given UTF8 bytes consist entirely of ASCII characters, false otherwise.\n   */\n  private static boolean isAscii(byte[] bytes) {\n    int length = bytes.length;\n    int s = 0;"
+  },
+  {
+    "id" : "4737962e-f51a-4813-8e0f-773c0c0ae06b",
+    "prId" : 24709,
+    "prUrl" : "https://github.com/apache/spark/pull/24709#pullrequestreview-243032770",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "bdbb1cee-c87e-4d36-8161-04cb73d2696b",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "I get that we might want to go off-road here and call a deprecated method, but does it help meaningfully? the benchmark doesn't have the resolution to determine it. Is it as fast to, maybe, pass US_ASCII as the charset in this case?",
+        "createdAt" : "2019-05-26T18:40:33Z",
+        "updatedAt" : "2019-05-26T19:36:50Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f1615760-8bed-41e5-932c-433c714af3b4",
+        "parentId" : "bdbb1cee-c87e-4d36-8161-04cb73d2696b",
+        "authorId" : "a11722a8-ecfa-4827-88e3-4d708f023846",
+        "body" : "That's a good question. I think it might be a little bit slower because the `US_ASCII` encoder needs to perform error-checking to validate whether the bytes are actually ASCII characters. That validation is probably cheap (just checking the sign / highest order bit of the byte) but it's still technically a bit more work.\r\n\r\nGood point about benchmark resolution, especially for short strings: I probably need to run more benchmark iterations for short strings to smooth out variation / noise.",
+        "createdAt" : "2019-05-26T19:41:28Z",
+        "updatedAt" : "2019-05-26T19:41:28Z",
+        "lastEditedBy" : "a11722a8-ecfa-4827-88e3-4d708f023846",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "253e7c3c-88cf-4068-bdcd-1e20129073c1",
+        "parentId" : "bdbb1cee-c87e-4d36-8161-04cb73d2696b",
+        "authorId" : "99156419-7ce7-4671-b858-d0b5c4711f88",
+        "body" : "it does have to check all bytes though? isn't this grow linearly to the length of bytes?",
+        "createdAt" : "2019-05-29T04:21:55Z",
+        "updatedAt" : "2019-05-29T04:22:02Z",
+        "lastEditedBy" : "99156419-7ce7-4671-b858-d0b5c4711f88",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "0aa284fd033794fa35696ea7778e68b8c505e547",
+    "line" : 72,
+    "diffHunk" : "@@ -1,1 +1269,1273 @@    // skips charset encoder and simply casts each byte into a char.\n    if (isAscii(bytes)) {\n      return new String(bytes, 0);\n    } else {\n      return new String(bytes, StandardCharsets.UTF_8);"
+  },
+  {
+    "id" : "e56bfb62-a22a-4d36-90eb-899323db3e1e",
+    "prId" : 24709,
+    "prUrl" : "https://github.com/apache/spark/pull/24709#pullrequestreview-242327652",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "fcdc4d98-1963-480e-9e5a-d45fc4d651e6",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Can this be package private?",
+        "createdAt" : "2019-05-26T18:40:41Z",
+        "updatedAt" : "2019-05-26T19:36:50Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5f642a2c-149a-461f-bc1d-eaca7371b173",
+        "parentId" : "fcdc4d98-1963-480e-9e5a-d45fc4d651e6",
+        "authorId" : "a11722a8-ecfa-4827-88e3-4d708f023846",
+        "body" : "I don't think so: the benchmarks that I added are in a different package (because it's hard to depend on our benchmarks package from the `unsafe` package), so this needs to be public.",
+        "createdAt" : "2019-05-26T19:45:31Z",
+        "updatedAt" : "2019-05-26T19:45:31Z",
+        "lastEditedBy" : "a11722a8-ecfa-4827-88e3-4d708f023846",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "089e869e-6dc6-4f6c-861c-63466e9eb46c",
+        "parentId" : "fcdc4d98-1963-480e-9e5a-d45fc4d651e6",
+        "authorId" : "99e31844-a5b3-48a2-af71-412edb607a13",
+        "body" : "Can we use `@VisibleForTesting` annotation?",
+        "createdAt" : "2019-05-27T15:33:14Z",
+        "updatedAt" : "2019-05-27T15:33:14Z",
+        "lastEditedBy" : "99e31844-a5b3-48a2-af71-412edb607a13",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "0aa284fd033794fa35696ea7778e68b8c505e547",
+    "line" : 81,
+    "diffHunk" : "@@ -1,1 +1278,1282 @@   * Pre-SPARK-27841 version of toString(), retained for benchmarking purposes.\n   */\n  public String toStringSlow() {\n    return new String(getBytes(), StandardCharsets.UTF_8);\n  }"
+  },
+  {
+    "id" : "b52b1e1f-f230-4b85-ba7c-dee5156e9939",
+    "prId" : 24707,
+    "prUrl" : "https://github.com/apache/spark/pull/24707#pullrequestreview-242050900",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "89590784-6d62-442f-bfa0-6e8fd2cf1fc9",
+        "parentId" : null,
+        "authorId" : "a11722a8-ecfa-4827-88e3-4d708f023846",
+        "body" : "One consideration here: do we need to make a defensive copy? If so, we can't do this optimization.\r\n\r\nWhy might we need to copy a `UTF8String`? The `UTF8String` instance itself is effectively immutable, but the underlying storage might be a region of potentially-not-exclusively-owned memory (either direct/off-heap memory or a region of a `long[]` array), so we might need to perform a copy in case we're going to buffer / otherwise hold onto the `UTF8String` past a point where the underlying underlying storage memory could be mutated.\r\n\r\nI think the most common case to worry about would be a UTF8String which is backed by memory that is part of a larger `UnsafeRow`. If we're doing row-at-a-time processing and aren't holding onto this `UTF8String` across rows then I think we're ok since changes to rows' memory _during_ single-row processing would impact many parts of Spark and would probably be detected. In the few places where we _do_ hold references across evaluations / rows then we need to copy, but I suspect most places already do this: for example, see the `regexp.clone()` in the `RegExpReplace` expression.\r\n\r\nMy intuition is that we probably _don't_ need to make a defensive copy here because I doubt we have parts of the code which _specifically assume that `replace()` will copy_ (i.e. which are abusing `replace()` as a slow `clone()` mechanism). Put differently, I suspect that any code which would fail due to lack of copying in `replace()` is also vulnerable to this problem from other sources (including simply reading a string from a row without further modification), so I don't think we need to add extra copying here.\r\n\r\nI'd love to get additional sets of eyes on this, though, and I'd ultimately be ok with changing `return this` to `return this.clone()` (and updating the other `return this` uses in `UTF8String`) if we conclude that this isn't safe (or are uncertain and want to err on the side of caution).",
+        "createdAt" : "2019-05-25T15:55:48Z",
+        "updatedAt" : "2019-06-09T22:41:24Z",
+        "lastEditedBy" : "a11722a8-ecfa-4827-88e3-4d708f023846",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3ae3777f-7a25-49ce-978a-9bd539d36e15",
+        "parentId" : "89590784-6d62-442f-bfa0-6e8fd2cf1fc9",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "I think your intuition is right here.",
+        "createdAt" : "2019-05-26T18:45:31Z",
+        "updatedAt" : "2019-06-09T22:41:24Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "6188dcdd321967eb78535d7cf55b73f20047f449",
+    "line" : 25,
+    "diffHunk" : "@@ -1,1 +984,988 @@    if (end == -1) {\n      // Search string was not found, so string is unchanged.\n      return this;\n    }\n    // At least one match was found. Estimate space needed for result."
   }
 ]

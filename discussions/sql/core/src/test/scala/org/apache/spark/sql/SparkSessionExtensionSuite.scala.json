@@ -130,5 +130,93 @@
     "commit" : "114a743b77c2963967cb5e25a20c792f70aca6e2",
     "line" : 34,
     "diffHunk" : "@@ -1,1 +195,199 @@      stop(session)\n    }\n  }\n\n  test(\"use custom class for extensions\") {"
+  },
+  {
+    "id" : "c0a611d8-8ec8-4e88-aacb-f752185b00b9",
+    "prId" : 24795,
+    "prUrl" : "https://github.com/apache/spark/pull/24795#pullrequestreview-252409698",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7bf67798-1922-4505-a4ae-fa9561b56dee",
+        "parentId" : null,
+        "authorId" : "99e31844-a5b3-48a2-af71-412edb607a13",
+        "body" : "How about the following? The `sum` will return the unique value that corresponds to the combination.\r\n\r\n```\r\ncase rep: ... => 1\r\ncase proj: ... => 4\r\ncase c2r: ... => 13\r\n```",
+        "createdAt" : "2019-06-20T16:48:50Z",
+        "updatedAt" : "2019-06-21T14:22:17Z",
+        "lastEditedBy" : "99e31844-a5b3-48a2-af71-412edb607a13",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7f1753db2d15186399e5ef9d7ef88b2bc7eedf67",
+    "line" : 42,
+    "diffHunk" : "@@ -1,1 +136,140 @@      // Verify that both pre and post processing of the plan worked.\n      val found = df.queryExecution.executedPlan.collect {\n        case rep: ReplacedRowToColumnarExec => 1\n        case proj: ColumnarProjectExec => 10\n        case c2r: ColumnarToRowExec => 100"
+  },
+  {
+    "id" : "944bc516-5844-4c4b-bd55-986f236a1b5a",
+    "prId" : 24795,
+    "prUrl" : "https://github.com/apache/spark/pull/24795#pullrequestreview-256298851",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "835262fa-9ab9-4ee0-b35c-8e5351c835ab",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I understand that this is in test not an API, but other people may look at this test to learn how to implement columnar operator, and I feel the current example is not that good.\r\n\r\nIIUC, the goal is:\r\n1. users can write a rule to replace an arbitrary SQL operator with a custom optimized columnar version\r\n2. Spark automatically insert column-to-row and row-to-column operators around the columnar operator.\r\n\r\nFor 1, I think a pretty simple approach is, take in an expression tree, compile it to a columnar processor that can execute the expression tree in a columnar fashion. We don't need to create a `ColumnarExpression`, which seems over complicated to me as a column processor.",
+        "createdAt" : "2019-07-01T03:45:54Z",
+        "updatedAt" : "2019-07-01T03:46:23Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e1428fa2-49cc-443b-b584-9486032b7da2",
+        "parentId" : "835262fa-9ab9-4ee0-b35c-8e5351c835ab",
+        "authorId" : "b19fe247-920f-40ae-83e7-6b8ec9979f6b",
+        "body" : "The main reason it is this way is that originally I had Expression support columnar as well but as a part of the review it changed so I made minimal changes to the example to match.\r\nI do find it simpler from a development standpoint to have a one to one mapping.  I can then write unit tests with just inputs and verify that the outputs match exactly.   But yes there probably are simpler ways to do this depending on the columnar library you are using.",
+        "createdAt" : "2019-07-01T12:14:29Z",
+        "updatedAt" : "2019-07-01T12:14:29Z",
+        "lastEditedBy" : "b19fe247-920f-40ae-83e7-6b8ec9979f6b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7f1753db2d15186399e5ef9d7ef88b2bc7eedf67",
+    "line" : 166,
+    "diffHunk" : "@@ -1,1 +381,385 @@   * [[org.apache.spark.sql.vectorized.ColumnarBatch]]. The result of\n   * calling this may be a single [[org.apache.spark.sql.vectorized.ColumnVector]] or a scalar\n   * value. Scalar values typically happen if they are a part of the expression i.e. col(\"a\") + 100.\n   * In this case the 100 is a [[org.apache.spark.sql.catalyst.expressions.Literal]] that\n   * [[org.apache.spark.sql.catalyst.expressions.Add]] would have to be able to handle."
+  },
+  {
+    "id" : "e246e2cf-5ec1-4ed5-bc2d-aae56ff9f890",
+    "prId" : 24795,
+    "prUrl" : "https://github.com/apache/spark/pull/24795#pullrequestreview-258884678",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e09e75dc-212e-4c0d-9bc8-0ce2a03d5c32",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Not a big deal but for my own understanding, why is it `case class`?",
+        "createdAt" : "2019-07-04T10:05:24Z",
+        "updatedAt" : "2019-07-04T10:05:52Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "69c31256-01ee-4153-8547-714eef3fa4d4",
+        "parentId" : "e09e75dc-212e-4c0d-9bc8-0ce2a03d5c32",
+        "authorId" : "b19fe247-920f-40ae-83e7-6b8ec9979f6b",
+        "body" : "It doesn't have to be a case class, just made it so I didn't need to add in the new, but I am happy to change it if you want me to in a follow on PR.",
+        "createdAt" : "2019-07-08T13:01:34Z",
+        "updatedAt" : "2019-07-08T13:01:35Z",
+        "lastEditedBy" : "b19fe247-920f-40ae-83e7-6b8ec9979f6b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7f1753db2d15186399e5ef9d7ef88b2bc7eedf67",
+    "line" : 72,
+    "diffHunk" : "@@ -1,1 +287,291 @@}\n\ncase class CloseableColumnBatchIterator(itr: Iterator[ColumnarBatch],\n    f: ColumnarBatch => ColumnarBatch) extends Iterator[ColumnarBatch] {\n  var cb: ColumnarBatch = null"
   }
 ]

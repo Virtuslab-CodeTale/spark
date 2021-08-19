@@ -1,0 +1,90 @@
+[
+  {
+    "id" : "3a7a20a8-13d4-4d2c-805f-0b7ffa52a39d",
+    "prId" : 24768,
+    "prUrl" : "https://github.com/apache/spark/pull/24768#pullrequestreview-258514156",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9305b88d-1693-4617-8a60-ddf8d1647ce0",
+        "parentId" : null,
+        "authorId" : "1f3c66ec-cc36-4a64-807a-476c6615e68c",
+        "body" : "This is a concerning change in light of the class comment. If failing to apply this rule can cause wrong results, how sure are we that the rule doesn't need to be applied when children are unresolved?",
+        "createdAt" : "2019-07-02T20:27:55Z",
+        "updatedAt" : "2019-07-09T17:36:34Z",
+        "lastEditedBy" : "1f3c66ec-cc36-4a64-807a-476c6615e68c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5e2446ba-7a0a-471d-a61e-27ed16a27b17",
+        "parentId" : "9305b88d-1693-4617-8a60-ddf8d1647ce0",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "If a child is not resolved, then the next line will fail because the children do not have expression IDs. If the children are never resolved, then the query will fail the resolution check. If the children are eventually resolved, then this simply runs later, when the next line will not fail.\r\n\r\nThis was a preexisting bug that was uncovered by this PR and is caused by not throwing an analysis exception immediately in `ResolveRelations`. There have been several updates like this to fix places that didn't check child resolution.",
+        "createdAt" : "2019-07-02T21:08:05Z",
+        "updatedAt" : "2019-07-09T17:36:34Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7c234923-9a3a-4696-8810-6e41f24b37db",
+        "parentId" : "9305b88d-1693-4617-8a60-ddf8d1647ce0",
+        "authorId" : "1f3c66ec-cc36-4a64-807a-476c6615e68c",
+        "body" : "Ok, that makes sense.",
+        "createdAt" : "2019-07-02T22:54:53Z",
+        "updatedAt" : "2019-07-09T17:36:34Z",
+        "lastEditedBy" : "1f3c66ec-cc36-4a64-807a-476c6615e68c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d2776712-0b52-4335-87de-e6caa465a1a1",
+        "parentId" : "9305b88d-1693-4617-8a60-ddf8d1647ce0",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "why is this needed when the first case is `case p if !p.resolved => p`? Do you mean there is a plan that is resolved but its children are not?",
+        "createdAt" : "2019-07-05T02:58:00Z",
+        "updatedAt" : "2019-07-09T17:36:34Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "21216679-fb2f-4c15-aa46-d6f3d54073fe",
+        "parentId" : "9305b88d-1693-4617-8a60-ddf8d1647ce0",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "@cloud-fan, feel free to look into that, but this case was matching with an unresolved child that did not have expression IDs. I thought the best approach was to require resolved children, but if you'd like to suggest a different approach I can update here.\r\n\r\nOtherwise, this solves the problem and it is clearly correct to only access expression IDs when children are resolved.",
+        "createdAt" : "2019-07-05T03:48:42Z",
+        "updatedAt" : "2019-07-09T17:36:34Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "46ff0dc0-b146-4890-86fa-62daf5ff1ed1",
+        "parentId" : "9305b88d-1693-4617-8a60-ddf8d1647ce0",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I'm not sure what is the problem this resolved. When we reach here, `p` is already resolved, which usually means `p.childrenResolved` is always true.",
+        "createdAt" : "2019-07-05T04:50:36Z",
+        "updatedAt" : "2019-07-09T17:36:34Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ceb1a438-70c7-425b-aef2-5dcfb7e37505",
+        "parentId" : "9305b88d-1693-4617-8a60-ddf8d1647ce0",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "@cloud-fan, not necessarily. Some plans may not check that children are resolved. `CheckAnalysis` accounts for this case by using `foreachUp`:\r\n\r\n```scala\r\n    plan.foreachUp {\r\n      case o if !o.resolved =>\r\n        failAnalysis(s\"unresolved operator ${o.simpleString(SQLConf.get.maxToStringFields)}\")\r\n      case _ =>\r\n    }\r\n```",
+        "createdAt" : "2019-07-05T18:31:45Z",
+        "updatedAt" : "2019-07-09T17:36:34Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4169a8760d6e358914071460c91f381d4ae89b0b",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +38,42 @@    // Skip leaf node, as it has no child and no need to update nullability.\n    case p: LeafNode => p\n    case p: LogicalPlan if p.childrenResolved =>\n      val nullabilities = p.children.flatMap(c => c.output).groupBy(_.exprId).map {\n        // If there are multiple Attributes having the same ExprId, we need to resolve"
+  }
+]

@@ -1,0 +1,68 @@
+[
+  {
+    "id" : "b2c18be8-913f-44cd-b603-ed56e97d127b",
+    "prId" : 24759,
+    "prUrl" : "https://github.com/apache/spark/pull/24759#pullrequestreview-278601392",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f32aed52-8372-4f00-806f-ae4b28e82daf",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "shall we do the same thing for `ReusedSubqueryExec`?",
+        "createdAt" : "2019-08-21T13:38:57Z",
+        "updatedAt" : "2019-08-26T07:56:18Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5fedb8db-56d1-43c1-8d2d-2ad568c44172",
+        "parentId" : "f32aed52-8372-4f00-806f-ae4b28e82daf",
+        "authorId" : "a2fcc15e-a51a-42f0-87a6-137048a28e30",
+        "body" : "@cloud-fan Yeah.. i will need to study a bit on how to exercise this. Let me push with rest of your comments.. I will look into it.",
+        "createdAt" : "2019-08-22T03:59:30Z",
+        "updatedAt" : "2019-08-26T07:56:18Z",
+        "lastEditedBy" : "a2fcc15e-a51a-42f0-87a6-137048a28e30",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8ee873c2-e475-4198-b3c9-4e0c34e30ce7",
+        "parentId" : "f32aed52-8372-4f00-806f-ae4b28e82daf",
+        "authorId" : "a2fcc15e-a51a-42f0-87a6-137048a28e30",
+        "body" : "@cloud-fan I think we are okay here. Here is a simple plan involving `ReusedSubqueryExec`\r\n```\r\nexplain formatted select (select avg(a) from s1) + (select avg(a) from s1) from s1 limit 1;\r\n```\r\n```\r\n== Physical Plan ==\r\nCollectLimit (3)\r\n+- * Project (2)\r\n   +- Scan hive default.s1 (1)\r\n\r\n\r\n(1) Scan hive default.s1 \r\nOutput: []\r\n     \r\n(2) Project [codegen id : 1]\r\nOutput    : [(Subquery scalar-subquery#151 + ReusedSubquery Subquery scalar-subquery#151) AS (scalarsubquery() + scalarsubquery())#168]\r\nInput     : []\r\n     \r\n(3) CollectLimit \r\nInput: [(scalarsubquery() + scalarsubquery())#168]\r\n     \r\n===== Subqueries =====\r\n\r\nSubquery:1 Hosting operator id = 2 Hosting Expression = Subquery scalar-subquery#151\r\n* HashAggregate (7)\r\n+- Exchange (6)\r\n   +- * HashAggregate (5)\r\n      +- Scan hive default.s1 (4)\r\n\r\n\r\n(4) Scan hive default.s1 \r\nOutput: [a#160]\r\n     \r\n(5) HashAggregate [codegen id : 1]\r\nInput: [a#160]\r\n     \r\n(6) Exchange \r\nInput: [sum#171, count#172L]\r\n     \r\n(7) HashAggregate [codegen id : 2]\r\nInput: [sum#171, count#172L]\r\n     \r\nSubquery:2 Hosting operator id = 2 Hosting Expression = ReusedSubquery Subquery scalar-subquery#151\r\n```\r\nPlease let me know what you think.",
+        "createdAt" : "2019-08-22T06:16:32Z",
+        "updatedAt" : "2019-08-26T07:56:18Z",
+        "lastEditedBy" : "a2fcc15e-a51a-42f0-87a6-137048a28e30",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "502dc958-b46a-4d61-85d2-f4037a3f4142",
+        "parentId" : "f32aed52-8372-4f00-806f-ae4b28e82daf",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "So we don't print the query plan for subquery 2. How is it implemented?",
+        "createdAt" : "2019-08-22T12:47:25Z",
+        "updatedAt" : "2019-08-26T07:56:18Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5fef3703-5507-420c-9713-f45a03fa4762",
+        "parentId" : "f32aed52-8372-4f00-806f-ae4b28e82daf",
+        "authorId" : "a2fcc15e-a51a-42f0-87a6-137048a28e30",
+        "body" : "@cloud-fan Currently its implemented by the following check in `processPlanSkippingSubqueries`. For a change, i have it commented :-)\r\n```\r\n   // ReusedSubqueryExecs are skipped over\r\n    if (plan.isInstanceOf[BaseSubqueryExec]) {\r\n      return startOperatorID\r\n    }\r\n```",
+        "createdAt" : "2019-08-22T18:17:39Z",
+        "updatedAt" : "2019-08-26T07:56:18Z",
+        "lastEditedBy" : "a2fcc15e-a51a-42f0-87a6-137048a28e30",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f401175f7bd0e94db1722653734b92c9db57a779",
+    "line" : 18,
+    "diffHunk" : "@@ -1,1 +92,96 @@    val reuse_op_str = ExplainUtils.getOpId(child)\n    s\"\"\"\n       |(${ExplainUtils.getOpId(this)}) $nodeName ${cdgen} [Reuses operator id: $reuse_op_str]\n       |Output : ${output}\n     \"\"\".stripMargin"
+  }
+]

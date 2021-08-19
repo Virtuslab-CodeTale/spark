@@ -2209,5 +2209,379 @@
     "commit" : "05a827df7094b07a492add875c6e649df52db41f",
     "line" : 19,
     "diffHunk" : "@@ -1,1 +270,274 @@    ;\n\nreplaceTableHeader\n    : (CREATE OR)? REPLACE TABLE multipartIdentifier\n    ;"
+  },
+  {
+    "id" : "f84786e2-82a6-4e66-a8bb-d055b1a34a5b",
+    "prId" : 24780,
+    "prUrl" : "https://github.com/apache/spark/pull/24780#pullrequestreview-250517512",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "733ab8b0-0a3c-4e16-8da7-1dcb4ca8cd74",
+        "parentId" : null,
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "I am fine to add this syntax, but this only supports changing column comments, right?",
+        "createdAt" : "2019-06-04T23:55:02Z",
+        "updatedAt" : "2019-06-05T13:46:26Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "62f30f7d-1632-43c9-992c-30c80a4f3a14",
+        "parentId" : "733ab8b0-0a3c-4e16-8da7-1dcb4ca8cd74",
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "Dropping the column is still risky to us. When you adding the columns back, we might see the unexpected values. ",
+        "createdAt" : "2019-06-04T23:57:04Z",
+        "updatedAt" : "2019-06-05T13:46:26Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "282683ae-4037-4952-8875-eaec6c52b7ab",
+        "parentId" : "733ab8b0-0a3c-4e16-8da7-1dcb4ca8cd74",
+        "authorId" : "5a447b79-39cd-420f-947f-1689950564a6",
+        "body" : "@gatorsmile the idea is actually to implement `alter table replace colu\u001dmns` fully:\r\n- drop column if not preset in the new schema\r\n- add column, if not preset in the table’s schema\r\n- keep column if colum_name and colum_type match between schemas\r\n- raise exception if trying to replace an existing column with a different data type\r\n\r\nI believe this is a much needed feature to be able to manage meta-stores fully from Spark; however I understand the complexity and risks of this operation, so please let’s take the time to ensure it’s the right thing to do and all possibile ramifications.\r\n\r\nI tried to make the commit history as clean and as descriptive as possibile and just added some more details in the PR description `known issues` section.\r\n\r\nI've also added an extra validation step to prevent columns to be replaced if the data type doesn't match (8b6da23)\r\n\r\nLet me know if anything isn’t clear and I'll be happy add more details.\r\n\r\nThanks!",
+        "createdAt" : "2019-06-05T12:02:36Z",
+        "updatedAt" : "2019-06-05T13:46:26Z",
+        "lastEditedBy" : "5a447b79-39cd-420f-947f-1689950564a6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "54cac258-9a85-41f9-bee1-10df87ee796d",
+        "parentId" : "733ab8b0-0a3c-4e16-8da7-1dcb4ca8cd74",
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "Let me give a typical scenario. For an existing table, if we drop the column `col1`, the data will not be visible to the end users. This is expected. However, if we add `col1` back, the previous values of the column `col1` should not be visible to the end users too. This is how the other database systems work. What is your thought? ",
+        "createdAt" : "2019-06-05T15:48:44Z",
+        "updatedAt" : "2019-06-05T15:48:44Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f6b96b4d-778d-4a3c-947e-9f09885c2fed",
+        "parentId" : "733ab8b0-0a3c-4e16-8da7-1dcb4ca8cd74",
+        "authorId" : "5a447b79-39cd-420f-947f-1689950564a6",
+        "body" : "i understand your point, it makes total sense and i would completely agree if hive was like the other dbms.  according to your scenario, also the below should not be possibile, but it is:  \r\n\r\n```\r\n>>> spark.sql(\"CREATE EXTERNAL TABLE test_table (c1 string, c2 int ) STORED AS PARQUET LOCATION '/tmp/test_table'\")\r\nDataFrame[]\r\n\r\n>>> spark.sql(\"INSERT INTO test_table VALUES ('c1', 2)\")\r\nDataFrame[]\r\n\r\n>>> spark.sql(\"SELECT * FROM test_table\").show()\r\n+---+---+\r\n| c1| c2|\r\n+---+---+\r\n| c1|  2|\r\n+---+---+\r\n\r\n>>> spark.sql(\"DROP TABLE test_table\")\r\nDataFrame[]\r\n\r\n>>> spark.catalog.listTables()\r\n[]\r\n\r\n>>> spark.sql(\"CREATE EXTERNAL TABLE test_table (c1 string, c2 int, c3 boolean) STORED AS PARQUET LOCATION '/tmp/test_table'\")\r\nDataFrame[]\r\n\r\n>>> spark.sql(\"SELECT * FROM test_table\").show()\r\n+---+---+----+\r\n| c1| c2|  c3|\r\n+---+---+----+\r\n| c1|  2|null|\r\n+---+---+----+\r\n``` \r\n\r\ndo you agree it's the same behaviour you explained in the \"drop / re-create column\" example?",
+        "createdAt" : "2019-06-05T16:29:14Z",
+        "updatedAt" : "2019-06-05T16:29:14Z",
+        "lastEditedBy" : "5a447b79-39cd-420f-947f-1689950564a6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "deaf5968-7b31-4e3c-867d-543c9d09d338",
+        "parentId" : "733ab8b0-0a3c-4e16-8da7-1dcb4ca8cd74",
+        "authorId" : "5a447b79-39cd-420f-947f-1689950564a6",
+        "body" : "@gatorsmile any thoughts about my previous comment?\r\n\r\ni was wandering if this could be just a miscommunication issue as you are referring to the behaviour of `alter table replace columns` with \"normal tables\", while i'm manly talking about \"external tables\"?\r\n\r\nmaybe `replace columns` could be enabled only for `external tables`?  would that be acceptable / less risky in your opinion?",
+        "createdAt" : "2019-06-17T14:06:30Z",
+        "updatedAt" : "2019-06-17T14:06:32Z",
+        "lastEditedBy" : "5a447b79-39cd-420f-947f-1689950564a6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "40667e01-f256-4bab-905c-ad6e7036e783",
+        "parentId" : "733ab8b0-0a3c-4e16-8da7-1dcb4ca8cd74",
+        "authorId" : "5a447b79-39cd-420f-947f-1689950564a6",
+        "body" : "@gatorsmile any thoughts about my previous comment?\r\n\r\ni was wandering if this could be just a miscommunication issue as you are referring to the behaviour of `alter table replace columns` with \"normal tables\", while i'm manly talking about \"external tables\"?\r\n\r\nmaybe `replace columns` could be enabled only for `external tables`?  would that be acceptable / less risky in your opinion?",
+        "createdAt" : "2019-06-17T14:06:43Z",
+        "updatedAt" : "2019-06-17T14:06:43Z",
+        "lastEditedBy" : "5a447b79-39cd-420f-947f-1689950564a6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "30641eb6114d7af6deb009423531bb261bce1600",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +117,121 @@        ADD COLUMNS '(' columns=colTypeList ')'                        #addTableColumns\n    | ALTER TABLE tableIdentifier\n        REPLACE COLUMNS '(' columns=colTypeList ')'                    #replaceTableColumns\n    | ALTER (TABLE | VIEW) from=tableIdentifier\n        RENAME TO to=tableIdentifier                                   #renameTable"
+  },
+  {
+    "id" : "d70d547d-4c11-4b6f-b98e-dfb031faf696",
+    "prId" : 24749,
+    "prUrl" : "https://github.com/apache/spark/pull/24749#pullrequestreview-246171454",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "aa26bbc8-36c5-4139-a4da-80052de624be",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "This is a good change. I mean `ctx.db` instead of `ctx.errorCapturingIdentifier` in `visitDropDatabase`. Could you improve the other db identifiers like this, too?",
+        "createdAt" : "2019-06-05T03:08:51Z",
+        "updatedAt" : "2019-06-18T20:09:57Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e2ceca75-a8ac-4425-a3c6-071f778919d0",
+        "parentId" : "aa26bbc8-36c5-4139-a4da-80052de624be",
+        "authorId" : "88f0c774-9c59-4485-885d-f6aee36efcea",
+        "body" : "done",
+        "createdAt" : "2019-06-05T05:51:36Z",
+        "updatedAt" : "2019-06-18T20:09:57Z",
+        "lastEditedBy" : "88f0c774-9c59-4485-885d-f6aee36efcea",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "742f110d-d252-424a-8e20-cda3c7b7641a",
+        "parentId" : "aa26bbc8-36c5-4139-a4da-80052de624be",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Thanks!",
+        "createdAt" : "2019-06-05T18:07:49Z",
+        "updatedAt" : "2019-06-18T20:09:57Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e1996b8bc7aaa3dcaac61a3c93d904a9ef2ce696",
+    "line" : 15,
+    "diffHunk" : "@@ -1,1 +90,94 @@    | ALTER database db=errorCapturingIdentifier\n        SET DBPROPERTIES tablePropertyList                             #setDatabaseProperties\n    | DROP database (IF EXISTS)? db=errorCapturingIdentifier\n        (RESTRICT | CASCADE)?                                          #dropDatabase\n    | SHOW DATABASES (LIKE? pattern=STRING)?                           #showDatabases"
+  },
+  {
+    "id" : "28a45d65-7d31-4c7d-a34f-9181503178c3",
+    "prId" : 24749,
+    "prUrl" : "https://github.com/apache/spark/pull/24749#pullrequestreview-247311573",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6caffe30-1ab1-4fd2-9a67-38cf15b50215",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "@yeshengm . Can we have a test coverage for this?",
+        "createdAt" : "2019-06-07T21:21:32Z",
+        "updatedAt" : "2019-06-18T20:09:57Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e1996b8bc7aaa3dcaac61a3c93d904a9ef2ce696",
+    "line" : 26,
+    "diffHunk" : "@@ -1,1 +139,143 @@    | ALTER TABLE tableIdentifier partitionSpec?\n        CHANGE COLUMN?\n        colName=errorCapturingIdentifier colType colPosition?          #changeColumn\n    | ALTER TABLE tableIdentifier (partitionSpec)?\n        SET SERDE STRING (WITH SERDEPROPERTIES tablePropertyList)?     #setTableSerDe"
+  },
+  {
+    "id" : "ee7b438b-15de-43d9-9bd2-c6be38ca35b8",
+    "prId" : 24749,
+    "prUrl" : "https://github.com/apache/spark/pull/24749#pullrequestreview-247317458",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c59b9ed7-901f-470a-b026-cd4a094a899a",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Can we have a test coverage for this?",
+        "createdAt" : "2019-06-07T21:41:47Z",
+        "updatedAt" : "2019-06-18T20:09:57Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e1996b8bc7aaa3dcaac61a3c93d904a9ef2ce696",
+    "line" : 44,
+    "diffHunk" : "@@ -1,1 +183,187 @@        ('(' key=tablePropertyKey ')')?                                #showTblProperties\n    | SHOW COLUMNS (FROM | IN) tableIdentifier\n        ((FROM | IN) db=errorCapturingIdentifier)?                     #showColumns\n    | SHOW PARTITIONS tableIdentifier partitionSpec?                   #showPartitions\n    | SHOW identifier? FUNCTIONS"
+  },
+  {
+    "id" : "94abea06-ae63-4400-85a3-0f9bbf7b996e",
+    "prId" : 24749,
+    "prUrl" : "https://github.com/apache/spark/pull/24749#pullrequestreview-247319166",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "602d81d0-bbc7-47a8-813d-4690cd310446",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Test coverage for this?",
+        "createdAt" : "2019-06-07T21:48:07Z",
+        "updatedAt" : "2019-06-18T20:09:57Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e1996b8bc7aaa3dcaac61a3c93d904a9ef2ce696",
+    "line" : 51,
+    "diffHunk" : "@@ -1,1 +189,193 @@    | SHOW CREATE TABLE tableIdentifier                                #showCreateTable\n    | (DESC | DESCRIBE) FUNCTION EXTENDED? describeFuncName            #describeFunction\n    | (DESC | DESCRIBE) database EXTENDED? db=errorCapturingIdentifier #describeDatabase\n    | (DESC | DESCRIBE) TABLE? option=(EXTENDED | FORMATTED)?\n        tableIdentifier partitionSpec? describeColName?                #describeTable"
+  },
+  {
+    "id" : "6038809a-f170-4959-b2fa-a915482ed58f",
+    "prId" : 24749,
+    "prUrl" : "https://github.com/apache/spark/pull/24749#pullrequestreview-271760666",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e2785dd6-3ee7-4550-8b84-5865e1e5c19f",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "is it possible to break `1 AS a-b`? We can interpret it as `(1 AS a) - b`, which is valid if b is a valid column. ",
+        "createdAt" : "2019-08-07T06:42:32Z",
+        "updatedAt" : "2019-08-07T06:42:32Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bd4e344a-fb1d-4f8e-ad79-d6ca4681c7b6",
+        "parentId" : "e2785dd6-3ee7-4550-8b84-5865e1e5c19f",
+        "authorId" : "88f0c774-9c59-4485-885d-f6aee36efcea",
+        "body" : "I just tried on Postgres, and it's a syntax error.",
+        "createdAt" : "2019-08-07T06:51:34Z",
+        "updatedAt" : "2019-08-07T06:51:34Z",
+        "lastEditedBy" : "88f0c774-9c59-4485-885d-f6aee36efcea",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bad86302-2880-42c0-8a4e-6f9c50e56b82",
+        "parentId" : "e2785dd6-3ee7-4550-8b84-5865e1e5c19f",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "ah nvm, `AS` means the end of an expression in the select list, so only `1 AS a, ...` is allowed",
+        "createdAt" : "2019-08-07T06:52:20Z",
+        "updatedAt" : "2019-08-07T06:52:21Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e178d0e9-8e91-4ead-a54a-a3a3c15bab08",
+        "parentId" : "e2785dd6-3ee7-4550-8b84-5865e1e5c19f",
+        "authorId" : "88f0c774-9c59-4485-885d-f6aee36efcea",
+        "body" : "In fact, in ANSI-SQL, select statements in a query spec are only allowed to be the format of `expr1 AS alias2, expr2 AS alias2`.",
+        "createdAt" : "2019-08-07T06:53:53Z",
+        "updatedAt" : "2019-08-07T06:53:53Z",
+        "lastEditedBy" : "88f0c774-9c59-4485-885d-f6aee36efcea",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "82f2fda2-e83d-4ef7-aa20-16ed8b337b4c",
+        "parentId" : "e2785dd6-3ee7-4550-8b84-5865e1e5c19f",
+        "authorId" : "88f0c774-9c59-4485-885d-f6aee36efcea",
+        "body" : "FYI https://ronsavage.github.io/SQL/sql-2003-2.bnf.html#select%20list",
+        "createdAt" : "2019-08-07T06:54:17Z",
+        "updatedAt" : "2019-08-07T06:54:18Z",
+        "lastEditedBy" : "88f0c774-9c59-4485-885d-f6aee36efcea",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e1996b8bc7aaa3dcaac61a3c93d904a9ef2ce696",
+    "line" : 111,
+    "diffHunk" : "@@ -1,1 +625,629 @@\nnamedExpression\n    : expression (AS? (name=errorCapturingIdentifier | identifierList))?\n    ;\n"
+  },
+  {
+    "id" : "662d5f85-82ab-4fba-a258-9fcad9b1a07f",
+    "prId" : 24723,
+    "prUrl" : "https://github.com/apache/spark/pull/24723#pullrequestreview-245575618",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e0183e72-91fb-4ef4-91b7-695b90eca5bb",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "we should also add it to `ansiNonReserved`.\r\n\r\nBTW is this a non-reserved keyword? @maropu ",
+        "createdAt" : "2019-06-02T02:14:03Z",
+        "updatedAt" : "2019-06-04T19:04:01Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2a8fc1c8-a208-445a-a981-790f2b3b509a",
+        "parentId" : "e0183e72-91fb-4ef4-91b7-695b90eca5bb",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "This is not an [ANSI reserved keyword](http://infocenter.sybase.com/help/index.jsp?topic=/com.sybase.infocenter.dc36271.1550/html/blocks/BEIJHIFE.htm), but it is reserved in [MySQL](https://dev.mysql.com/doc/refman/8.0/en/keywords.html), [PostgreSQL](https://www.postgresql.org/docs/11/sql-keywords-appendix.html), and [DB2](https://www.ibm.com/support/knowledgecenter/en/SSEPEK_11.0.0/sqlref/src/tpc/db2z_reservedwords.html). It is also on the list of [potential ANSI reserved keywords](http://infocenter.sybase.com/help/index.jsp?topic=/com.sybase.infocenter.dc36271.1550/html/blocks/BEIJCJHC.htm).",
+        "createdAt" : "2019-06-04T16:55:24Z",
+        "updatedAt" : "2019-06-04T19:04:01Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "bd7d8c8f7c6a2c378deba5927c96a8eb4dc6ef54",
+    "line" : 81,
+    "diffHunk" : "@@ -1,1 +1271,1275 @@    | TRUE\n    | TRUNCATE\n    | TYPE\n    | UNARCHIVE\n    | UNBOUNDED"
+  },
+  {
+    "id" : "09fe5c6c-d3da-4ad7-98fa-5444a53a1844",
+    "prId" : 24723,
+    "prUrl" : "https://github.com/apache/spark/pull/24723#pullrequestreview-245565458",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "76b3ea26-5d2e-4ae1-9d2a-9f91ed990745",
+        "parentId" : null,
+        "authorId" : "43998e22-6c2f-401d-9914-8cecf6fad929",
+        "body" : "Do we need to modify this? I'm not sure what happens if something like:\r\n\r\n```\r\nALTER TABLE tbl ADD a.b.c ... AFTER x.y\r\n```\r\n",
+        "createdAt" : "2019-06-04T11:08:38Z",
+        "updatedAt" : "2019-06-04T19:04:01Z",
+        "lastEditedBy" : "43998e22-6c2f-401d-9914-8cecf6fad929",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "001639db-e489-4132-b456-c64ed510f43f",
+        "parentId" : "76b3ea26-5d2e-4ae1-9d2a-9f91ed990745",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "Yes, this is needed because columns are identified by `qualifiedName`. The parser shouldn't fail if a nested column name is used. Instead, analysis should catch problems.",
+        "createdAt" : "2019-06-04T16:28:05Z",
+        "updatedAt" : "2019-06-04T19:04:01Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ec4f1304-c66f-4a24-b44d-bcdf12ac5c89",
+        "parentId" : "76b3ea26-5d2e-4ae1-9d2a-9f91ed990745",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "I should also add that it is valid to reorder nested fields:\r\n\r\n```\r\nALTER TABLE tbl ADD point.z bigint AFTER point.y\r\n```",
+        "createdAt" : "2019-06-04T16:35:35Z",
+        "updatedAt" : "2019-06-04T19:04:01Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "bd7d8c8f7c6a2c378deba5927c96a8eb4dc6ef54",
+    "line" : 47,
+    "diffHunk" : "@@ -1,1 +735,739 @@\ncolPosition\n    : FIRST | AFTER qualifiedName\n    ;\n"
+  },
+  {
+    "id" : "f58c8c14-3250-4679-be6e-ddb914bc7839",
+    "prId" : 24723,
+    "prUrl" : "https://github.com/apache/spark/pull/24723#pullrequestreview-245666859",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8e49644f-7859-47a2-bd1e-ff449de4f6a9",
+        "parentId" : null,
+        "authorId" : "43998e22-6c2f-401d-9914-8cecf6fad929",
+        "body" : "How will we handle this version of `CHANGE COLUMN` command?\r\nShould we merge this in the `(ALTER | CHANGE) COLUMN` command above?",
+        "createdAt" : "2019-06-04T11:25:23Z",
+        "updatedAt" : "2019-06-04T19:04:01Z",
+        "lastEditedBy" : "43998e22-6c2f-401d-9914-8cecf6fad929",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fb018902-2ab6-4424-aaed-aad3b00b8b71",
+        "parentId" : "8e49644f-7859-47a2-bd1e-ff449de4f6a9",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "I think we need to discuss deprecating this form of the command, which is why I haven't updated it.\r\n\r\nThe problem is that this requires the user to specify too much of a column's metadata when it isn't changing. For example, if I'm updating an int to a long, I also need to specify that it should have the same name (`UPDATE a a BIGINT`). Similarly, to rename you have to pass the type back in (`UPDATE a b INT`). This can easily lead to unintended changes that can't be reverted, like widening a type accidentally.\r\n\r\nI think that this form of the command should not be supported in v2. We can decide that later because all this is doing is updating the parser to add commands that we need to support.",
+        "createdAt" : "2019-06-04T19:53:03Z",
+        "updatedAt" : "2019-06-04T19:53:03Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "bd7d8c8f7c6a2c378deba5927c96a8eb4dc6ef54",
+    "line" : 30,
+    "diffHunk" : "@@ -1,1 +136,140 @@        (TYPE dataType)? (COMMENT comment=STRING)? colPosition?        #alterTableColumn\n    | ALTER TABLE tableIdentifier partitionSpec?\n        CHANGE COLUMN? identifier colType colPosition?                 #changeColumn\n    | ALTER TABLE tableIdentifier (partitionSpec)?\n        SET SERDE STRING (WITH SERDEPROPERTIES tablePropertyList)?     #setTableSerDe"
   }
 ]

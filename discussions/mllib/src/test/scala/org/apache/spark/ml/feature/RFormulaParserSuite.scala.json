@@ -64,5 +64,71 @@
     "commit" : "c3d97a351a04474a260ff6ae40909f366a8398cf",
     "line" : 116,
     "diffHunk" : "@@ -1,1 +279,283 @@    checkParse(\"y ~ base64( a ) + (b + c)\", \"y\", Seq(\"base64( a )\", \"b\", \"c\"))\n    checkParse(\"log(y) ~ a + log(b)\", \"log(y)\", Seq(\"a\", \"log(b)\"))\n    checkParse(\"I(c+d) ~ a + log(b)\", \"c+d\", Seq(\"a\", \"log(b)\"))\n  }\n"
+  },
+  {
+    "id" : "29ddaa78-7cc2-4a8a-8945-4757ea25ac4a",
+    "prId" : 24764,
+    "prUrl" : "https://github.com/apache/spark/pull/24764#pullrequestreview-244760816",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ae813b89-526e-486a-a576-7720b960e325",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "I don't think this is a problem, just curious: the order of terms in an interaction doesn't matter, but I wonder if we handle the case that say a:c and c:a are generated, and only return a:c? might be worth one test case somewhere.",
+        "createdAt" : "2019-06-02T13:32:59Z",
+        "updatedAt" : "2019-06-03T09:13:06Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "afd0b064-0db0-4cae-92e4-e09523175a98",
+        "parentId" : "ae813b89-526e-486a-a576-7720b960e325",
+        "authorId" : "340aa00e-a2e7-422e-9a35-ef5a82672673",
+        "body" : "Yes that's right, if we end up generating `a:c` and `c:a`, only `a:c` should return. I've added some checks for that on lines 93 and 102 on RFormulaParserSuite.scala. Do you have additional test cases in mind or are those good enough?  ",
+        "createdAt" : "2019-06-03T09:09:14Z",
+        "updatedAt" : "2019-06-03T09:13:06Z",
+        "lastEditedBy" : "340aa00e-a2e7-422e-9a35-ef5a82672673",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e911ae0da8437b3574cfa3ac70679d6c85156c7e",
+    "line" : 26,
+    "diffHunk" : "@@ -1,1 +113,117 @@  test(\"factor cross distributive\") {\n    checkParse(\"y ~ (a + b)*c\", \"y\", Seq(\"a\", \"b\", \"c\", \"a:c\", \"b:c\"))\n    checkParse(\"y ~ c*(a + b)\", \"y\", Seq(\"c\", \"a\", \"b\", \"c:a\", \"c:b\"))\n  }\n"
+  },
+  {
+    "id" : "7d4f632c-d813-4430-a3ac-2ccc37e6e787",
+    "prId" : 24764,
+    "prUrl" : "https://github.com/apache/spark/pull/24764#pullrequestreview-244757922",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "920ef101-b97c-484d-8438-53e90d15ccf8",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Finally just wondering about corner cases... what does `(a+b)^1` or `^0` give?",
+        "createdAt" : "2019-06-02T13:33:57Z",
+        "updatedAt" : "2019-06-03T09:13:06Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7cb41a2e-71a9-4188-9aab-b50452077682",
+        "parentId" : "920ef101-b97c-484d-8438-53e90d15ccf8",
+        "authorId" : "340aa00e-a2e7-422e-9a35-ef5a82672673",
+        "body" : "The regex match of ^ operator (line 287 on RFormulaParser.scala) is like this;\r\n\r\n`term ~ \"^\" ~ \"^[1-9]\\\\d*\".r`\r\n\r\nIt only matches numbers larger than 0. So if there is a term with `^0`, directly an exception is raised with `Could not parse formula` message. `^1` terms returns itself, so `(a+b)^1=a+b`\r\n",
+        "createdAt" : "2019-06-03T09:03:50Z",
+        "updatedAt" : "2019-06-03T09:13:06Z",
+        "lastEditedBy" : "340aa00e-a2e7-422e-9a35-ef5a82672673",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e911ae0da8437b3574cfa3ac70679d6c85156c7e",
+    "line" : 35,
+    "diffHunk" : "@@ -1,1 +122,126 @@      .add(\"c\", \"string\", true)\n      .add(\"d\", \"string\", true)\n    checkParse(\"a ~ (a + b)^2\", \"a\", Seq(\"a\", \"b\", \"a:b\"))\n    checkParse(\"a ~ .^2\", \"a\", Seq(\"b\", \"c\", \"d\", \"b:c\", \"b:d\", \"c:d\"), schema)\n    checkParse(\"a ~ .^3\", \"a\", Seq(\"b\", \"c\", \"d\", \"b:c\", \"b:d\", \"c:d\", \"b:c:d\"), schema)"
   }
 ]

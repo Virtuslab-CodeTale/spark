@@ -152,5 +152,236 @@
     "commit" : "f5702810ac5e925e998331029f6927cfc94448e3",
     "line" : 35,
     "diffHunk" : "@@ -1,1 +125,129 @@    // Apply the same instance of this rule to sub-queries so that sub-queries all share the\n    // same `stageCache` for Exchange reuse.\n    val adaptivePlan = this.applyInternal(queryExec.sparkPlan, queryExec)\n    if (!adaptivePlan.isInstanceOf[AdaptiveSparkPlanExec]) {\n      throw SubqueryAdaptiveNotSupportedException(plan)"
+  },
+  {
+    "id" : "1e352394-ccee-40ab-91ae-7a6a3dc1652b",
+    "prId" : 24706,
+    "prUrl" : "https://github.com/apache/spark/pull/24706#pullrequestreview-242801311",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6fca90c8-7c76-419e-8770-ec0734f542d3",
+        "parentId" : null,
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "This comment might need some extra attention since this introduces some hidden state, and that this means that you cannot reuse the same `InsertAdaptiveSparkPlan` rule across `QueryExecution`s.",
+        "createdAt" : "2019-05-28T12:48:32Z",
+        "updatedAt" : "2019-06-15T01:12:56Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b1ed3117-daa5-4434-a399-2554691e237a",
+        "parentId" : "6fca90c8-7c76-419e-8770-ec0734f542d3",
+        "authorId" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "body" : "Good point. This rule should not be \"statically created\" and reused. I'll add this note to the javadoc of this class.",
+        "createdAt" : "2019-05-28T17:00:44Z",
+        "updatedAt" : "2019-06-15T01:12:56Z",
+        "lastEditedBy" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e2651049c408f211b225f40c93adf5b741b14eb4",
+    "line" : 42,
+    "diffHunk" : "@@ -1,1 +40,44 @@  private val conf = session.sessionState.conf\n\n  // Exchange-reuse is shared across the entire query, including sub-queries.\n  private val stageCache = new TrieMap[SparkPlan, QueryStageExec]()\n"
+  },
+  {
+    "id" : "191d3f37-dce4-49da-83eb-fa529232a5b5",
+    "prId" : 24706,
+    "prUrl" : "https://github.com/apache/spark/pull/24706#pullrequestreview-242809537",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "28f5fd57-0c18-4d17-b4e2-0161a2f61633",
+        "parentId" : null,
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "This relies on the laziness of the QueryExecution.\r\n\r\nThe subquery should already be analyzed and optimized at this point. We could also consider using `session.sessionState.planner` directly or as a parameter (that would also work with streaming if we ever choose to support that).",
+        "createdAt" : "2019-05-28T13:05:56Z",
+        "updatedAt" : "2019-06-15T01:12:56Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b6b452a3-e14f-42bd-b57d-a421e4c61db3",
+        "parentId" : "28f5fd57-0c18-4d17-b4e2-0161a2f61633",
+        "authorId" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "body" : "Makes sense. It's the existing logic for \"PlanSubqueries\". I'll make a note.",
+        "createdAt" : "2019-05-28T17:17:26Z",
+        "updatedAt" : "2019-06-15T01:12:56Z",
+        "lastEditedBy" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e2651049c408f211b225f40c93adf5b741b14eb4",
+    "line" : 120,
+    "diffHunk" : "@@ -1,1 +118,122 @@\n  private def getExecutedPlan(plan: LogicalPlan): SparkPlan = {\n    val queryExec = new QueryExecution(session, plan)\n    // Apply the same instance of this rule to sub-queries so that sub-queries all share the\n    // same `stageCache` for Exchange reuse."
+  },
+  {
+    "id" : "22ec44ac-2d6e-455f-9720-99a320e1fcc1",
+    "prId" : 24706,
+    "prUrl" : "https://github.com/apache/spark/pull/24706#pullrequestreview-242635268",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c6992839-f4c5-48a0-a25c-c3db8566a9a2",
+        "parentId" : null,
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "Log this?",
+        "createdAt" : "2019-05-28T14:28:20Z",
+        "updatedAt" : "2019-06-15T01:12:56Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e2651049c408f211b225f40c93adf5b741b14eb4",
+    "line" : 62,
+    "diffHunk" : "@@ -1,1 +60,64 @@          logWarning(s\"${SQLConf.RUNTIME_REOPTIMIZATION_ENABLED.key} is enabled \" +\n            s\"but is not supported for sub-query: $subquery.\")\n          plan\n      }\n    case _ =>"
+  },
+  {
+    "id" : "22b823e2-2269-4115-bd7e-d9474637e66e",
+    "prId" : 24706,
+    "prUrl" : "https://github.com/apache/spark/pull/24706#pullrequestreview-249984384",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e6f85fd5-0402-4d10-bebf-8c6a3023c76f",
+        "parentId" : null,
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "Why do we need to do this? This already seems to be done in `AdaptiveSparkPlanExec` when we submit the stage.",
+        "createdAt" : "2019-05-28T14:44:57Z",
+        "updatedAt" : "2019-06-15T01:12:56Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e581c3ec-da33-4a90-9ac2-6653bc99f06d",
+        "parentId" : "e6f85fd5-0402-4d10-bebf-8c6a3023c76f",
+        "authorId" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "body" : "> This already seems to be done in AdaptiveSparkPlanExec when we submit the stage.\r\n\r\nNo.\r\n\r\nThe physical transformations we used in `QueryExecution.preparations` have now been split into two groups in adaptive execution here (also noted in the code comment):\r\n1. Rules that add or remove exchanges.\r\n2. Rules that are independent within each exchange, or say, stage.\r\n\r\n`InsertAdaptiveSparkPlan` is now the first in `QueryExecution.preparations`, which means neither of these two groups has been applied yet. It is this way so that we do not need to manipulate (modify) the rule application order in `QueryExecution.preparations` for AQE.",
+        "createdAt" : "2019-05-28T21:26:12Z",
+        "updatedAt" : "2019-06-15T01:12:56Z",
+        "lastEditedBy" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6b813e63-d938-45b5-96c9-24a9c2990521",
+        "parentId" : "e6f85fd5-0402-4d10-bebf-8c6a3023c76f",
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "To me it makes more sense to this in the `AdaptiveSparkPlanExec`. The `AdaptiveSparkPlanExec` is now expecting a plan that can only be produced by this rule, and not any physical plan.",
+        "createdAt" : "2019-06-14T11:40:10Z",
+        "updatedAt" : "2019-06-15T01:12:56Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "11c4ca54-3e9d-4c5e-9fae-80a0961a3a71",
+        "parentId" : "e6f85fd5-0402-4d10-bebf-8c6a3023c76f",
+        "authorId" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "body" : "In one of the commits I had tried refactoring this into `AdaptiveSparkPlanExec`, but later found out that this would cause a problem in serializing/deserializing `initialPlan` in `AdaptiveSparkPlanExec`, for the `initialPlan` before applying the sub-query planning rule contains instances of `expression.ScalarSubquery`.",
+        "createdAt" : "2019-06-14T15:52:37Z",
+        "updatedAt" : "2019-06-15T01:12:56Z",
+        "lastEditedBy" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e2651049c408f211b225f40c93adf5b741b14eb4",
+    "line" : 55,
+    "diffHunk" : "@@ -1,1 +53,57 @@        val preparations = AdaptiveSparkPlanExec.createQueryStagePreparationRules(\n          session.sessionState.conf, subqueryMap)\n        val newPlan = AdaptiveSparkPlanExec.applyPhysicalRules(plan, preparations)\n        logDebug(s\"Adaptive execution enabled for plan: $plan\")\n        AdaptiveSparkPlanExec(newPlan, session, subqueryMap, stageCache)"
+  },
+  {
+    "id" : "fb314862-7761-48ae-9577-09354ebd454f",
+    "prId" : 24706,
+    "prUrl" : "https://github.com/apache/spark/pull/24706#pullrequestreview-242943640",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "06d3aa7b-a93e-490d-96c0-437f48e3a509",
+        "parentId" : null,
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "A couple of general remarks:\r\n- As fair as I understand this code subqueries for a given stage are now executed before the stage. This used to be that all the subqueries for a query were executed before the main query.\r\n- We may need to consider moving this into the `AdaptiveSparkPlanExec` to put most state in one place and make this stateless again. You could turn this into a mix-in if this adds too much LOC.",
+        "createdAt" : "2019-05-28T14:49:38Z",
+        "updatedAt" : "2019-06-15T01:12:56Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ee249f0b-3ccd-490e-b292-137420df4030",
+        "parentId" : "06d3aa7b-a93e-490d-96c0-437f48e3a509",
+        "authorId" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "body" : "> As fair as I understand this code subqueries for a given stage are now executed before the stage. This used to be that all the subqueries for a query were executed before the main query.\r\n\r\nAgreed. But this has nothing to do with what this rule does. It's just we don't call `execute` higher in the tree before stages below get to finish. So we may need to refactor the original `SparkPlan.executeQuery` logic to make this \"wait-for-all-subqueries-to-finish\" thing more explicit.\r\n\r\n> We may need to consider moving this into the AdaptiveSparkPlanExec to put most state in one place and make this stateless again. You could turn this into a mix-in if this adds too much LOC.\r\n\r\nAgreed. Not the prettiest solution to put a stateful object into a rule.",
+        "createdAt" : "2019-05-28T21:58:57Z",
+        "updatedAt" : "2019-06-15T01:12:56Z",
+        "lastEditedBy" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e2651049c408f211b225f40c93adf5b741b14eb4",
+    "line" : 38,
+    "diffHunk" : "@@ -1,1 +36,40 @@ * Note that this rule is stateful and thus should not be reused across query executions.\n */\ncase class InsertAdaptiveSparkPlan(session: SparkSession) extends Rule[SparkPlan] {\n\n  private val conf = session.sessionState.conf"
+  },
+  {
+    "id" : "f0dd10b5-0077-4414-885f-66e4c9a7f5c9",
+    "prId" : 24706,
+    "prUrl" : "https://github.com/apache/spark/pull/24706#pullrequestreview-243975888",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "01459b47-6c46-445f-a325-717b22caa330",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "This stage cache is passed to the created `AdaptiveSparkPlanExec` directly. Can we create the stage cache in `AdaptiveSparkPlanExec`?",
+        "createdAt" : "2019-05-30T17:19:26Z",
+        "updatedAt" : "2019-06-15T01:12:56Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "93e6f19c-af8a-414d-97ed-90ae66fe9ed5",
+        "parentId" : "01459b47-6c46-445f-a325-717b22caa330",
+        "authorId" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "body" : "Problem is we want to make all `AdaptiveSparkPlanExec`s of the main query and the subqueries share the same `stageCache`.",
+        "createdAt" : "2019-05-30T19:09:35Z",
+        "updatedAt" : "2019-06-15T01:12:56Z",
+        "lastEditedBy" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e2651049c408f211b225f40c93adf5b741b14eb4",
+    "line" : 43,
+    "diffHunk" : "@@ -1,1 +41,45 @@\n  // Exchange-reuse is shared across the entire query, including sub-queries.\n  private val stageCache = new TrieMap[SparkPlan, QueryStageExec]()\n\n  override def apply(plan: SparkPlan): SparkPlan = plan match {"
+  },
+  {
+    "id" : "8819823d-bfad-4988-ae47-3e95ca606837",
+    "prId" : 24706,
+    "prUrl" : "https://github.com/apache/spark/pull/24706#pullrequestreview-244346718",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "aadb8106-b0fe-4900-aa72-a338b6412664",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Let's add a note here: we apply this rule on the subqueries so that the `AdapativeSparkPlanExec` for subqueries share the same `stageCache` with main query's `AdapativeSparkPlanExec`",
+        "createdAt" : "2019-05-31T14:41:40Z",
+        "updatedAt" : "2019-06-15T01:12:56Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e2651049c408f211b225f40c93adf5b741b14eb4",
+    "line" : 123,
+    "diffHunk" : "@@ -1,1 +121,125 @@    // Apply the same instance of this rule to sub-queries so that sub-queries all share the\n    // same `stageCache` for Exchange reuse.\n    val adaptivePlan = this.apply(queryExec.sparkPlan)\n    if (!adaptivePlan.isInstanceOf[AdaptiveSparkPlanExec]) {\n      throw SubqueryAdaptiveNotSupportedException(plan)"
   }
 ]

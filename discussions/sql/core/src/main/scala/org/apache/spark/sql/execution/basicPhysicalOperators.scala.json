@@ -163,5 +163,71 @@
     "commit" : "29d135c3c0f9873541b4a8a574c5467de8c285c5",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +617,621 @@  }\n\n  def addExtraInfo: RDD[InternalRow] => RDD[InternalRow] = {\n    _.setExtraInfo(s\"Union(${output.mkString(\", \")})\")\n  }"
+  },
+  {
+    "id" : "125f7936-3138-4c63-8741-7c90e3cbd8ec",
+    "prId" : 24765,
+    "prUrl" : "https://github.com/apache/spark/pull/24765#pullrequestreview-244602516",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "03f049aa-9147-48d2-bcaa-88a70227dda9",
+        "parentId" : null,
+        "authorId" : "a11722a8-ecfa-4827-88e3-4d708f023846",
+        "body" : "I found the old code here to be slightly confusing because it seemed to be using `notNullPreds` for two different purposes:\r\n\r\n1. If we see `IsNotNull` conjuncts in the filter then evaluate them first / earlier because (a) these expressions are cheap to evaluate and may allow for short-circuiting and skipping more expensive expressions, and (b) evaluating these earlier allows other expressions to omit null checks (for example, if we have `IsNotNull(x)` and `x * 100 < 10` then we _already_ implicitly need to null-check `x` as part of the second expression so we might as well do the explicit null check expression first).\r\n2. Given that tuples have successfully passed through the filter, we can rely on the presence of `IsNotNull` checks to default subsequent expressions' null checks to `false`. For example, let's say we had a `.filter().select()` which gets compiled into a single whole stage codegen: after tuples have passed through the filter we know that certain fields cannot possibly be null, so we can elide null checks _at codegen time_ by just setting `nullable = false` in subsequent code.\r\n\r\nThere might be some subtleties related in (1) related to non-deterministic expressions, but I think that's accounted for further down at the place where we're actually generating the checks.\r\n\r\nIn the old code, the `(notNullPreds, otherPreds)` on this line was being used for both purposes: for (1) I think we could simply collect _all_ `IsNotNull` expressions, but the existing implementation of (2) relied on the additional `nullIntolerant` / `a.references` checks in order to be correct.\r\n\r\nIn this PR, I've separated these two usages: the \"update nullability for downstream operators\" now uses the more precise condition implemented in `getImpliedNotNullExprIds`, while the \"optimize short-circuiting\" simply checks for `IsNotNull` and ignores child attributes.",
+        "createdAt" : "2019-06-01T21:53:28Z",
+        "updatedAt" : "2019-06-01T22:15:44Z",
+        "lastEditedBy" : "a11722a8-ecfa-4827-88e3-4d708f023846",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a10632fea46e102226b771793a3df8ff733768be",
+    "line" : 3,
+    "diffHunk" : "@@ -1,1 +89,93 @@\n  // Split out all the IsNotNulls from condition.\n  private val (notNullPreds, otherPreds) = splitConjunctivePredicates(condition).partition {\n    case IsNotNull(_) => true\n    case _ => false"
+  },
+  {
+    "id" : "5079c833-18ed-43f4-8a1a-cda6e7cd3ac7",
+    "prId" : 24759,
+    "prUrl" : "https://github.com/apache/spark/pull/24759#pullrequestreview-278392056",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "dd2eb453-2465-40a9-bae6-820ee7e85b07",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "why do we need this if?",
+        "createdAt" : "2019-08-21T13:25:18Z",
+        "updatedAt" : "2019-08-26T07:56:18Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3523c907-a551-42ad-aff7-4d7ab4b4e304",
+        "parentId" : "dd2eb453-2465-40a9-bae6-820ee7e85b07",
+        "authorId" : "a2fcc15e-a51a-42f0-87a6-137048a28e30",
+        "body" : "@cloud-fan Oh.. because we don't show these SubqueryExec ops in the new format. Here is an example:\r\n** SQL **\r\n```\r\nexplain select * from explain_temp1 where key = (select max(key) from explain_temp2);\r\n```\r\n** Old output **\r\n```\r\n== Physical Plan ==\r\n*(1) Project [key#33776, val#33777]\r\n+- *(1) Filter (isnotnull(key#33776) AND (key#33776 = Subquery scalar-subquery#33790))\r\n   :  +- Subquery scalar-subquery#33790\r\n   :     +- *(2) HashAggregate(keys=[], functions=[max(key#33778)])\r\n   :        +- Exchange SinglePartition, true\r\n   :           +- *(1) HashAggregate(keys=[], functions=[partial_max(key#33778)])\r\n   :              +- *(1) ColumnarToRow\r\n   :                 +- FileScan parquet default.explain_temp2[key#33778] Batched: true, DataFilters: [], Format: Parquet, Location: InMemoryFileIndex[file:/user/hive/warehouse/explain_temp2], PartitionFilters: [], PushedFilters: [], ReadSchema: struct<key:int>\r\n   +- *(1) ColumnarToRow\r\n      +- FileScan parquet default.explain_temp1[key#33776,val#33777] Batched: true, DataFilters: [isnotnull(key#33776)], Format: Parquet, Location: InMemoryFileIndex[file:/user/hive/warehouse/explain_temp1], PartitionFilters: [], PushedFilters: [IsNotNull(key)], ReadSchema: struct<key:int,val:int>\r\n\r\n```\r\nThe line  `Subquery scalar-subquery#33790` does not show up in the new plan as we only show the actual plan and not the containing operator.",
+        "createdAt" : "2019-08-22T00:26:57Z",
+        "updatedAt" : "2019-08-26T07:56:18Z",
+        "lastEditedBy" : "a2fcc15e-a51a-42f0-87a6-137048a28e30",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2a2bd113-4d6f-46ca-9c39-9403c5fa38d7",
+        "parentId" : "dd2eb453-2465-40a9-bae6-820ee7e85b07",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "can you add some comments to briefly explain it?",
+        "createdAt" : "2019-08-22T12:46:20Z",
+        "updatedAt" : "2019-08-26T07:56:18Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "f401175f7bd0e94db1722653734b92c9db57a779",
+    "line" : 58,
+    "diffHunk" : "@@ -1,1 +716,720 @@     * excluded from the main plan.\n     */\n    if (!printNodeId) {\n      super.generateTreeString(\n        depth,"
   }
 ]

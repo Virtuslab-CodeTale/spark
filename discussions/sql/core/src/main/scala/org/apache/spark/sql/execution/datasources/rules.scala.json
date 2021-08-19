@@ -229,5 +229,49 @@
     "commit" : "3e2949131a8a7579149a7dd4153650461f5b5da2",
     "line" : 18,
     "diffHunk" : "@@ -1,1 +362,366 @@      DDLPreprocessingUtils.castAndRenameQueryOutput(insert.query, expectedColumns, conf)\n    } else {\n      val errors = new mutable.ArrayBuffer[String]()\n      val resolved = insert.query.output.zip(expectedColumns).flatMap {\n        case (queryExpr, tableAttr) =>"
+  },
+  {
+    "id" : "fa9a51a1-9b3d-4eeb-8b34-7dc294864789",
+    "prId" : 24741,
+    "prUrl" : "https://github.com/apache/spark/pull/24741#pullrequestreview-246318398",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "671efac7-f651-46b7-84bf-1dd5cbd46e23",
+        "parentId" : null,
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "This is a separate problem, but could you also file an issue to fix this rule? This relies on rule ordering for correctness because it will convert any 2-part identifier to a SQL-on-file plan if the namespace is also a DataSource name. This should additionally check that the path either looks like a path (contains `/`) or exists in some file system.",
+        "createdAt" : "2019-06-05T17:20:40Z",
+        "updatedAt" : "2019-06-13T01:41:28Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c707e25b-fc79-4264-8add-a79846c3a18a",
+        "parentId" : "671efac7-f651-46b7-84bf-1dd5cbd46e23",
+        "authorId" : "f5b3f57a-75a6-496c-af94-c32580ada13a",
+        "body" : "Sounds good.\r\n\r\nWhat should be the expected behavior for this test in sql.SQLQuerySuite.\"run sql directly on files\"?\r\n```\r\n    e = intercept[AnalysisException] {\r\n      sql(\"select * from json.invalid_file\")\r\n    }\r\n    assert(e.message.contains(\"Path does not exist\"))\r\n```",
+        "createdAt" : "2019-06-06T00:20:44Z",
+        "updatedAt" : "2019-06-13T01:41:28Z",
+        "lastEditedBy" : "f5b3f57a-75a6-496c-af94-c32580ada13a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "faee8630-028d-46f5-a894-5834a864a7eb",
+        "parentId" : "671efac7-f651-46b7-84bf-1dd5cbd46e23",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "I think it should be that the table could not be found. If there were some way to determine that it is a path, like checking for `/`, then that message would be correct. So it could be updated to this:\r\n\r\n```scala\r\n    e = intercept[AnalysisException] {\r\n      sql(\"select * from json.`/invalid_file`\")\r\n    }\r\n    assert(e.message.contains(\"Path does not exist\"))\r\n```",
+        "createdAt" : "2019-06-06T00:25:14Z",
+        "updatedAt" : "2019-06-13T01:41:28Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b8cdf6c22172585b3b3a9452d5e4d2d591ece88e",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +38,42 @@class ResolveSQLOnFile(sparkSession: SparkSession) extends Rule[LogicalPlan] {\n  private def maybeSQLFile(u: UnresolvedRelation): Boolean = {\n    sparkSession.sessionState.conf.runSQLonFile && u.multipartIdentifier.size == 2\n  }\n"
   }
 ]

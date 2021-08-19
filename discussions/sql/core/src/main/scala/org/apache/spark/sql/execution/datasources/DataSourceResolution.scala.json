@@ -394,5 +394,126 @@
     "commit" : "cff78a16e691917e812b4cd63bf7544a54af4742",
     "line" : 22,
     "diffHunk" : "@@ -1,1 +101,105 @@    case DescribeColumnStatement(\n        CatalogObjectIdentifier(Some(catalog), ident), colName, isExtended) =>\n      throw new AnalysisException(\"Describing columns is not supported for v2 tables.\")\n\n    case DescribeTableStatement("
+  },
+  {
+    "id" : "c15917f8-a603-43cc-b0a5-e5390616b1e9",
+    "prId" : 24768,
+    "prUrl" : "https://github.com/apache/spark/pull/24768#pullrequestreview-252915069",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3a7d7f8b-708f-42ff-a6eb-fa22cb593f9d",
+        "parentId" : null,
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "Should it be default catalog instead of session catalog here? Or do you mean it should be V1 table here. It would be good to have some comments.",
+        "createdAt" : "2019-06-13T16:01:52Z",
+        "updatedAt" : "2019-07-09T17:36:34Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6ccf3501-3472-4d66-acbc-235d4ff9911b",
+        "parentId" : "3a7d7f8b-708f-42ff-a6eb-fa22cb593f9d",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "I've updated this:\r\n\r\n```\r\n  // the identifier had no catalog and no default catalog is set, but the source is\r\n  // use the v2 session catalog, which delegates to the global v1 session catalog\r\n```",
+        "createdAt" : "2019-06-21T16:21:18Z",
+        "updatedAt" : "2019-07-09T17:36:34Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4169a8760d6e358914071460c91f381d4ae89b0b",
+    "line" : 59,
+    "diffHunk" : "@@ -1,1 +69,73 @@          // the identifier had no catalog and no default catalog is set, but the source is v2.\n          // use the v2 session catalog, which delegates to the global v1 session catalog\n          convertCreateTable(v2SessionCatalog.asTableCatalog, identifier, create)\n      }\n"
+  },
+  {
+    "id" : "2a02b9b5-c7f9-4018-bea6-6786c2d42d1e",
+    "prId" : 24768,
+    "prUrl" : "https://github.com/apache/spark/pull/24768#pullrequestreview-257201769",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7472d2a0-6541-4474-b834-ee9e21fcce02",
+        "parentId" : null,
+        "authorId" : "1f3c66ec-cc36-4a64-807a-476c6615e68c",
+        "body" : "I don't know if there's anything to do about it in this PR, and maybe I'm misunderstanding, but I'm very concerned if we're inferring which catalogs do or don't exist based only on the shape of the query plan. Ideally we should be able to interpret query plans without needing to think about which catalogs exist, and directly check in the rare situations where it does matter.",
+        "createdAt" : "2019-07-02T20:37:13Z",
+        "updatedAt" : "2019-07-09T17:36:34Z",
+        "lastEditedBy" : "1f3c66ec-cc36-4a64-807a-476c6615e68c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "feda90b1-5802-415f-9883-4feabf99546d",
+        "parentId" : "7472d2a0-6541-4474-b834-ee9e21fcce02",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "Catalog existence is independent. A catalog exists if it is defined in Spark's configuration properties, `spark.sql.catalog.name=<implementation-class>`.\r\n\r\nAs far as the ability to interpret plans without knowing which catalogs exist, that would require being able to know which part of an identifier refers to a catalog up front. That means either always requiring a catalog, or always requiring a certain number of identifier parts. Because the need was to support external catalogs with an unknown number of namespaces and to provide backward compatibility with existing tables (e.g. the identifier `db.table` without a catalog), we need to look up the first identifier to check whether it is a catalog.\r\n\r\nI can give you more context if you'd like, but this decision was carefully considered and not really something we should revisit at this point.",
+        "createdAt" : "2019-07-02T21:12:40Z",
+        "updatedAt" : "2019-07-09T17:36:34Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7dede293-9f18-45e8-88c2-e91cd05c2563",
+        "parentId" : "7472d2a0-6541-4474-b834-ee9e21fcce02",
+        "authorId" : "1f3c66ec-cc36-4a64-807a-476c6615e68c",
+        "body" : "I agree with the design goals you're describing, and agree that we shouldn't revisit that decision here. (Even if I had a better solution in mind, which I don't.)\r\n\r\nI'm still confused about the \"there is no default v2 catalog\" part, though. How do we know that a CreateTableStatement matching this case can't exist when there's a default v2 catalog?",
+        "createdAt" : "2019-07-02T22:59:59Z",
+        "updatedAt" : "2019-07-09T17:36:34Z",
+        "lastEditedBy" : "1f3c66ec-cc36-4a64-807a-476c6615e68c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f5ebdf67-296b-4ebd-bcb0-fa668b708b52",
+        "parentId" : "7472d2a0-6541-4474-b834-ee9e21fcce02",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "After this PR, the rules to determine the catalog responsible for an identifier are:\r\n\r\n1. If the identifier starts with a known catalog, use it\r\n2. If there is a configured default v2 catalog, use that catalog\r\n3. Otherwise, the session catalog is responsible for the identifier\r\n\r\nRules 1 and 2 are implemented in the `AsTableIdentifier` and `CatalogObjectIdentifier` extractors. So `AsTableIdentifier` is not going to match and convert to a v1 identifier if a v2 catalog is responsible for the table. In those cases, `CatalogObjectIdentifier` will always return a catalog and an `Identifier`.\r\n\r\nIf the session catalog is responsible for the identifier, then Spark needs to determine whether it should use the session catalog directly, or if it needs to use a v2 plan that uses the `V2SessionCatalog` because the source is v2. That's what the `V1WriteProvider` matcher determines.\r\n\r\nSo putting all of that together, we get that this rule will match when the source is v1 (use the session catalog directly), the identifier has no catalog (rule 1 is not the case), and there is no default v2 catalog (rule 2 is not the case).\r\n",
+        "createdAt" : "2019-07-02T23:47:00Z",
+        "updatedAt" : "2019-07-09T17:36:34Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4169a8760d6e358914071460c91f381d4ae89b0b",
+    "line" : 36,
+    "diffHunk" : "@@ -1,1 +52,56 @@        AsTableIdentifier(table), schema, partitionCols, bucketSpec, properties,\n        V1WriteProvider(provider), options, location, comment, ifNotExists) =>\n      // the source is v1, the identifier has no catalog, and there is no default v2 catalog\n      val tableDesc = buildCatalogTable(table, schema, partitionCols, bucketSpec, properties,\n        provider, options, location, comment, ifNotExists)"
+  },
+  {
+    "id" : "4addc74f-c60a-4ce7-ab4d-645e0194f0a9",
+    "prId" : 24723,
+    "prUrl" : "https://github.com/apache/spark/pull/24723#pullrequestreview-245562355",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1bc31d4a-ce12-4171-b2af-5f70f5a19a6f",
+        "parentId" : null,
+        "authorId" : "43998e22-6c2f-401d-9914-8cecf6fad929",
+        "body" : "`AlterTableAlterColumnStatement` is missing?",
+        "createdAt" : "2019-06-04T11:30:49Z",
+        "updatedAt" : "2019-06-04T19:04:01Z",
+        "lastEditedBy" : "43998e22-6c2f-401d-9914-8cecf6fad929",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bae59c3c-ea10-4c8e-82c0-89c50ed76e8a",
+        "parentId" : "1bc31d4a-ce12-4171-b2af-5f70f5a19a6f",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "Nothing implements `AlterTableAlterColumnStatement`. This PR preserves existing behavior and updates the parser, it does not add new behavior.",
+        "createdAt" : "2019-06-04T16:29:38Z",
+        "updatedAt" : "2019-06-04T19:04:01Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "bd7d8c8f7c6a2c378deba5927c96a8eb4dc6ef54",
+    "line" : 39,
+    "diffHunk" : "@@ -1,1 +118,122 @@        if newColumns.forall(_.name.size == 1) =>\n      // only top-level adds are supported using AlterTableAddColumnsCommand\n      AlterTableAddColumnsCommand(table, newColumns.map(convertToStructField))\n  }\n"
   }
 ]

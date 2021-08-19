@@ -64,5 +64,104 @@
     "commit" : "6154bf486e68dbb5a4c16dc9e71030cc20d8ca58",
     "line" : 102,
     "diffHunk" : "@@ -1,1 +320,324 @@    assert(monitor.timedOutExecutors(shuffleDeadline) === Seq(\"1\"))\n\n    // Clean up the shuffles, executor now should now time out at the idle deadline.\n    monitor.shuffleCleaned(0)\n    assert(monitor.timedOutExecutors(idleDeadline).isEmpty)"
+  },
+  {
+    "id" : "cf0030d0-0350-44e4-922b-25e5607c3b41",
+    "prId" : 24704,
+    "prUrl" : "https://github.com/apache/spark/pull/24704#pullrequestreview-243867248",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "63e7ca1a-dab9-4482-853e-14b78a975e40",
+        "parentId" : null,
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "set the monitor back at the end of this test (will be pretty confusing if somebody tries to add another test after this one otherwise)",
+        "createdAt" : "2019-05-29T18:39:48Z",
+        "updatedAt" : "2019-06-05T01:27:44Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "df241528-07df-472a-88d3-9d7d7e96c94a",
+        "parentId" : "63e7ca1a-dab9-4482-853e-14b78a975e40",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Not sure what you mean? The monitor is re-initialized for each test.",
+        "createdAt" : "2019-05-29T20:36:23Z",
+        "updatedAt" : "2019-06-05T01:27:44Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "67a5ac2d-fcd7-4ba6-a7a1-2e49210a2f6b",
+        "parentId" : "63e7ca1a-dab9-4482-853e-14b78a975e40",
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "ooops my fault.",
+        "createdAt" : "2019-05-30T15:37:25Z",
+        "updatedAt" : "2019-06-05T01:27:44Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9ae62d930aec531c5c19a718a76ea4ac01c2695d",
+    "line" : 208,
+    "diffHunk" : "@@ -1,1 +206,210 @@\n    conf.set(SHUFFLE_SERVICE_ENABLED, true).set(SHUFFLE_SERVICE_FETCH_RDD_ENABLED, true)\n    monitor = new ExecutorMonitor(conf, client, clock)\n\n    monitor.onExecutorAdded(SparkListenerExecutorAdded(clock.getTimeMillis(), \"1\", null))"
+  },
+  {
+    "id" : "cef03294-7ea2-4bfc-a700-7758536afb03",
+    "prId" : 24704,
+    "prUrl" : "https://github.com/apache/spark/pull/24704#pullrequestreview-244460394",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2fd22c72-4210-48ba-b39e-b1377bb76f4c",
+        "parentId" : null,
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "from @dhruve 's comment above, I realized it might be good to add to this test case a bit:\r\n\r\n```scala\r\n    // if we get an unpersist event much later, which moves an executor from having cached blocks\r\n    // to no longer having cached blocks, we still know the timeout from the original time the\r\n    // executor went idle\r\n    clock.setTime(idleDeadline)\r\n...\r\n```",
+        "createdAt" : "2019-05-31T16:51:41Z",
+        "updatedAt" : "2019-06-05T01:27:44Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0b371b60-fc2e-4022-8a43-ef697b624dff",
+        "parentId" : "2fd22c72-4210-48ba-b39e-b1377bb76f4c",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Actually the `clock.setTime()` is not needed, because the `timedOutExecutors` call here is a test-specific one that takes the time as a parameter.\r\n\r\nBut I'll add the comment.",
+        "createdAt" : "2019-05-31T18:36:20Z",
+        "updatedAt" : "2019-06-05T01:27:44Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9ae62d930aec531c5c19a718a76ea4ac01c2695d",
+    "line" : 162,
+    "diffHunk" : "@@ -1,1 +160,164 @@    // originally went idle.\n    clock.setTime(idleDeadline)\n    monitor.onUnpersistRDD(SparkListenerUnpersistRDD(2))\n    assert(monitor.timedOutExecutors(clock.getTimeMillis()) === Seq(\"1\"))\n  }"
+  },
+  {
+    "id" : "100d605f-13f8-49b2-b37d-3e961c4e7f5a",
+    "prId" : 24704,
+    "prUrl" : "https://github.com/apache/spark/pull/24704#pullrequestreview-244515974",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2610201d-7ebb-49e8-a29a-6c5f565eb404",
+        "parentId" : null,
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "a brief comment here would be helpful, eg. \"The scheduler only kills some of the executors we asked it to (eg. because another task just started there, but really for whatever reason the scheduler feels like).  Make sure the timedOut list gets updated appropriately.\"",
+        "createdAt" : "2019-05-31T20:59:15Z",
+        "updatedAt" : "2019-06-05T01:27:44Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9ae62d930aec531c5c19a718a76ea4ac01c2695d",
+    "line" : 242,
+    "diffHunk" : "@@ -1,1 +240,244 @@    // Notify that only a subset of executors was killed, to mimic the case where the scheduler\n    // refuses to kill an executor that is busy for whatever reason the monitor hasn't detected yet.\n    monitor.executorsKilled(Seq(\"1\"))\n    assert(monitor.timedOutExecutors().toSet === Set(\"2\", \"3\"))\n    assert(monitor.pendingRemovalCount === 1)"
   }
 ]

@@ -207,5 +207,104 @@
     "commit" : "2cce2fa9e057cb379e628fe01ea2cef280a9b198",
     "line" : 12,
     "diffHunk" : "@@ -1,1 +94,98 @@  }\n\n  /**\n   * Generate [[ColumnVector]] expressions for our parent to consume as rows.\n   * This is called once per [[ColumnVector]] in the batch."
+  },
+  {
+    "id" : "3cd89b12-74fb-4d17-8991-047394a78cbf",
+    "prId" : 24795,
+    "prUrl" : "https://github.com/apache/spark/pull/24795#pullrequestreview-246777630",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6f665492-9ae3-4a08-82dd-7d4137e95c5c",
+        "parentId" : null,
+        "authorId" : "99e31844-a5b3-48a2-af71-412edb607a13",
+        "body" : "Are `pre` and `post` appropriate naming, in particular, `pre`?  IIUC correctly, `pre` is a mandatory function for columnar processing and `post` is an optional function to optimize columnars or to clean up resources. To me, a pair of `pre` and `post` looks dual. (Of course, I am not a native English speaker).\r\n\r\nIn addition, can you create a test case using `ColunarRule` (for example, a simplified version of [this](https://gist.github.com/revans2/c3cad77075c4fa5d9d271308ee2f1b1d), but use `pre` and `post`)? It would help understanding of reviewers and can ensure the behavior of this API.",
+        "createdAt" : "2019-06-06T18:58:48Z",
+        "updatedAt" : "2019-06-21T14:22:17Z",
+        "lastEditedBy" : "99e31844-a5b3-48a2-af71-412edb607a13",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b79de028-71de-466b-a16f-772cbaeec4c9",
+        "parentId" : "6f665492-9ae3-4a08-82dd-7d4137e95c5c",
+        "authorId" : "b19fe247-920f-40ae-83e7-6b8ec9979f6b",
+        "body" : "For me `pre` and `post` made since in relation to the comments, but perhaps not standalone. I'll see if I can make them more descriptive.  I'll also add in a test.",
+        "createdAt" : "2019-06-06T19:44:44Z",
+        "updatedAt" : "2019-06-21T14:22:17Z",
+        "lastEditedBy" : "b19fe247-920f-40ae-83e7-6b8ec9979f6b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7f1753db2d15186399e5ef9d7ef88b2bc7eedf67",
+    "line" : 47,
+    "diffHunk" : "@@ -1,1 +45,49 @@ * memory.\n */\nclass ColumnarRule {\n  def preColumnarTransitions: Rule[SparkPlan] = plan => plan\n  def postColumnarTransitions: Rule[SparkPlan] = plan => plan"
+  },
+  {
+    "id" : "4c07664b-6a60-4e98-a4c9-8253260544f6",
+    "prId" : 24795,
+    "prUrl" : "https://github.com/apache/spark/pull/24795#pullrequestreview-250465701",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "48b6aa06-12fb-4784-85e0-5db6e42461de",
+        "parentId" : null,
+        "authorId" : "0c293c45-22a6-4358-8a40-adbf7c470575",
+        "body" : "Could this be used as a generalized replacement for `ArrowWriter` in ArrowWriter.scala, which writes to ArrowColumnVectors?",
+        "createdAt" : "2019-06-14T22:55:52Z",
+        "updatedAt" : "2019-06-21T14:22:17Z",
+        "lastEditedBy" : "0c293c45-22a6-4358-8a40-adbf7c470575",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a9123f19-2b52-4e13-81da-dd76246ccb6e",
+        "parentId" : "48b6aa06-12fb-4784-85e0-5db6e42461de",
+        "authorId" : "b19fe247-920f-40ae-83e7-6b8ec9979f6b",
+        "body" : "That is the eventual goal.  In this patch, I wanted the code to not replace any existing code to keep the possible impacts smaller.  \r\n\r\nI am currently working on a separate patch to replace ColumnarBatchScan with ColumnarToRowExec.  The patch is mostly just updating tests to match the new pattern, but I also want to run a lot of benchmark code to be sure that I didn't regress anything.\r\n\r\nAfter that, I was going to start working on the various APIs that use arrow data behind the scenes to process data, R, Python, etc.  That is likely to have a larger impact because the code that does those transitions is spread through a lot more files.  I also don't want to get too far ahead of myself as this patch all of them would be based off of is not even in yet.  ",
+        "createdAt" : "2019-06-17T12:34:24Z",
+        "updatedAt" : "2019-06-21T14:22:17Z",
+        "lastEditedBy" : "b19fe247-920f-40ae-83e7-6b8ec9979f6b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7f1753db2d15186399e5ef9d7ef88b2bc7eedf67",
+    "line" : 237,
+    "diffHunk" : "@@ -1,1 +235,239 @@ * [[WritableColumnVector]].\n */\nprivate object RowToColumnConverter {\n  private abstract class TypeConverter extends Serializable {\n    def append(row: SpecializedGetters, column: Int, cv: WritableColumnVector): Unit"
+  },
+  {
+    "id" : "19277dcc-a127-46b6-8a52-f393c548eb3e",
+    "prId" : 24795,
+    "prUrl" : "https://github.com/apache/spark/pull/24795#pullrequestreview-252796146",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "226c5dab-fbfb-4771-bf4b-f703427ff5d5",
+        "parentId" : null,
+        "authorId" : "a269db99-bf49-44c7-9b33-056e49f21bc5",
+        "body" : "I still don't understand - why do we need ColumnarRule, i.e. any rule that's column specific?",
+        "createdAt" : "2019-06-21T04:36:36Z",
+        "updatedAt" : "2019-06-21T14:22:17Z",
+        "lastEditedBy" : "a269db99-bf49-44c7-9b33-056e49f21bc5",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c3bf3d74-6bc5-4dcb-b27c-b08f2be7f253",
+        "parentId" : "226c5dab-fbfb-4771-bf4b-f703427ff5d5",
+        "authorId" : "b19fe247-920f-40ae-83e7-6b8ec9979f6b",
+        "body" : "@rxin \r\nAs I explained [before](https://github.com/apache/spark/pull/24795#issuecomment-499960263) there needs to be at least one rule that operates on the entire physical `SparkPlan` after the exchanges have been inserted into the plan.\r\n\r\nHaving two rules, one that runs prior to inserting columnar transitions and one that runs after it makes it so a plugin does not have to duplicate code for inserting columnar transitions and provides a cleaner API for anyone trying to insert columnar processing, but that is relatively minor.\r\n\r\nIf you want me to split `ColumnarRule` up and rename the individual parts to not be columnar specific I am happy to do it.  If you want me to make it a single rule that runs prior to code generation I can make that work too.  Just let me know which of the two changes you would prefer, and I will make it happen.",
+        "createdAt" : "2019-06-21T12:29:38Z",
+        "updatedAt" : "2019-06-21T14:22:17Z",
+        "lastEditedBy" : "b19fe247-920f-40ae-83e7-6b8ec9979f6b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "7f1753db2d15186399e5ef9d7ef88b2bc7eedf67",
+    "line" : 37,
+    "diffHunk" : "@@ -1,1 +35,39 @@\n/**\n * Holds a user defined rule that can be used to inject columnar implementations of various\n * operators in the plan. The [[preColumnarTransitions]] [[Rule]] can be used to replace\n * [[SparkPlan]] instances with versions that support a columnar implementation. After this"
   }
 ]

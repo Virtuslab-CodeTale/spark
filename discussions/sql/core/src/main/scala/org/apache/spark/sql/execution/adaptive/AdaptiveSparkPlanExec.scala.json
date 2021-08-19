@@ -1450,5 +1450,236 @@
     "commit" : "f5702810ac5e925e998331029f6927cfc94448e3",
     "line" : 22,
     "diffHunk" : "@@ -1,1 +127,131 @@        val id = idStr.toLong\n        val qe = SQLExecution.getQueryExecution(id)\n        if (qe.eq(queryExecution)) Some(id) else None\n      }\n      var currentLogicalPlan = currentPhysicalPlan.logicalLink.get"
+  },
+  {
+    "id" : "48d05bc8-1fce-4fac-9bf6-0624dd7e2335",
+    "prId" : 24706,
+    "prUrl" : "https://github.com/apache/spark/pull/24706#pullrequestreview-243880511",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4624f587-0a22-4b45-ae05-d30f548139e3",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "It sounds a little weird that the stages are independent and executing them in order by their dependencies.",
+        "createdAt" : "2019-05-25T02:59:46Z",
+        "updatedAt" : "2019-06-15T01:12:56Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "09785c49-0528-4218-968c-97f1b93e42cb",
+        "parentId" : "4624f587-0a22-4b45-ae05-d30f548139e3",
+        "authorId" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "body" : "Are you saying the wording is no good? Any suggestions?",
+        "createdAt" : "2019-05-28T16:23:12Z",
+        "updatedAt" : "2019-06-15T01:12:56Z",
+        "lastEditedBy" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bfa09d2b-c6d3-4969-bd71-2fc03a71b5a6",
+        "parentId" : "4624f587-0a22-4b45-ae05-d30f548139e3",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Just remove `independent`? As they are run by some dependencies, sounds like they're not really independent.",
+        "createdAt" : "2019-05-30T16:01:16Z",
+        "updatedAt" : "2019-06-15T01:12:56Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e2651049c408f211b225f40c93adf5b741b14eb4",
+    "line" : 45,
+    "diffHunk" : "@@ -1,1 +43,47 @@/**\n * A root node to execute the query plan adaptively. It splits the query plan into independent\n * stages and executes them in order according to their dependencies. The query stage\n * materializes its output at the end. When one stage completes, the data statistics of the\n * materialized output will be used to optimize the remainder of the query."
+  },
+  {
+    "id" : "ec1a1364-d0d1-40e3-b667-4653b2e8a049",
+    "prId" : 24706,
+    "prUrl" : "https://github.com/apache/spark/pull/24706#pullrequestreview-242796089",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1263f5f4-7328-4f35-aa3f-6a8fa6d6297e",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "I think the plan node is updated by:\r\n\r\n```scala\r\nval newLogicalPlan = currentLogicalPlan.transformDown {\r\n  case p if p.eq(logicalNode) => newLogicalNode\r\n}\r\n```\r\n\r\nThe `logicalNode` should be `logicalLink` of `oldNode` and `oldNode` is `Xchg`. Why isn't `child` be transformed, but the whole `Agg-child`?",
+        "createdAt" : "2019-05-25T05:26:27Z",
+        "updatedAt" : "2019-06-15T01:12:56Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5fe04a64-ce27-49b0-8b80-7be9adcc03bb",
+        "parentId" : "1263f5f4-7328-4f35-aa3f-6a8fa6d6297e",
+        "authorId" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "body" : "The reason is simple: Which logical node does Xchg correspond to? None. And in case of an Aggregate, you can't even find a whole sub-tree in the logical plan that corresponds to the Xchg.\r\n\r\nPlease also refer to https://github.com/apache/spark/pull/24706#discussion_r288200042",
+        "createdAt" : "2019-05-28T16:50:47Z",
+        "updatedAt" : "2019-06-15T01:12:56Z",
+        "lastEditedBy" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e2651049c408f211b225f40c93adf5b741b14eb4",
+    "line" : 303,
+    "diffHunk" : "@@ -1,1 +301,305 @@   *                    child\n   *    The updated plan node will be:\n   *    LogicalQueryStage(HashAgg - Stage1)\n   */\n  private def updateLogicalPlan("
+  },
+  {
+    "id" : "1c5b6e49-5cc9-49e0-9c5d-16fc69563e55",
+    "prId" : 24706,
+    "prUrl" : "https://github.com/apache/spark/pull/24706#pullrequestreview-243347472",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a2a074c6-aa72-4187-a191-c327a928c493",
+        "parentId" : null,
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "I think it is kind of weird that we are defining a `nextMsg` and that we are not really using it. How about:\r\n```scala\r\nval newStageEvents = new util.ArrayList[StageMaterializationEvent]\r\nnewStageEvents.add(events.take())\r\nevents.drainTo(newStageEvents)\r\nnewStageEvents.asScala.foreach {\r\n  ...\r\n}\r\n```",
+        "createdAt" : "2019-05-29T07:35:44Z",
+        "updatedAt" : "2019-06-15T01:12:56Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7ca44213-3766-43a9-b7e7-1d7fb14e8971",
+        "parentId" : "a2a074c6-aa72-4187-a191-c327a928c493",
+        "authorId" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "body" : "That'll work too. But `nextMsg` is used in the current impl, otherwise the whole thing wouldn't work:\r\nhttps://github.com/apache/spark/pull/24706/files/1c665d2e616a7c6ffc79c8be8307c9f3ff503b23#diff-6954dd8020a9ca298f1fb9602c0e831cR98.",
+        "createdAt" : "2019-05-29T15:39:12Z",
+        "updatedAt" : "2019-06-15T01:12:56Z",
+        "lastEditedBy" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e2651049c408f211b225f40c93adf5b741b14eb4",
+    "line" : 143,
+    "diffHunk" : "@@ -1,1 +141,145 @@        // new stages can be created. There might be other stages that finish at around the same\n        // time, so we process those stages too in order to reduce re-planning.\n        val nextMsg = events.take()\n        val rem = new util.ArrayList[StageMaterializationEvent]()\n        events.drainTo(rem)"
+  },
+  {
+    "id" : "cc0c3308-e9df-48dc-8af8-aa0e978dacbd",
+    "prId" : 24706,
+    "prUrl" : "https://github.com/apache/spark/pull/24706#pullrequestreview-243349154",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c57c93d9-a064-4278-af46-edc09e022a5c",
+        "parentId" : null,
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "You could move this into the loop.",
+        "createdAt" : "2019-05-29T07:37:13Z",
+        "updatedAt" : "2019-06-15T01:12:56Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0f342cf3-363a-498a-ba6d-f1a8a6a9f2ab",
+        "parentId" : "c57c93d9-a064-4278-af46-edc09e022a5c",
+        "authorId" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "body" : "I'd argue it'll have to be instantiated with every loop, yet used exactly once (when there's sth. wrong).",
+        "createdAt" : "2019-05-29T15:41:51Z",
+        "updatedAt" : "2019-06-15T01:12:56Z",
+        "lastEditedBy" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e2651049c408f211b225f40c93adf5b741b14eb4",
+    "line" : 122,
+    "diffHunk" : "@@ -1,1 +120,124 @@      var result = createQueryStages(currentPhysicalPlan)\n      val events = new LinkedBlockingQueue[StageMaterializationEvent]()\n      val errors = new mutable.ArrayBuffer[SparkException]()\n      while (!result.allChildStagesMaterialized) {\n        currentPhysicalPlan = result.newPlan"
+  },
+  {
+    "id" : "5bac9a4b-651f-4620-a2dd-d2cf5a08a703",
+    "prId" : 24706,
+    "prUrl" : "https://github.com/apache/spark/pull/24706#pullrequestreview-243984219",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "12c57428-514b-4f8e-8810-8253809e73d6",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "if the reused Exchange is already materialized, shall we return allChildStagesMaterialized=true here?",
+        "createdAt" : "2019-05-30T17:38:13Z",
+        "updatedAt" : "2019-06-15T01:12:56Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0a7402c3-3882-4c27-b50c-e3e34cac5630",
+        "parentId" : "12c57428-514b-4f8e-8810-8253809e73d6",
+        "authorId" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "body" : "We could, but we might lose the opportunity of optimization that depends on the stats of a reused stage. And since this exchange reuse is entirely dynamic, choosing to optimize for new stages but not for completed reused stages will make the adaptive plan even less deterministic.",
+        "createdAt" : "2019-05-30T19:28:12Z",
+        "updatedAt" : "2019-06-15T01:12:56Z",
+        "lastEditedBy" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e2651049c408f211b225f40c93adf5b741b14eb4",
+    "line" : 214,
+    "diffHunk" : "@@ -1,1 +212,216 @@          // has been materialized or not. Thus we won't skip re-optimization for a reused stage.\n          CreateStageResult(newPlan = reusedStage,\n            allChildStagesMaterialized = false, newStages = Seq((e, reusedStage)))\n\n        case _ =>"
+  },
+  {
+    "id" : "d64af9c4-308c-4317-a768-803d6d8a5702",
+    "prId" : 24706,
+    "prUrl" : "https://github.com/apache/spark/pull/24706#pullrequestreview-243989860",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d11f6de5-07c1-45d7-9d77-eb65e47060eb",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "wait, the `stageCache` is already updated, is it safe to reuse the query stage that has been removed from `stageCache`?",
+        "createdAt" : "2019-05-30T17:41:30Z",
+        "updatedAt" : "2019-06-15T01:12:56Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "52b82879-710e-4746-8d84-3afaf9a27e86",
+        "parentId" : "d11f6de5-07c1-45d7-9d77-eb65e47060eb",
+        "authorId" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "body" : "This is to try reusing an existing again. And it's for avoiding a big lock on the entire \"create-or-reuse-stage\" block. It works like this:\r\n1. We first try \"getting\" an existing stage for reuse as soon as we see an `Exchange` without going into the node and see if there's any un-materialized child stages. If there's a match, we are happy and will reuse it immediately.\r\n2. If there isn't a match, we keep traversing into the `Exchange` and see if all child stages are ready. If not, we'll just hold back from creating a new stage.\r\n3. If yes, that means we can create a new stage on this `Exchange` now, but there are chances that between step (1) and now, there might be a new stage that can match this `Exchange`. So we do a `getOrElseUpdate` and there can be 2 outcomes:\r\n  a) the returned stage is exactly the new stage used for \"ElseUpdate\", then we just go ahead with the new stage.\r\n  b) otherwise, it's an existing stage that gets put into the `stageCache` between step (1) and now, so let's forget about the new stage we've just created and reuse the existing stage we've found.",
+        "createdAt" : "2019-05-30T19:40:39Z",
+        "updatedAt" : "2019-06-15T01:12:56Z",
+        "lastEditedBy" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e2651049c408f211b225f40c93adf5b741b14eb4",
+    "line" : 228,
+    "diffHunk" : "@@ -1,1 +226,230 @@              val queryStage = stageCache.getOrElseUpdate(e.canonicalized, newStage)\n              if (queryStage.ne(newStage)) {\n                newStage = reuseQueryStage(queryStage, e.output)\n              }\n            }"
+  },
+  {
+    "id" : "181fa950-676f-434b-b9ea-35a63318e78f",
+    "prId" : 24706,
+    "prUrl" : "https://github.com/apache/spark/pull/24706#pullrequestreview-249016694",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e7947f47-6b03-4881-bf91-2f4f8ff1f876",
+        "parentId" : null,
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "This loop body is quite big. We could try to move this into a separate method. ",
+        "createdAt" : "2019-06-12T21:20:57Z",
+        "updatedAt" : "2019-06-15T01:12:56Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e2651049c408f211b225f40c93adf5b741b14eb4",
+    "line" : 154,
+    "diffHunk" : "@@ -1,1 +152,156 @@        }\n\n        // In case of errors, we cancel all running stages and throw exception.\n        if (errors.nonEmpty) {\n          cleanUpAndThrowException(errors)"
   }
 ]

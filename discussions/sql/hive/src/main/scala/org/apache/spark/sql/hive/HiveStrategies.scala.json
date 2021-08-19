@@ -284,5 +284,93 @@
     "commit" : "cfcd0aafedbcaede70f072c7ba156ce6465942b0",
     "line" : 13,
     "diffHunk" : "@@ -1,1 +120,124 @@      // For partitioned tables, the partition directory may be outside of the table directory.\n      // Which is expensive to get table size. Please see how we implemented it in the AnalyzeTable.\n      val sizeInBytes = if (conf.fallBackToHdfsForStatsEnabled && partitionCols.isEmpty) {\n        try {\n          val hadoopConf = session.sessionState.newHadoopConf()"
+  },
+  {
+    "id" : "ba8b878e-e80f-445c-9bf2-0a6038c60e0e",
+    "prId" : 24741,
+    "prUrl" : "https://github.com/apache/spark/pull/24741#pullrequestreview-246153659",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "63016f6f-a02b-4a6d-a4e5-e110a239c8d4",
+        "parentId" : null,
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "This sounds like a separate issue. Could we submit a separate PR? ",
+        "createdAt" : "2019-06-04T22:01:14Z",
+        "updatedAt" : "2019-06-13T01:41:28Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "03bccd6f-ea24-4666-8f78-0c784e164d80",
+        "parentId" : "63016f6f-a02b-4a6d-a4e5-e110a239c8d4",
+        "authorId" : "f5b3f57a-75a6-496c-af94-c32580ada13a",
+        "body" : "This PR prevents lookupTableFromCatalog from throwing NoSuchTableException right away. Instead, it relies on checkAnalysis to throw an exception for UnresolvedRelation.\r\n\r\nThe test hive.SQLQuerySuite.\"double nested data\" would fail in the following sql without this change:\r\n```\r\nCREATE TABLE test_ctas_1234 AS SELECT * from notexists\r\n```\r\nHiveAnalysis gets to run before checkAnalysis, thus exposing this bug where query.output is used before query is resolved.\r\n\r\nSo wouldn't say it is a totally separate issue.\r\nIn addition, outside of this PR, it'd be hard to write a unit test.\r\n",
+        "createdAt" : "2019-06-05T05:18:05Z",
+        "updatedAt" : "2019-06-13T01:41:28Z",
+        "lastEditedBy" : "f5b3f57a-75a6-496c-af94-c32580ada13a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f4358e2c-c4b5-4e1d-9519-e8ffc8c04e08",
+        "parentId" : "63016f6f-a02b-4a6d-a4e5-e110a239c8d4",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "I agree with John. This is needed as a consequence of fixing the `ResolveRelations` rule to no longer throw `AnalysisException` if it can't resolve the name and doesn't think that `ResolveSQLOnFile` would either.",
+        "createdAt" : "2019-06-05T17:34:35Z",
+        "updatedAt" : "2019-06-13T01:41:28Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b8cdf6c22172585b3b3a9452d5e4d2d591ece88e",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +155,159 @@\n    case CreateTable(tableDesc, mode, Some(query))\n        if DDLUtils.isHiveTable(tableDesc) && query.resolved =>\n      CreateHiveTableAsSelectCommand(tableDesc, query, query.output.map(_.name), mode)\n"
+  },
+  {
+    "id" : "7814e2e5-d313-4bb1-97b0-7c93419b8ee8",
+    "prId" : 24741,
+    "prUrl" : "https://github.com/apache/spark/pull/24741#pullrequestreview-249070493",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7de02dc6-f38f-4c50-a628-99988e385f21",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "@jzhuge Like `CREATE`, we need `&& child.resolved` here for `INSERT OVERWRITE LOCAL DIRECTORY`. Please add the same test case accordingly.",
+        "createdAt" : "2019-06-12T23:46:25Z",
+        "updatedAt" : "2019-06-13T01:41:28Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b8cdf6c22172585b3b3a9452d5e4d2d591ece88e",
+    "line" : 9,
+    "diffHunk" : "@@ -1,1 +158,162 @@      CreateHiveTableAsSelectCommand(tableDesc, query, query.output.map(_.name), mode)\n\n    case InsertIntoDir(isLocal, storage, provider, child, overwrite)\n        if DDLUtils.isHiveTable(provider) && child.resolved =>\n      val outputPath = new Path(storage.locationUri.get)"
+  },
+  {
+    "id" : "c49d45aa-7d03-4805-87f7-94c745851e3f",
+    "prId" : 24712,
+    "prUrl" : "https://github.com/apache/spark/pull/24712#pullrequestreview-242072663",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5237b4c6-085a-4f95-9353-2e60042d02da",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Looks if getting size is failed, previously, it used `defaultSizeInBytes` but now `0`. Can you check if it still behaves identically?",
+        "createdAt" : "2019-05-27T02:09:40Z",
+        "updatedAt" : "2019-05-27T02:09:40Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "0dc68b937ceebc79c855104270d3a5f46c96feb4",
+    "line" : 23,
+    "diffHunk" : "@@ -1,1 +119,123 @@      val table = relation.tableMeta\n      val sizeInBytes = if (session.sessionState.conf.fallBackToHdfsForStatsEnabled) {\n        CommandUtils.calculateTotalSize(session, table)\n      } else {\n        BigInt(session.sessionState.conf.defaultSizeInBytes)"
   }
 ]
