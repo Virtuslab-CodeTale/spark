@@ -394,5 +394,71 @@
     "commit" : "fb44905b6eff346919965065bc39da35fa247ef7",
     "line" : 27,
     "diffHunk" : "@@ -1,1 +343,347 @@\n  private def isDataPath(path: Path, stagingDir: String): Boolean = {\n    !path.getName.startsWith(stagingDir) && DataSourceUtils.isDataPath(path)\n  }\n}"
+  },
+  {
+    "id" : "7b801871-82f9-4642-986f-edb842e3ac07",
+    "prId" : 24523,
+    "prUrl" : "https://github.com/apache/spark/pull/24523#pullrequestreview-238421979",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4dffd3da-99f1-4ec6-8dc3-f7e5ea6ae933",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "This module is `sql/core`. We should not have an assumption with `Hive`. Please rename `statsMaybeUpdatedByHive` to more neutral one.\r\n\r\n",
+        "createdAt" : "2019-05-16T01:35:07Z",
+        "updatedAt" : "2019-05-16T01:35:07Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "95145c0b-b844-4492-9f07-68b9934b13d4",
+        "parentId" : "4dffd3da-99f1-4ec6-8dc3-f7e5ea6ae933",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "+1 , I think it's nothing about hive. It's just, we shouldn't call `alterTableStats` if the stats is not changed.",
+        "createdAt" : "2019-05-16T10:27:23Z",
+        "updatedAt" : "2019-05-16T10:27:23Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b52945e2-5da8-4175-90b5-ee25e110825a",
+        "parentId" : "4dffd3da-99f1-4ec6-8dc3-f7e5ea6ae933",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "How about:\r\n```scala\r\n  def updateTableStats(sparkSession: SparkSession, table: CatalogTable): Unit = {\r\n    val catalog = sparkSession.sessionState.catalog\r\n    val statsMaybeUpdatedByExternalCatalog = catalog.getTableMetadata(table.identifier)\r\n    if (statsMaybeUpdatedByExternalCatalog.stats == table.stats) {\r\n      if (sparkSession.sessionState.conf.autoSizeUpdateEnabled) {\r\n        val newSize =\r\n          CommandUtils.calculateTotalSize(sparkSession, statsMaybeUpdatedByExternalCatalog)\r\n        val newStats = CatalogStatistics(sizeInBytes = newSize)\r\n        catalog.alterTableStats(table.identifier, Some(newStats))\r\n      } else if (table.stats.nonEmpty) {\r\n        catalog.alterTableStats(table.identifier, None)\r\n      }\r\n    } else {\r\n      logInfo(\r\n        s\"Skip to update statistics for ${table.qualifiedName} as it updated by external catalog.\")\r\n    }\r\n  }\r\n```",
+        "createdAt" : "2019-05-16T14:15:58Z",
+        "updatedAt" : "2019-05-16T14:15:59Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ac45dc3f2f839526016c4d89f57fc427eb44dbb4",
+    "line" : 11,
+    "diffHunk" : "@@ -1,1 +44,48 @@  def updateTableStats(sparkSession: SparkSession, table: CatalogTable): Unit = {\n    val catalog = sparkSession.sessionState.catalog\n    val statsMaybeUpdatedByHive = catalog.getTableMetadata(table.identifier)\n    if (statsMaybeUpdatedByHive.stats == table.stats) {\n      if (sparkSession.sessionState.conf.autoSizeUpdateEnabled) {"
+  },
+  {
+    "id" : "49bd820c-e0ae-4a9b-971b-d80d386b28b4",
+    "prId" : 24523,
+    "prUrl" : "https://github.com/apache/spark/pull/24523#pullrequestreview-238144026",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9247fcbd-48c6-491a-ad09-c12068c88c28",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "The difference of the statistics doesn't mean the correctness of the stats, does it?",
+        "createdAt" : "2019-05-16T01:37:04Z",
+        "updatedAt" : "2019-05-16T01:37:05Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ac45dc3f2f839526016c4d89f57fc427eb44dbb4",
+    "line" : 21,
+    "diffHunk" : "@@ -1,1 +54,58 @@      }\n    } else {\n      logInfo(s\"Skip to update statistics for ${table.qualifiedName} as it updated by Hive.\")\n    }\n  }"
   }
 ]

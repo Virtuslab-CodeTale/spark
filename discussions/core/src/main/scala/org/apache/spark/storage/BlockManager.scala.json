@@ -1472,5 +1472,60 @@
     "commit" : "7f0f360dfb734c44ed2773c60d340d47b17f33fb",
     "line" : 36,
     "diffHunk" : "@@ -1,1 +994,998 @@   * Release a lock on the given block with explicit TaskContext.\n   * The param `taskContext` should be passed in case we can't get the correct TaskContext,\n   * for example, the input iterator of a cached RDD iterates to the end in a child\n   * thread.\n   */"
+  },
+  {
+    "id" : "222d3597-331e-40ed-8841-c7da59e66046",
+    "prId" : 24554,
+    "prUrl" : "https://github.com/apache/spark/pull/24554#pullrequestreview-236246355",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f6bdd1de-c004-46e9-a4c5-27640642f626",
+        "parentId" : null,
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Imran already commented on this, but it would be good to know what happens if this file disappears after this point. Because `EncryptedManagedBuffer`/`EncryptedBlockData` will not open the file right away, so you may get some exception later, and it would be good to know that the rest of the code will recover properly from that.\r\n\r\n(I guess it wouldn't be worse than getting an `IOException` while reading your own cached block, but doesn't hurt to check.)",
+        "createdAt" : "2019-05-10T18:40:41Z",
+        "updatedAt" : "2019-06-07T17:58:12Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "261fc767a23061844e32b1a7ec0e8fd58c42e12c",
+    "line" : 164,
+    "diffHunk" : "@@ -1,1 +1004,1008 @@      blockSize: Long): Option[ManagedBuffer] = {\n    val file = ExecutorDiskUtils.getFile(localDirs, subDirsPerLocalDir, blockId.name)\n    if (file.exists()) {\n      val mangedBuffer = securityManager.getIOEncryptionKey() match {\n        case Some(key) =>"
+  },
+  {
+    "id" : "0a6051de-e77b-497e-ae0d-d59226072222",
+    "prId" : 24499,
+    "prUrl" : "https://github.com/apache/spark/pull/24499#pullrequestreview-238814473",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "fd523f86-d593-4a67-8f70-59914a35a2d4",
+        "parentId" : null,
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "if you're not using the external shuffle client, where is the shuffle client getting initialized now?",
+        "createdAt" : "2019-05-16T21:31:26Z",
+        "updatedAt" : "2019-05-23T11:27:05Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c77ad462-c62d-41a2-8a1a-3d1a1b341515",
+        "parentId" : "fd523f86-d593-4a67-8f70-59914a35a2d4",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "There were two `init` methods for `BlockTransferService`:\r\n1) One with the `appID` was inherited from `ShuffleClient` and had an empty body:\r\nhttps://github.com/apache/spark/blob/5476f6c078a05d8d2dd31acb513d312c9f28dd2c/common/network-shuffle/src/main/java/org/apache/spark/network/shuffle/ShuffleClient.java#L28-L33\r\n\r\nAnd **I have removed this one** (as it was probably just to avoid an if condition and a casting of `externalShuffleClient` to `ExternalShuffleClient` but now we have the if condition within the `Option[ExternalShuffleClient]`).\r\n\r\n2) The other `init` is: `org.apache.spark.network.BlockTransferService#init` which gets a `BlockDataManager`. This one is called right before your comment in the line 397 (new numbering):\r\nhttps://github.com/apache/spark/blob/a849554eba22db846bc00efc5b36e2438b481f6a/core/src/main/scala/org/apache/spark/storage/BlockManager.scala#L396-L400\r\n\r\nThese double `init` was a bit misleading, I am positive this even improves the readability. Otherwise the `available only after [[init]] is invoked` appearing in many comments before the `BlockTransferService` methods should even mention by which of the `init` method exactly. \r\n",
+        "createdAt" : "2019-05-17T09:06:37Z",
+        "updatedAt" : "2019-05-23T11:27:05Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "faa583f88b410fc7ededafe36bcb1ef878482d44",
+    "line" : 68,
+    "diffHunk" : "@@ -1,1 +397,401 @@    blockTransferService.init(this)\n    externalShuffleClient.foreach { shuffleClient =>\n      shuffleClient.init(appId)\n    }\n    blockReplicationPolicy = {"
   }
 ]

@@ -614,5 +614,82 @@
     "commit" : "2cce2fa9e057cb379e628fe01ea2cef280a9b198",
     "line" : 31,
     "diffHunk" : "@@ -1,1 +149,153 @@    dataFilters: Seq[Expression],\n    override val tableIdentifier: Option[TableIdentifier])\n  extends DataSourceScanExec {\n\n  // Note that some vals referring the file-based relation are lazy intentionally"
+  },
+  {
+    "id" : "d281fcd7-567f-49e1-bc91-60b25dc1a3c1",
+    "prId" : 24527,
+    "prUrl" : "https://github.com/apache/spark/pull/24527#pullrequestreview-233814885",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f9ca9139-ecf3-43cf-9a64-d6ee25fc08c7",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Hi, @LantaoJin . It would be very helpful if you provide a test case for your following claim.\r\n> Splitting RDD to too many small pieces doesn't make sense. Jobs will launch too many partitions and never complete.",
+        "createdAt" : "2019-05-05T15:55:51Z",
+        "updatedAt" : "2019-05-05T15:55:51Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b64912ec-98cf-4f78-a9cb-0ec62a42d086",
+        "parentId" : "f9ca9139-ecf3-43cf-9a64-d6ee25fc08c7",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "It may be hard to provide a UT. This case only happens in one of our jobs which we enable multi-thread to read from one HDFS folder and write to different target HDFS folders with different filters. With DRA enabled and the job launched near 2000 executors with near 8000 active tasks. When the job runs for a while, the task number of filter/scan stages increases from 200 to over 5000. And we got many below logs:\r\n\r\n> 19/04/29 06:13:48 INFO FileSourceScanExec: Planning scan with bin packing, max size: 129026539 bytes, open cost is considered as scanning 4194304 bytes.\r\n19/04/29 06:13:48 INFO FileSourceScanExec: Planning scan with bin packing, max size: 129026539 bytes, open cost is considered as scanning 4194304 bytes.\r\n19/04/29 06:13:49 INFO FileSourceScanExec: Planning scan with bin packing, max size: 129026539 bytes, open cost is considered as scanning 4194304 bytes.\r\n\r\nChanged to\r\n> 19/04/29 06:15:49 INFO FileSourceScanExec: Planning scan with bin packing, max size: 4474908 bytes, open cost is considered as scanning 4194304 bytes.\r\n19/04/29 06:16:15 INFO FileSourceScanExec: Planning scan with bin packing, max size: 4194304 bytes, open cost is considered as scanning 4194304 bytes.\r\n19/04/29 06:16:21 INFO FileSourceScanExec: Planning scan with bin packing, max size: 4194304 bytes, open cost is considered as scanning 4194304 bytes.\r\n19/04/29 06:16:23 INFO FileSourceScanExec: Planning scan with bin packing, max size: 4194304 bytes, open cost is considered as scanning 4194304 bytes.\r\n19/04/29 06:16:23 INFO FileSourceScanExec: Planning scan with bin packing, max size: 4194304 bytes, open cost is considered as scanning 4194304 bytes.\r\n\r\nThis issue would gone in four cases:\r\n\r\n1. set \"spark.default.parallelism\" to a fixed value.\r\n2. Disable DRA and set num-executors to a low value.\r\n3. The app can not get too many resources to launch executors\r\n4. Run jobs one by one instead multi-thread to run. \r\n\r\nAll of above will prevent app to require too many partitions since less cores:\r\n```scala\r\n  override def defaultParallelism(): Int = { //  if not set, more resources, more cores\r\n    conf.getInt(\"spark.default.parallelism\", math.max(totalCoreCount.get(), 2))\r\n  }\r\n\r\n  def maxSplitBytes(\r\n      sparkSession: SparkSession,\r\n      selectedPartitions: Seq[PartitionDirectory]): Long = {\r\n    val defaultMaxSplitBytes = sparkSession.sessionState.conf.filesMaxPartitionBytes\r\n    val openCostInBytes = sparkSession.sessionState.conf.filesOpenCostInBytes\r\n    val defaultParallelism = sparkSession.sparkContext.defaultParallelism\r\n    val totalBytes = selectedPartitions.flatMap(_.files.map(_.getLen + openCostInBytes)).sum\r\n    val bytesPerCore = totalBytes / defaultParallelism // more cores, less bytesPerCore\r\n    // less bytesPerCore, less maxSplitBytes\r\n    Math.min(defaultMaxSplitBytes, Math.max(openCostInBytes, bytesPerCore))\r\n  }\r\n\r\n  def splitFiles(\r\n      sparkSession: SparkSession,\r\n      file: FileStatus,\r\n      filePath: Path,\r\n      isSplitable: Boolean,\r\n      maxSplitBytes: Long,\r\n      partitionValues: InternalRow): Seq[PartitionedFile] = {\r\n    if (isSplitable) {\r\n      (0L until file.getLen by maxSplitBytes).map { offset => // less maxSplitBytes, more partitions\r\n        val remaining = file.getLen - offset\r\n        val size = if (remaining > maxSplitBytes) maxSplitBytes else remaining\r\n        val hosts = getBlockHosts(getBlockLocations(file), offset, size)\r\n        PartitionedFile(partitionValues, filePath.toUri.toString, offset, size, hosts)\r\n      }\r\n    } else {\r\n      Seq(getPartitionedFile(file, filePath, partitionValues))\r\n    }\r\n  }\r\n```",
+        "createdAt" : "2019-05-06T02:49:39Z",
+        "updatedAt" : "2019-05-06T02:51:19Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ba43e198bebbcde0a5a6dc400cd3aff653e8f503",
+    "line" : 11,
+    "diffHunk" : "@@ -1,1 +426,430 @@      case _ =>\n        FilePartition.maxSplitBytes(fsRelation.sparkSession, selectedPartitions)\n    }\n    logInfo(s\"Planning scan with bin packing, max size: $maxSplitBytes bytes, \" +\n      s\"open cost is considered as scanning $openCostInBytes bytes.\")"
+  },
+  {
+    "id" : "0d7423f7-d8c3-47dc-a427-a14a1d83fcf3",
+    "prId" : 24527,
+    "prUrl" : "https://github.com/apache/spark/pull/24527#pullrequestreview-233821950",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3371d640-b9c1-4ee2-8288-a5e10117b8c7",
+        "parentId" : null,
+        "authorId" : "99156419-7ce7-4671-b858-d0b5c4711f88",
+        "body" : "shouldn't this be something provided by the ParquetSource?",
+        "createdAt" : "2019-05-06T03:35:15Z",
+        "updatedAt" : "2019-05-06T03:35:18Z",
+        "lastEditedBy" : "99156419-7ce7-4671-b858-d0b5c4711f88",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4798cc12-6b4f-44ca-85d0-7b0609e770ed",
+        "parentId" : "3371d640-b9c1-4ee2-8288-a5e10117b8c7",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "Actually, `ParquetSource` here is alias of `ParquetFileFormat`\r\n```scala\r\nimport org.apache.spark.sql.execution.datasources.parquet.{ParquetFileFormat => ParquetSource}\r\n```",
+        "createdAt" : "2019-05-06T04:01:01Z",
+        "updatedAt" : "2019-05-06T04:01:02Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d8944453-fca5-45d8-9c5e-68ec1eef5c0d",
+        "parentId" : "3371d640-b9c1-4ee2-8288-a5e10117b8c7",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "Sorry, please ignore. Currently, `FileFormat` doesn't provide this. How to split is determined in `DataSourceScanExec`",
+        "createdAt" : "2019-05-06T04:09:44Z",
+        "updatedAt" : "2019-05-06T04:09:44Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ba43e198bebbcde0a5a6dc400cd3aff653e8f503",
+    "line" : 8,
+    "diffHunk" : "@@ -1,1 +423,427 @@    val maxSplitBytes = relation.fileFormat match {\n      case _ : ParquetSource =>\n        fsRelation.sparkSession.sessionState.conf.filesMaxPartitionBytes // parquet.block.size\n      case _ =>\n        FilePartition.maxSplitBytes(fsRelation.sparkSession, selectedPartitions)"
   }
 ]

@@ -31,5 +31,60 @@
     "commit" : "39ddc891582db48a7d5e2ece771aac064cd41f1f",
     "line" : 52,
     "diffHunk" : "@@ -1,1 +71,75 @@    uiTab = if (sc.getConf.get(UI_ENABLED)) {\n      Some(new ThriftServerTab(new HiveThriftServer2AppStatusStore(kvStore, Some(listener)),\n        ThriftServerTab.getSparkUI(sc)))\n    } else {\n      None"
+  },
+  {
+    "id" : "8735f03f-2505-4de9-b065-b9acc818496f",
+    "prId" : 24575,
+    "prUrl" : "https://github.com/apache/spark/pull/24575#pullrequestreview-237710431",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a53712ad-5bf5-4ba0-8fcd-db4c6bb48a14",
+        "parentId" : null,
+        "authorId" : "8de20372-3c43-4f6b-838b-45ccb852019b",
+        "body" : "The ```addServerInstanceToZooKeeper``` method has been removed in SPARK-15004. \r\nHow can this work?\r\nYou can take a look at the discussion of SPARK-11100 first.",
+        "createdAt" : "2019-05-15T03:43:17Z",
+        "updatedAt" : "2019-05-15T03:44:22Z",
+        "lastEditedBy" : "8de20372-3c43-4f6b-838b-45ccb852019b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "14eb2fb0-6e5f-42fa-af1c-6d65325295c2",
+        "parentId" : "a53712ad-5bf5-4ba0-8fcd-db4c6bb48a14",
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "Because `HiveThriftServer2` not support HA based on Hive, so SPARK-11100 occurs.\r\nI have investigated the `addServerInstanceToZooKeeper` method in Hive，it was supported from version 0.14.0 to version 3.1.1\r\nThis change has been running normally for more than a year on our production environment.",
+        "createdAt" : "2019-05-15T06:52:34Z",
+        "updatedAt" : "2019-05-15T07:01:20Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "443965b8-a295-4634-8156-dc41b9777ab1",
+        "parentId" : "a53712ad-5bf5-4ba0-8fcd-db4c6bb48a14",
+        "authorId" : "8de20372-3c43-4f6b-838b-45ccb852019b",
+        "body" : "HiveThriftServer2 inherits HiveServer2, and HiveServer2 does not currently have the addServerInstanceToZooKeeper method.\r\nCall getDeclaredMethod(\"addServerInstanceToZooKeeper\") directly, will not throw NoSuchMethodException now?",
+        "createdAt" : "2019-05-15T07:12:24Z",
+        "updatedAt" : "2019-05-15T07:12:24Z",
+        "lastEditedBy" : "8de20372-3c43-4f6b-838b-45ccb852019b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "99614f3c-707a-4176-8974-f3c619d6efd8",
+        "parentId" : "a53712ad-5bf5-4ba0-8fcd-db4c6bb48a14",
+        "authorId" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "body" : "OK. You said is correct based on HiveServer2 that contains in `hive-thriftserver` module.\r\nThere exists issue as follows:\r\nFirst，why the `hive-thriftserver` module copy the code about `HiveServer2` from https://github.com/apache/hive?\r\nSecond, every company uses different Hive version. For example，my company uses Hive contains 1.2.1 and 2.X.So we first uses our Hive library instead of `hive-thriftserver` module carrying.\r\nThird,SPARK-15004 looks arbitrary and not enough discussed.",
+        "createdAt" : "2019-05-15T09:36:02Z",
+        "updatedAt" : "2019-05-15T09:37:06Z",
+        "lastEditedBy" : "f26e51a2-ed90-47c7-9856-a6cc134b7f39",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "e98c844aa3851d65fac9ea5a5a0581f52bf14077",
+    "line" : 25,
+    "diffHunk" : "@@ -1,1 +122,126 @@            ConfVars.HIVE_SERVER2_SUPPORT_DYNAMIC_SERVICE_DISCOVERY)) {\n            val method = server.getClass.getSuperclass.getDeclaredMethod(\n                \"addServerInstanceToZooKeeper\",\n                classOf[org.apache.hadoop.hive.conf.HiveConf])\n            method.setAccessible(true)"
   }
 ]

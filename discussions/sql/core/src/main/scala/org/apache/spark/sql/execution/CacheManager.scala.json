@@ -207,5 +207,126 @@
     "commit" : "8b5e7442c63fe326db7c7f46f7a194fbae8f0d46",
     "line" : 21,
     "diffHunk" : "@@ -1,1 +85,89 @@      val inMemoryRelation = try {\n        // Avoiding changing the output partitioning, here disable AQE.\n        sparkSession.sessionState.conf.setConf(SQLConf.ADAPTIVE_EXECUTION_ENABLED, false)\n        InMemoryRelation(\n          sparkSession.sessionState.conf.useCompression,"
+  },
+  {
+    "id" : "a4cc67f6-adda-4b7f-b75d-109b51c9f8e5",
+    "prId" : 24580,
+    "prUrl" : "https://github.com/apache/spark/pull/24580#pullrequestreview-236795121",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "63674526-be4b-4df5-a2fb-701e170cddf6",
+        "parentId" : null,
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "If the original cached plan has a hint, should we keep/respect them? We need to define a clear behavior in our cache manager.",
+        "createdAt" : "2019-05-13T05:14:48Z",
+        "updatedAt" : "2019-05-14T13:37:33Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "14795069-8e2b-4026-8c81-d4f32e45108a",
+        "parentId" : "63674526-be4b-4df5-a2fb-701e170cddf6",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "It doesn't matter, because\r\n1. as a cache key, the lookup relies on `semanticEquals`, so having the hint node in the plan has no effect.\r\n2. the cache lookup returns `InMemoryRelation`, which has no hint.\r\n\r\nI think the behavior is pretty clear: for any query, the hint behavior should be the same no matter some sub-plans are cached or not.",
+        "createdAt" : "2019-05-13T06:00:17Z",
+        "updatedAt" : "2019-05-14T13:37:33Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a1a8f642-3e86-4fef-a14b-57bd7157bd49",
+        "parentId" : "63674526-be4b-4df5-a2fb-701e170cddf6",
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "Basically, we ignore the hints that are specified in the original cached plans. If users want to use hints, they should specify them in the queries. ",
+        "createdAt" : "2019-05-13T16:46:57Z",
+        "updatedAt" : "2019-05-14T13:37:33Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "48e55fa8037bfb47cc6d0b56337faf79c2924730",
+    "line" : 26,
+    "diffHunk" : "@@ -1,1 +217,221 @@      case currentFragment =>\n        lookupCachedData(currentFragment).map { cached =>\n          // After cache lookup, we should still keep the hints from the input plan.\n          val hints = EliminateResolvedHint.extractHintsFromPlan(currentFragment)._2\n          val cachedPlan = cached.cachedRepresentation.withOutput(currentFragment.output)"
+  },
+  {
+    "id" : "4c8553cb-d755-4489-a7a4-8f29818e608c",
+    "prId" : 24580,
+    "prUrl" : "https://github.com/apache/spark/pull/24580#pullrequestreview-237029849",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "32ed3c16-5915-4b0e-9076-a0e5a3ad9f32",
+        "parentId" : null,
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "`extractHintsFromPlan(currentFragment)._2` was originally a private function. Asking the caller to call reverse is weird. We can add a new function in EliminateResolvedHint or even add a new object for Hint processing. ",
+        "createdAt" : "2019-05-13T17:08:18Z",
+        "updatedAt" : "2019-05-14T13:37:33Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0eaa21bd-caaf-484f-b11e-91b37721479f",
+        "parentId" : "32ed3c16-5915-4b0e-9076-a0e5a3ad9f32",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "It's natural to return the hints in a top-down fashion. And the caller side is free to process the returned hints, including reverse it. ",
+        "createdAt" : "2019-05-14T05:15:58Z",
+        "updatedAt" : "2019-05-14T13:37:33Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "48e55fa8037bfb47cc6d0b56337faf79c2924730",
+    "line" : 27,
+    "diffHunk" : "@@ -1,1 +218,222 @@        lookupCachedData(currentFragment).map { cached =>\n          // After cache lookup, we should still keep the hints from the input plan.\n          val hints = EliminateResolvedHint.extractHintsFromPlan(currentFragment)._2\n          val cachedPlan = cached.cachedRepresentation.withOutput(currentFragment.output)\n          // The returned hint list is in top-down order, we should create the hint nodes from"
+  },
+  {
+    "id" : "2ba0b807-656c-400c-85c6-b7eb6a28af04",
+    "prId" : 24580,
+    "prUrl" : "https://github.com/apache/spark/pull/24580#pullrequestreview-237595446",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0fb0a554-0f7d-40eb-92cd-d381d8386088",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Is this the same (semantically) as original cached plan?\r\n\r\nWe can take one example in added test: `broadcast(spark.range(1000)).filter($\"id\" > 100)`. Originally, the plan broadcasted is `spark.range(1000)`. After using cached data, seems cached `spark.range(1000).filter($\"id\" > 100)` is broadcasted by the hint, actually. It is slightly difference, but maybe in significant effect it might cause?",
+        "createdAt" : "2019-05-14T15:51:40Z",
+        "updatedAt" : "2019-05-14T15:51:40Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8724f513-69c3-4d9e-bb3a-7cc4cb56e4f8",
+        "parentId" : "0fb0a554-0f7d-40eb-92cd-d381d8386088",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "The semantic of a hint node is special. By design only join node has hints, so `Hint(Filter(Relation))` is the same as `Filter(Hint(Relation))`, as they both indicate that the left/right sub-tree of a join node has a hint.",
+        "createdAt" : "2019-05-15T03:09:03Z",
+        "updatedAt" : "2019-05-15T03:09:04Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ad1b3d0f-bbab-4bb4-8ba8-e74b3274b5c7",
+        "parentId" : "0fb0a554-0f7d-40eb-92cd-d381d8386088",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Ok, I see. Makes sense and it's fine.",
+        "createdAt" : "2019-05-15T03:34:52Z",
+        "updatedAt" : "2019-05-15T03:34:52Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "48e55fa8037bfb47cc6d0b56337faf79c2924730",
+    "line" : 32,
+    "diffHunk" : "@@ -1,1 +223,227 @@          // right to left.\n          hints.foldRight[LogicalPlan](cachedPlan) { case (hint, p) =>\n            ResolvedHint(p, hint)\n          }\n        }.getOrElse(currentFragment)"
   }
 ]

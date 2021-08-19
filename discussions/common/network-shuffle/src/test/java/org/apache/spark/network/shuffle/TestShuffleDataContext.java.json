@@ -20,5 +20,104 @@
     "commit" : "8873f111f5e1dcd6137396eeda06d7595ac2a72e",
     "line" : 8,
     "diffHunk" : "@@ -1,1 +71,75 @@      int shuffleId, int mapId, byte[][] blocks, boolean indeterminateBlock) throws IOException {\n    String blockId = \"shuffle_\" + shuffleId + \"_\" + mapId + \"_0\";\n    if (indeterminateBlock) blockId += \"_0\";\n\n    OutputStream dataStream = null;"
+  },
+  {
+    "id" : "802d5ea2-dbe4-4633-b373-e464454eab5e",
+    "prId" : 24499,
+    "prUrl" : "https://github.com/apache/spark/pull/24499#pullrequestreview-240326263",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c8f0bd7e-bacb-421e-84bc-54deb0853492",
+        "parentId" : null,
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "So if you call `insertSpillData` (or one of the other new methods) multiple times, they'll all the writing the same file?",
+        "createdAt" : "2019-05-20T18:21:45Z",
+        "updatedAt" : "2019-05-23T11:27:05Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "45fc2325-025b-4bdd-82fb-c2da51bf9c3c",
+        "parentId" : "c8f0bd7e-bacb-421e-84bc-54deb0853492",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "Yes, but it is called by once for each data context. \r\n\r\nTo improve it:\r\n1) an assert can be added or \r\n2) a counter can be introduced which increased after each call and at the checks this counter can considered when the expected values are constructed\r\n\r\nI think the assert should be enough here.\r\n",
+        "createdAt" : "2019-05-20T20:44:48Z",
+        "updatedAt" : "2019-05-23T11:27:05Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "eae8e7fa-bff0-4348-bdb7-ef9520389412",
+        "parentId" : "c8f0bd7e-bacb-421e-84bc-54deb0853492",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "What's wrong with the original code you changed?",
+        "createdAt" : "2019-05-20T20:55:51Z",
+        "updatedAt" : "2019-05-23T11:27:05Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e26125c7-1517-4f96-99e1-ee43fed3d808",
+        "parentId" : "c8f0bd7e-bacb-421e-84bc-54deb0853492",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "I would like to avoid testing an expression with the same expression: a filter for files with another filter for files. \r\n\r\nExpected values as a literal are much easier to follow.",
+        "createdAt" : "2019-05-20T21:45:34Z",
+        "updatedAt" : "2019-05-23T11:27:05Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "57ac125c-c0fb-4bcd-bda6-f8f2cc4ec731",
+        "parentId" : "c8f0bd7e-bacb-421e-84bc-54deb0853492",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "In the old code the test filter was: org.apache.spark.network.shuffle.NonShuffleFilesCleanupSuite#filter:\r\n\r\n~~~java\r\n private static FilenameFilter filter = new FilenameFilter() {\r\n    @Override\r\n    public boolean accept(File dir, String name) {\r\n      // Don't delete shuffle data or shuffle index files.\r\n      return !name.endsWith(\".index\") && !name.endsWith(\".data\");\r\n    }\r\n  };\r\n~~~\r\n\r\nAnd the tested code the filter in:\r\norg.apache.spark.network.shuffle.ExternalShuffleBlockResolver#deleteNonShuffleFiles\r\n\r\n~~~java\r\nprivate void deleteNonShuffleFiles(String[] dirs) {\r\n    FilenameFilter filter = new FilenameFilter() {\r\n      @Override\r\n      public boolean accept(File dir, String name) {\r\n        // Don't delete shuffle data or shuffle index files.\r\n        return !name.endsWith(\".index\") && !name.endsWith(\".data\");\r\n      }\r\n    };\r\n~~~",
+        "createdAt" : "2019-05-20T21:52:19Z",
+        "updatedAt" : "2019-05-23T11:27:05Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3526eed9-3082-4ac1-9201-e6da704d89b7",
+        "parentId" : "c8f0bd7e-bacb-421e-84bc-54deb0853492",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Ok, since the tests are passing I'll give up on this, but it's weird.",
+        "createdAt" : "2019-05-21T22:19:59Z",
+        "updatedAt" : "2019-05-23T11:27:05Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "faa583f88b410fc7ededafe36bcb1ef878482d44",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +97,101 @@  /** Creates spill file(s) within the local dirs. */\n  public void insertSpillData() throws IOException {\n    String filename = \"temp_local_uuid\";\n    insertFile(filename);\n  }"
+  },
+  {
+    "id" : "f5339fa8-3acc-4aad-a4cb-92085af5df0c",
+    "prId" : 24499,
+    "prUrl" : "https://github.com/apache/spark/pull/24499#pullrequestreview-239638570",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "bd9c0d49-7429-4e57-b802-076bddd0d860",
+        "parentId" : null,
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "add blank line before",
+        "createdAt" : "2019-05-20T18:22:23Z",
+        "updatedAt" : "2019-05-23T11:27:05Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "faa583f88b410fc7ededafe36bcb1ef878482d44",
+    "line" : 33,
+    "diffHunk" : "@@ -1,1 +116,120 @@  }\n\n  private void insertFile(String filename) throws IOException {\n    insertFile(filename, new byte[] { 42 });\n  }"
   }
 ]

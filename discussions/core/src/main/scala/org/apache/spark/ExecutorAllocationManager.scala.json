@@ -1032,5 +1032,93 @@
     "commit" : "da6f156777a8e1572651b925c2884bb3688fd66d",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +289,293 @@\n    // Update executor target number only after initializing flag is unset\n    updateAndSyncNumExecutorsTarget(clock.nanoTime())\n    if (executorIdsToBeRemoved.nonEmpty) {\n      removeExecutors(executorIdsToBeRemoved)"
+  },
+  {
+    "id" : "9ff036af-3e27-44d8-9e9d-7aca8f4e4776",
+    "prId" : 24497,
+    "prUrl" : "https://github.com/apache/spark/pull/24497#pullrequestreview-252912331",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "dd081352-fbe6-47c3-bd92-7df1b7b847d4",
+        "parentId" : null,
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "I think its worth adding a comment here along the lines of \"do NOT remove stageAttempt from stageAttemptToNumRunningTasks, because the attempt may still have running tasks, even after another attempt for the stage is submitted.\"",
+        "createdAt" : "2019-06-21T16:15:05Z",
+        "updatedAt" : "2019-06-24T03:38:58Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b91965098c3c2b71d5adda9d501ee46cf14831ed",
+    "line" : 85,
+    "diffHunk" : "@@ -1,1 +560,564 @@        // because the attempt may still have running tasks,\n        // even after another attempt for the stage is submitted.\n        stageAttemptToNumTasks -= stageAttempt\n        stageAttemptToNumSpeculativeTasks -= stageAttempt\n        stageAttemptToTaskIndices -= stageAttempt"
+  },
+  {
+    "id" : "fa71e7f4-f329-45f6-b900-b13173a09ed6",
+    "prId" : 24497,
+    "prUrl" : "https://github.com/apache/spark/pull/24497#pullrequestreview-253227049",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "aeaccaf4-6dce-4e35-bb60-09fc7ccb6e20",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "I think we should not take tasks from previous stage attempts, which are already zombie,  into account, right ?",
+        "createdAt" : "2019-06-24T06:22:05Z",
+        "updatedAt" : "2019-06-24T06:22:05Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9b9f87e8-d619-4dea-989a-52f287d50206",
+        "parentId" : "aeaccaf4-6dce-4e35-bb60-09fc7ccb6e20",
+        "authorId" : "8de20372-3c43-4f6b-838b-45ccb852019b",
+        "body" : "In ```onStageCompleted``` processing, ```stageAttemptToNumTasks```, ```stageAttemptToTaskIndices``` removes the zombie stage, so pendingTasks does not calculate the zombie stage's task.",
+        "createdAt" : "2019-06-24T06:46:09Z",
+        "updatedAt" : "2019-06-24T06:46:09Z",
+        "lastEditedBy" : "8de20372-3c43-4f6b-838b-45ccb852019b",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6cb086e1-a5e8-4f2a-9ae1-d2a6d5bdf1b0",
+        "parentId" : "aeaccaf4-6dce-4e35-bb60-09fc7ccb6e20",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "I see.",
+        "createdAt" : "2019-06-24T06:57:19Z",
+        "updatedAt" : "2019-06-24T06:57:19Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b91965098c3c2b71d5adda9d501ee46cf14831ed",
+    "line" : 187,
+    "diffHunk" : "@@ -1,1 +647,651 @@    def pendingTasks(): Int = {\n      stageAttemptToNumTasks.map { case (stageAttempt, numTasks) =>\n        numTasks - stageAttemptToTaskIndices.get(stageAttempt).map(_.size).getOrElse(0)\n      }.sum\n    }"
+  },
+  {
+    "id" : "9dc0b3c8-bc95-43dd-b238-a3c6176c6a49",
+    "prId" : 24497,
+    "prUrl" : "https://github.com/apache/spark/pull/24497#pullrequestreview-253216461",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "88a7f0f6-ed6d-4951-800f-c58abc78b6b4",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "ditto.",
+        "createdAt" : "2019-06-24T06:22:19Z",
+        "updatedAt" : "2019-06-24T06:22:19Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b91965098c3c2b71d5adda9d501ee46cf14831ed",
+    "line" : 195,
+    "diffHunk" : "@@ -1,1 +653,657 @@    def pendingSpeculativeTasks(): Int = {\n      stageAttemptToNumSpeculativeTasks.map { case (stageAttempt, numTasks) =>\n        numTasks - stageAttemptToSpeculativeTaskIndices.get(stageAttempt).map(_.size).getOrElse(0)\n      }.sum\n    }"
   }
 ]

@@ -174,5 +174,93 @@
     "commit" : "e25f1954d62972476e3bb4bdb58fa6fd8921d51c",
     "line" : 19,
     "diffHunk" : "@@ -1,1 +83,87 @@      .map { ignoreExtensionOption =>\n        if (ignoreExtensionOption != !ignoreFilesWithoutExtensionByDefault) {\n          warn(s\"The Avro option '${AvroOptions.ignoreExtensionKey}'\")\n        }\n        ignoreExtensionOption"
+  },
+  {
+    "id" : "9266a217-2bc5-4522-bc3b-5b64aed852ce",
+    "prId" : 24518,
+    "prUrl" : "https://github.com/apache/spark/pull/24518#pullrequestreview-339682535",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "49c9f6c1-6c67-438e-8fe5-76af4dd4204c",
+        "parentId" : null,
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "I am wondering whom is this deprecation warning to? Spark users don't use `ignoreExtension` directly. I do think we should print a warning when we read & detect that `AvroFileFormat.IgnoreFilesWithoutExtensionProperty` and/or `AvroOptions.ignoreExtensionKey` are set otherwise users will never see the deprecation.",
+        "createdAt" : "2020-01-07T19:18:26Z",
+        "updatedAt" : "2020-01-07T19:18:37Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "25e5020d-f251-4d9e-8d18-1ebdce3c41c9",
+        "parentId" : "49c9f6c1-6c67-438e-8fe5-76af4dd4204c",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "I think it already shows an warning at https://github.com/apache/spark/pull/24518/files/d8f8420d9d3c97f96c1e09855e008ece3f275ad3#diff-8b28467c7f7a28d7fcf208a613a373c8R61",
+        "createdAt" : "2020-01-08T00:23:45Z",
+        "updatedAt" : "2020-01-08T00:23:46Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bb47cc17-7d97-4473-bdb3-6c9179e49642",
+        "parentId" : "49c9f6c1-6c67-438e-8fe5-76af4dd4204c",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "only in one case at schema inferring. I would remove this annotation and print warning in initialization of `AvroOptions`. The deprecation warning is printed only while Spark compilation which is useless for users. ",
+        "createdAt" : "2020-01-08T07:02:44Z",
+        "updatedAt" : "2020-01-08T07:02:44Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "012bf209-25cb-46a3-b74d-870c4804f499",
+        "parentId" : "49c9f6c1-6c67-438e-8fe5-76af4dd4204c",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "I think we should remove `deprecated`. \r\n\r\nIt would be great if we can put that logic into `AvroOptions` e.g.:\r\n\r\n```scala\r\n    parameters\r\n      .get(AvroOptions.ignoreExtensionKey)\r\n      .map { v =>\r\n        logWarning(...)\r\n        v.toBoolean\r\n      }.getOrElse(!ignoreFilesWithoutExtension)\r\n```\r\n\r\nHowever, can you make it doesn't show the logs too many times? If we put there, seems like it will show the same logs multiple times.",
+        "createdAt" : "2020-01-08T07:22:45Z",
+        "updatedAt" : "2020-01-08T07:22:45Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4e053bef-0465-454e-bbc0-7a8a6f9a2b40",
+        "parentId" : "49c9f6c1-6c67-438e-8fe5-76af4dd4204c",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "If you can find a better way, please go and open a PR (and some nits I picked below)",
+        "createdAt" : "2020-01-08T07:24:47Z",
+        "updatedAt" : "2020-01-08T07:24:47Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d8f8420d9d3c97f96c1e09855e008ece3f275ad3",
+    "line" : 4,
+    "diffHunk" : "@@ -1,1 +60,64 @@   * is taken into account. If the former one is not set too, file extensions are ignored.\n   */\n  @deprecated(\"Use the general data source option pathGlobFilter for filtering file names\", \"3.0\")\n  val ignoreExtension: Boolean = {\n    val ignoreFilesWithoutExtensionByDefault = false"
+  },
+  {
+    "id" : "f2473236-a93e-4d24-8d32-d8a23d0d86bb",
+    "prId" : 24518,
+    "prUrl" : "https://github.com/apache/spark/pull/24518#pullrequestreview-339682181",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d32f0d56-39d6-44f9-a249-63fdcac684e6",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "`ignoreExtensionKey` -> `IGNORE_EXTENTION_KEY` to be consistent with other `XXXOptions`",
+        "createdAt" : "2020-01-08T07:23:38Z",
+        "updatedAt" : "2020-01-08T07:23:39Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d8f8420d9d3c97f96c1e09855e008ece3f275ad3",
+    "line" : 13,
+    "diffHunk" : "@@ -1,1 +68,72 @@\n    parameters\n      .get(AvroOptions.ignoreExtensionKey)\n      .map(_.toBoolean)\n      .getOrElse(!ignoreFilesWithoutExtension)"
   }
 ]

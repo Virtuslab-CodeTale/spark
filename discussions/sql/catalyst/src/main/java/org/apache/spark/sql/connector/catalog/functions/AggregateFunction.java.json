@@ -31,5 +31,137 @@
     "commit" : "c18715fcc304f4a805d420e193d4a3884b3f7e4f",
     "line" : 13,
     "diffHunk" : "@@ -1,1 +29,33 @@ * and update the aggregation state. The JVM type of result values produced by\n * {@link #produceResult} must be the type used by Spark's\n * InternalRow API for the {@link DataType SQL data type} returned by {@link #resultType()}.\n * Please refer to class documentation of {@link ScalarFunction} for the mapping between\n * {@link DataType} and the JVM type."
+  },
+  {
+    "id" : "9cab29d4-64e9-4d3c-9bc3-865acb4a6523",
+    "prId" : 24559,
+    "prUrl" : "https://github.com/apache/spark/pull/24559#pullrequestreview-619156308",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a9d3f830-6c47-4d69-aa59-08ad2942c215",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Another important logic is how to serialize the buffer. As I mentioned before, Spark requires aggregate functions to implement partial merge, so serializing the buffer and shuffle it always happens.\r\n\r\nIt's inefficient to simply use a java serializer. The aggregate buffer is also an `InternalRow`. Assuming you are implementing the `avg` function,  and the buffer includes 2 values: `sum` and `count`. It's inefficient to serialize `Tuple2(sum, count)` to a binary and save it in the buffer row. We should just write `sum` and `count` as 2 columns to the buffer row.\r\n\r\nI'd propose something like\r\n```\r\npublic interface AggregateFunction<R> extends BoundFunction {\r\n  AggregationState newAggregationState();\r\n  ...\r\n}\r\n\r\npublic interface AggregationState {\r\n  StructType schema();\r\n  InternalRow serialize();\r\n}\r\n```",
+        "createdAt" : "2021-03-04T14:04:29Z",
+        "updatedAt" : "2021-04-06T19:57:15Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "088d93ae-7163-4653-9c2f-ab9909d199e3",
+        "parentId" : "a9d3f830-6c47-4d69-aa59-08ad2942c215",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "I don't think requiring the UDF to return an InternalRow is a good idea. That's one of the problems of the existing API that we want to fix.\r\n\r\nKeep in mind that this serialization will only occur when Spark needs to shuffle the partial aggregate state, so the cost of Java serialization is amortized over all of the values that are processed.",
+        "createdAt" : "2021-03-04T17:25:48Z",
+        "updatedAt" : "2021-04-06T19:57:15Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ba0412da-644e-485c-aa85-a6e5dc0bad25",
+        "parentId" : "a9d3f830-6c47-4d69-aa59-08ad2942c215",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I agree that perf may not be a big issue here, but the serialization logic needs to be provided. How about\r\n```\r\npublic interface AggregateFunction<S extends Serializble, R>\r\n```",
+        "createdAt" : "2021-03-04T17:37:25Z",
+        "updatedAt" : "2021-04-06T19:57:15Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ff4e2a2a-8ac4-4fd6-a13f-6b46b5acf4fe",
+        "parentId" : "a9d3f830-6c47-4d69-aa59-08ad2942c215",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "`PartialAggregateFunction` already have this. Alternatively I'm wondering whether we can do:\r\n\r\n```java\r\nByteBuffer serialize(S state);\r\nS deserialize(ByteBuffer buf);\r\n```\r\nfollowing the `TypedImperativeAggregate` interface.",
+        "createdAt" : "2021-03-05T23:43:56Z",
+        "updatedAt" : "2021-04-06T19:57:15Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fe9fc489-f41b-4876-b2f6-d868c246c639",
+        "parentId" : "a9d3f830-6c47-4d69-aa59-08ad2942c215",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "Yes, @sunchao is right. This requirement is added by `PartialAggregateFunction` so merging the two interfaces would pick up that change, if we want to merge the two.",
+        "createdAt" : "2021-03-05T23:50:26Z",
+        "updatedAt" : "2021-04-06T19:57:15Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8791d0da-a457-41be-9eab-a8b1e4ef45e8",
+        "parentId" : "a9d3f830-6c47-4d69-aa59-08ad2942c215",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "One issue I found with the `Serializable` approach is that currently in Spark the `SerializerInstance` as well as `ExpressionEncoder` all require `ClassTag`, which is not available from Java. This makes it hard to reuse the existing machinery in Spark for the serialization/deserialization work. Another issue, which is reflected by the CI failure, is that simple classes such as:\r\n```scala\r\nclass IntAverage extends AggregateFunction[(Int, Int), Int]\r\n```\r\n~~will not work out-of-box, as `(Int, Int)` doesn't implement `Serializable`~~. \r\n\r\nEdit: sorry `TupleN` does implement `Serializable` in Scala, and the issue is (it seems) we can't get a `AggregateFunction` from a `BoundFunction` with the `Serializable` constraint.\r\n\r\nThe `ClassTag` constraint for `SerializerInstance` was added in #700 for supporting Scala Pickling as one of the serializer implementation but seems the PR never ended in Spark, so not quite sure if it is still needed today, although it would require change a public developer API. Thanks @viirya for having a offline discussion with me on this.\r\n\r\nBecause of this, I'm wondering if it makes sense to replace the `Serializable` with something else, such as another method:\r\n```java\r\nEncoder<S> encoder();\r\n```\r\nThis can be implemented pretty easily by Spark users with [`Encoders`](https://github.com/apache/spark/blob/master/sql/catalyst/src/main/scala/org/apache/spark/sql/Encoders.scala). The approach is similar to the `udaf` API today. For Scala users, we can optionally provide another version of `AggregateFunction` in Scala with implicit, so users don't need to do this.\r\n\r\nWould like to hear your opinion on this @rdblue @cloud-fan \r\n",
+        "createdAt" : "2021-03-18T01:50:39Z",
+        "updatedAt" : "2021-04-06T19:57:15Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b114f1d9-8bec-40db-9d8b-795af089f8f7",
+        "parentId" : "a9d3f830-6c47-4d69-aa59-08ad2942c215",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "I don't think it is a good idea to use encoders. That brings in an additional API that is specific to Spark. There's nothing in practice that should prevent using Java's `Serializable` and that's a simple and well-understood way to do what we need.",
+        "createdAt" : "2021-03-23T21:32:49Z",
+        "updatedAt" : "2021-04-06T19:57:15Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3875c16d-28e2-46d2-ba22-0edf19cbb7cc",
+        "parentId" : "a9d3f830-6c47-4d69-aa59-08ad2942c215",
+        "authorId" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "body" : "Agree that from users' point of view `Serializable` is more friendly. This also means (from what I can see), though, we cannot reuse the existing `Serializer` and `SerializerInstance` from Spark, which allows Spark users to choose between Java and Kryo or plug in their own implementations. \r\n\r\nSince it seems that performance won't be a concern for this use case maybe we can just use plain Java serializer for the job.",
+        "createdAt" : "2021-03-23T22:58:46Z",
+        "updatedAt" : "2021-04-06T19:57:15Z",
+        "lastEditedBy" : "9ae00886-75a7-4f39-aed7-d47b26b67afb",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "bb8f2aa2181ff3270b91d6f15f05e4197f13df32",
+    "line" : 93,
+    "diffHunk" : "@@ -1,1 +91,95 @@   */\n  R produceResult(S state);\n\n}"
+  },
+  {
+    "id" : "3a79a3bd-197f-4dd0-8305-05269e4572ae",
+    "prId" : 24559,
+    "prUrl" : "https://github.com/apache/spark/pull/24559#pullrequestreview-623670449",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "be20b6d0-8ec5-40ff-b33e-1755c2a89a18",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "How about `This method is called one time for every group of values per task to initialize ...`?",
+        "createdAt" : "2021-03-29T14:54:36Z",
+        "updatedAt" : "2021-04-06T19:57:15Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "00674bb7-a0cc-4896-bd6c-ae2f981e214a",
+        "parentId" : "be20b6d0-8ec5-40ff-b33e-1755c2a89a18",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "This may be called twice for the same group if the group appears on multiple executors before the shuffle.",
+        "createdAt" : "2021-03-29T21:36:04Z",
+        "updatedAt" : "2021-04-06T19:57:15Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "bb8f2aa2181ff3270b91d6f15f05e4197f13df32",
+    "line" : 52,
+    "diffHunk" : "@@ -1,1 +50,54 @@   * Initialize state for an aggregation.\n   * <p>\n   * This method is called one or more times for every group of values to initialize intermediate\n   * aggregation state. More than one intermediate aggregation state variable may be used when the\n   * aggregation is run in parallel tasks."
   }
 ]

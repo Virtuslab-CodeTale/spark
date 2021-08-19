@@ -2176,5 +2176,115 @@
     "commit" : "ddbf8b284c4167fc693e79e0f5d14b52d42be41a",
     "line" : 25,
     "diffHunk" : "@@ -1,1 +211,215 @@  \"\"\")\n// scalastyle:on line.size.limit\ncase class Cast(child: Expression, dataType: DataType, timeZoneId: Option[String] = None)\n  extends CastBase {\n"
+  },
+  {
+    "id" : "e389033a-26d9-4556-8e70-870d3c473195",
+    "prId" : 24576,
+    "prUrl" : "https://github.com/apache/spark/pull/24576#pullrequestreview-236790829",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "547ce6cf-151d-44a5-9df3-a9c95867d907",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Instead of adding 6 lines(`else if (from == NullType)`) to add a place holder, how about the following?\r\n```scala\r\n- case dt if dt == from => identity[Any]\r\n+ case dt if dt == from || from == NullType => identity[Any]\r\n```",
+        "createdAt" : "2019-05-10T21:44:16Z",
+        "updatedAt" : "2019-05-11T10:08:47Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c6fc9e07-e24e-4dc3-985d-129941f34924",
+        "parentId" : "547ce6cf-151d-44a5-9df3-a9c95867d907",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "When `from` is `NullType`, the returned function won't be called, actually, but just a placeholder.\r\n\r\nInstead of `identity`, throwing an exception sounds better, so it prevents accidentally calling it, and we don't want it.",
+        "createdAt" : "2019-05-11T01:37:55Z",
+        "updatedAt" : "2019-05-11T10:08:47Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1e168ed7-630c-4479-a1b2-df2be8782d92",
+        "parentId" : "547ce6cf-151d-44a5-9df3-a9c95867d907",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Got it. Although it's not called, yes. That would be safer.",
+        "createdAt" : "2019-05-13T16:37:54Z",
+        "updatedAt" : "2019-05-13T16:37:54Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a5c2416807d720074958eab19e144c54d7ac45b2",
+    "line" : 12,
+    "diffHunk" : "@@ -1,1 +629,633 @@    } else {\n      to match {\n        case dt if dt == from => identity[Any]\n        case StringType => castToString(from)\n        case BinaryType => castToBinary(from)"
+  },
+  {
+    "id" : "8bd1ce4d-6524-4488-a24b-694487ae2ead",
+    "prId" : 24576,
+    "prUrl" : "https://github.com/apache/spark/pull/24576#pullrequestreview-237036724",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7e24d810-5a4a-49d8-956b-62d608e646b2",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "when will we hit this exception?",
+        "createdAt" : "2019-05-14T04:55:33Z",
+        "updatedAt" : "2019-05-14T04:55:33Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3e6945fe-50da-4d76-af32-04304274e6cc",
+        "parentId" : "7e24d810-5a4a-49d8-956b-62d608e646b2",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "In the case of casting a nested field in a struct or array, if we find it is a null, we don't call the cast function but set the destination as null directly. If we call this cast function, we hit this exception.",
+        "createdAt" : "2019-05-14T05:21:13Z",
+        "updatedAt" : "2019-05-14T05:21:13Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5e3885e5-72ce-45ea-9350-c60319f0334e",
+        "parentId" : "7e24d810-5a4a-49d8-956b-62d608e646b2",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "We do the thing as follow:\r\n```scala\r\nbuildCast[InternalRow](_, row => {\r\n  val newRow = new GenericInternalRow(from.fields.length)\r\n  var i = 0\r\n  while (i < row.numFields) {\r\n    newRow.update(i,\r\n      // We don't call cast function but directly set a null, if finding a null.\r\n      if (row.isNullAt(i)) null else castFuncs(i)(row.get(i, from.apply(i).dataType)))\r\n    i += 1\r\n  }\r\n  newRow\r\n})\r\n```",
+        "createdAt" : "2019-05-14T05:23:13Z",
+        "updatedAt" : "2019-05-14T05:23:13Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "89b529e0-8a45-4b2b-b871-6aa37c83e187",
+        "parentId" : "7e24d810-5a4a-49d8-956b-62d608e646b2",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Which means, it's a bug if the exception is thrown?",
+        "createdAt" : "2019-05-14T05:34:05Z",
+        "updatedAt" : "2019-05-14T05:34:05Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f85a0b5d-3108-4a77-9eb1-b672385d6b33",
+        "parentId" : "7e24d810-5a4a-49d8-956b-62d608e646b2",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "If reaching here, means we call the cast function for a null, unnecessarily.",
+        "createdAt" : "2019-05-14T05:49:39Z",
+        "updatedAt" : "2019-05-14T05:49:39Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a5c2416807d720074958eab19e144c54d7ac45b2",
+    "line" : 9,
+    "diffHunk" : "@@ -1,1 +626,630 @@      // But for nested types like struct, we might reach here for nested null type field.\n      // We won't call the returned function actually, but returns a placeholder.\n      _ => throw new SparkException(s\"should not directly cast from NullType to $to.\")\n    } else {\n      to match {"
   }
 ]

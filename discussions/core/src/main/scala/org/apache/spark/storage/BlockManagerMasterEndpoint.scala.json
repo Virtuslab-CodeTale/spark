@@ -669,5 +669,126 @@
     "commit" : "da93837805efc76c83511eed6a71d49851b34945",
     "line" : 14,
     "diffHunk" : "@@ -1,1 +53,57 @@\n  // Mapping from executor id to the block manager's local disk directories.\n  private val executorIdToLocalDirs =\n    CacheBuilder\n      .newBuilder()"
+  },
+  {
+    "id" : "f635800c-5b73-484c-8292-2b7026a348ab",
+    "prId" : 24499,
+    "prUrl" : "https://github.com/apache/spark/pull/24499#pullrequestreview-232375391",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "12790dcb-fa63-4913-b0fa-21c108f8e18a",
+        "parentId" : null,
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "Shouldn't you de-dupe this id object? Seems like for a large cached RDD you'd end up with a lot of identical objects in memory... I remember seeing similar logic to de-dupe the regular block manager ids somewhere.",
+        "createdAt" : "2019-04-30T18:32:49Z",
+        "updatedAt" : "2019-05-23T11:27:05Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "592d86bc-b08d-409c-9ec4-26f193a0bfd2",
+        "parentId" : "12790dcb-fa63-4913-b0fa-21c108f8e18a",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "I think we shouldn't. As `externalShuffleServiceIdOnHost` calls the `apply` method of `BlockManagerId` object where we have a cache for BlockManagerId instances:\r\n\r\nhttps://github.com/apache/spark/blob/3e7797aa02a48e653b3c167a62cba6512a1d3bcb/core/src/main/scala/org/apache/spark/storage/BlockManagerId.scala#L122-L127",
+        "createdAt" : "2019-04-30T20:00:11Z",
+        "updatedAt" : "2019-05-23T11:27:05Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "faa583f88b410fc7ededafe36bcb1ef878482d44",
+    "line" : 184,
+    "diffHunk" : "@@ -1,1 +493,497 @@\n    if (blockId.isRDD && storageLevel.useDisk && externalShuffleServiceRddFetchEnabled) {\n      val externalShuffleServiceId = externalShuffleServiceIdOnHost(blockManagerId)\n      if (storageLevel.isValid) {\n        locations.add(externalShuffleServiceId)"
+  },
+  {
+    "id" : "85da2637-94f2-4dfb-ba85-74399495cc24",
+    "prId" : 24499,
+    "prUrl" : "https://github.com/apache/spark/pull/24499#pullrequestreview-232395081",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e72d381a-61d9-443d-90b2-cfcdb2adeefd",
+        "parentId" : null,
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "This logic reads a bit funny although it looks correct. How about:\r\n\r\n```\r\nif (blockExists && externalShuffleServiceEnabled && storageLevel.useDisk) {\r\n  _exclusiveCachedBlocks -= blockId\r\n} else {\r\n  _exclusiveCachedBlocks += blockId\r\n}\r\n```",
+        "createdAt" : "2019-04-30T18:37:37Z",
+        "updatedAt" : "2019-05-23T11:27:05Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3bda614a-d80e-455e-bc7e-5e4933bf9362",
+        "parentId" : "e72d381a-61d9-443d-90b2-cfcdb2adeefd",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "For me reading my version is easier: the block is an exclusive block when external shuffle service is disabled or it is enabled but not block is in the disk. Although if it is not exclusive currently but it was known before (existed) than to be in the safe side (as it could have been exclusive) we should remove it from the exclusive blocks.  \r\n\r\nAlso it uses the Set operation (add/remove) rarely. So I would like to keep this.",
+        "createdAt" : "2019-04-30T20:42:05Z",
+        "updatedAt" : "2019-05-23T11:27:05Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "faa583f88b410fc7ededafe36bcb1ef878482d44",
+    "line" : 247,
+    "diffHunk" : "@@ -1,1 +664,668 @@\n      if (!blockId.isBroadcast) {\n        if (!externalShuffleServiceEnabled || !storageLevel.useDisk) {\n          _exclusiveCachedBlocks += blockId\n        } else if (blockExists) {"
+  },
+  {
+    "id" : "50959ea2-a974-4c10-9805-b7c20a0c10a3",
+    "prId" : 24499,
+    "prUrl" : "https://github.com/apache/spark/pull/24499#pullrequestreview-234967569",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "92791243-6c08-4987-a204-66ee50bf3e37",
+        "parentId" : null,
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "why a java hashmap inside a scala hashmap?",
+        "createdAt" : "2019-05-07T20:49:11Z",
+        "updatedAt" : "2019-05-23T11:27:05Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "527686cd-5bd8-4fb3-96ec-b37dd98cccc8",
+        "parentId" : "92791243-6c08-4987-a204-66ee50bf3e37",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "It is chosen because of consistency with the already existing solution for storing cached blocks:\r\n\r\nhttps://github.com/apache/spark/blob/cc7aea020a45adda9a464b3bb9300a6b35ec77ca/core/src/main/scala/org/apache/spark/storage/BlockManagerMasterEndpoint.scala#L544-L546\r\n\r\nI would prefer to have a type alias for `JHashMap[BlockId, BlockStatus]` then it would be a bit  more self-explanatory. Would you prefer to have a comment here?",
+        "createdAt" : "2019-05-08T09:55:32Z",
+        "updatedAt" : "2019-05-23T11:27:05Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "faa583f88b410fc7ededafe36bcb1ef878482d44",
+    "line" : 35,
+    "diffHunk" : "@@ -1,1 +54,58 @@  // Mapping from external shuffle service block manager id to the block statuses.\n  private val blockStatusByShuffleService =\n    new mutable.HashMap[BlockManagerId, JHashMap[BlockId, BlockStatus]]\n\n  // Mapping from executor ID to block manager ID."
+  },
+  {
+    "id" : "5aae41da-2536-4436-b976-7c357f1a20be",
+    "prId" : 24499,
+    "prUrl" : "https://github.com/apache/spark/pull/24499#pullrequestreview-234724167",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0ebd0572-dfbe-41eb-90d5-9db99539aa7a",
+        "parentId" : null,
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "I had to step through this pretty carefully to figure out why you were passing in `blockManagerId.executorId` here, though it was actually owned by the shuffle service.  In fact I was originally thinking that you should put in a \"dummy\" executor Id in here so it was clear its actually referring to something owned by the shuffle service.  But now I see that you actually need to know the original executor, to know which dirs to look in.  It might be worth at least a comment here that we need to keep a handle on the original executor, so the shuffle service knows which dir to look in.",
+        "createdAt" : "2019-05-07T21:18:24Z",
+        "updatedAt" : "2019-05-23T11:27:05Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "faa583f88b410fc7ededafe36bcb1ef878482d44",
+    "line" : 153,
+    "diffHunk" : "@@ -1,1 +403,407 @@    // we need to keep the executor ID of the original executor to let the shuffle service know\n    // which local directories should be used to look for the file\n    BlockManagerId(blockManagerId.executorId, blockManagerId.host, externalShuffleServicePort)\n  }\n"
   }
 ]

@@ -1,0 +1,211 @@
+[
+  {
+    "id" : "bfecc6b8-a76e-4bfe-b738-8e247be8101a",
+    "prId" : 24531,
+    "prUrl" : "https://github.com/apache/spark/pull/24531#pullrequestreview-233803117",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "3804b3ed-b696-41c1-af83-68e1e25bc1be",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Why not just not cache `predict` here? that avoids dealing with unpersisting in the single caller above.",
+        "createdAt" : "2019-05-05T23:04:49Z",
+        "updatedAt" : "2019-05-08T00:36:10Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d60acf5c-447e-4a71-8278-d83877f60bed",
+        "parentId" : "3804b3ed-b696-41c1-af83-68e1e25bc1be",
+        "authorId" : "d0d56018-475d-4da3-93a6-5e843402b7f2",
+        "body" : "Yes. removed the caching of `predict`",
+        "createdAt" : "2019-05-05T23:36:36Z",
+        "updatedAt" : "2019-05-08T00:36:11Z",
+        "lastEditedBy" : "d0d56018-475d-4da3-93a6-5e843402b7f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "598a7a2b19395250c2bb06b6155ef7759632c5f3",
+    "line" : 111,
+    "diffHunk" : "@@ -1,1 +439,443 @@    val predict = points.mapValues(model.predict(_))\n    points.unpersist()\n    predict\n  }\n"
+  },
+  {
+    "id" : "a0684755-a67e-4745-9384-bc5f4f3c7fc4",
+    "prId" : 24531,
+    "prUrl" : "https://github.com/apache/spark/pull/24531#pullrequestreview-233812953",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "a813efa5-688a-4624-8625-f17e080259ee",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "This looks unnecessary. `map` doesn't preserves the partitioner. It might be better to preserve it.",
+        "createdAt" : "2019-05-06T02:02:12Z",
+        "updatedAt" : "2019-05-08T00:36:11Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1d9f91c7-4e78-4034-8f8f-9bd62f7d7898",
+        "parentId" : "a813efa5-688a-4624-8625-f17e080259ee",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "`.map` is 1:1. It inherently preserves partitioning.",
+        "createdAt" : "2019-05-06T02:14:48Z",
+        "updatedAt" : "2019-05-08T00:36:11Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cb48dc4b-ba22-47b0-b0dc-40f09249d9e0",
+        "parentId" : "a813efa5-688a-4624-8625-f17e080259ee",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "In `map`, it creates `MapPartitionsRDD` with `preservesPartitioning` = false?",
+        "createdAt" : "2019-05-06T02:20:33Z",
+        "updatedAt" : "2019-05-08T00:36:11Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2b7d8c25-d599-48c4-9a10-8b519f4b4985",
+        "parentId" : "a813efa5-688a-4624-8625-f17e080259ee",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Hm yeah that's a good point. I am not sure it's valid to say this RDD preservers partitioning because the default hash partitioners would has the tuples and case class differently. The result is not a pair RDD. I don't feel strongly about it, but i'd keep this change.",
+        "createdAt" : "2019-05-06T02:24:56Z",
+        "updatedAt" : "2019-05-08T00:36:11Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "598a7a2b19395250c2bb06b6155ef7759632c5f3",
+    "line" : 29,
+    "diffHunk" : "@@ -1,1 +233,237 @@    val assignments = kMeans(v, k).map {\n      case (id, cluster) => Assignment(id, cluster)\n    }\n\n    new PowerIterationClusteringModel(k, assignments)"
+  },
+  {
+    "id" : "788fffab-f3cf-4896-b303-e0d2915e6131",
+    "prId" : 24531,
+    "prUrl" : "https://github.com/apache/spark/pull/24531#pullrequestreview-233811351",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1d15007f-278b-4c84-ab84-da463989ab54",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Is `gA` persisted? I don't look into it very deeply inside `Graph.fromEdges`, but seems it shouldn't persist it silently.",
+        "createdAt" : "2019-05-06T02:04:31Z",
+        "updatedAt" : "2019-05-08T00:36:11Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "598a7a2b19395250c2bb06b6155ef7759632c5f3",
+    "line" : 50,
+    "diffHunk" : "@@ -1,1 +306,310 @@        /* useEdge */ true))\n    materialize(graph)\n    gA.unpersist()\n\n    graph"
+  },
+  {
+    "id" : "e8a5668b-ebb1-41f2-b595-b5a2fe268b18",
+    "prId" : 24531,
+    "prUrl" : "https://github.com/apache/spark/pull/24531#pullrequestreview-233812202",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "cf920e06-d7bf-4dba-8b44-04dda0954001",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "`materialize` runs `foreachPartition` on the graph's edges. I didn't see it is persisted, so not sure why you want to materialize it without caching it?",
+        "createdAt" : "2019-05-06T02:12:13Z",
+        "updatedAt" : "2019-05-08T00:36:11Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5659d49f-f54a-4ff6-95bc-7dc674c16059",
+        "parentId" : "cf920e06-d7bf-4dba-8b44-04dda0954001",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Same deal, it's really materializing the edges and vertices RDDs.",
+        "createdAt" : "2019-05-06T02:15:32Z",
+        "updatedAt" : "2019-05-08T00:36:11Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "598a7a2b19395250c2bb06b6155ef7759632c5f3",
+    "line" : 62,
+    "diffHunk" : "@@ -1,1 +330,334 @@    val v0 = r.mapValues(x => x / sum)\n    val graph = Graph(VertexRDD(v0), g.edges)\n    materialize(graph)\n    r.unpersist()\n    graph"
+  },
+  {
+    "id" : "25163293-b03e-408b-af73-30b3ddf6e1c0",
+    "prId" : 24531,
+    "prUrl" : "https://github.com/apache/spark/pull/24531#pullrequestreview-234153635",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ecfb1958-055e-43e5-b6bd-d2c9bac113a5",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "nit: just `curG.unpersist`?",
+        "createdAt" : "2019-05-06T02:34:43Z",
+        "updatedAt" : "2019-05-08T00:36:11Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c0e04e4f-b435-4599-828b-2781ea05c7d1",
+        "parentId" : "ecfb1958-055e-43e5-b6bd-d2c9bac113a5",
+        "authorId" : "d0d56018-475d-4da3-93a6-5e843402b7f2",
+        "body" : "Actually `curG.unpersist` doesn't seem unpersist the edges rdd. One `EdgeRDD` block is getting cached in every iteration. That is why I have explicitely uncached into both edges and vertices",
+        "createdAt" : "2019-05-06T19:19:44Z",
+        "updatedAt" : "2019-05-08T00:36:11Z",
+        "lastEditedBy" : "d0d56018-475d-4da3-93a6-5e843402b7f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "598a7a2b19395250c2bb06b6155ef7759632c5f3",
+    "line" : 84,
+    "diffHunk" : "@@ -1,1 +410,414 @@      }\n      curG.vertices.unpersist()\n      curG.edges.unpersist()\n      // update v\n      curG = Graph(VertexRDD(v1), g.edges)"
+  },
+  {
+    "id" : "1a16e631-dfbf-46f9-9c5d-beafbb1cf471",
+    "prId" : 24531,
+    "prUrl" : "https://github.com/apache/spark/pull/24531#pullrequestreview-234707246",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "57bacfbe-6181-40cd-a121-27a457a4b7f0",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Not a big deal but you can remove `(_)` here and below",
+        "createdAt" : "2019-05-07T13:52:59Z",
+        "updatedAt" : "2019-05-08T00:36:11Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b6922422-1fe9-4bc8-9a3c-c9169514e67e",
+        "parentId" : "57bacfbe-6181-40cd-a121-27a457a4b7f0",
+        "authorId" : "d0d56018-475d-4da3-93a6-5e843402b7f2",
+        "body" : "I think we can't remove `(_)`, because there are multiple implementations for the methods.\r\nhttps://github.com/apache/spark/blob/2f558094257c38d26650049f2ac93be6d65d6d85/mllib/src/main/scala/org/apache/spark/mllib/clustering/KMeansModel.scala#L75-L94",
+        "createdAt" : "2019-05-07T19:07:51Z",
+        "updatedAt" : "2019-05-08T00:36:11Z",
+        "lastEditedBy" : "d0d56018-475d-4da3-93a6-5e843402b7f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "598a7a2b19395250c2bb06b6155ef7759632c5f3",
+    "line" : 102,
+    "diffHunk" : "@@ -1,1 +431,435 @@  private[clustering]\n  def kMeans(v: VertexRDD[Double], k: Int): VertexRDD[Int] = {\n    val points = v.mapValues(Vectors.dense(_)).cache()\n    val model = new KMeans()\n      .setK(k)"
+  }
+]

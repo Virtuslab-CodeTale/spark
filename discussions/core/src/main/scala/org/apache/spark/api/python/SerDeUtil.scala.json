@@ -1,0 +1,57 @@
+[
+  {
+    "id" : "d56b8cd8-be2a-4bb6-b52d-4143ececefe9",
+    "prId" : 24521,
+    "prUrl" : "https://github.com/apache/spark/pull/24521#pullrequestreview-233716294",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e6cabf9c-5302-4d99-b693-c899923156c9",
+        "parentId" : null,
+        "authorId" : "0c293c45-22a6-4358-8a40-adbf7c470575",
+        "body" : "It looks like `close()` clears the memoized map, the UnpickleStack, and the input stream. Since the input stream is a `ByteArrayStream` that's a no-op and is fine. Since each row is independent of the others, I don't see any reason why the other 2 would store anything necessary, so I believe that will be fine.",
+        "createdAt" : "2019-05-03T17:59:28Z",
+        "updatedAt" : "2019-05-04T01:40:38Z",
+        "lastEditedBy" : "0c293c45-22a6-4358-8a40-adbf7c470575",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "433735a2-23fc-43d3-903f-b5756f01c540",
+        "parentId" : "e6cabf9c-5302-4d99-b693-c899923156c9",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "I don't know anything about this, but it looks odd to close the object repeatedly. It may not cause a problem now. What's the downside to using a new object for each row, just performance?",
+        "createdAt" : "2019-05-03T21:10:12Z",
+        "updatedAt" : "2019-05-04T01:40:38Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1c60df41-f6b2-4a0c-acd3-4af52a2b036e",
+        "parentId" : "e6cabf9c-5302-4d99-b693-c899923156c9",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Yea, I missed `Since each row is independent of the others` - so I thought we should manually control `memo`. I had to look deeper :D.  Looks fine. Yes, I guess just it needs an extra clear call for each row.",
+        "createdAt" : "2019-05-03T23:34:27Z",
+        "updatedAt" : "2019-05-04T01:40:38Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bcd09873-e45c-4c37-af21-e416d9f5c160",
+        "parentId" : "e6cabf9c-5302-4d99-b693-c899923156c9",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "To use use a new object for each row is also ok. I didn't do it just for (possible) performance concern.",
+        "createdAt" : "2019-05-04T01:26:06Z",
+        "updatedAt" : "2019-05-04T01:40:38Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "053e6a50029cbe759bad279fb94a285ab0a7acd5",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +189,193 @@        // `Opcodes.MEMOIZE` of Protocol 4 (Python 3.4+) will store objects in internal map\n        // of `Unpickler`. This map is cleared when calling `Unpickler.close()`.\n        unpickle.close()\n        if (batched) {\n          obj match {"
+  }
+]

@@ -1,0 +1,90 @@
+[
+  {
+    "id" : "49518ba9-f3f8-4ef1-893d-922868e695ef",
+    "prId" : 24499,
+    "prUrl" : "https://github.com/apache/spark/pull/24499#pullrequestreview-235158888",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "83a199e5-85a9-478b-904d-c077ec49f2a5",
+        "parentId" : null,
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "I don't understand why you're adding these `null`s here and to other tests (is it related to this discussion earlier? https://github.com/apache/spark/pull/24499#discussion_r280565768 not sure I totally followed that, but I thought that was related to empty buffers, not null buffers).",
+        "createdAt" : "2019-05-07T21:23:46Z",
+        "updatedAt" : "2019-05-23T11:27:05Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ccaaeae5-e8d2-42ea-8843-c623bc574cfe",
+        "parentId" : "83a199e5-85a9-478b-904d-c077ec49f2a5",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "It is `null`s because of the initial value of `res` which only reassigned when the file exists: \r\n\r\nhttps://github.com/apache/spark/blob/cc7aea020a45adda9a464b3bb9300a6b35ec77ca/common/network-shuffle/src/main/java/org/apache/spark/network/shuffle/ExternalShuffleBlockResolver.java#L312-L321\r\n\r\nBut I think here is an interesting case: what if the file existed when `FileSegmentManagedBuffer ` is constructed with a non-zero length but when the file is about to be put on the wire or right before that it is removed by the owning executor. In my next commit this case will cover by a unit test too. ",
+        "createdAt" : "2019-05-08T16:26:33Z",
+        "updatedAt" : "2019-05-23T11:27:05Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "faa583f88b410fc7ededafe36bcb1ef878482d44",
+    "line" : 43,
+    "diffHunk" : "@@ -1,1 +61,65 @@    buffers.add(null);\n    buffers.add(buffer2);\n    buffers.add(null);\n    buffers.add(buffer3);\n"
+  },
+  {
+    "id" : "d373cd5d-909c-4d21-bb81-95f491a6da5e",
+    "prId" : 24499,
+    "prUrl" : "https://github.com/apache/spark/pull/24499#pullrequestreview-236702454",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "012a2398-0718-455b-b0d3-919f051a13f4",
+        "parentId" : null,
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "why don't these get released?",
+        "createdAt" : "2019-05-10T18:33:20Z",
+        "updatedAt" : "2019-05-23T11:27:05Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "954c74af-fe49-462f-b59f-2e7b6e3e1d5b",
+        "parentId" : "012a2398-0718-455b-b0d3-919f051a13f4",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "I have added a comment and released them manually at the `tearDown()`:\r\nhttps://github.com/apache/spark/blob/737b14a63a9782af77ca6a273f9c55750aff11a3/common/network-common/src/test/java/org/apache/spark/network/server/OneForOneStreamManagerSuite.java#L73-L77",
+        "createdAt" : "2019-05-13T14:12:25Z",
+        "updatedAt" : "2019-05-23T11:27:05Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "faa583f88b410fc7ededafe36bcb1ef878482d44",
+    "line" : 59,
+    "diffHunk" : "@@ -1,1 +75,79 @@    // would only be released by Netty after it is written to the network\n    Mockito.verify(buffer1, Mockito.never()).release();\n    Mockito.verify(buffer2, Mockito.never()).release();\n    Mockito.verify(buffer3, Mockito.times(1)).release();\n  }"
+  },
+  {
+    "id" : "97ca23a0-d1cf-40e9-9e0b-859f89b1c510",
+    "prId" : 24499,
+    "prUrl" : "https://github.com/apache/spark/pull/24499#pullrequestreview-236248146",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b089ba9e-8d2c-4d54-8b86-22084fbfc8e7",
+        "parentId" : null,
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "please add a comment about `null`s here are to simulate a file which goes missing before its read, just as a defensive measure.",
+        "createdAt" : "2019-05-10T18:34:54Z",
+        "updatedAt" : "2019-05-23T11:27:05Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "faa583f88b410fc7ededafe36bcb1ef878482d44",
+    "line" : 41,
+    "diffHunk" : "@@ -1,1 +59,63 @@    // the nulls here are to simulate a file which goes missing before being read,\n    // just as a defensive measure\n    buffers.add(null);\n    buffers.add(buffer2);\n    buffers.add(null);"
+  }
+]

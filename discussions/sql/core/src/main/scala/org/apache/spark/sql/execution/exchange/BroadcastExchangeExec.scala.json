@@ -361,5 +361,192 @@
     "commit" : "e2651049c408f211b225f40c93adf5b741b14eb4",
     "line" : 37,
     "diffHunk" : "@@ -1,1 +73,77 @@\n  @transient\n  private[sql] lazy val relationFuture: Future[broadcast.Broadcast[Any]] = {\n    // relationFuture is used in \"doExecute\". Therefore we can get the execution id correctly here.\n    val executionId = sparkContext.getLocalProperty(SQLExecution.EXECUTION_ID_KEY)"
+  },
+  {
+    "id" : "e47e1bf1-2700-4e56-b472-0edc277bd1b6",
+    "prId" : 24595,
+    "prUrl" : "https://github.com/apache/spark/pull/24595#pullrequestreview-706941369",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "7a65a2a3-a08a-48b0-b249-44e5634861a4",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "let's add a comment to explain why we set up a job group here. There is no other public API that can cancel a specific job AFAIK.",
+        "createdAt" : "2019-05-15T03:05:12Z",
+        "updatedAt" : "2019-05-15T18:20:20Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d0ecf4f2-9f4c-4643-ac22-36b875145346",
+        "parentId" : "7a65a2a3-a08a-48b0-b249-44e5634861a4",
+        "authorId" : "88f0c774-9c59-4485-885d-f6aee36efcea",
+        "body" : "Just curious, why can't we just inherit the job group id of the outside thread so that when the SQL statement was cancelled, these broadcast sub-jobs can be cancelled as a whole?",
+        "createdAt" : "2020-10-23T08:15:48Z",
+        "updatedAt" : "2020-10-23T08:18:16Z",
+        "lastEditedBy" : "88f0c774-9c59-4485-885d-f6aee36efcea",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "38c08d42-9634-4a2d-8122-d8496a7527db",
+        "parentId" : "7a65a2a3-a08a-48b0-b249-44e5634861a4",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "That sounds like a good idea. We should only set the job group if there is no one outside.",
+        "createdAt" : "2021-07-12T02:48:59Z",
+        "updatedAt" : "2021-07-12T02:49:00Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e4c6b392-a282-46e4-bf6b-a318d2c904a9",
+        "parentId" : "7a65a2a3-a08a-48b0-b249-44e5634861a4",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Wouldn't that cancelling the broadcast job cause the outer main job to cancel?",
+        "createdAt" : "2021-07-12T02:50:47Z",
+        "updatedAt" : "2021-07-12T02:50:47Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b0ae1b35-c726-482c-833b-f2ae1ab9dec2",
+        "parentId" : "7a65a2a3-a08a-48b0-b249-44e5634861a4",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "> We should only set the job group if there is no one outside.\r\n\r\nand I guess it would be a partial fix?",
+        "createdAt" : "2021-07-12T02:51:56Z",
+        "updatedAt" : "2021-07-12T02:51:56Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5bcffb7d-2d9c-410d-ae1d-2bec692339a1",
+        "parentId" : "7a65a2a3-a08a-48b0-b249-44e5634861a4",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I rechecked the code, we will cancel the broadcast if a timeout is hit, and we shouldn't cancel the main job there. We need a way to only cancel the jobs of the broadcast.",
+        "createdAt" : "2021-07-12T02:55:07Z",
+        "updatedAt" : "2021-07-12T02:55:07Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fc2a97b0-f65f-4c6f-9bd8-f93c8ffb7e4b",
+        "parentId" : "7a65a2a3-a08a-48b0-b249-44e5634861a4",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "seems like the problem is, we didn't set the job group id back to its original value after broadcast is done?",
+        "createdAt" : "2021-07-12T02:56:53Z",
+        "updatedAt" : "2021-07-12T02:56:53Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a8dda957-8186-40b7-b04a-c3fa457ef95c",
+        "parentId" : "7a65a2a3-a08a-48b0-b249-44e5634861a4",
+        "authorId" : "88f0c774-9c59-4485-885d-f6aee36efcea",
+        "body" : "Can we somehow encode the fact that this RDD is a broadcast job in the jobid/jobgroupid?",
+        "createdAt" : "2021-07-12T10:33:03Z",
+        "updatedAt" : "2021-07-12T10:33:03Z",
+        "lastEditedBy" : "88f0c774-9c59-4485-885d-f6aee36efcea",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d7145fd0-da78-42df-ba93-ff92320ca963",
+        "parentId" : "7a65a2a3-a08a-48b0-b249-44e5634861a4",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "I think that's hacky though. To fix it properly, we should either have multiple job group ids or job group hierarchy. ",
+        "createdAt" : "2021-07-12T10:39:51Z",
+        "updatedAt" : "2021-07-12T10:39:51Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c39d9d9d-9813-4c5b-a97d-47061c22c70f",
+        "parentId" : "7a65a2a3-a08a-48b0-b249-44e5634861a4",
+        "authorId" : "88f0c774-9c59-4485-885d-f6aee36efcea",
+        "body" : "I agree that we should have hierarchical job group.",
+        "createdAt" : "2021-07-12T10:41:30Z",
+        "updatedAt" : "2021-07-12T10:41:30Z",
+        "lastEditedBy" : "88f0c774-9c59-4485-885d-f6aee36efcea",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1c75e714-4382-40e5-b401-36b489875282",
+        "parentId" : "7a65a2a3-a08a-48b0-b249-44e5634861a4",
+        "authorId" : "afcafcea-ead3-4649-a4d8-74eb9dfd1a22",
+        "body" : "My idea is to leave the choice to the user. Since cancelling the broadcast job is an optimization method, and the UI is also user-oriented, it is better to add a configuration item, such as: \r\n`spark.broadcast.job.cancelling.enabled`\r\n When it is true, it supports cancelling the broadcast job. The default is false. By default,  if the user sets up job group and job description, he will not be surprised by the UI. If the user wants to optimize the broadcast job, he will not be surprised by the UI too. We can make it clear in the configuration doc. Mutiple job group can also achieve the goal, but I am worried that it will be more disruptive to program development. Some old users may not know how to set up mutiple job group without viewing the source code.In addition, multiple job group will bring more workload and higher error probability.",
+        "createdAt" : "2021-07-14T02:34:36Z",
+        "updatedAt" : "2021-07-14T02:49:29Z",
+        "lastEditedBy" : "afcafcea-ead3-4649-a4d8-74eb9dfd1a22",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "762f22b8-3e87-4138-bb97-6035d24f6d2e",
+        "parentId" : "7a65a2a3-a08a-48b0-b249-44e5634861a4",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "It's always better to have fewer configs if possible. And I don't think we can override the job group id here if the config is true, as this is used to cancel broadcast after timeout.",
+        "createdAt" : "2021-07-14T02:59:32Z",
+        "updatedAt" : "2021-07-14T02:59:32Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7706601a-38a9-49d6-98fb-c722368f8d89",
+        "parentId" : "7a65a2a3-a08a-48b0-b249-44e5634861a4",
+        "authorId" : "afcafcea-ead3-4649-a4d8-74eb9dfd1a22",
+        "body" : "@HyukjinKwon  @jiangxb1987 @yeshengm What‘s your opinion of my idea?",
+        "createdAt" : "2021-07-15T02:52:58Z",
+        "updatedAt" : "2021-07-15T02:53:03Z",
+        "lastEditedBy" : "afcafcea-ead3-4649-a4d8-74eb9dfd1a22",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f6769548-1260-4d20-ac7f-18f58be8dd60",
+        "parentId" : "7a65a2a3-a08a-48b0-b249-44e5634861a4",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "I am discussing about multiple job group support which will fundamentally fix all these problems. This is actually a general problem that's not speicfic to SQL broadcast here only.",
+        "createdAt" : "2021-07-15T03:12:06Z",
+        "updatedAt" : "2021-07-15T03:12:06Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e64730d2-6b21-44a3-873d-ee947e76ccc0",
+        "parentId" : "7a65a2a3-a08a-48b0-b249-44e5634861a4",
+        "authorId" : "afcafcea-ead3-4649-a4d8-74eb9dfd1a22",
+        "body" : "@HyukjinKwon Could you please tell me where you are discussing? I also want to make a little contribution.",
+        "createdAt" : "2021-07-15T05:21:16Z",
+        "updatedAt" : "2021-07-15T05:21:25Z",
+        "lastEditedBy" : "afcafcea-ead3-4649-a4d8-74eb9dfd1a22",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9a04e2f2-cdd9-4de9-8849-33759fcd64d6",
+        "parentId" : "7a65a2a3-a08a-48b0-b249-44e5634861a4",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "sorry I am discussing offline first. I will send out an email or JIRA soon for more open discussion soon.",
+        "createdAt" : "2021-07-15T05:38:08Z",
+        "updatedAt" : "2021-07-15T05:38:17Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5d82dd7aad830d36e24f9943f9d566fbc70b93aa",
+    "line" : 83,
+    "diffHunk" : "@@ -1,1 +73,77 @@          try {\n            // Setup a job group here so later it may get cancelled by groupId if necessary.\n            sparkContext.setJobGroup(runId.toString, s\"broadcast exchange (runId $runId)\",\n              interruptOnCancel = true)\n            val beforeCollect = System.nanoTime()"
   }
 ]

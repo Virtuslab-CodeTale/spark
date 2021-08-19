@@ -295,5 +295,38 @@
     "commit" : "8b5e7442c63fe326db7c7f46f7a194fbae8f0d46",
     "line" : 26,
     "diffHunk" : "@@ -1,1 +618,622 @@        (SQLConf.USE_OBJECT_HASH_AGG.key, useObjectHashAgg.toString),\n        (SQLConf.ADAPTIVE_EXECUTION_ENABLED.key -> \"false\")) {\n        // When enable AQE, the WholeStageCodegenExec is added during QueryStageExec.\n\n        val df = Seq((\"1\", 1), (\"1\", 2), (\"2\", 3), (\"2\", 4)).toDF(\"x\", \"y\")"
+  },
+  {
+    "id" : "1efc9430-f5a6-4f96-8cfe-6b032b0618a8",
+    "prId" : 24557,
+    "prUrl" : "https://github.com/apache/spark/pull/24557#pullrequestreview-235164286",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "34f71fea-f265-4fa2-92b2-ef172a3a5f98",
+        "parentId" : null,
+        "authorId" : "a11722a8-ecfa-4827-88e3-4d708f023846",
+        "body" : "This returns `null` because all values of the ordering column are `null`? That seems to match Presto behavior:\r\n\r\n```\r\nSELECT max_by(x, y) FROM (\r\n  VALUES\r\n    ('a', null),\r\n    ('b', null)\r\n) AS tab (x, y)\r\n```\r\n\r\nalso returns `null` in Presto :thumbsup:",
+        "createdAt" : "2019-05-08T16:16:50Z",
+        "updatedAt" : "2019-05-13T08:40:13Z",
+        "lastEditedBy" : "a11722a8-ecfa-4827-88e3-4d708f023846",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2e1a4e01-9b4c-480b-98ba-be2365c9f44f",
+        "parentId" : "34f71fea-f265-4fa2-92b2-ef172a3a5f98",
+        "authorId" : "a11722a8-ecfa-4827-88e3-4d708f023846",
+        "body" : "This makes sense if you think of this function as being semantically equivalent to \r\n\r\n```\r\nSELECT first(x) FROM tab WHERE y = max(y)\r\n```",
+        "createdAt" : "2019-05-08T16:37:37Z",
+        "updatedAt" : "2019-05-13T08:40:13Z",
+        "lastEditedBy" : "a11722a8-ecfa-4827-88e3-4d708f023846",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "05f1767dc49e6caebd91abf207014bcd8029b4f1",
+    "line" : 31,
+    "diffHunk" : "@@ -1,1 +810,814 @@\n    checkAnswer(\n      sql(\"SELECT max_by(x, y) FROM VALUES (('a', null)), (('b', null)) AS tab(x, y)\"),\n      Row(null) :: Nil\n    )"
   }
 ]
