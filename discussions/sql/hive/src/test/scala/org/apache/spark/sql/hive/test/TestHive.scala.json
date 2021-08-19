@@ -97,5 +97,126 @@
     "commit" : "a32a8cfa56d9c03af6f9853fc48284939bf1f628",
     "line" : 8,
     "diffHunk" : "@@ -1,1 +653,657 @@  private val hiveTestJarsDir = Utils.createTempDir()\n\n  def getHiveContribJar(version: String = HiveUtils.builtinHiveVersion): File =\n    getJarFromUrl(s\"${repository}org/apache/hive/hive-contrib/\" +\n      s\"$version/hive-contrib-$version.jar\")"
+  },
+  {
+    "id" : "467d76c5-968e-49f1-a0b5-0271d6d94fca",
+    "prId" : 25690,
+    "prUrl" : "https://github.com/apache/spark/pull/25690#pullrequestreview-294351269",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "c762d648-9846-4672-ba57-d09a426663a6",
+        "parentId" : null,
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "cc @srowen @dongjoon-hyun @HyukjinKwon Do you think this is stable?",
+        "createdAt" : "2019-09-09T02:28:07Z",
+        "updatedAt" : "2019-09-27T15:41:14Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e7824efa-c6fa-4e9b-bcfb-54bcd25e2a2e",
+        "parentId" : "c762d648-9846-4672-ba57-d09a426663a6",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "I don't know how stable this way it is. While Sean or Dongjoon might have an idea about this, I would verify if `--jars` in that condition is still tested, and run the tests multiple times to show practically this way works at least.",
+        "createdAt" : "2019-09-09T09:22:06Z",
+        "updatedAt" : "2019-09-27T15:41:14Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d893e7ac-6124-444a-9f7a-7469cc4de0fe",
+        "parentId" : "c762d648-9846-4672-ba57-d09a426663a6",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "I think this could be OK. I was really thinking of refactoring the logic that directly downloads the JAR, found in `HiveExternalCatalogVersionsSuite.tryDownloadSpark`. However in retrospect, I think that logic is a little bit tied to downloading a release tarball, not a JAR. \r\n\r\nIf you just want single JARs, how about just constructing the URL for it on `repository.apache.org` and download? I don't think you have to resolve it?",
+        "createdAt" : "2019-09-09T10:51:30Z",
+        "updatedAt" : "2019-09-27T15:41:14Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f982b4a5-110d-4b66-a54b-ca7f77758826",
+        "parentId" : "c762d648-9846-4672-ba57-d09a426663a6",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "Do you prefer this?\r\n```scala\r\n  private val repository = \"https://repository.apache.org/content/repositories/releases/\"\r\n  private val hiveContribUrl = s\"${repository}org/apache/hive/hive-contrib/\" +\r\n    s\"${HiveUtils.builtinHiveVersion}/\"\r\n  private val hiveHcatalogCoreUrl = s\"${repository}org/apache/hive/hcatalog/hive-hcatalog-core/\" +\r\n    s\"${HiveUtils.builtinHiveVersion}/\"\r\n\r\n  def getHiveContribJar: File = getFileFromUrl(hiveContribUrl,\r\n    s\"hive-contrib-${HiveUtils.builtinHiveVersion}.jar\")\r\n  def getHiveHcatalogCoreJar: File = getFileFromUrl(hiveHcatalogCoreUrl,\r\n    s\"hive-hcatalog-core-${HiveUtils.builtinHiveVersion}.jar\")\r\n\r\n  private def getFileFromUrl(urlString: String, filename: String): File = {\r\n    val hiveTestJars = new File(\"/tmp/test-spark/hiveTestJars\")\r\n    if (!hiveTestJars.exists()) {\r\n      hiveTestJars.mkdirs()\r\n    }\r\n    val targetFile = new File(hiveTestJars, filename)\r\n    if (!targetFile.exists() || !(targetFile.length() > 0)) {\r\n      val conf = new SparkConf\r\n      val securityManager = new org.apache.spark.SecurityManager(conf)\r\n      val hadoopConf = new Configuration\r\n\r\n      // propagate exceptions up to the caller of getFileFromUrl\r\n      Utils.doFetchFile(urlString, hiveTestJars, filename, conf, securityManager, hadoopConf)\r\n    }\r\n    targetFile\r\n  }\r\n```",
+        "createdAt" : "2019-09-09T11:48:55Z",
+        "updatedAt" : "2019-09-27T15:41:14Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "58a163fa-e90c-427b-9b2c-04c78391667b",
+        "parentId" : "c762d648-9846-4672-ba57-d09a426663a6",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Yes, that kind of thing. It could be a little simpler (e.g. no need for defs for the `getHiveContribJar` et al, and I think you can pass a null conf/securityManager to download an HTTPS URL) but this seems simpler than trying to resolve the artifact.",
+        "createdAt" : "2019-09-09T13:22:18Z",
+        "updatedAt" : "2019-09-27T15:41:14Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5704eca8-3f63-41a2-884e-b70f8de061ef",
+        "parentId" : "c762d648-9846-4672-ba57-d09a426663a6",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "Done",
+        "createdAt" : "2019-09-10T01:54:15Z",
+        "updatedAt" : "2019-09-27T15:41:14Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "55a29fba-67ee-49d6-ad4f-4900a50d4388",
+        "parentId" : "c762d648-9846-4672-ba57-d09a426663a6",
+        "authorId" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "body" : "```scala\r\n  private def getJarFromUrl(urlString: String): File = {\r\n    val fileName = urlString.split(\"/\").last\r\n    val targetFile = new File(hiveTestJarsDir, fileName)\r\n    if (!targetFile.exists()) {\r\n      Utils.doFetchFile(urlString, hiveTestJarsDir, fileName, new SparkConf, null, null)\r\n    }\r\n    targetFile\r\n  }\r\n```\r\nThe method I think it may be incorrect. Why not change to:\r\n```scala\r\n  private def getJarFromUrl(urlString: String): File = {\r\n    val fileName = urlString.split(\"/\").last\r\n    Utils.doFetchFile(urlString, hiveTestJarsDir, fileName, new SparkConf, null, null)\r\n  }\r\n```\r\nBecause the `targetFile` and the return value of `Utils.doFetchFile` may be different.\r\nIn my testing:\r\n`targetFile`:\r\n/private/var/folders/pl/0j98k60s5zs7lz4kthvkn2dm3954vp/T/spark-c8c1a791-bef2-4e36-bd99-e03d89fd7d27/hive-contrib-1.2.1.jar\r\n`Utils.doFetchFile`:\r\n/private/var/folders/pl/0j98k60s5zs7lz4kthvkn2dm3954vp/T/spark-fdbe0ba4-a929-499a-9a29-55644bcd31b0/hive-contrib-1.2.1.jar",
+        "createdAt" : "2019-09-26T15:14:35Z",
+        "updatedAt" : "2019-09-27T15:41:14Z",
+        "lastEditedBy" : "0223d15f-93d2-46b2-bee2-7f40fcd0335a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "682d7482-6f81-48ab-8d3e-01e9f06d5523",
+        "parentId" : "c762d648-9846-4672-ba57-d09a426663a6",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "Thank you @LantaoJin My change is to avoid downloading these two files many times.",
+        "createdAt" : "2019-09-27T14:10:43Z",
+        "updatedAt" : "2019-09-27T15:41:14Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "882ae45cb657cb1fd77a6c3fd8034f3ec2986c20",
+    "line" : 23,
+    "diffHunk" : "@@ -1,1 +667,671 @@    }\n    targetFile\n  }\n}"
+  },
+  {
+    "id" : "b82a38d4-4aab-4041-a2a5-7f988737640f",
+    "prId" : 25690,
+    "prUrl" : "https://github.com/apache/spark/pull/25690#pullrequestreview-294415801",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ea7569c3-4933-4e25-a736-7c7905d181b7",
+        "parentId" : null,
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "We can also verify that the default value is valid.",
+        "createdAt" : "2019-09-27T15:52:32Z",
+        "updatedAt" : "2019-09-27T15:52:32Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "882ae45cb657cb1fd77a6c3fd8034f3ec2986c20",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +650,654 @@\nprivate[hive] object HiveTestJars {\n  private val repository = SQLConf.ADDITIONAL_REMOTE_REPOSITORIES.defaultValueString\n  private val hiveTestJarsDir = Utils.createTempDir()\n"
   }
 ]

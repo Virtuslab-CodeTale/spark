@@ -64,5 +64,137 @@
     "commit" : "84856190f5bf7f7865ce3428986cca61471c9845",
     "line" : 25,
     "diffHunk" : "@@ -1,1 +203,207 @@\n    case ShowTablesStatement(Some(namespace), pattern) =>\n      val DefaultCatalogAndNamespace(maybeCatalog, ns) = namespace\n      maybeCatalog match {\n        case Some(catalog) =>"
+  },
+  {
+    "id" : "2fe02e61-8068-48d9-b960-e574d4c0179d",
+    "prId" : 25601,
+    "prUrl" : "https://github.com/apache/spark/pull/25601#pullrequestreview-285885998",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "15049550-8d7d-44f6-b42e-0e778f56d50f",
+        "parentId" : null,
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "I think this needs to distinguish between the case where the catalog is None and the catalog does not support namespaces. For the second case, this should report that the catalog doesn't support namespaces. You can also add a conversion method, `asNamespaceCatalog` to `CatalogV2Utils` like `asTableCatalog`.",
+        "createdAt" : "2019-09-04T21:57:05Z",
+        "updatedAt" : "2019-09-09T23:58:04Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "36bf4884-d941-4040-8aae-5597c31b783f",
+        "parentId" : "15049550-8d7d-44f6-b42e-0e778f56d50f",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "Using `asNamespaceCatalog` simplifies the matching. Thanks.",
+        "createdAt" : "2019-09-04T23:59:00Z",
+        "updatedAt" : "2019-09-09T23:58:04Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7f25d28b-a64c-47d6-8daa-f714c0675a8b",
+        "parentId" : "15049550-8d7d-44f6-b42e-0e778f56d50f",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "Why not use the current catalog instead of failing?",
+        "createdAt" : "2019-09-06T21:38:49Z",
+        "updatedAt" : "2019-09-09T23:58:04Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4282111a-f240-4ea9-8665-852634d1a281",
+        "parentId" : "15049550-8d7d-44f6-b42e-0e778f56d50f",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "If the catalog name is specified, but catalog doesn't support namespace, I think we should fail instead of falling back to the current catalog.\r\n\r\nIt's similar to: if the catalog name is specified, but doesn't contain the table we need, we should fail instead of falling back to the current catalog.",
+        "createdAt" : "2019-09-10T03:14:38Z",
+        "updatedAt" : "2019-09-10T03:14:38Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9a55a03acf84fe67595817c8fef409a9e4912a51",
+    "line" : 38,
+    "diffHunk" : "@@ -1,1 +184,188 @@          ShowNamespaces(catalog.asNamespaceCatalog, Some(ns), pattern)\n        case None =>\n          throw new AnalysisException(\n            s\"No v2 catalog is available for ${namespace.quoted}\")\n      }"
+  },
+  {
+    "id" : "a6096db7-ee44-4ad1-8ba6-d1a4b0931f32",
+    "prId" : 25601,
+    "prUrl" : "https://github.com/apache/spark/pull/25601#pullrequestreview-286530033",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "46d73852-3896-495e-abef-1aa3101afba3",
+        "parentId" : null,
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "I think this should be `currentCatalog` instead. @cloud-fan, do you agree?",
+        "createdAt" : "2019-09-06T21:38:12Z",
+        "updatedAt" : "2019-09-09T23:58:04Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "577c5c2d-6590-4b09-9181-6d3d9589cbd5",
+        "parentId" : "46d73852-3896-495e-abef-1aa3101afba3",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "yea",
+        "createdAt" : "2019-09-10T03:10:08Z",
+        "updatedAt" : "2019-09-10T03:10:08Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "59f3542e-ee1c-4ff7-8727-66ef387b7f3c",
+        "parentId" : "46d73852-3896-495e-abef-1aa3101afba3",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Let's implement switching the current catalog first, otherwise we are not able to test it.",
+        "createdAt" : "2019-09-10T13:19:47Z",
+        "updatedAt" : "2019-09-10T13:19:47Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dc97ec07-3dc7-4cdc-a661-efaad81bf816",
+        "parentId" : "46d73852-3896-495e-abef-1aa3101afba3",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "@imback82 are you working on it?",
+        "createdAt" : "2019-09-10T13:25:01Z",
+        "updatedAt" : "2019-09-10T13:25:02Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "87387512-98d1-45c1-b0f1-bc634ea6fe4a",
+        "parentId" : "46d73852-3896-495e-abef-1aa3101afba3",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "yes, I am working on `USE NAMESPACE`",
+        "createdAt" : "2019-09-10T23:13:52Z",
+        "updatedAt" : "2019-09-10T23:13:53Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8ea3bd77-2b49-4490-aae0-73338b0349db",
+        "parentId" : "46d73852-3896-495e-abef-1aa3101afba3",
+        "authorId" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "body" : "I should be able to send out the PR sometime tomorrow.",
+        "createdAt" : "2019-09-11T02:46:22Z",
+        "updatedAt" : "2019-09-11T02:46:22Z",
+        "lastEditedBy" : "b14448be-63dd-4b59-ab38-deeb2a38de86",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "9a55a03acf84fe67595817c8fef409a9e4912a51",
+    "line" : 25,
+    "diffHunk" : "@@ -1,1 +171,175 @@\n    case ShowNamespacesStatement(None, pattern) =>\n      defaultCatalog match {\n        case Some(catalog) =>\n          ShowNamespaces(catalog.asNamespaceCatalog, None, pattern)"
   }
 ]

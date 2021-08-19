@@ -878,5 +878,82 @@
     "commit" : "e9ebb6fd690c6e3a786b3285058c59850107386b",
     "line" : 168,
     "diffHunk" : "@@ -1,1 +829,833 @@    val log = listing.read(classOf[LogInfo], logPath)\n\n    if (log.lastProcessed <= maxTime && log.appId.isEmpty) {\n      logInfo(s\"Deleting invalid / corrupt event log ${log.logPath}\")\n      deleteLog(fs, new Path(log.logPath))"
+  },
+  {
+    "id" : "dfae6922-c3ab-47dd-bb22-8ebb35ae5e3a",
+    "prId" : 25670,
+    "prUrl" : "https://github.com/apache/spark/pull/25670#pullrequestreview-297766157",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "15e40544-a238-4dea-89a0-f7b8606ef7e6",
+        "parentId" : null,
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "It would be good to check what happens when you have an existing listing db with the old version of this type, and the new code loads it. Is this field properly initialized to `None`, or does it become `null`, which would cause problems?",
+        "createdAt" : "2019-10-02T16:48:55Z",
+        "updatedAt" : "2019-10-16T20:56:19Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "533d97ed-32d5-47dc-ae33-e0202c00c639",
+        "parentId" : "15e40544-a238-4dea-89a0-f7b8606ef7e6",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "I missed to check this. Will check and fix if it causes problem via adding UT which loads LevelDB from Spark 2.4.4 and read more applications.",
+        "createdAt" : "2019-10-03T03:01:49Z",
+        "updatedAt" : "2019-10-16T20:56:19Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cc353dae-4fe8-4391-b477-0022f5ba245d",
+        "parentId" : "15e40544-a238-4dea-89a0-f7b8606ef7e6",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "I've crafted some test code to experiment this: \r\n\r\n```\r\n    val newLogDir = new File(\"/spark-dist/releases/spark-2.4.4-bin-hadoop2.7/eventlogs\")\r\n    val localStoreDir = new File(\"/spark-dist/releases/spark-2.4.4-bin-hadoop2.7/history-dir\")\r\n    val newLocalStoreDir = new File(testDir, \"localstore\")\r\n    newLocalStoreDir.mkdirs()\r\n    FileUtils.copyDirectory(localStoreDir, newLocalStoreDir)\r\n\r\n    val conf = createTestConf()\r\n    conf.set(HISTORY_LOG_DIR, newLogDir.getAbsolutePath)\r\n    conf.set(LOCAL_STORE_DIR, newLocalStoreDir.getAbsolutePath)\r\n\r\n    val provider = new FsHistoryProvider(conf)\r\n    provider.checkForLogs()\r\n```\r\n\r\nHere the directory directly points to the eventlogs/history local store directory in Spark 2.4.4 since metadata of listing contains the path and Spark ignores the content of local store if metadata doesn't match. If we want to include this to new UT, some modification might be needed. We tend to add UT if we want to ensure the new change is compatible with old version, so seem to be worth to add.\r\n\r\nI've set breakpoint to `FsHistoryProvider.checkForLogs`, and observed lastIndex is set to `None` (so it seems to be safe), but `logType` is set to `null` which we don't expect.\r\n\r\nWould we be better to increase `CURRENT_LISTING_VERSION` to deal with this, or manually set to `EventLogs` when it's null? Maybe better to deal with new PR though.",
+        "createdAt" : "2019-10-04T01:38:42Z",
+        "updatedAt" : "2019-10-16T20:56:19Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9bc20a8b-bf3b-43e8-9657-eeef4ef5553e",
+        "parentId" : "15e40544-a238-4dea-89a0-f7b8606ef7e6",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Just realized that FsHistoryProvider does some care on `logType` being `null`. I wouldn't expect LogType.Value is null and feel safer to correct the value, but given now FsHistoryProvider accesses logType correctly, that's OK. I'd prefer to add UT to check the values of field of LogInfo when reading from Spark 2.4.4 to make sure we're not missing anything, but it's just me.",
+        "createdAt" : "2019-10-04T03:05:19Z",
+        "updatedAt" : "2019-10-16T20:56:19Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "10d8a9fb-e3fc-479e-819c-638d2a9ec4bd",
+        "parentId" : "15e40544-a238-4dea-89a0-f7b8606ef7e6",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "You don't need to create a disk store with the old Spark version to test this. This is basically a test of deserializing an old JSON payload using `KVStoreScalaSerializer`; feed it JSON without the new field, and see what comes out of it.",
+        "createdAt" : "2019-10-04T16:21:43Z",
+        "updatedAt" : "2019-10-16T20:56:19Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fde218f8-3020-4911-9da5-9f2c4a6f0b37",
+        "parentId" : "15e40544-a238-4dea-89a0-f7b8606ef7e6",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Good point. In other tests which we have modified something and worried about compatibility, we stored the old data and load from there so I thought about the same. Your suggestion would be pretty much simpler. Thanks!",
+        "createdAt" : "2019-10-05T00:50:17Z",
+        "updatedAt" : "2019-10-16T20:56:19Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a2f631d88504ed360f3f3d3bcb3ceffb83f9c75f",
+    "line" : 365,
+    "diffHunk" : "@@ -1,1 +1171,1175 @@    attemptId: Option[String],\n    fileSize: Long,\n    lastIndex: Option[Long],\n    isComplete: Boolean)\n"
   }
 ]

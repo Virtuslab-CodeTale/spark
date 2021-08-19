@@ -3408,5 +3408,38 @@
     "commit" : "c223e0537796c1e0a52bc5a655660f89ab539192",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +120,124 @@    }\n\n    val batches = (Batch(\"Eliminate Distinct\", Once, EliminateDistinct) ::\n    // Technically some of the rules in Finish Analysis are not optimizer rules and belong more\n    // in the analyzer, because they are needed for correctness (e.g. ComputeCurrentTime)."
+  },
+  {
+    "id" : "833265ac-586e-4083-8d46-feceaf33433e",
+    "prId" : 25600,
+    "prUrl" : "https://github.com/apache/spark/pull/25600#pullrequestreview-280605574",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4f4b386d-4ef0-4b02-81b8-6dbbc16001f9",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Yup, +1 for now.",
+        "createdAt" : "2019-08-28T05:02:29Z",
+        "updatedAt" : "2019-09-04T14:47:15Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ecf9e2c1-f630-454f-b504-73c9a6f18238",
+        "parentId" : "4f4b386d-4ef0-4b02-81b8-6dbbc16001f9",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Copied and pasted from the offline discussion with @maryannxue:\r\n\r\nSeems the problem is that, `ExtractPythonUDFFromAggregate` seems not idempotent.\r\nso in `OptimizeSubqueries`, when it optimizes this plan at here https://github.com/apache/spark/blob/bab88c48b1432249571aae90bc56b40d74f2fa88/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/optimizer/Optimizer.scala#L240\r\n\r\nHere, `s.plan` is as below:\r\n\r\n```\r\nSubquery\r\n+- Project [pyUDF(agg#32) AS CAST(pyUDF(cast(min(k) as string)) AS STRING)#27]\r\n   +- Aggregate [min(k#18) AS agg#32]\r\n      +- Project [_1#13 AS k#18]\r\n         +- LocalRelation [_1#13, _2#14]\r\n```\r\n\r\nAfter `CollapseProject`:\r\n\r\n```\r\nSubquery\r\n+- Aggregate [pyUDF(min(k#18)) AS CAST(pyUDF(cast(min(k) as string)) AS STRING)#27]\r\n   +- Project [_1#13 AS k#18]\r\n      +- LocalRelation [_1#13, _2#14]\r\n```\r\n\r\nAfter `ExtractPythonUDFFromAggregate`:\r\n\r\n```\r\nSubquery\r\n+- Project [pyUDF(agg#33) AS CAST(pyUDF(cast(min(k) as string)) AS STRING)#27]\r\n   +- Aggregate [min(k#18) AS agg#33]\r\n      +- Project [_1#13 AS k#18]\r\n         +- LocalRelation [_1#13, _2#14]\r\n```\r\nseems the new alias is made at https://github.com/apache/spark/blob/77c7e91e029a9a70678435acb141154f2f51882e/sql/core/src/main/scala/org/apache/spark/sql/execution/python/ExtractPythonUDFs.scala#L63\r\n\r\nSo adding it to blacklisting makes sense to me for now.",
+        "createdAt" : "2019-08-28T06:05:57Z",
+        "updatedAt" : "2019-09-04T14:47:15Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "b00225078c6471b5b01f8a920ab28a2361b8e48b",
+    "line" : 6,
+    "diffHunk" : "@@ -1,1 +50,54 @@  override protected val blacklistedOnceBatches: Set[String] =\n    Set(\n      \"PartitionPruning\",\n      \"Extract Python UDFs\")\n"
   }
 ]

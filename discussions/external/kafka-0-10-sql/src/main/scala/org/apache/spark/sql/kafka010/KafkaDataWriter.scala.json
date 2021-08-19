@@ -86,5 +86,60 @@
     "commit" : "21d03e75f9b669ac2cbb42af3315944fb780b2c8",
     "line" : 5,
     "diffHunk" : "@@ -1,1 +64,68 @@  def abort(): Unit = {}\n\n  def close(): Unit = {}\n\n  /** explicitly invalidate producer from pool. only for testing. */"
+  },
+  {
+    "id" : "4f53d546-4b97-461e-91ef-e545e0306dc8",
+    "prId" : 25618,
+    "prUrl" : "https://github.com/apache/spark/pull/25618#pullrequestreview-281810809",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5b66b162-5dbe-433b-9d9b-9eefbe9d408e",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Spark leverages the fact that Kafka producer is thread-safe. You may need to check whether it's still valid for transactional producer as well. (My instinct says it may not, otherwise you'll deal with 2PC via multiple partitions with same producer id in same executor. Sounds weird.)",
+        "createdAt" : "2019-08-29T23:28:42Z",
+        "updatedAt" : "2019-08-29T23:40:47Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "12e1b9af-7960-4aa8-a54e-dedeb7684ffb",
+        "parentId" : "5b66b162-5dbe-433b-9d9b-9eefbe9d408e",
+        "authorId" : "ba6a59c9-dd69-47c0-bfc8-6de96af270ce",
+        "body" : "I have considered kafka producer per executor. But there will be data loss to abort transaction when multiple task share one transaction, and some task failed and retry in other executor.\r\nSo to avoid create too many producer, task will reuse the created producer. And the config `producer.create.factor` will limit producer total number in abnormal scene, such as long tail task.",
+        "createdAt" : "2019-08-30T01:57:26Z",
+        "updatedAt" : "2019-08-30T01:57:27Z",
+        "lastEditedBy" : "ba6a59c9-dd69-47c0-bfc8-6de96af270ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a2a946bb-18e7-4b49-b97e-079d90b72600",
+        "parentId" : "5b66b162-5dbe-433b-9d9b-9eefbe9d408e",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "What I meant is Spark shares Kafka producer in multi-threads in executor once `producerParams` is same. So what you considered is exactly what Spark is doing now. (I meant to point out this.) According to your explanation, caching logic should be changed to restrict multi-threads usage.",
+        "createdAt" : "2019-08-30T02:08:17Z",
+        "updatedAt" : "2019-08-30T02:08:18Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "630cf52c-8980-42bc-a12f-69a58e4b17b1",
+        "parentId" : "5b66b162-5dbe-433b-9d9b-9eefbe9d408e",
+        "authorId" : "ba6a59c9-dd69-47c0-bfc8-6de96af270ce",
+        "body" : "I think caching logic is ok and we can control producer creation per task, and also failover with transactional.id in producerParams.\r\nTransaction producer is not thread safe, so what I do is one producer per task in one micro-batch, and in next batch reused the created producer instead of recreate one since transaction is complete in every micro-batch.  With producerParams, transactional.id is different between tasks in one micro-batch, but same in the next micro-batch.\r\nAnd if task number is same for every executor in every micro-batch, no more producer will be created except the first micro-batch. ",
+        "createdAt" : "2019-08-30T03:08:24Z",
+        "updatedAt" : "2019-08-30T03:08:24Z",
+        "lastEditedBy" : "ba6a59c9-dd69-47c0-bfc8-6de96af270ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4ce3967db60a807c07ec892e0594ba5e06b1621a",
+    "line" : 83,
+    "diffHunk" : "@@ -1,1 +98,102 @@\n  private lazy val producer = {\n    val kafkaProducer = CachedKafkaProducer.getOrCreate(producerParams)\n    if (kafkaProducer.getProducerId == -1) {\n      kafkaProducer.initTransactions()"
   }
 ]

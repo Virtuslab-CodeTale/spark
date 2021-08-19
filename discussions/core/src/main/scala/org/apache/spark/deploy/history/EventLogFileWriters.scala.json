@@ -141,5 +141,82 @@
     "commit" : "e1a6e42b73f8d58dbc0a04882f2288d2fae0dad8",
     "line" : 11,
     "diffHunk" : "@@ -1,1 +119,123 @@    // scalastyle:on println\n    if (flushLogger) {\n      writer.foreach(_.flush())\n      hadoopDataStream.foreach(_.hflush())\n    }"
+  },
+  {
+    "id" : "e3e21143-7bae-449d-b619-10c736e4be9d",
+    "prId" : 25670,
+    "prUrl" : "https://github.com/apache/spark/pull/25670#pullrequestreview-294076395",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8f090a7f-5b2e-4ddd-bff7-83fff97a45f4",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Where is this method used ?",
+        "createdAt" : "2019-09-26T16:19:36Z",
+        "updatedAt" : "2019-10-16T20:56:19Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "87ccf6d0-8923-4554-b368-82b9452791fb",
+        "parentId" : "8f090a7f-5b2e-4ddd-bff7-83fff97a45f4",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "They're used in test suites - we need to provide unified way to get log path between single file reader and rolling files reader.",
+        "createdAt" : "2019-09-26T20:35:50Z",
+        "updatedAt" : "2019-10-16T20:56:19Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1bf8471f-b49d-4eab-851c-e672277e8273",
+        "parentId" : "8f090a7f-5b2e-4ddd-bff7-83fff97a45f4",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Then, would be better to mark as \"For tests only\"",
+        "createdAt" : "2019-09-27T01:23:35Z",
+        "updatedAt" : "2019-10-16T20:56:19Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a2f631d88504ed360f3f3d3bcb3ceffb83f9c75f",
+    "line" : 356,
+    "diffHunk" : "@@ -1,1 +354,358 @@  }\n\n  override def logPath: String = logDirForAppPath.toString\n\n  private def createAppStatusFile(inProgress: Boolean): Unit = {"
+  },
+  {
+    "id" : "32a5ea31-92e2-438c-9d09-b20b822bbcdc",
+    "prId" : 25670,
+    "prUrl" : "https://github.com/apache/spark/pull/25670#pullrequestreview-296570315",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "68703952-ae3f-4bd2-a62a-c590c564aa45",
+        "parentId" : null,
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "This comes from the old code but seems to be somewhat incorrect. If the file exists and `shouldOverwrite` is false, this will not delete the file, as expected.\r\n\r\nBut later, when you do e.g. `new FileOutputStream(uri.getPath)`, the existing file will be overwritten on most file systems (NTFS being the exception, I think).\r\n\r\nNo need to fix that here, though. Also because it's unlikely to happen given how we name files.",
+        "createdAt" : "2019-10-02T16:28:10Z",
+        "updatedAt" : "2019-10-16T20:56:19Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ba23062a-2da4-493a-9c22-ab6d66f7dc69",
+        "parentId" : "68703952-ae3f-4bd2-a62a-c590c564aa45",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "That's a good point. Maybe we haven't defined proper behavior of this case: would we want to fail the application?\r\n\r\nThere might be similar case for if shouldOverwrite is true and fileSystem.delete() returns false. I see fileSystem.delete() will mostly throw IOException when it fails to delete, but at least in javadoc, having 'false' as return value when calling fileSystem.delete() may not only say the file doesn't exist. Javadoc doesn't guarantee that.",
+        "createdAt" : "2019-10-02T22:56:39Z",
+        "updatedAt" : "2019-10-16T20:56:19Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a2f631d88504ed360f3f3d3bcb3ceffb83f9c75f",
+    "line" : 83,
+    "diffHunk" : "@@ -1,1 +81,85 @@\n  protected def initLogFile(path: Path)(fnSetupWriter: OutputStream => PrintWriter): Unit = {\n    if (shouldOverwrite && fileSystem.delete(path, true)) {\n      logWarning(s\"Event log $path already exists. Overwriting...\")\n    }"
   }
 ]

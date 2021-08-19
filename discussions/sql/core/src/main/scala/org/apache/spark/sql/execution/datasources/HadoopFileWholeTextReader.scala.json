@@ -1,0 +1,68 @@
+[
+  {
+    "id" : "ce03e75b-6658-416e-9c7c-6253a9fb4d2b",
+    "prId" : 25616,
+    "prUrl" : "https://github.com/apache/spark/pull/25616#pullrequestreview-282784790",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "433495f6-b6c5-4bc1-8956-68d7fcb95bf5",
+        "parentId" : null,
+        "authorId" : "8e87861a-4202-49a2-baf7-6d51f6aaa5a2",
+        "body" : "`WholeTextFileRecordReader` is `Configurable`, `setConf` should be called after creation.\r\nThis is why tests are failing before this patch.\r\n\r\nHowever, I am wondering for `org.apache.spark.input.WholeTextFileRecordReader` and `org.apache.spark.input.ConfigurableCombineFileRecordReader`, we can already retrieve config from `org.apache.hadoop.mapreduce.TaskAttemptContext`.  There is no need to make these class `Configurable`\r\n\r\nI am wondering if we should remove `Configurable` trait for the related classes all at once.  what do you think @gatorsmile ",
+        "createdAt" : "2019-08-30T06:37:02Z",
+        "updatedAt" : "2019-08-30T06:44:34Z",
+        "lastEditedBy" : "8e87861a-4202-49a2-baf7-6d51f6aaa5a2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "72be8c8e-f26c-4f5b-b34f-d9735616f26b",
+        "parentId" : "433495f6-b6c5-4bc1-8956-68d7fcb95bf5",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Is there an existing test that fails without this change, as you mention? should it be reenabled?",
+        "createdAt" : "2019-09-02T14:21:41Z",
+        "updatedAt" : "2019-09-02T14:21:42Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "57bdbcc1-cf4f-4a2d-892b-938cea38671e",
+        "parentId" : "433495f6-b6c5-4bc1-8956-68d7fcb95bf5",
+        "authorId" : "8e87861a-4202-49a2-baf7-6d51f6aaa5a2",
+        "body" : "![image](https://user-images.githubusercontent.com/807537/64126084-0c57ea00-cddf-11e9-9701-814ac131e79f.png)\r\nSome tests in `WholeTextFileSuite` and `SaveLoadSuite` are failing without this change.\r\n\r\nHowever, the failure is introduced by my change to `WholeTextFileRecordReader` https://github.com/apache/spark/blob/149de72c220cbc094f0b8756c535cf1bd796a48e/core/src/main/scala/org/apache/spark/input/WholeTextFileRecordReader.scala#L70-L73\r\n\r\nWe use `getConf` instead of `new Configuration`, then should call `setConf` first.",
+        "createdAt" : "2019-09-02T16:14:10Z",
+        "updatedAt" : "2019-09-02T16:14:10Z",
+        "lastEditedBy" : "8e87861a-4202-49a2-baf7-6d51f6aaa5a2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "57ade2d3-6046-4032-8e6b-e5713b8c3483",
+        "parentId" : "433495f6-b6c5-4bc1-8956-68d7fcb95bf5",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "I see, they're not failing in master but can fail if run in an env where Hadoop config files are present?",
+        "createdAt" : "2019-09-02T20:49:18Z",
+        "updatedAt" : "2019-09-02T20:49:19Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8e14e16b-8c47-454c-87f1-d72d118bcec4",
+        "parentId" : "433495f6-b6c5-4bc1-8956-68d7fcb95bf5",
+        "authorId" : "8e87861a-4202-49a2-baf7-6d51f6aaa5a2",
+        "body" : "> I see, they're not failing in master but can fail if run in an env where Hadoop config files are present?I see, they're not failing in master but can fail if run in an env where Hadoop config files are present?\r\n\r\nEh, yes, they are not failing in master. The code(master) even normally won't fail in an env where Hadoop configs are present. They could fail or get unexpected result unless the Hadoop configs are incorrectly configured in executor env(such as yarn-cluster), even user supplies correct configs (passed to `TaskAttemptContext`",
+        "createdAt" : "2019-09-03T06:38:08Z",
+        "updatedAt" : "2019-09-03T06:38:08Z",
+        "lastEditedBy" : "8e87861a-4202-49a2-baf7-6d51f6aaa5a2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "149de72c220cbc094f0b8756c535cf1bd796a48e",
+    "line" : 4,
+    "diffHunk" : "@@ -1,1 +46,50 @@    val hadoopAttemptContext = new TaskAttemptContextImpl(conf, attemptId)\n    val reader = new WholeTextFileRecordReader(fileSplit, hadoopAttemptContext, 0)\n    reader.setConf(hadoopAttemptContext.getConfiguration)\n    reader.initialize(fileSplit, hadoopAttemptContext)\n    new RecordReaderIterator(reader)"
+  }
+]

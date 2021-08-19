@@ -1164,5 +1164,159 @@
     "commit" : "f23336dd808a196af8d36b7728e59af5dea9dced",
     "line" : 4,
     "diffHunk" : "@@ -1,1 +176,180 @@  //       stray messages to detect.\n  private val failedEpoch = new HashMap[String, Long]\n  // There will be a regression when an executor lost and then causes 'fetch failed'.\n  // So we should distinguish the failedEpoch of 'executor lost' from the fetchFailedEpoch\n  // of 'fetch failed'."
+  },
+  {
+    "id" : "8d053db8-408a-4be4-b7e3-053e553211d0",
+    "prId" : 25620,
+    "prUrl" : "https://github.com/apache/spark/pull/25620#pullrequestreview-281876225",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "350a781e-9585-4aa2-833b-7cd0ac412cda",
+        "parentId" : null,
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "For the compatibility with the scenario of old fetch protocol(e.g. external shuffle service can not upgrade now), we only do the extension in new version shuffle fetch protocol, which introduced in #24565.",
+        "createdAt" : "2019-08-29T14:47:56Z",
+        "updatedAt" : "2019-09-18T18:26:21Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b793fefd-6bca-48e1-b5ef-3e9f6768af4c",
+        "parentId" : "350a781e-9585-4aa2-833b-7cd0ac412cda",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "what about general shuffles? It looks to me that the shuffle reader needs to keep both the legacy int map id and the new long map id. When `SHUFFLE_USE_OLD_FETCH_PROTOCOL` is false, construct the new shuffle request with the new long map id. Otherwise, construct the old shuffle request with the legacy int map id.",
+        "createdAt" : "2019-08-29T15:03:38Z",
+        "updatedAt" : "2019-09-18T18:26:21Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fc90b039-4838-4da9-a615-b851da60a752",
+        "parentId" : "350a781e-9585-4aa2-833b-7cd0ac412cda",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "Thanks for the reminding, I missed the protocol checking in MapOutputTracker, fix this in \r\n539d725.",
+        "createdAt" : "2019-08-30T07:46:27Z",
+        "updatedAt" : "2019-09-18T18:26:21Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "28c9f9c2da1215a836fef7925e95a40c7c6dd87e",
+    "line" : 63,
+    "diffHunk" : "@@ -1,1 +1617,1621 @@                    val numMissingPartitions = mapStage.findMissingPartitions().length\n                    if (numMissingPartitions < mapStage.numTasks) {\n                      if (sc.getConf.get(config.SHUFFLE_USE_OLD_FETCH_PROTOCOL)) {\n                        val reason = \"A shuffle map stage with indeterminate output was failed \" +\n                          \"and retried. However, Spark can only do this while using the new \" +"
+  },
+  {
+    "id" : "ad3e4bc2-4573-4c2c-a0c0-27de77bb7de0",
+    "prId" : 25620,
+    "prUrl" : "https://github.com/apache/spark/pull/25620#pullrequestreview-288621301",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8144ffe1-3e61-421e-bb86-f70b68ccf892",
+        "parentId" : null,
+        "authorId" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "body" : "Just curious, why not do unregister during failure handling?",
+        "createdAt" : "2019-09-03T23:51:29Z",
+        "updatedAt" : "2019-09-18T18:26:21Z",
+        "lastEditedBy" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fb43cab5-452f-4bdd-8311-a2c7898ff2c4",
+        "parentId" : "8144ffe1-3e61-421e-bb86-f70b68ccf892",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "That's for the scenario of ExecutorLost. While executor lost happened, there's possible for the indeterminate stage rerun triggered by `submitParentStage`.\r\nSo if we only unregister during failure handling, only fetch failed stage and its parent stage do unregister, that logic would not cover the scenario of its parent's parent stage is indeterminate and have missing tasks.",
+        "createdAt" : "2019-09-06T02:39:40Z",
+        "updatedAt" : "2019-09-18T18:26:21Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b131ef3a-e663-4255-94a7-7c7c8c2cee7d",
+        "parentId" : "8144ffe1-3e61-421e-bb86-f70b68ccf892",
+        "authorId" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "body" : "It seems we can still put the unregister logic into the block:\r\nhttps://github.com/apache/spark/pull/25620/files#diff-6a9ff7fb74fd490a50462d45db2d5e11R1626 ?",
+        "createdAt" : "2019-09-06T21:08:10Z",
+        "updatedAt" : "2019-09-18T18:26:21Z",
+        "lastEditedBy" : "bc001dd4-5224-4ca1-afdd-49d69783d7f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2aec4ebf-cffe-49da-919f-6f69183171be",
+        "parentId" : "8144ffe1-3e61-421e-bb86-f70b68ccf892",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "Actually the place points out by Xingbo is just my first-time attempt :), I found that's not enough to fix this problem during doing the integrate test.\r\nThis is because the logic we calculate `stagesToRollback` in `collectStagesToRollback`, only care about the downstream stages of the current fetch failed stage. For upstream indeterminate stages, put the unregister logic in failure handling didn't cover. So the correctness bug will still happen.\r\nAlso the newly added UT `SPARK-25341: retry all the succeeding stages when the map stage is indeterminate` also covered this check, if we do the unregister in failure handling, the UT will fail.",
+        "createdAt" : "2019-09-07T13:53:38Z",
+        "updatedAt" : "2019-09-18T18:26:21Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "66d69bca-7df0-420b-a062-e5f4dac2af01",
+        "parentId" : "8144ffe1-3e61-421e-bb86-f70b68ccf892",
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "I'm a little concerned about putting this here, as you'll see lower down in this method there is some handling for the case that `submitMissingTasks` is called but there are actually no tasks to run.  I'm not seeing how that happens now, but your change would make those cases always re-evaluate all partitions of the stage.\r\n\r\nI think @jiangxb1987 suggestion makes sense, couldn't you do it the unregistering there?  I agree the logic is currently insufficient as its not building up the full set of stages that need to be recomputed, but maybe we need to combine both.\r\n\r\nor maybe we understand the old cases of submitting a stage with no missing partitions and my concern is not relevant?",
+        "createdAt" : "2019-09-09T21:32:33Z",
+        "updatedAt" : "2019-09-18T18:26:21Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "34001f2e-98be-45a9-bf9f-ce78485c7bb8",
+        "parentId" : "8144ffe1-3e61-421e-bb86-f70b68ccf892",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "Thanks for the detailed comment.\r\nI tried to combine both at first but seems kind of duplicated code.\r\nFor the concerned about no missing partitions stage submission, I checked`shuffleMapStage.isAvailable` for the unregister in aa3a409, what we need here is making sure the partially completed indeterminate stage will be whole stage rerun.",
+        "createdAt" : "2019-09-16T13:20:13Z",
+        "updatedAt" : "2019-09-18T18:26:21Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "28c9f9c2da1215a836fef7925e95a40c7c6dd87e",
+    "line" : 8,
+    "diffHunk" : "@@ -1,1 +1107,1111 @@    // The operation here can make sure for the partially completed intermediate stage,\n    // `findMissingPartitions()` returns all partitions every time.\n    stage match {\n      case sms: ShuffleMapStage if stage.isIndeterminate && !sms.isAvailable =>\n        mapOutputTracker.unregisterAllMapOutput(sms.shuffleDep.shuffleId)"
+  },
+  {
+    "id" : "df2701f7-cddb-4469-82e7-d9352b10ef8c",
+    "prId" : 25620,
+    "prUrl" : "https://github.com/apache/spark/pull/25620#pullrequestreview-288407483",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e193fd44-784d-4ead-b482-f5da2771bb60",
+        "parentId" : null,
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "the implicit `else` here is only if SHUFFLE_USE_OLD_FETCH_PROTOCOL, right?  worth at least a comment (otherwise that -1 will look more and more strange as no one uses the old shuffle protocol anymore).",
+        "createdAt" : "2019-09-09T21:11:23Z",
+        "updatedAt" : "2019-09-18T18:26:21Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "00bc0711-b887-4f0d-8af0-3a76c0edcff4",
+        "parentId" : "e193fd44-784d-4ead-b482-f5da2771bb60",
+        "authorId" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "body" : "Great thanks for this comment, it's my mistake to use -1 as the default value of map index for old fetch protocol.\r\nThe logic of `mapId == -1` should only for `MetadataFetchFailedException`, it involoved in https://github.com/apache/spark/commit/7d71b9a56a4d644ccabb56dd282e84e2a49ef144 and #1227.\r\nFor our logic, just pass map index for both old and new protocol. Done in aa3a409.",
+        "createdAt" : "2019-09-16T03:37:42Z",
+        "updatedAt" : "2019-09-18T18:26:21Z",
+        "lastEditedBy" : "cd38bd5a-0fae-4d8e-8acd-36dc13753759",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "28c9f9c2da1215a836fef7925e95a40c7c6dd87e",
+    "line" : 36,
+    "diffHunk" : "@@ -1,1 +1542,1546 @@            // Mark the map whose fetch failed as broken in the map stage\n            mapOutputTracker.unregisterMapOutput(shuffleId, mapIndex, bmAddress)\n          }\n\n          if (failedStage.rdd.isBarrier()) {"
   }
 ]
