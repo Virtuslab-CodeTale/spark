@@ -1362,5 +1362,71 @@
     "commit" : "e95c1824574a17930a1e2c448ffba169ad4fb2ac",
     "line" : 10,
     "diffHunk" : "@@ -1,1 +283,287 @@        case Some(existingStage) if conf.exchangeReuseEnabled =>\n          val stage = reuseQueryStage(existingStage, e)\n          // This is a leaf stage and is not materialized yet even if the reused exchange may has\n          // been completed. It will trigger re-optimization later and stage materialization will\n          // finish in instant if the underlying exchange is already completed."
+  },
+  {
+    "id" : "dfa8a27e-3650-46d8-8ddc-308c778045d7",
+    "prId" : 25456,
+    "prUrl" : "https://github.com/apache/spark/pull/25456#pullrequestreview-276060678",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9673b1ed-2a2e-4aa9-975d-bb25ec24f39f",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "When we reach here, will `stagesToReplace` be non-empty?",
+        "createdAt" : "2019-08-16T15:06:38Z",
+        "updatedAt" : "2019-08-21T15:41:45Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5ff8a860-2cb0-42d8-979d-0784eeffd493",
+        "parentId" : "9673b1ed-2a2e-4aa9-975d-bb25ec24f39f",
+        "authorId" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "body" : "Yes, one important idea i should have put in code comment here is:\r\n\r\nThe current logical plan is always updated together with the current physical plan, which means if a new physical plan is not adopted after re-optimization, the new logical plan (with stages replaced) is not taken either (https://github.com/apache/spark/pull/25456/files#diff-6954dd8020a9ca298f1fb9602c0e831cR181). That also means that the current logical plan is kind of behind the current status of the physical plan because the logical plan does not reflect the new stages created since last update (https://github.com/apache/spark/pull/25456/files#diff-6954dd8020a9ca298f1fb9602c0e831cR188). Yet we cannot update the logical plan alone, as all logical links of the current physical plan point to the original logical plan it is planned from. So as a fix for this \"out-of-date\" problem, we keep the logical plan together with this `stagesToReplace` list, and each time we re-optimize, we update the logical plan with those stages (that haven't been applied to it yet) first (https://github.com/apache/spark/pull/25456/files#diff-6954dd8020a9ca298f1fb9602c0e831cR177), and then start re-optimizing and re-planning on the updated logical plan. If the new physical plan is adopted, we take the new physical plan together with the new logical plan and clear the `stagesToReplace` list, otherwise, we keep the current logical plan and the list as they are.",
+        "createdAt" : "2019-08-16T16:57:53Z",
+        "updatedAt" : "2019-08-21T15:41:45Z",
+        "lastEditedBy" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a40c8b92c829817fd31a43a967f28f81d14c49ee",
+    "line" : 47,
+    "diffHunk" : "@@ -1,1 +144,148 @@        currentPhysicalPlan = result.newPlan\n        if (result.newStages.nonEmpty) {\n          stagesToReplace = result.newStages ++ stagesToReplace\n          executionId.foreach(onUpdatePlan)\n"
+  },
+  {
+    "id" : "dcc12a78-a491-4c9a-834f-ba4971a48a38",
+    "prId" : 25456,
+    "prUrl" : "https://github.com/apache/spark/pull/25456#pullrequestreview-276063192",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "00a09a49-14ea-427f-9a8f-54e16b8b7940",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "will `currentPhysicalPlan.find(_.eq(stage))` be empty?",
+        "createdAt" : "2019-08-16T15:08:56Z",
+        "updatedAt" : "2019-08-21T15:41:45Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d0b69344-4686-4bdd-8ee3-ed3dfbcd0c32",
+        "parentId" : "00a09a49-14ea-427f-9a8f-54e16b8b7940",
+        "authorId" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "body" : "Following this comment https://github.com/apache/spark/pull/25456/files#r314805998:\r\n\r\nNow that we might have `newStages` from different rounds of stage creation, some stages might have been included in newer stages already, so those are not \"reachable\" now and we don't need to worry about them any more. But meanwhile we need to make sure we always apply the latest stages first: https://github.com/apache/spark/pull/25456/files#diff-6954dd8020a9ca298f1fb9602c0e831cR142. ",
+        "createdAt" : "2019-08-16T17:03:22Z",
+        "updatedAt" : "2019-08-21T15:41:45Z",
+        "lastEditedBy" : "4916859c-0e27-4e9d-ac39-ad95bc1382d3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a40c8b92c829817fd31a43a967f28f81d14c49ee",
+    "line" : 217,
+    "diffHunk" : "@@ -1,1 +377,381 @@    var logicalPlan = plan\n    stagesToReplace.foreach {\n      case stage if currentPhysicalPlan.find(_.eq(stage)).isDefined =>\n        val logicalNodeOpt = stage.getTagValue(TEMP_LOGICAL_PLAN_TAG).orElse(stage.logicalLink)\n        assert(logicalNodeOpt.isDefined)"
   }
 ]

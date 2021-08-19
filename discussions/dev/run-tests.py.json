@@ -350,5 +350,104 @@
     "commit" : "f64d060b76592fd2b7436647a1a2a1fbd1f4887a",
     "line" : 12,
     "diffHunk" : "@@ -1,1 +51,55 @@    ['root']\n    >>> [x.name for x in determine_modules_for_files( \\\n            [\".github/workflows/master.yml\", \"appveyor.yml\"])]\n    []\n    \"\"\""
+  },
+  {
+    "id" : "06e99b7f-f48d-42b8-b37a-34c7ddffe084",
+    "prId" : 25423,
+    "prUrl" : "https://github.com/apache/spark/pull/25423#pullrequestreview-279875356",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d81b9625-7acf-46d4-b106-9e8006c3edd2",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Can we try to set this in python tests too? Seems like Java gateway has to use JDK 11 as well.",
+        "createdAt" : "2019-08-25T05:20:45Z",
+        "updatedAt" : "2019-08-25T05:20:54Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f854aa6d-5923-41a7-a37e-b5b0615fa2c0",
+        "parentId" : "d81b9625-7acf-46d4-b106-9e8006c3edd2",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "It should use Java 11 if the path provides Java 11 and the test harness that runs Python tests does too. At least I don't know how else one would tell pyspark what to use!\r\n\r\nIn fact I'm pretty sure the test failure here shows that it is using JDK 11. From JPMML: `java.lang.ClassNotFoundException: com.sun.xml.internal.bind.v2.ContextFactory` This would be caused by JDK 11 changes. However, I don't get why all the other non-Python tests don't fail.\r\n\r\nGiven the weird problem in https://github.com/apache/spark/pull/24651 I am wondering if we have some subtle classpath issues with how the Pyspark tests are run.\r\n\r\nThis one however might be more directly solvable by figuring out what is suggesting to use this old Sun JAXB implementation. I'll start digging around META-INF",
+        "createdAt" : "2019-08-26T15:12:13Z",
+        "updatedAt" : "2019-08-26T15:20:00Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a044d472-bdcd-488d-9d1a-77270709fb0e",
+        "parentId" : "d81b9625-7acf-46d4-b106-9e8006c3edd2",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Hm, and why does https://amplab.cs.berkeley.edu/jenkins/view/Spark%20QA%20Test%20(Dashboard)/job/spark-master-test-maven-hadoop-3.2-jdk-11/ pass then? it is doing the same thing in the Jenkins config. (OK I think I answered my own question below)\r\n\r\nEDIT: Oh, because it doesn't run Pyspark tests?",
+        "createdAt" : "2019-08-26T15:21:17Z",
+        "updatedAt" : "2019-08-26T15:22:39Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "10a9e6e6-a23a-4dfe-97fb-778a1adcb252",
+        "parentId" : "d81b9625-7acf-46d4-b106-9e8006c3edd2",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "No, actually you're right. Yes, seems after Scala tests here, the PATH and JAVA_HOME still set as are.\r\n\r\nI thought:\r\n\r\nhttps://github.com/apache/spark/blob/209b9361ac8a4410ff797cff1115e1888e2f7e66/python/pyspark/java_gateway.py#L45-L60\r\n\r\nhttps://github.com/apache/spark/blob/3cb82047f2f51af553df09b9323796af507d36f8/core/src/main/scala/org/apache/spark/deploy/SparkSubmit.scala#L425\r\n\r\nHere somehow happened to use JDK 8.\r\n\r\nActually the PySpark tests and SparkR tests passed at https://github.com/apache/spark/pull/25443#issuecomment-522206143\r\n\r\nSo, the issue persists here .. but I guess yes we can do it separately since at least this PR _seems_ setting JDK 11 correctly, and it virtually doesn't affect any main or test code (if this title is not used).",
+        "createdAt" : "2019-08-26T15:45:10Z",
+        "updatedAt" : "2019-08-26T15:45:44Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d5170063-31e5-45bb-8240-fe35ff1e5439",
+        "parentId" : "d81b9625-7acf-46d4-b106-9e8006c3edd2",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "It's interesting. Thank you for the investigation, @srowen and @HyukjinKwon ",
+        "createdAt" : "2019-08-26T17:56:52Z",
+        "updatedAt" : "2019-08-26T17:56:52Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f9570d88-a88f-49f5-ae95-7bcae328ce75",
+        "parentId" : "d81b9625-7acf-46d4-b106-9e8006c3edd2",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Do we have a JIRA issue for this?",
+        "createdAt" : "2019-08-26T22:12:48Z",
+        "updatedAt" : "2019-08-26T22:12:48Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "019e5fc3-0065-44d1-baa3-be30316531cc",
+        "parentId" : "d81b9625-7acf-46d4-b106-9e8006c3edd2",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "We probably need one, yeah, regardless of the cause. I'll file one to track.",
+        "createdAt" : "2019-08-26T22:34:39Z",
+        "updatedAt" : "2019-08-26T22:34:39Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "14741564-1af4-43db-88c2-3fd0b67b7300",
+        "parentId" : "d81b9625-7acf-46d4-b106-9e8006c3edd2",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "https://issues.apache.org/jira/browse/SPARK-28877",
+        "createdAt" : "2019-08-26T22:43:03Z",
+        "updatedAt" : "2019-08-26T22:43:03Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "bae6524d7d1965dbf30eb4146c1278e18af13801",
+    "line" : 8,
+    "diffHunk" : "@@ -1,1 +409,413 @@        os.environ[\"JAVA_HOME\"] = \"/usr/java/jdk-11.0.1\"\n        os.environ[\"PATH\"] = \"%s/bin:%s\" % (os.environ[\"JAVA_HOME\"], os.environ[\"PATH\"])\n        test_profiles += ['-Djava.version=11']\n\n    if build_tool == \"maven\":"
   }
 ]

@@ -229,5 +229,104 @@
     "commit" : "b18437c5998f5df50172732015f66b33c3908d2a",
     "line" : 20,
     "diffHunk" : "@@ -1,1 +253,257 @@    val catalog = sparkSession.sessionState.catalog\n    if (FunctionRegistry.builtin.functionExists(FunctionIdentifier(functionName))) {\n      throw new AnalysisException(s\"Cannot refresh builtin function $functionName\")\n    }\n    if (catalog.isTemporaryFunction(FunctionIdentifier(functionName, databaseName))) {"
+  },
+  {
+    "id" : "cac5eb2b-ecb9-4c4a-bc95-91192e30467f",
+    "prId" : 25399,
+    "prUrl" : "https://github.com/apache/spark/pull/25399#pullrequestreview-342235161",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "df0cceb3-2f94-4e67-abef-39ca61c0cd3d",
+        "parentId" : null,
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "I am not sure whether this could cause a false alarm. For example, the security access exceptions. \r\n\r\nYou can check the impl of addJar or addFile.  ",
+        "createdAt" : "2020-01-14T00:39:22Z",
+        "updatedAt" : "2020-01-14T00:39:22Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e86251cb-7337-4060-9f46-3194c21cf49b",
+        "parentId" : "df0cceb3-2f94-4e67-abef-39ca61c0cd3d",
+        "authorId" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "body" : "cc @zsxwing ",
+        "createdAt" : "2020-01-14T00:39:38Z",
+        "updatedAt" : "2020-01-14T00:39:38Z",
+        "lastEditedBy" : "d19fc546-1296-40ce-befb-9eca847aeceb",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ba183f12-1c09-4204-99a5-a8c9878bb8e3",
+        "parentId" : "df0cceb3-2f94-4e67-abef-39ca61c0cd3d",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "I think we should better follow the logic in `addJar`\r\nhttps://github.com/apache/spark/blob/master/core/src/main/scala/org/apache/spark/SparkContext.scala#L1843",
+        "createdAt" : "2020-01-14T00:53:21Z",
+        "updatedAt" : "2020-01-14T00:53:21Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d78ecad94b67fdd1ebfe28eb1abaab6836a7d1ab",
+    "line" : 23,
+    "diffHunk" : "@@ -1,1 +81,85 @@    val nonExistentResources = resources.filter { r =>\n      val path = new Path(r.uri)\n      !path.getFileSystem(hadoopConf).exists(path)\n    }\n    if (nonExistentResources.nonEmpty) {"
+  },
+  {
+    "id" : "58e44b60-da41-42c8-8c2f-c7c5e578b7fc",
+    "prId" : 25399,
+    "prUrl" : "https://github.com/apache/spark/pull/25399#pullrequestreview-411589784",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6091d43c-d905-444e-82f4-c03e41751003",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "it will also break one case with local schema\r\n\r\n```\r\nscala> new Path(\"local:/path\").getFileSystem(spark.sparkContext.hadoopConfiguration)\r\njava.io.IOException: No FileSystem for scheme: local\r\n  at org.apache.hadoop.fs.FileSystem.getFileSystemClass(FileSystem.java:2660)\r\n  at org.apache.hadoop.fs.FileSystem.createFileSystem(FileSystem.java:2667)\r\n  at org.apache.hadoop.fs.FileSystem.access$200(FileSystem.java:94)\r\n  at org.apache.hadoop.fs.FileSystem$Cache.getInternal(FileSystem.java:2703)\r\n  at org.apache.hadoop.fs.FileSystem$Cache.get(FileSystem.java:2685)\r\n  at org.apache.hadoop.fs.FileSystem.get(FileSystem.java:373)\r\n  at org.apache.hadoop.fs.Path.getFileSystem(Path.java:295)\r\n  ... 47 elided\r\n```\r\n\r\nhttps://github.com/apache/spark/blob/master/core/src/main/scala/org/apache/spark/SparkContext.scala#L1903\r\n\r\nI think I rushed to review this one. Reverting this.",
+        "createdAt" : "2020-01-14T01:36:17Z",
+        "updatedAt" : "2020-01-14T01:36:17Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3b944cee-2e44-46e2-a5c1-629539209ea1",
+        "parentId" : "6091d43c-d905-444e-82f4-c03e41751003",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "```\r\nscala> sql(\"\"\"CREATE FUNCTION udtf_test AS 'org.apache.spark.sql.hive.execution.UDFTest' USING JAR 'local:/var/invalid/invalid.jar'\r\n     | \"\"\")\r\njava.io.IOException: No FileSystem for scheme: local\r\n  at org.apache.hadoop.fs.FileSystem.getFileSystemClass(FileSystem.java:2660)\r\n  at org.apache.hadoop.fs.FileSystem.createFileSystem(FileSystem.java:2667)\r\n  at org.apache.hadoop.fs.FileSystem.access$200(FileSystem.java:94)\r\n  at org.apache.hadoop.fs.FileSystem$Cache.getInternal(FileSystem.java:2703)\r\n  at org.apache.hadoop.fs.FileSystem$Cache.get(FileSystem.java:2685)\r\n```",
+        "createdAt" : "2020-01-14T01:47:18Z",
+        "updatedAt" : "2020-01-14T01:47:18Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "efeae8d9-e31e-40b1-87c1-9f77c02473b1",
+        "parentId" : "6091d43c-d905-444e-82f4-c03e41751003",
+        "authorId" : "f2e3e1f3-82a3-4b68-a0c2-2f7fdf58cf35",
+        "body" : "okay soon will raise the follow-up PR with all the test coverage",
+        "createdAt" : "2020-01-14T01:54:05Z",
+        "updatedAt" : "2020-01-14T01:54:06Z",
+        "lastEditedBy" : "f2e3e1f3-82a3-4b68-a0c2-2f7fdf58cf35",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0b6fe44b-6a5e-4849-b829-c8b3c12cb637",
+        "parentId" : "6091d43c-d905-444e-82f4-c03e41751003",
+        "authorId" : "8de20372-3c43-4f6b-838b-45ccb852019b",
+        "body" : "At present, Spark does not check whether this class is in the jar when registering a permanent UDF.\r\nBut hive does check if jar and class exist.\r\nCan we also add a check for the existence of class in spark, like registering a temporary function?\r\n\r\nhttps://github.com/apache/hive/blob/9f40d7cc1d889aa3079f3f494cf810fabe326e44/ql/src/java/org/apache/hadoop/hive/ql/exec/Registry.java#L289-L296\r\n\r\nhttps://github.com/apache/hive/blob/9f40d7cc1d889aa3079f3f494cf810fabe326e44/ql/src/java/org/apache/hadoop/hive/ql/exec/Registry.java#L686-L691",
+        "createdAt" : "2020-05-14T08:44:40Z",
+        "updatedAt" : "2020-05-14T08:44:41Z",
+        "lastEditedBy" : "8de20372-3c43-4f6b-838b-45ccb852019b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d78ecad94b67fdd1ebfe28eb1abaab6836a7d1ab",
+    "line" : 22,
+    "diffHunk" : "@@ -1,1 +80,84 @@    val hadoopConf = sparkSession.sparkContext.hadoopConfiguration\n    val nonExistentResources = resources.filter { r =>\n      val path = new Path(r.uri)\n      !path.getFileSystem(hadoopConf).exists(path)\n    }"
   }
 ]

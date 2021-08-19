@@ -64,5 +64,313 @@
     "commit" : "be0711aa5582ea27d3d1f6b89a712ba7edcea057",
     "line" : 23,
     "diffHunk" : "@@ -1,1 +176,180 @@      plan resolveOperatorsDown {\n        case u: UnresolvedRelation =>\n          cteRelations.find(x => resolver(x._1, u.tableName)).map(_._2).getOrElse(u)\n        case other =>\n          // This cannot be done in ResolveSubquery because ResolveSubquery does not know the CTE."
+  },
+  {
+    "id" : "1f870985-25c1-44b5-b5df-55720ad74695",
+    "prId" : 25464,
+    "prUrl" : "https://github.com/apache/spark/pull/25464#pullrequestreview-278771381",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d446b458-02a2-4bb7-99a0-efd857927569",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "How about the case, `SELECT /*+ REPARTITION(a) */ * FROM t`?",
+        "createdAt" : "2019-08-23T02:30:02Z",
+        "updatedAt" : "2019-10-29T13:30:31Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4ac7eb612bd11f1feced3f3b28cb7e8b2a43c11f",
+    "line" : 69,
+    "diffHunk" : "@@ -1,1 +184,188 @@      }\n    }\n\n    /**\n     * This function handles hints for \"REPARTITION_BY_RANGE\"."
+  },
+  {
+    "id" : "df94ff94-618d-4bbf-9d00-6fb95d1ceb2c",
+    "prId" : 25464,
+    "prUrl" : "https://github.com/apache/spark/pull/25464#pullrequestreview-285879020",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "0761d43b-a375-4f56-a228-8c5eed46a729",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "IIUC this hint cannot accept all the `Exception`...",
+        "createdAt" : "2019-09-10T02:38:31Z",
+        "updatedAt" : "2019-10-29T13:30:31Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4ac7eb612bd11f1feced3f3b28cb7e8b2a43c11f",
+    "line" : 93,
+    "diffHunk" : "@@ -1,1 +201,205 @@        val sortOrder = partitionExprs.map {\n          case expr: SortOrder => expr\n          case expr: Expression => SortOrder(expr, Ascending)\n        }\n        RepartitionByExpression(sortOrder, hint.child, numPartitions)"
+  },
+  {
+    "id" : "0fb6e4fb-c56a-45ea-a7bb-c91a0016c6dc",
+    "prId" : 25464,
+    "prUrl" : "https://github.com/apache/spark/pull/25464#pullrequestreview-306934389",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d0aee176-149b-475f-b453-17a85a126f3c",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Hm, It's `REPARTITION()` but why does it creates range partition in this case? Do you intend to support range partition by something like `REPARTITION(...)`?",
+        "createdAt" : "2019-10-24T05:49:35Z",
+        "updatedAt" : "2019-10-29T13:30:31Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "85df3600-5d1b-45ab-b681-2ef8d286aa1b",
+        "parentId" : "d0aee176-149b-475f-b453-17a85a126f3c",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "Yeah, I tried to keep consistent with `Dataset.repartition()`. The latter has two methods `repartition(numPartitions: Int)` and `repartition(numPartitions: Int, partitionExprs: Column*)`\r\n\r\n",
+        "createdAt" : "2019-10-25T00:43:36Z",
+        "updatedAt" : "2019-10-29T13:30:31Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4ac7eb612bd11f1feced3f3b28cb7e8b2a43c11f",
+    "line" : 62,
+    "diffHunk" : "@@ -1,1 +177,181 @@\n        case param @ Seq(IntegerLiteral(numPartitions), _*) if shuffle =>\n          createRepartitionByExpression(numPartitions, param.tail)\n        case param @ Seq(numPartitions: Int, _*) if shuffle =>\n          createRepartitionByExpression(numPartitions, param.tail)"
+  },
+  {
+    "id" : "2929b8a5-7480-4142-aa93-677d1b80d81f",
+    "prId" : 25464,
+    "prUrl" : "https://github.com/apache/spark/pull/25464#pullrequestreview-308371178",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "34ea9414-fbb4-446b-8f96-bf0afdfba0a3",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "`createRepartitionByExpression` seems duplicated. Can we just make one private function to share?",
+        "createdAt" : "2019-10-24T05:50:13Z",
+        "updatedAt" : "2019-10-29T13:30:31Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1af48d7c-71fa-4bcb-b7b0-16bde3cc6e30",
+        "parentId" : "34ea9414-fbb4-446b-8f96-bf0afdfba0a3",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "Duplicated is in order to make method clearly for `repartition(...)` and `repartitionByRange(...)`. ",
+        "createdAt" : "2019-10-25T01:18:48Z",
+        "updatedAt" : "2019-10-29T13:30:31Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8cec7273-7684-44ca-8651-233d0b0677c9",
+        "parentId" : "34ea9414-fbb4-446b-8f96-bf0afdfba0a3",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Hm, both inner function and duplication are discouraged but okay.",
+        "createdAt" : "2019-10-29T09:29:56Z",
+        "updatedAt" : "2019-10-29T13:30:31Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4ac7eb612bd11f1feced3f3b28cb7e8b2a43c11f",
+    "line" : 77,
+    "diffHunk" : "@@ -1,1 +192,196 @@      val hintName = hint.name.toUpperCase(Locale.ROOT)\n\n      def createRepartitionByExpression(\n          numPartitions: Int, partitionExprs: Seq[Any]): RepartitionByExpression = {\n        val invalidParams = partitionExprs.filter(!_.isInstanceOf[UnresolvedAttribute])"
+  },
+  {
+    "id" : "935a19ed-db76-4968-a443-cf562d8cb8da",
+    "prId" : 25464,
+    "prUrl" : "https://github.com/apache/spark/pull/25464#pullrequestreview-308509569",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "93b956b2-5f65-433f-8014-46678deb8ab0",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Can we then consistently throw an exception like `Dataset.repartition`?\r\n\r\n```scala\r\n    val sortOrders = partitionExprs.filter(_.expr.isInstanceOf[SortOrder])\r\n    if (sortOrders.nonEmpty) throw new IllegalArgumentException(\r\n      s\"\"\"Invalid partitionExprs specified: $sortOrders\r\n         |For range partitioning use repartitionByRange(...) instead.\r\n       \"\"\".stripMargin)\r\n```",
+        "createdAt" : "2019-10-29T09:31:03Z",
+        "updatedAt" : "2019-10-29T13:30:31Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c370f2f8-ffae-451b-b91c-76c669df30f4",
+        "parentId" : "93b956b2-5f65-433f-8014-46678deb8ab0",
+        "authorId" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "body" : "Good point, add an IllegalArgumentException check.",
+        "createdAt" : "2019-10-29T13:33:02Z",
+        "updatedAt" : "2019-10-29T13:33:02Z",
+        "lastEditedBy" : "baca2fab-b749-483f-8c77-c4db14eca9d9",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4ac7eb612bd11f1feced3f3b28cb7e8b2a43c11f",
+    "line" : 42,
+    "diffHunk" : "@@ -1,1 +163,167 @@            s\"${invalidParams.mkString(\", \")} found\")\n        }\n        RepartitionByExpression(\n          partitionExprs.map(_.asInstanceOf[Expression]), hint.child, numPartitions)\n      }"
+  },
+  {
+    "id" : "9e1c9206-5199-4b04-9dbc-fc279c6ede7d",
+    "prId" : 25464,
+    "prUrl" : "https://github.com/apache/spark/pull/25464#pullrequestreview-321718258",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "71c348ac-66ac-429c-b1e7-7ea04ff6188d",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "shouldn't we return `hint` here? This will cause stack overflow once the hint is not the root node.",
+        "createdAt" : "2019-11-22T11:05:14Z",
+        "updatedAt" : "2019-11-22T11:05:14Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4f3d9261-180d-456a-a7a3-ce8cc70d551b",
+        "parentId" : "71c348ac-66ac-429c-b1e7-7ea04ff6188d",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Ah, yes. I will make a followup. Thanks for catching this.",
+        "createdAt" : "2019-11-22T18:08:14Z",
+        "updatedAt" : "2019-11-22T18:08:15Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4ac7eb612bd11f1feced3f3b28cb7e8b2a43c11f",
+    "line" : 116,
+    "diffHunk" : "@@ -1,1 +224,228 @@          case \"REPARTITION_BY_RANGE\" =>\n            createRepartitionByRange(hint)\n          case _ => plan\n        }\n    }"
+  },
+  {
+    "id" : "ce10315c-4a3e-4faf-bd3d-f921246df306",
+    "prId" : 25464,
+    "prUrl" : "https://github.com/apache/spark/pull/25464#pullrequestreview-358588530",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "4759a8e6-424d-4200-b289-a9781d7b7452",
+        "parentId" : null,
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "I think this check breaks the old API, in Spark 2.4 it is possible to use an expression here. I think we need to back this out.",
+        "createdAt" : "2020-02-05T22:59:12Z",
+        "updatedAt" : "2020-02-05T22:59:13Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f3ce251f-7d67-4b4a-b419-ec01fa7c4691",
+        "parentId" : "4759a8e6-424d-4200-b289-a9781d7b7452",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "AFAIK 2.4 only supports something like `REPARTITION(5)`, the parameters here means anything after the partition number parameter, e.g. `REPARTITION(5, para1, para2, ...)`",
+        "createdAt" : "2020-02-06T06:44:19Z",
+        "updatedAt" : "2020-02-06T06:44:20Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "13026e2a-13f7-4f07-825f-7bb68adfe627",
+        "parentId" : "4759a8e6-424d-4200-b289-a9781d7b7452",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Yea, I think so, too.",
+        "createdAt" : "2020-02-06T13:32:12Z",
+        "updatedAt" : "2020-02-06T13:32:12Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2debc9c3-79d0-4c52-b154-fa2309f79718",
+        "parentId" : "4759a8e6-424d-4200-b289-a9781d7b7452",
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "Ah ok, you are right. Never the less I think we should support expressions for REPARTITION here.",
+        "createdAt" : "2020-02-13T22:10:17Z",
+        "updatedAt" : "2020-02-13T22:10:18Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4ac7eb612bd11f1feced3f3b28cb7e8b2a43c11f",
+    "line" : 37,
+    "diffHunk" : "@@ -1,1 +158,162 @@             |For range partitioning use REPARTITION_BY_RANGE instead.\n           \"\"\".stripMargin)\n        val invalidParams = partitionExprs.filter(!_.isInstanceOf[UnresolvedAttribute])\n        if (invalidParams.nonEmpty) {\n          throw new AnalysisException(s\"$hintName Hint parameter should include columns, but \" +"
+  },
+  {
+    "id" : "4a170a74-21a4-4701-ac17-da52dcac2056",
+    "prId" : 25464,
+    "prUrl" : "https://github.com/apache/spark/pull/25464#pullrequestreview-354869901",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "fefefa3a-f4f6-4b85-b1e8-109de6d9c9c9",
+        "parentId" : null,
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "Style, please put this inside curly braces and on a new line.",
+        "createdAt" : "2020-02-05T23:00:13Z",
+        "updatedAt" : "2020-02-05T23:00:25Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "123966c5-166a-443c-a207-2e78e6ecccd6",
+        "parentId" : "fefefa3a-f4f6-4b85-b1e8-109de6d9c9c9",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "@ulysses-you Could you do follow-up for the two comments from @hvanhovell ?",
+        "createdAt" : "2020-02-06T13:33:30Z",
+        "updatedAt" : "2020-02-06T13:33:31Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fa6ec580-1426-4a2f-8e49-a453d6557371",
+        "parentId" : "fefefa3a-f4f6-4b85-b1e8-109de6d9c9c9",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Actually it might be better to just handle this later when we happen to touch this codes given that  we don't usually make followups for minor styles issues.",
+        "createdAt" : "2020-02-07T00:43:10Z",
+        "updatedAt" : "2020-02-07T00:43:11Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4ac7eb612bd11f1feced3f3b28cb7e8b2a43c11f",
+    "line" : 33,
+    "diffHunk" : "@@ -1,1 +154,158 @@          numPartitions: Int, partitionExprs: Seq[Any]): RepartitionByExpression = {\n        val sortOrders = partitionExprs.filter(_.isInstanceOf[SortOrder])\n        if (sortOrders.nonEmpty) throw new IllegalArgumentException(\n          s\"\"\"Invalid partitionExprs specified: $sortOrders\n             |For range partitioning use REPARTITION_BY_RANGE instead."
+  },
+  {
+    "id" : "d7cc3f01-02b7-4047-9351-b46aa8088a25",
+    "prId" : 25464,
+    "prUrl" : "https://github.com/apache/spark/pull/25464#pullrequestreview-354102068",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "fedb03ac-a342-4cf2-9f29-0c924566f989",
+        "parentId" : null,
+        "authorId" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "body" : "Same comment as above.",
+        "createdAt" : "2020-02-05T23:01:43Z",
+        "updatedAt" : "2020-02-05T23:01:43Z",
+        "lastEditedBy" : "80d631a6-73e8-46a6-a01b-a80d1f1cc6cc",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "4ac7eb612bd11f1feced3f3b28cb7e8b2a43c11f",
+    "line" : 79,
+    "diffHunk" : "@@ -1,1 +194,198 @@      def createRepartitionByExpression(\n          numPartitions: Int, partitionExprs: Seq[Any]): RepartitionByExpression = {\n        val invalidParams = partitionExprs.filter(!_.isInstanceOf[UnresolvedAttribute])\n        if (invalidParams.nonEmpty) {\n          throw new AnalysisException(s\"$hintName Hint parameter should include columns, but \" +"
   }
 ]

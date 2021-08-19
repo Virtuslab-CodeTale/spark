@@ -460,5 +460,104 @@
     "commit" : "b808d51a05a4c382550b4648690ca68660ae0e3a",
     "line" : 12,
     "diffHunk" : "@@ -1,1 +363,367 @@   */\n  override def visitManageResource(ctx: ManageResourceContext): LogicalPlan = withOrigin(ctx) {\n    val mayebePaths = if (ctx.STRING != null) string(ctx.STRING) else remainder(ctx.identifier).trim\n    ctx.op.getType match {\n      case SqlBaseParser.ADD =>"
+  },
+  {
+    "id" : "16d1c214-1763-4cd1-b408-ca4670de0a0f",
+    "prId" : 25398,
+    "prUrl" : "https://github.com/apache/spark/pull/25398#pullrequestreview-273447957",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "29a962e8-6103-4d8e-94e8-e2525db92494",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Are you sure this is correct? It seems a valid value is `Some(DDLUtils.HIVE_PROVIDER)` or `None` for the third parameter.",
+        "createdAt" : "2019-08-11T03:33:24Z",
+        "updatedAt" : "2019-08-12T13:11:55Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "44e7fc94-3e5e-48f8-9a94-c9f3a4b3ff16",
+        "parentId" : "29a962e8-6103-4d8e-94e8-e2525db92494",
+        "authorId" : "a88f50e2-6440-4a6c-8883-3130888d05bc",
+        "body" : "in case of `parquet` and `orc` we can use the respective file format instead of `hive`.\r\nIn case of ctas also we convert to use data source https://github.com/viirya/spark-1/blob/839a6ce1732fa37b5f8ec9afa2d51730fc6ca691/sql/hive/src/main/scala/org/apache/spark/sql/hive/HiveStrategies.scala#L188  \r\nThis will make it inline with that behavior.",
+        "createdAt" : "2019-08-11T05:08:04Z",
+        "updatedAt" : "2019-08-12T13:11:55Z",
+        "lastEditedBy" : "a88f50e2-6440-4a6c-8883-3130888d05bc",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "72d6dd4082cdc8d45204af8aabfecf78288c6eed",
+    "line" : 7,
+    "diffHunk" : "@@ -1,1 +1399,1403 @@    val fileFormat = extractFileFormat(fileStorage.serde)\n    (ctx.LOCAL != null, storage, Some(fileFormat))\n  }\n\n  private def extractFileFormat(serde: Option[String]): String = {"
+  },
+  {
+    "id" : "426f4c63-5dad-4f23-b269-f2d2361e3653",
+    "prId" : 25398,
+    "prUrl" : "https://github.com/apache/spark/pull/25398#pullrequestreview-300529380",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "03788658-787a-4f2c-ad3a-38cd3921f2de",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "I think @maropu has kind of its point. Why don't you just use `STORED AS file_format` instead? BTW, I think it should be in `RelationConversions` with `spark.sql.hive.convertMetastoreXXX`.",
+        "createdAt" : "2019-09-29T14:02:44Z",
+        "updatedAt" : "2019-09-29T14:02:44Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c4520835-7978-4637-b884-45c0b442a88e",
+        "parentId" : "03788658-787a-4f2c-ad3a-38cd3921f2de",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "Yea, I think so... `provider` seems to be mainly used for data source tables. In this hive path, that is just used for a flag, a hive table or not.",
+        "createdAt" : "2019-10-01T00:52:05Z",
+        "updatedAt" : "2019-10-01T00:59:35Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "1c39f4d1-00c4-452f-a8a2-b2ff4c54bfa9",
+        "parentId" : "03788658-787a-4f2c-ad3a-38cd3921f2de",
+        "authorId" : "a88f50e2-6440-4a6c-8883-3130888d05bc",
+        "body" : "@HyukjinKwon I used `STORED AS file_format` only.. if we use `STORED AS` it will be hive managed, so in this PR i  convert it to data source if convertible, we follow same behavior  in case of `CTAS` which is fixed in [SPARK-25271](https://github.com/apache/spark/pull/22514)",
+        "createdAt" : "2019-10-01T13:57:00Z",
+        "updatedAt" : "2019-10-01T14:00:27Z",
+        "lastEditedBy" : "a88f50e2-6440-4a6c-8883-3130888d05bc",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d560534b-1d15-4008-b481-350a378c638d",
+        "parentId" : "03788658-787a-4f2c-ad3a-38cd3921f2de",
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "@Udbhav30, I more meant this seems not the right place to replace. You should add a configuration, and such replacement should be done in analysis/optimizing, not in the parser.\r\n\r\nIf that's the case, then why don't you use `USING file_format` explicitly? Can you please describe what this PR target to fix clearly? Spark lately added a new PR template (https://github.com/apache/spark/blob/master/.github/PULL_REQUEST_TEMPLATE). It might be better to follow this.",
+        "createdAt" : "2019-10-11T02:11:41Z",
+        "updatedAt" : "2019-10-11T02:12:29Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "da3120d6-4d70-4f8a-851f-6acacedcbeea",
+        "parentId" : "03788658-787a-4f2c-ad3a-38cd3921f2de",
+        "authorId" : "a88f50e2-6440-4a6c-8883-3130888d05bc",
+        "body" : "@HyukjinKwon, i can use `USING file_format` explicitly that would serve the purpose but i thought it is better to fix this and make it inline with `CTAS` behavior  which is fixed in this [PR](https://github.com/apache/spark/pull/22514)\r\n\r\nIf you agree to go ahead i can try making changes in analysis/optimizing layer instead of parser as suggested by you. \r\nSure i will follow the template , I have updated the PR description.  thanks :)",
+        "createdAt" : "2019-10-11T08:10:58Z",
+        "updatedAt" : "2019-10-11T08:38:08Z",
+        "lastEditedBy" : "a88f50e2-6440-4a6c-8883-3130888d05bc",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "72d6dd4082cdc8d45204af8aabfecf78288c6eed",
+    "line" : 9,
+    "diffHunk" : "@@ -1,1 +1401,1405 @@  }\n\n  private def extractFileFormat(serde: Option[String]): String = {\n    serde.map({ x =>\n      val lowerCaseSerde = x.toLowerCase(Locale.ROOT)"
   }
 ]

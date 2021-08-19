@@ -1,0 +1,101 @@
+[
+  {
+    "id" : "1569b32b-e19e-410a-89a1-22f5994d6bab",
+    "prId" : 25470,
+    "prUrl" : "https://github.com/apache/spark/pull/25470#pullrequestreview-276361508",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "815669bf-0600-4e31-85bf-b22d7877a6dc",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "@rednaxelafx does JVM classloader have cache?",
+        "createdAt" : "2019-08-16T02:39:33Z",
+        "updatedAt" : "2019-08-27T13:12:08Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d6af6d4f-5acb-42fb-9adf-c6cbe2a001de",
+        "parentId" : "815669bf-0600-4e31-85bf-b22d7877a6dc",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Yeah, same question. It's native code so hard to see. I suspect it does, but we may still be saving some overhead in digging it out of the JVM?",
+        "createdAt" : "2019-08-16T16:40:57Z",
+        "updatedAt" : "2019-08-27T13:12:08Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a993bba2-b674-4b6a-a8eb-100e44c0dd60",
+        "parentId" : "815669bf-0600-4e31-85bf-b22d7877a6dc",
+        "authorId" : "28d581bb-a398-46f0-861f-a016fdb56186",
+        "body" : "Class.forName seems is not free. I have done a simple test in local.\r\n```scala\r\nobject ResolveClass {\r\n  def main(args: Array[String]): Unit = {\r\n    var i = 0\r\n    while (i < 10) {\r\n      Class.forName(Person.getClass.getName)\r\n      i += 1\r\n    }\r\n    val start = System.currentTimeMillis()\r\n    i = 0\r\n    while (i < 100000) {\r\n      Class.forName(Person.getClass.getName)\r\n      i += 1\r\n    }\r\n\r\n    println(System.currentTimeMillis() - start)\r\n  }\r\n}\r\n```\r\nit needs about 196 ms. The map just need the less than half time.",
+        "createdAt" : "2019-08-19T06:32:59Z",
+        "updatedAt" : "2019-08-27T13:12:08Z",
+        "lastEditedBy" : "28d581bb-a398-46f0-861f-a016fdb56186",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "0a15c24a4c689b06028c51d52afade9b7b9559ba",
+    "line" : 45,
+    "diffHunk" : "@@ -1,1 +87,91 @@      try {\n        // scalastyle:off classforname\n        Class.forName(name, false, loader)\n        // scalastyle:on classforname\n      } catch {"
+  },
+  {
+    "id" : "7862ca0a-2ce6-4636-8dab-38a5c3666956",
+    "prId" : 25470,
+    "prUrl" : "https://github.com/apache/spark/pull/25470#pullrequestreview-279526140",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b9bfc3c5-37ce-4def-9cae-0f4ddcec9fe4",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Can we simply reuse the `ByteBufferOutputStream` in the `serialize` method? e.g.\r\n```\r\nprivate val bos = new ByteBufferOutputStream()\r\noverride def serialize[T: ClassTag](t: T): ByteBuffer = {\r\n  bos.reset()\r\n  val out = serializeStream(bos)\r\n  out.writeObject(t)\r\n  out.close()\r\n  bos.toByteBuffer\r\n}\r\n```\r\n",
+        "createdAt" : "2019-08-26T07:48:58Z",
+        "updatedAt" : "2019-08-27T13:12:08Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0ecae4b6-cf8d-4ba2-ace4-81e00987beea",
+        "parentId" : "b9bfc3c5-37ce-4def-9cae-0f4ddcec9fe4",
+        "authorId" : "28d581bb-a398-46f0-861f-a016fdb56186",
+        "body" : "I think it's OK if we use it in a single thread. However, this is not helpful for the deserialization performance because the overhead comes from `ObjectInputStream`. ",
+        "createdAt" : "2019-08-26T10:56:54Z",
+        "updatedAt" : "2019-08-27T13:12:08Z",
+        "lastEditedBy" : "28d581bb-a398-46f0-861f-a016fdb56186",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "0a15c24a4c689b06028c51d52afade9b7b9559ba",
+    "line" : 59,
+    "diffHunk" : "@@ -1,1 +114,118 @@}\n\nprivate[spark] class JavaSerializerInstance(\n    counterReset: Int,\n    extraDebugInfo: Boolean,"
+  },
+  {
+    "id" : "9909311f-d489-4b31-82e6-2e736cb478a8",
+    "prId" : 25470,
+    "prUrl" : "https://github.com/apache/spark/pull/25470#pullrequestreview-279484588",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5a47f951-e6bb-4ae4-9390-679a3f680483",
+        "parentId" : null,
+        "authorId" : "99e31844-a5b3-48a2-af71-412edb607a13",
+        "body" : "nvm\r\n~~Can we use `val` for these three values?~~",
+        "createdAt" : "2019-08-26T09:13:47Z",
+        "updatedAt" : "2019-08-27T13:12:08Z",
+        "lastEditedBy" : "99e31844-a5b3-48a2-af71-412edb607a13",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "0a15c24a4c689b06028c51d52afade9b7b9559ba",
+    "line" : 94,
+    "diffHunk" : "@@ -1,1 +172,176 @@  private var counterReset = conf.get(SERIALIZER_OBJECT_STREAM_RESET)\n  private var extraDebugInfo = conf.get(SERIALIZER_EXTRA_DEBUG_INFO)\n  private var cacheResolvedClasses = conf.get(JAVA_SERIALIZER_CACHE_RESOLVED_CLASSES)\n\n  protected def this() = this(new SparkConf())  // For deserialization only"
+  }
+]

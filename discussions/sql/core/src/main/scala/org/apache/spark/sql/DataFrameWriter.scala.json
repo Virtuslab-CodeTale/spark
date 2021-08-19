@@ -625,5 +625,148 @@
     "commit" : "d9dcf16c4fe3f573cbbd6fcc869b0a541d11955c",
     "line" : 31,
     "diffHunk" : "@@ -1,1 +378,382 @@    var parition = Map[String, Option[String]]()\n    if (partionInfo.isDefined) {\n      val res = partionInfo.get.foreach(partion => {\n        val partionKey = partion.replaceAll(\"'\", \"\").split(\"=\")(0)\n        val partionValue = partion.replaceAll(\"'\", \"\").split(\"=\")(1)"
+  },
+  {
+    "id" : "c2c915e9-3e20-4487-9c15-aa0ebea21d58",
+    "prId" : 25465,
+    "prUrl" : "https://github.com/apache/spark/pull/25465#pullrequestreview-279120049",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "360d6568-1d3d-4374-ab39-12cc553b25f8",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "This is better than before, which use configs to disable file source v2 write: https://github.com/apache/spark/pull/25465/files#diff-9a6b543db706f1a90f790783d6930a13L1605\r\n\r\nconfigs can be changed, and we shouldn't allow users to use the broken file source v2 write.",
+        "createdAt" : "2019-08-15T16:27:03Z",
+        "updatedAt" : "2019-08-27T05:48:29Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a98e09a8-2e6c-446f-bc3c-bb353cae8ce5",
+        "parentId" : "360d6568-1d3d-4374-ab39-12cc553b25f8",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "Why not add this to `lookupDataSourceV2` instead? Doesn't this logic apply to SQL as well?",
+        "createdAt" : "2019-08-21T21:25:09Z",
+        "updatedAt" : "2019-08-27T05:48:29Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "956acc5b-184e-4125-af39-f1f2b12d3ed9",
+        "parentId" : "360d6568-1d3d-4374-ab39-12cc553b25f8",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "This doesn't apply to `DataFrameReader`. We can still read file source v2 with `DataFrameReader` and I don't want to break it.",
+        "createdAt" : "2019-08-22T02:14:13Z",
+        "updatedAt" : "2019-08-27T05:48:29Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6cf2cacb-3c40-4e9a-bd90-95021fdc4cf7",
+        "parentId" : "360d6568-1d3d-4374-ab39-12cc553b25f8",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "If the file sources don't support the schema from the metastore, then the read path should not be used. While it doesn't fail while inferring a schema, the source will read using the inferred schema instead of the metastore schema and that's a bug.\r\n\r\nFor example, if I create a table with 3 columns and drop one, the data and the inferred schema will have the original 3 columns. But the metastore table will have just 2 columns. Reading with v2 would bring back a column that is deleted.\r\n\r\nUntil the file sources are fixed, they should be disabled in all cases.",
+        "createdAt" : "2019-08-22T15:55:13Z",
+        "updatedAt" : "2019-08-27T05:48:29Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6ce3ad88-e653-4784-b413-598872cfd211",
+        "parentId" : "360d6568-1d3d-4374-ab39-12cc553b25f8",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "I'm talking about `spark.read.parquet(path)`. It's nothing about the metastore, and the behavior is well defined in Spark 2.x:\r\n1. if no schema is specified, e.g. `spark.read.parquet(path)`, then the schema will be inferred.\r\n2. if schema is specified by users, e.g. `spark.read.schema(...).parquet(path)`, then schema inference will be skipped and Spark fails at runtime if the specified schema doesn't match the actual file schema.\r\n\r\nI think what you were talking about is `CREATE TABLE ... USING parquet`. This is a different case and currently file source v2 is already disabled for it.",
+        "createdAt" : "2019-08-23T02:29:21Z",
+        "updatedAt" : "2019-08-27T05:48:29Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "54fb45ae-c458-408a-997b-1d67437db493",
+        "parentId" : "360d6568-1d3d-4374-ab39-12cc553b25f8",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "I think you're right that this is not affected by the metastore problem because this is reading a path-based table and not a metastore table.",
+        "createdAt" : "2019-08-23T17:09:43Z",
+        "updatedAt" : "2019-08-27T05:48:29Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "d9f664438417ee8f4bb952d41f53c8c0b0e8d500",
+    "line" : 89,
+    "diffHunk" : "@@ -1,1 +835,839 @@    DataSource.lookupDataSourceV2(source, df.sparkSession.sessionState.conf) match {\n      // TODO(SPARK-28396): File source v2 write path is currently broken.\n      case Some(_: FileDataSourceV2) => None\n      case other => other\n    }"
+  },
+  {
+    "id" : "58a2bbd8-2f65-48c6-9bc0-8ee0c9a82e6b",
+    "prId" : 25402,
+    "prUrl" : "https://github.com/apache/spark/pull/25402#pullrequestreview-275250309",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "996fc0c3-752c-4cc8-b32b-e62a0e207668",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "the `provider` here may not be the actual table provider, as `saveAsTable` can write to an existing table. Maybe we should always use v2 session catalog?\r\n ",
+        "createdAt" : "2019-08-14T11:12:48Z",
+        "updatedAt" : "2019-08-14T16:08:07Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6180e1ef-b47b-4380-85c4-6e2d5bb565a7",
+        "parentId" : "996fc0c3-752c-4cc8-b32b-e62a0e207668",
+        "authorId" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "body" : "That works for me. Since the V2 code path will fallback to the V1 code path if it sees an UnresolvedTable",
+        "createdAt" : "2019-08-14T16:12:39Z",
+        "updatedAt" : "2019-08-14T16:13:08Z",
+        "lastEditedBy" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "465a87f5-40a2-41e3-abdd-bb6edb7663be",
+        "parentId" : "996fc0c3-752c-4cc8-b32b-e62a0e207668",
+        "authorId" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "body" : "hmm. actually that causes issues if the table doesn't exist. Maybe we should use the statements instead of the logical plans?",
+        "createdAt" : "2019-08-14T16:16:05Z",
+        "updatedAt" : "2019-08-14T16:16:06Z",
+        "lastEditedBy" : "471c3dfe-259c-447a-9abd-f7fdecccd9a7",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3c851a04-b4bb-4866-a5eb-261f425f4231",
+        "parentId" : "996fc0c3-752c-4cc8-b32b-e62a0e207668",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "+1 on using statements.",
+        "createdAt" : "2019-08-15T03:31:27Z",
+        "updatedAt" : "2019-08-15T03:31:27Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "afa1c514-6111-4919-90af-d73ad6a17e7e",
+        "parentId" : "996fc0c3-752c-4cc8-b32b-e62a0e207668",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "let's do it in a followup.",
+        "createdAt" : "2019-08-15T03:46:31Z",
+        "updatedAt" : "2019-08-15T03:46:31Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a70e72676da6442a45e3a358c734b6f161c615d0",
+    "line" : 36,
+    "diffHunk" : "@@ -1,1 +490,494 @@\n    val session = df.sparkSession\n    val provider = DataSource.lookupDataSource(source, session.sessionState.conf)\n    val canUseV2 = canUseV2Source(session, provider)\n    val sessionCatalogOpt = session.sessionState.analyzer.sessionCatalog"
   }
 ]

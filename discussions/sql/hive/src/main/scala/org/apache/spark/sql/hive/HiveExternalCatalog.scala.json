@@ -240,5 +240,82 @@
     "commit" : "1496c669745bd6c135011ea0dabd768e31016e45",
     "line" : 6,
     "diffHunk" : "@@ -1,1 +547,551 @@  private def getLocationFromStorageProps(table: CatalogTable): Option[String] = {\n    val storageLoc = table.storage.locationUri.map(CatalogUtils.URIToString(_))\n    val storageProp = CaseInsensitiveMap(table.storage.properties).get(\"path\")\n    // storageProp == None is hive table\n    if (storageLoc.equals(storageProp) || storageProp == None) {"
+  },
+  {
+    "id" : "6662d58f-2a23-4a9b-bd51-0f6065048b8b",
+    "prId" : 25452,
+    "prUrl" : "https://github.com/apache/spark/pull/25452#pullrequestreview-333026554",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "5faaa5d8-edce-4f70-9da4-e08329a21695",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Will case sensitivity be problem in this comparison? Shall we lower case before comparison?",
+        "createdAt" : "2019-12-16T16:28:22Z",
+        "updatedAt" : "2019-12-17T04:48:28Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e968f852-55d9-4e26-b164-5a5b31314102",
+        "parentId" : "5faaa5d8-edce-4f70-9da4-e08329a21695",
+        "authorId" : "f2e3e1f3-82a3-4b68-a0c2-2f7fdf58cf35",
+        "body" : "I think it should be case sensitive, cz in case of unix based system  /opt/some.jar is different from /OPT/SOME.jar. Isn't it ?",
+        "createdAt" : "2019-12-17T04:58:49Z",
+        "updatedAt" : "2019-12-17T04:58:49Z",
+        "lastEditedBy" : "f2e3e1f3-82a3-4b68-a0c2-2f7fdf58cf35",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "95d1e2391b3c5d8daeb97c41e5eb9a13b73f3743",
+    "line" : 29,
+    "diffHunk" : "@@ -1,1 +1326,1330 @@    }\n    val changedResources = newFunction.resources.filter(\n      newResource => !oldFunction.resources.contains(newResource))\n    changedResources.nonEmpty\n  }"
+  },
+  {
+    "id" : "9d23935f-b52d-489b-94c5-9e33d4b6a080",
+    "prId" : 25452,
+    "prUrl" : "https://github.com/apache/spark/pull/25452#pullrequestreview-333027483",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "edac0e4e-4724-4658-8f45-343dcb12df4e",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "From Hive [DDL](https://cwiki.apache.org/confluence/display/Hive/LanguageManual+DDL#LanguageManualDDL-Create/Drop/ReloadFunction), looks like it does not have \"replace\" in create function:\r\n\r\n```\r\nCREATE FUNCTION [db_name.]function_name AS class_name\r\n  [USING JAR|FILE|ARCHIVE 'file_uri' [, JAR|FILE|ARCHIVE 'file_uri'] ];\r\n```\r\n\r\nMaybe it is why this API does not do resource replacement?\r\n",
+        "createdAt" : "2019-12-16T16:34:47Z",
+        "updatedAt" : "2019-12-17T04:48:28Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "08a63bcd-a73b-4c2d-823c-861a9c0bdd5d",
+        "parentId" : "edac0e4e-4724-4658-8f45-343dcb12df4e",
+        "authorId" : "f2e3e1f3-82a3-4b68-a0c2-2f7fdf58cf35",
+        "body" : "yes, as of now Hive only alter name, owner, class name, type but not resource URI. There is no replace DDL in Hive",
+        "createdAt" : "2019-12-17T04:49:48Z",
+        "updatedAt" : "2019-12-17T04:49:48Z",
+        "lastEditedBy" : "f2e3e1f3-82a3-4b68-a0c2-2f7fdf58cf35",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "396c6e9d-1ddb-42ee-9be9-1c399e958cbc",
+        "parentId" : "edac0e4e-4724-4658-8f45-343dcb12df4e",
+        "authorId" : "f2e3e1f3-82a3-4b68-a0c2-2f7fdf58cf35",
+        "body" : "And also initially in the [jira](https://issues.apache.org/jira/browse/SPARK-28710), I proposed 2 solutions for this bug\r\n\r\nsolution 1: throw Unsupported Error for permanent function\r\nsolution 2: instead of alter function, do drop and create\r\n",
+        "createdAt" : "2019-12-17T05:03:20Z",
+        "updatedAt" : "2019-12-17T05:03:20Z",
+        "lastEditedBy" : "f2e3e1f3-82a3-4b68-a0c2-2f7fdf58cf35",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "95d1e2391b3c5d8daeb97c41e5eb9a13b73f3743",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +1292,1296 @@      // replace the function in the metastore if there is no change in the resource\n      case _ =>\n        client.alterFunction(db, newDefinition)\n    }\n  }"
   }
 ]

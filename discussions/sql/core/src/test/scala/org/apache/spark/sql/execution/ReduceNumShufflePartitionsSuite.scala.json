@@ -1,0 +1,57 @@
+[
+  {
+    "id" : "fc2a7b04-8336-4b29-97aa-e93592abb362",
+    "prId" : 25479,
+    "prUrl" : "https://github.com/apache/spark/pull/25479#pullrequestreview-276382428",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2e4858c7-3e5d-44ce-9848-c3e47fe8ccee",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "does this fail without the fix?",
+        "createdAt" : "2019-08-16T15:41:24Z",
+        "updatedAt" : "2019-08-16T17:39:38Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b12e96d6-d34b-4782-a912-e0521ee47dd0",
+        "parentId" : "2e4858c7-3e5d-44ce-9848-c3e47fe8ccee",
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "It does. The plan is:\r\n```\r\nAdaptiveSparkPlan(isFinalPlan=false)\r\n+- Union\r\n   :- Project [id#0L]\r\n   :  +- SortMergeJoin [id#0L], [id#2L], Inner\r\n   :     :- Sort [id#0L ASC NULLS FIRST], false, 0\r\n   :     :  +- Exchange hashpartitioning(id#0L, 5), true\r\n   :     :     +- Range (0, 3, step=1, splits=12)\r\n   :     +- Sort [id#2L ASC NULLS FIRST], false, 0\r\n   :        +- Exchange hashpartitioning(id#2L, 5), true\r\n   :           +- Range (0, 3, step=1, splits=12)\r\n   +- HashAggregate(keys=[], functions=[sum(id#6L)], output=[sum(id)#10L])\r\n      +- Exchange SinglePartition, true\r\n         +- HashAggregate(keys=[], functions=[partial_sum(id#6L)], output=[sum#14L])\r\n            +- Range (0, 3, step=1, splits=12)\r\n```\r\nand the error comes from this assert: https://github.com/apache/spark/blob/master/sql/core/src/main/scala/org/apache/spark/sql/execution/adaptive/ReduceNumShufflePartitions.scala#L136",
+        "createdAt" : "2019-08-16T17:21:31Z",
+        "updatedAt" : "2019-08-16T17:39:38Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "eb65da31-3e5d-4fd8-84f1-92e4f477af54",
+        "parentId" : "2e4858c7-3e5d-44ce-9848-c3e47fe8ccee",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Can you fill the `Does this PR introduce any user-facing change` section? Changing a query from failure to runnable is a user-facing change.",
+        "createdAt" : "2019-08-19T06:15:07Z",
+        "updatedAt" : "2019-08-19T06:15:08Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "58c8b97b-a2c8-417b-8e31-f6c113b06a50",
+        "parentId" : "2e4858c7-3e5d-44ce-9848-c3e47fe8ccee",
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "Oh ok, sure, filled.",
+        "createdAt" : "2019-08-19T07:32:02Z",
+        "updatedAt" : "2019-08-19T07:32:02Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "31436a81f9761b26605eee99ca634e4231ac6191",
+    "line" : 12,
+    "diffHunk" : "@@ -1,1 +596,600 @@      val resultDf = df1.union(df2)\n\n      checkAnswer(resultDf, Seq((0), (1), (2), (3)).map(i => Row(i)))\n\n      val finalPlan = resultDf.queryExecution.executedPlan"
+  }
+]

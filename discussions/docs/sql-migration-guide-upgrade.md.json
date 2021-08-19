@@ -1,0 +1,156 @@
+[
+  {
+    "id" : "f54621c4-5b50-4c88-be5d-bae7dbb230b4",
+    "prId" : 25431,
+    "prUrl" : "https://github.com/apache/spark/pull/25431#pullrequestreview-274688191",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "aeac4bf7-1197-4578-8ac2-58b8f6f40b89",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "This seems fairly incomplete to a reader. What database? \r\nhive -> Hive. This also needs to clarify that the Hive client was updated",
+        "createdAt" : "2019-08-13T14:29:06Z",
+        "updatedAt" : "2019-08-13T14:29:06Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5c6829de-f5c9-4e8a-8a19-5f9b781ca1ff",
+        "parentId" : "aeac4bf7-1197-4578-8ac2-58b8f6f40b89",
+        "authorId" : "f2e3e1f3-82a3-4b68-a0c2-2f7fdf58cf35",
+        "body" : "Hive maintains the `SCHEMA_VERSION` in the `VERSION` table of the metastore db(this  database name will be configured by the user in the hive-site.xml), this SCHEMA_VERSION should be updated to at least 2.3.0.  \r\n\r\n I taught it's better capture in the migration guide as in my production environment thrift server failed to start after upgrade to spark 3.0. If the users are aware of this then I can cancel this ticket",
+        "createdAt" : "2019-08-13T16:57:09Z",
+        "updatedAt" : "2019-08-13T16:57:09Z",
+        "lastEditedBy" : "f2e3e1f3-82a3-4b68-a0c2-2f7fdf58cf35",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "35970f35-cb9d-4187-8107-957a2ba76cc3",
+        "parentId" : "aeac4bf7-1197-4578-8ac2-58b8f6f40b89",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "@sandeep-katta How to reproduce this issue?",
+        "createdAt" : "2019-08-14T00:14:06Z",
+        "updatedAt" : "2019-08-14T00:14:06Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2a891efa-3bf7-4cff-a008-b1ac80ff853f",
+        "parentId" : "aeac4bf7-1197-4578-8ac2-58b8f6f40b89",
+        "authorId" : "f2e3e1f3-82a3-4b68-a0c2-2f7fdf58cf35",
+        "body" : "configure the metastoredb in the hive-site.xml as below\r\n <property>\r\n    <name>javax.jdo.option.ConnectionURL</name>\r\n    <value>jdbc:mysql://vm1:3306/**sparksql**?characterEncoding=UTF-8</value>\r\n  </property>\r\n\r\nunder **sparksql** database there will be one table by name VERSION with the below values\r\n\r\n\r\nmysql> select * from VERSION;\r\n+--------+----------------+--------------------------------------+\r\n| VER_ID | SCHEMA_VERSION | VERSION_COMMENT                |\r\n+--------+----------------+--------------------------------------+\r\n|      1       |              **1.3.0**    |   Set by MetaStore root@127.0.0.1 |\r\n+--------+----------------+--------------------------------------+\r\n1 row in set (0.00 sec)\r\n\r\nif you upgrade the spark to 3.0 and restart thrift server it will not start. You need to update SCHEMA_VERSION to at least **2.3.0**",
+        "createdAt" : "2019-08-14T04:49:13Z",
+        "updatedAt" : "2019-08-14T04:49:13Z",
+        "lastEditedBy" : "f2e3e1f3-82a3-4b68-a0c2-2f7fdf58cf35",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "31945b1c-5f71-4e09-8b57-229285670202",
+        "parentId" : "aeac4bf7-1197-4578-8ac2-58b8f6f40b89",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "Do you know why it's `1.3.0`?  Hive 1.3.0 has not been released yet.",
+        "createdAt" : "2019-08-14T05:07:46Z",
+        "updatedAt" : "2019-08-14T05:07:46Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "76404bad-bf75-420a-9fea-e9972b9c2807",
+        "parentId" : "aeac4bf7-1197-4578-8ac2-58b8f6f40b89",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "Anyway, could you try to start thriftserver with `spark.sql.hive.metastore.version=1.2`?\r\n```sh\r\nsbin/start-thriftserver.sh --conf spark.sql.hive.metastore.version=1.2 --conf spark.sql.hive.metastore.jars=maven\r\n```",
+        "createdAt" : "2019-08-14T05:12:45Z",
+        "updatedAt" : "2019-08-14T05:12:45Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "80325e8b-f1f9-4767-b898-74286e1e7908",
+        "parentId" : "aeac4bf7-1197-4578-8ac2-58b8f6f40b89",
+        "authorId" : "f2e3e1f3-82a3-4b68-a0c2-2f7fdf58cf35",
+        "body" : "Till 2.4 I think Spark uses some private fork of Hive which is 1.2.1, so we updated the SCHEMA_VERSION to 1.3.0 which > 1.2.1",
+        "createdAt" : "2019-08-14T05:14:33Z",
+        "updatedAt" : "2019-08-14T05:14:34Z",
+        "lastEditedBy" : "f2e3e1f3-82a3-4b68-a0c2-2f7fdf58cf35",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "862b5b80-5ccb-4108-9803-00c43c15fe7b",
+        "parentId" : "aeac4bf7-1197-4578-8ac2-58b8f6f40b89",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "Could you try to start thriftserver with `spark.sql.hive.metastore.version=1.2`?\r\n```sh\r\nsbin/start-thriftserver.sh --conf spark.sql.hive.metastore.version=1.2 --conf spark.sql.hive.metastore.jars=maven\r\n```",
+        "createdAt" : "2019-08-14T05:25:01Z",
+        "updatedAt" : "2019-08-14T05:25:02Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "124a0b3b-d1b8-4e5d-8825-e7fa24addba5",
+        "parentId" : "aeac4bf7-1197-4578-8ac2-58b8f6f40b89",
+        "authorId" : "f2e3e1f3-82a3-4b68-a0c2-2f7fdf58cf35",
+        "body" : "I can start the thrift server even by disabling schema verification `hive.metastore.schema.verification`\r\n\r\nBut by doing this we may not be able to get the benefits of upgrading to latest Hive version.\r\n\r\nIf the users are aware of this then I can close this PR.",
+        "createdAt" : "2019-08-14T05:35:12Z",
+        "updatedAt" : "2019-08-14T05:35:12Z",
+        "lastEditedBy" : "f2e3e1f3-82a3-4b68-a0c2-2f7fdf58cf35",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ea023c7c-81db-42f5-9fe9-b1766616ff4b",
+        "parentId" : "aeac4bf7-1197-4578-8ac2-58b8f6f40b89",
+        "authorId" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "body" : "There are two things here:\r\n1. If you want to improve the performance of the Hive Metastore Server. The correct way is to upgrade your Hive Metastore Server to latest version. `SCHEMA_VERSION` should be updated by [Hive itself](https://github.com/apache/hive/blob/c57a59611fa168ee38c6ee0ee60b1d6c4994f9f8/metastore/scripts/upgrade/mysql/upgrade-1.2.0-to-1.3.0.mysql.sql).\r\n2. Upgrade built-in Hive to 2.3.x still can get benefits if you Hive Metastore Server is 1.2.x, such as [SPARK-12014](https://issues.apache.org/jira/browse/SPARK-12014), [SPARK-27500](https://issues.apache.org/jira/browse/SPARK-27500) and [SPARK-26321](https://issues.apache.org/jira/browse/SPARK-26321).",
+        "createdAt" : "2019-08-14T06:20:49Z",
+        "updatedAt" : "2019-08-14T06:20:49Z",
+        "lastEditedBy" : "813f0961-9a16-4e42-a167-961d914c472c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2c7264cb-b0ea-436f-9910-8c0a511ba616",
+        "parentId" : "aeac4bf7-1197-4578-8ac2-58b8f6f40b89",
+        "authorId" : "f2e3e1f3-82a3-4b68-a0c2-2f7fdf58cf35",
+        "body" : "okay understood, this should be in the scope of Hive upgrade. Thank you @wangyum . I will close this PR as invalid ",
+        "createdAt" : "2019-08-14T06:28:26Z",
+        "updatedAt" : "2019-08-14T06:28:26Z",
+        "lastEditedBy" : "f2e3e1f3-82a3-4b68-a0c2-2f7fdf58cf35",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "bb9e8f92d0975ef5c57bbe35ac50776e27a964a8",
+    "line" : 4,
+    "diffHunk" : "@@ -1,1 +24,28 @@\n## Upgrading From Spark SQL 2.4 to 3.0\n  - Since Spark 3.0, hive is upgraded to 2.3.x, so it is required to update the Hive\n  `SCHEMA_VERSION` in the database to at least 2.3.0. \n  "
+  },
+  {
+    "id" : "6a0fb435-87f3-413b-ab69-ed1a5ac6f22b",
+    "prId" : 25431,
+    "prUrl" : "https://github.com/apache/spark/pull/25431#pullrequestreview-274395765",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "04daa3b3-6aaf-4aa8-abb4-f872292528e7",
+        "parentId" : null,
+        "authorId" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "body" : "Hive is only upgraded into 2.3.5 (and presumably it will be 2.3.6) only Hadoop 3 profile, which has not been officially released with.",
+        "createdAt" : "2019-08-13T16:10:59Z",
+        "updatedAt" : "2019-08-13T16:11:12Z",
+        "lastEditedBy" : "5e07d5ab-b4b3-41e4-beca-fefd635980c6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "bb9e8f92d0975ef5c57bbe35ac50776e27a964a8",
+    "line" : 4,
+    "diffHunk" : "@@ -1,1 +24,28 @@\n## Upgrading From Spark SQL 2.4 to 3.0\n  - Since Spark 3.0, hive is upgraded to 2.3.x, so it is required to update the Hive\n  `SCHEMA_VERSION` in the database to at least 2.3.0. \n  "
+  }
+]

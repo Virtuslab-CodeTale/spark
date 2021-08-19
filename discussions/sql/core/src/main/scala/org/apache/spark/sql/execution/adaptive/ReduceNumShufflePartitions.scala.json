@@ -86,5 +86,82 @@
     "commit" : "ac17a7cb869a093745ff0d60fe9d3837ede72c85",
     "line" : 144,
     "diffHunk" : "@@ -1,1 +177,181 @@    partitionStartIndices += firstStartIndex\n    var postShuffleInputSize = mapOutputStatistics.map(_.bytesByPartitionId(firstStartIndex)).sum\n    var i = firstStartIndex\n    includedPartitions.drop(1).foreach { nextPartitionIndex =>\n        val nextShuffleInputSize ="
+  },
+  {
+    "id" : "b3469a7d-cbc3-47c3-a160-1f813b02d8cf",
+    "prId" : 25479,
+    "prUrl" : "https://github.com/apache/spark/pull/25479#pullrequestreview-276080526",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "fd198c92-df22-4d08-a2c1-6c9d48a613e9",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "let's also give an example about when we will have different pre-shuffle partition numbers.",
+        "createdAt" : "2019-08-16T15:40:23Z",
+        "updatedAt" : "2019-08-16T17:39:38Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "08787d11-e6df-448d-9366-c349200a4d14",
+        "parentId" : "fd198c92-df22-4d08-a2c1-6c9d48a613e9",
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "Ok, added. Please let me know if it should be more detailed.",
+        "createdAt" : "2019-08-16T17:40:48Z",
+        "updatedAt" : "2019-08-16T17:40:49Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "31436a81f9761b26605eee99ca634e4231ac6191",
+    "line" : 5,
+    "diffHunk" : "@@ -1,1 +83,87 @@      // we should skip it when calculating the `partitionStartIndices`.\n      val validMetrics = shuffleMetrics.filter(_ != null)\n      // We may have different pre-shuffle partition numbers, don't reduce shuffle partition number\n      // in that case. For example when we union fully aggregated data (data is arranged to a single\n      // partition) and a result of a SortMergeJoin (multiple partitions)."
+  },
+  {
+    "id" : "df6f7fdb-ce8f-46f1-87c2-a78b6cc7ea68",
+    "prId" : 25479,
+    "prUrl" : "https://github.com/apache/spark/pull/25479#pullrequestreview-276389434",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6a044238-5dfe-4982-aad8-ec14f6cb8498",
+        "parentId" : null,
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "After we have this condition `distinctNumPreShufflePartitions.length == 1`, do we still need the assert at L136? Shall we remove the assert?",
+        "createdAt" : "2019-08-16T20:41:55Z",
+        "updatedAt" : "2019-08-16T21:56:27Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "73d7f8b3-fe56-4b6b-aef1-2e89a115e4b3",
+        "parentId" : "6a044238-5dfe-4982-aad8-ec14f6cb8498",
+        "authorId" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "body" : "Yes, we could remove it, but the assert has been there since the original version of `ReduceNumShufflePartitions` where the `distinctNumPreShufflePartitions.length == 1` check was also included. I'm not sure what is the plan with `ReduceNumShufflePartitions`. @carsonwang, @maryannxue do you want to improve `Union`/`SinglePartition` handling in this rule? Shall we remove the assert?",
+        "createdAt" : "2019-08-17T09:03:12Z",
+        "updatedAt" : "2019-08-17T09:04:27Z",
+        "lastEditedBy" : "3d4870da-39a8-4406-b00d-131930d14cd8",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e9d3219b-b596-44b3-847e-05239a06a6f0",
+        "parentId" : "6a044238-5dfe-4982-aad8-ec14f6cb8498",
+        "authorId" : "863271f8-065a-4cc6-a85e-e2ed034131f6",
+        "body" : "I think it is fine to remove it. We can improve the handling of `Union/SinglePartition` in future and it probably needs more changes and a new function to estimate the partition start indices. ",
+        "createdAt" : "2019-08-19T07:48:41Z",
+        "updatedAt" : "2019-08-19T07:48:41Z",
+        "lastEditedBy" : "863271f8-065a-4cc6-a85e-e2ed034131f6",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "31436a81f9761b26605eee99ca634e4231ac6191",
+    "line" : 10,
+    "diffHunk" : "@@ -1,1 +88,92 @@      val distinctNumPreShufflePartitions =\n        validMetrics.map(stats => stats.bytesByPartitionId.length).distinct\n      if (validMetrics.nonEmpty && distinctNumPreShufflePartitions.length == 1) {\n        val partitionStartIndices = estimatePartitionStartIndices(validMetrics.toArray)\n        // This transformation adds new nodes, so we must use `transformUp` here."
   }
 ]

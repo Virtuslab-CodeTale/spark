@@ -108,5 +108,115 @@
     "commit" : "452b53571f26ad8b4994910b2cb99325f43a4215",
     "line" : 186,
     "diffHunk" : "@@ -1,1 +214,218 @@        val newKeys = ArrayTransform(MapKeys(input), keyFunc)\n        val newValues = ArrayTransform(MapValues(input), valueFunc)\n        Some(Alias(MapFromArrays(newKeys, newValues), expectedName)())\n      } else {\n        None"
+  },
+  {
+    "id" : "7cd01034-b342-4bdb-bd39-240f5ac1e31a",
+    "prId" : 25453,
+    "prUrl" : "https://github.com/apache/spark/pull/25453#pullrequestreview-277011839",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b79f0714-a059-4e99-ac55-178e5103bb3a",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "This is just a check to confirm; you don't modify any logic in `resolveOutputColumns`?",
+        "createdAt" : "2019-08-20T02:05:25Z",
+        "updatedAt" : "2019-08-22T08:27:31Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c415174c-b3a7-449b-b04b-cd1e2987822c",
+        "parentId" : "b79f0714-a059-4e99-ac55-178e5103bb3a",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "Yes.",
+        "createdAt" : "2019-08-20T08:37:48Z",
+        "updatedAt" : "2019-08-22T08:27:31Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "eb9442cdeadd2ab2232c82a3dfb65055489e4e06",
+    "line" : 30,
+    "diffHunk" : "@@ -1,1 +28,32 @@\nobject TableOutputResolver {\n  def resolveOutputColumns(\n      tableName: String,\n      expected: Seq[Attribute],"
+  },
+  {
+    "id" : "a1114a2c-6601-4e4c-89d4-ac029f64e309",
+    "prId" : 25453,
+    "prUrl" : "https://github.com/apache/spark/pull/25453#pullrequestreview-277145874",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "69319ef2-7a25-45c6-bd6a-789e5fbfbc43",
+        "parentId" : null,
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "We can always use `Cast` here and let the optimization rule `SimplifyCasts` to remove unnecessary ones. But there is test case(E.g. `HiveQuerySuite.SPARK-7270: consider dynamic partition when comparing table output`) checking if there is no casting in the analyzed plan. To keep the behavior of V1, let's remove unnecessary `Cast` here. ",
+        "createdAt" : "2019-08-20T12:59:17Z",
+        "updatedAt" : "2019-08-22T08:27:31Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "eb9442cdeadd2ab2232c82a3dfb65055489e4e06",
+    "line" : 96,
+    "diffHunk" : "@@ -1,1 +94,98 @@    lazy val outputField = if (tableAttr.dataType.sameType(queryExpr.dataType) &&\n      tableAttr.name == queryExpr.name &&\n      tableAttr.metadata == queryExpr.metadata) {\n      Some(queryExpr)\n    } else {"
+  },
+  {
+    "id" : "89046132-adf7-4445-b5e6-b31a85b0ffa6",
+    "prId" : 25453,
+    "prUrl" : "https://github.com/apache/spark/pull/25453#pullrequestreview-277562968",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "f9da65ad-31c7-4ca5-9c66-aa18fbc01554",
+        "parentId" : null,
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "```\r\n        if (queryExpr.nullable && !tableAttr.nullable) {\r\n          addError(s\"Cannot write nullable values to non-null column '${tableAttr.name}'\")\r\n          None\r\n        } else {\r\n          // run the type check first to ensure type errors are present\r\n          val canWrite = DataType.canWrite(\r\n            queryExpr.dataType, tableAttr.dataType, byName, conf.resolver, tableAttr.name, addError)\r\n          if (canWrite) {\r\n            outputField\r\n          } else {\r\n            None\r\n          }\r\n        }\r\n```\r\n?",
+        "createdAt" : "2019-08-21T00:35:41Z",
+        "updatedAt" : "2019-08-22T08:27:31Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4bffa34b-b181-46ae-8c56-9a8cadc206b7",
+        "parentId" : "f9da65ad-31c7-4ca5-9c66-aa18fbc01554",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "btw, we don't need the check `queryExpr.nullable && !tableAttr.nullable` in the other modes?",
+        "createdAt" : "2019-08-21T00:36:03Z",
+        "updatedAt" : "2019-08-22T08:27:31Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9183721a-4c18-4813-9fbc-9f261f08c0c0",
+        "parentId" : "f9da65ad-31c7-4ca5-9c66-aa18fbc01554",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "I think this is on purpose in the original code. Running `DataType.canWrite` can expose more errors.",
+        "createdAt" : "2019-08-21T05:22:50Z",
+        "updatedAt" : "2019-08-22T08:27:31Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f27c2886-0e40-4354-b11a-12f7115f5d98",
+        "parentId" : "f9da65ad-31c7-4ca5-9c66-aa18fbc01554",
+        "authorId" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "body" : "> btw, we don't need the check queryExpr.nullable && !tableAttr.nullable in the other modes?\r\n\r\nIIRC there is no such check in Spark 2.x",
+        "createdAt" : "2019-08-21T05:23:39Z",
+        "updatedAt" : "2019-08-22T08:27:31Z",
+        "lastEditedBy" : "15acce7d-132b-48c9-894b-9bc3f4c2b09d",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "eb9442cdeadd2ab2232c82a3dfb65055489e4e06",
+    "line" : 112,
+    "diffHunk" : "@@ -1,1 +110,114 @@\n      case StoreAssignmentPolicy.STRICT =>\n        // run the type check first to ensure type errors are present\n        val canWrite = DataType.canWrite(\n          queryExpr.dataType, tableAttr.dataType, byName, conf.resolver, tableAttr.name, addError)"
   }
 ]
