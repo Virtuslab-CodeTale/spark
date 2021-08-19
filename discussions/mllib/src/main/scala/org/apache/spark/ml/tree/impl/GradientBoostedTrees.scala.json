@@ -31,5 +31,181 @@
     "commit" : "009c553b7f6e12c584deb002f8e52d47017f1845",
     "line" : 4,
     "diffHunk" : "@@ -1,1 +312,316 @@    treeStrategy.algo = OldAlgo.Regression\n    treeStrategy.impurity = OldVariance\n    require(!treeStrategy.bootstrap, \"GradientBoostedTrees does not need bootstrap sampling\")\n    treeStrategy.assertValid()\n"
+  },
+  {
+    "id" : "266a8496-2ea1-4367-86a4-c1c2457e1a7e",
+    "prId" : 25926,
+    "prUrl" : "https://github.com/apache/spark/pull/25926#pullrequestreview-297900946",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "fbec4ffb-545c-4f6c-b2c5-c551abf53889",
+        "parentId" : null,
+        "authorId" : "67753c60-11ee-4434-aa73-ad8ea638a02a",
+        "body" : "hmm shouldn't the loss be weighted by the weight column value here?  seems a bit strange to ignore the weight column here",
+        "createdAt" : "2019-10-07T04:04:41Z",
+        "updatedAt" : "2019-10-23T11:08:19Z",
+        "lastEditedBy" : "67753c60-11ee-4434-aa73-ad8ea638a02a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "61fca515-e538-4a13-aaca-1b883c37e5cc",
+        "parentId" : "fbec4ffb-545c-4f6c-b2c5-c551abf53889",
+        "authorId" : "67753c60-11ee-4434-aa73-ad8ea638a02a",
+        "body" : "oh, reading some of the other code this looks like unweighted error.  That seems very confusing.  I think we could improve this code structure a bit more.",
+        "createdAt" : "2019-10-07T04:37:57Z",
+        "updatedAt" : "2019-10-23T11:08:19Z",
+        "lastEditedBy" : "67753c60-11ee-4434-aa73-ad8ea638a02a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8146809b-442b-41bf-9b42-b1704f212056",
+        "parentId" : "fbec4ffb-545c-4f6c-b2c5-c551abf53889",
+        "authorId" : "67753c60-11ee-4434-aa73-ad8ea638a02a",
+        "body" : "what would be the problem with this returning weighted error and getting rid of the computeError function?",
+        "createdAt" : "2019-10-07T04:39:16Z",
+        "updatedAt" : "2019-10-23T11:08:19Z",
+        "lastEditedBy" : "67753c60-11ee-4434-aa73-ad8ea638a02a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "300039770f06eb9f7e4075b61c4203e598a66410",
+    "line" : 80,
+    "diffHunk" : "@@ -1,1 +113,117 @@    data.map { case Instance(label, _, features) =>\n      val pred = updatePrediction(features, 0.0, initTree, initTreeWeight)\n      val error = loss.computeError(pred, label)\n      (pred, error)\n    }"
+  },
+  {
+    "id" : "acfc88e2-ed65-4748-b672-d999b1e924fe",
+    "prId" : 25926,
+    "prUrl" : "https://github.com/apache/spark/pull/25926#pullrequestreview-297900743",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ebf5764e-ff0b-47a9-82d1-2147bf7d4257",
+        "parentId" : null,
+        "authorId" : "67753c60-11ee-4434-aa73-ad8ea638a02a",
+        "body" : "same thing here - it seems like we are ignoring the weight column but intuitively it seems like it should be included, could you explain the reasoning behind it being excluded here?",
+        "createdAt" : "2019-10-07T04:05:56Z",
+        "updatedAt" : "2019-10-23T11:08:19Z",
+        "lastEditedBy" : "67753c60-11ee-4434-aa73-ad8ea638a02a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "81f9ced3-83ac-439f-8c73-0ea9997fe97f",
+        "parentId" : "ebf5764e-ff0b-47a9-82d1-2147bf7d4257",
+        "authorId" : "67753c60-11ee-4434-aa73-ad8ea638a02a",
+        "body" : "oh, reading some of the other code this looks like unweighted error.  That seems very confusing.  I think we could improve this code structure a bit more.",
+        "createdAt" : "2019-10-07T04:38:04Z",
+        "updatedAt" : "2019-10-23T11:08:19Z",
+        "lastEditedBy" : "67753c60-11ee-4434-aa73-ad8ea638a02a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "300039770f06eb9f7e4075b61c4203e598a66410",
+    "line" : 100,
+    "diffHunk" : "@@ -1,1 +136,140 @@      loss: OldLoss): RDD[(Double, Double)] = {\n    data.zip(predictionAndError).map {\n      case (Instance(label, _, features), (pred, _)) =>\n        val newPred = updatePrediction(features, pred, tree, treeWeight)\n        val newError = loss.computeError(newPred, label)"
+  },
+  {
+    "id" : "cb91883a-19cf-480e-b4b9-c54a54d1b0bd",
+    "prId" : 25926,
+    "prUrl" : "https://github.com/apache/spark/pull/25926#pullrequestreview-302002427",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "588cf6d4-59c1-45ac-bd3c-6e4231b0d841",
+        "parentId" : null,
+        "authorId" : "67753c60-11ee-4434-aa73-ad8ea638a02a",
+        "body" : "trying to understand this code - why are the trees broadcast here but the treeWeights are not?",
+        "createdAt" : "2019-10-07T04:26:21Z",
+        "updatedAt" : "2019-10-23T11:08:19Z",
+        "lastEditedBy" : "67753c60-11ee-4434-aa73-ad8ea638a02a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "06a76ba2-5617-4d60-9cd2-72dc26c9aafd",
+        "parentId" : "588cf6d4-59c1-45ac-bd3c-6e4231b0d841",
+        "authorId" : "67753c60-11ee-4434-aa73-ad8ea638a02a",
+        "body" : "just to be clear the previous code is doing this as well, I just don't understand why the treeWeights aren't broadcast either",
+        "createdAt" : "2019-10-07T04:27:02Z",
+        "updatedAt" : "2019-10-23T11:08:19Z",
+        "lastEditedBy" : "67753c60-11ee-4434-aa73-ad8ea638a02a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "db59e360-8b00-4007-86d5-b25188207fe0",
+        "parentId" : "588cf6d4-59c1-45ac-bd3c-6e4231b0d841",
+        "authorId" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "body" : "in this place, I just followed preivous impl. I am neutral on it.",
+        "createdAt" : "2019-10-08T03:51:47Z",
+        "updatedAt" : "2019-10-23T11:08:19Z",
+        "lastEditedBy" : "685f805b-e4fa-4f21-b066-58afcecf9ce6",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3cc0945b-b3f8-475f-b31d-df33d9c46ea3",
+        "parentId" : "588cf6d4-59c1-45ac-bd3c-6e4231b0d841",
+        "authorId" : "67753c60-11ee-4434-aa73-ad8ea638a02a",
+        "body" : "sounds good",
+        "createdAt" : "2019-10-15T15:30:21Z",
+        "updatedAt" : "2019-10-23T11:08:19Z",
+        "lastEditedBy" : "67753c60-11ee-4434-aa73-ad8ea638a02a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "300039770f06eb9f7e4075b61c4203e598a66410",
+    "line" : 201,
+    "diffHunk" : "@@ -1,1 +228,232 @@\n    val numTrees = trees.length\n    val (errSum, weightSum) = remappedData.mapPartitions { iter =>\n      iter.map { case Instance(label, weight, features) =>\n        val pred = Array.tabulate(numTrees) { i =>"
+  },
+  {
+    "id" : "db1d939f-4b6b-4044-ba76-7916e920e01b",
+    "prId" : 25926,
+    "prUrl" : "https://github.com/apache/spark/pull/25926#pullrequestreview-298516819",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "25a40baa-85ec-412e-af71-9b4831b09c1c",
+        "parentId" : null,
+        "authorId" : "67753c60-11ee-4434-aa73-ad8ea638a02a",
+        "body" : "it would be nice if we could checkpoint the weighted instead of unweighted prediction error, which ties into the earlier comment on why methods like computeInitialPredictionAndError can't return the weighted prediction error",
+        "createdAt" : "2019-10-08T03:25:48Z",
+        "updatedAt" : "2019-10-23T11:08:19Z",
+        "lastEditedBy" : "67753c60-11ee-4434-aa73-ad8ea638a02a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "300039770f06eb9f7e4075b61c4203e598a66410",
+    "line" : 257,
+    "diffHunk" : "@@ -1,1 +314,318 @@\n    var predError = computeInitialPredictionAndError(input, firstTreeWeight, firstTreeModel, loss)\n    predErrorCheckpointer.update(predError)\n    logDebug(\"error of gbt = \" + computeWeightedError(input, predError))\n"
+  },
+  {
+    "id" : "0540c897-7ade-44bf-a508-73660d5cb97f",
+    "prId" : 25926,
+    "prUrl" : "https://github.com/apache/spark/pull/25926#pullrequestreview-302007708",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b3a7664a-39e1-4619-a895-c172ee9b1fa9",
+        "parentId" : null,
+        "authorId" : "67753c60-11ee-4434-aa73-ad8ea638a02a",
+        "body" : "if we are going to keep the checkpointing of unweighted error as opposed to weighted error, then it would be nice to specify that in the name of the checkpointer:\r\npredUnweigtedErrorCheckpointer\r\nor alternatively add a comment to make that clear:\r\n```\r\n    // Note: this is checkpointing the unweighted error\r\n    predErrorCheckpointer.update(predError) \r\n```",
+        "createdAt" : "2019-10-15T15:37:29Z",
+        "updatedAt" : "2019-10-23T11:08:19Z",
+        "lastEditedBy" : "67753c60-11ee-4434-aa73-ad8ea638a02a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "300039770f06eb9f7e4075b61c4203e598a66410",
+    "line" : 257,
+    "diffHunk" : "@@ -1,1 +314,318 @@\n    var predError = computeInitialPredictionAndError(input, firstTreeWeight, firstTreeModel, loss)\n    predErrorCheckpointer.update(predError)\n    logDebug(\"error of gbt = \" + computeWeightedError(input, predError))\n"
   }
 ]

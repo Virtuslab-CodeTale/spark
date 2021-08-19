@@ -1,0 +1,57 @@
+[
+  {
+    "id" : "9c1eb638-32eb-4f32-8b3b-805fb521ac32",
+    "prId" : 25953,
+    "prUrl" : "https://github.com/apache/spark/pull/25953#pullrequestreview-295689608",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8dc81187-8867-4cf5-a329-57a677d0550a",
+        "parentId" : null,
+        "authorId" : "a11722a8-ecfa-4827-88e3-4d708f023846",
+        "body" : "Mind adding a one-line comment in the body of the test noting that this is a regression test for `SPARK-29244`?",
+        "createdAt" : "2019-10-01T05:41:09Z",
+        "updatedAt" : "2019-10-01T15:23:57Z",
+        "lastEditedBy" : "a11722a8-ecfa-4827-88e3-4d708f023846",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8f14c7f7-2ec5-4125-8fa6-eef589b6b351",
+        "parentId" : "8dc81187-8867-4cf5-a329-57a677d0550a",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Ok. Added.",
+        "createdAt" : "2019-10-01T15:23:01Z",
+        "updatedAt" : "2019-10-01T15:23:57Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "441aa2bf2096e7537117bc93dd99415e218b1dad",
+    "line" : 13,
+    "diffHunk" : "@@ -1,1 +729,733 @@\n  @Test\n  public void freeAfterFailedReset() {\n    // SPARK-29244: BytesToBytesMap.free after a OOM reset operation should not cause failure.\n    memoryManager.limit(5000);"
+  },
+  {
+    "id" : "d2955ad0-d78b-479c-9e6c-119ef2823f3f",
+    "prId" : 25953,
+    "prUrl" : "https://github.com/apache/spark/pull/25953#pullrequestreview-295376733",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6bd199f9-153f-449d-89f6-fd07f6572f74",
+        "parentId" : null,
+        "authorId" : "a11722a8-ecfa-4827-88e3-4d708f023846",
+        "body" : "Even though this test suite fails without the `longArray = null` change, it turns out that another (wrong!) way to make this test pass would be to simply remove the `free(longArray)` call and leak memory.\r\n\r\nUnfortunately, though, that doesn't cause the test to fail! It turns out that the \r\n\r\n```java\r\n  @After\r\n  public void tearDown() {\r\n    Utils.deleteRecursively(tempDir);\r\n    tempDir = null;\r\n\r\n    if (taskMemoryManager != null) {\r\n      Assert.assertEquals(0L, taskMemoryManager.cleanUpAllAllocatedMemory());\r\n      long leakedMemory = taskMemoryManager.getMemoryConsumptionForThisTask();\r\n      taskMemoryManager = null;\r\n      Assert.assertEquals(0L, leakedMemory);\r\n    }\r\n  }\r\n```\r\n\r\ndoesn't work as expected because `TestMemoryManager` doesn't properly implement per-taskAttemptId memory-consumption tracking.\r\n\r\nI've opened #25985 to fix that problem. That doesn't need to block merging of this patch, however.",
+        "createdAt" : "2019-10-01T06:04:01Z",
+        "updatedAt" : "2019-10-01T15:23:57Z",
+        "lastEditedBy" : "a11722a8-ecfa-4827-88e3-4d708f023846",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "441aa2bf2096e7537117bc93dd99415e218b1dad",
+    "line" : 27,
+    "diffHunk" : "@@ -1,1 +743,747 @@    } finally {\n      map.free();\n    }\n  }\n"
+  }
+]

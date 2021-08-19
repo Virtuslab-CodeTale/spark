@@ -427,5 +427,225 @@
     "commit" : "dbb73e3f21a7bccd7af3a217303018eb9b206c8b",
     "line" : 6,
     "diffHunk" : "@@ -1,1 +416,420 @@          val stage = e.getValue()\n          // If a stage has no partitions(tasks), the stage should not be marked as skipped.\n          if (v1.StageStatus.PENDING.equals(stage.status) && stage.info.numTasks > 0) {\n            stage.status = v1.StageStatus.SKIPPED\n            job.skippedStages += stage.info.stageId"
+  },
+  {
+    "id" : "2de5f787-826f-4920-bf98-e85450b7a4f3",
+    "prId" : 25943,
+    "prUrl" : "https://github.com/apache/spark/pull/25943#pullrequestreview-299735323",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "da549ffa-db8b-47b5-8d61-d9d4f92ecc27",
+        "parentId" : null,
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "This may need to cooperate with SPARK-28594's config.",
+        "createdAt" : "2019-09-26T12:50:01Z",
+        "updatedAt" : "2019-10-16T15:23:01Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e742d9e8-fa68-4b8d-ae6b-9b79cfeac47d",
+        "parentId" : "da549ffa-db8b-47b5-8d61-d9d4f92ecc27",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "I still think it should be run by default to guarantee AppStatusListener and KVStore is in sync, but let's wait for another voices.",
+        "createdAt" : "2019-10-04T08:12:02Z",
+        "updatedAt" : "2019-10-16T15:23:01Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "19598e40-6763-473d-819e-a610388be7db",
+        "parentId" : "da549ffa-db8b-47b5-8d61-d9d4f92ecc27",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Hmm... I've found we don't recover AppStatusSource as well since it will not be passed when `live == false`. If possible I'd put assertion whether KVStore is empty when `live == true` then, but it depends on the possibility. If not, we may have to live with.",
+        "createdAt" : "2019-10-07T03:13:21Z",
+        "updatedAt" : "2019-10-16T15:23:01Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bc26265f-f7bf-40c4-a4fe-a2e38b5f0498",
+        "parentId" : "da549ffa-db8b-47b5-8d61-d9d4f92ecc27",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "> If possible I'd put assertion whether KVStore is empty when live == true then, but it depends on the possibility. \r\n\r\nI think our current usage of a live(true) `AppStatusListener` guarantees the empty KVStore at the initialization step. So I don't understand well for `depends on the possibility` ? Do I miss something ?\r\n\r\nAnd yet, it seems that we don't have `isEmpty` api for KVStore. Otherwise, I could put an assertion to reach a compromises between us. ",
+        "createdAt" : "2019-10-09T14:46:57Z",
+        "updatedAt" : "2019-10-16T15:23:01Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "463c2818-ac92-458a-8eef-23de0482b28b",
+        "parentId" : "da549ffa-db8b-47b5-8d61-d9d4f92ecc27",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "> I think our current usage of a live(true) AppStatusListener guarantees the empty KVStore at the initialization step. So I don't understand well for depends on the possibility ?\r\n\r\nThat's a \"context\" we might have a chance to break eventually and as a side-effect it will break here. I'm in favor of doing defensive programming: if there're preconditions it should be mentioned anywhere or asserted. But I agree we don't have isEmpty api for KVStore - let's leave it as it is.",
+        "createdAt" : "2019-10-09T22:34:19Z",
+        "updatedAt" : "2019-10-16T15:23:01Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "46715b3d2c52acd97fdca2e2034393f7e49e1b4f",
+    "line" : 28,
+    "diffHunk" : "@@ -1,1 +107,111 @@  // visible for tests\n  private[spark] def recoverLiveEntities(): Unit = {\n    if (!live) {\n      kvstore.view(classOf[JobDataWrapper])\n        .asScala.filter(_.info.status == JobExecutionStatus.RUNNING)"
+  },
+  {
+    "id" : "be10bd90-1896-41bf-8745-8fcfd9115765",
+    "prId" : 25943,
+    "prUrl" : "https://github.com/apache/spark/pull/25943#pullrequestreview-297260524",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "18e4faf3-e332-493b-87b2-026432930320",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "nit: indentation of block for foreach looks to be off",
+        "createdAt" : "2019-10-04T08:13:53Z",
+        "updatedAt" : "2019-10-16T15:23:01Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "46715b3d2c52acd97fdca2e2034393f7e49e1b4f",
+    "line" : 48,
+    "diffHunk" : "@@ -1,1 +127,131 @@          val jobs = liveJobs.values.filter(_.stageIds.contains(stageId)).toSeq\n          stageData.toLiveStage(jobs)\n        }.foreach { stage =>\n          val stageId = stage.info.stageId\n          val stageAttempt = stage.info.attemptNumber()"
+  },
+  {
+    "id" : "7411544b-3d6e-4901-82a7-80662aaff0fb",
+    "prId" : 25943,
+    "prUrl" : "https://github.com/apache/spark/pull/25943#pullrequestreview-297260524",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "05c4640b-1837-4772-9494-7d7d40f241a5",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "nit: same here, but just a suggestion (as the indentation is not dramatically changed)",
+        "createdAt" : "2019-10-04T08:17:01Z",
+        "updatedAt" : "2019-10-16T15:23:01Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "46715b3d2c52acd97fdca2e2034393f7e49e1b4f",
+    "line" : 83,
+    "diffHunk" : "@@ -1,1 +162,166 @@        }\n\n      kvstore.view(classOf[RDDStorageInfoWrapper]).asScala\n        .foreach { rddWrapper =>\n          val liveRdd = rddWrapper.toLiveRDD(liveExecutors)"
+  },
+  {
+    "id" : "f8cd78ae-efa5-4f91-89fa-231bbb29c6db",
+    "prId" : 25943,
+    "prUrl" : "https://github.com/apache/spark/pull/25943#pullrequestreview-297260524",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "d32c063d-8190-49a6-9854-15a99b0088f0",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "nit: same here",
+        "createdAt" : "2019-10-04T08:17:06Z",
+        "updatedAt" : "2019-10-16T15:23:01Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "46715b3d2c52acd97fdca2e2034393f7e49e1b4f",
+    "line" : 89,
+    "diffHunk" : "@@ -1,1 +168,172 @@        }\n\n      kvstore.view(classOf[PoolData]).asScala.foreach { poolData =>\n        val schedulerPool = poolData.toSchedulerPool\n        pools.put(schedulerPool.name, schedulerPool)"
+  },
+  {
+    "id" : "01f4b30c-1742-47e4-b941-ef8964c64134",
+    "prId" : 25943,
+    "prUrl" : "https://github.com/apache/spark/pull/25943#pullrequestreview-297260524",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "63884188-bb3e-4da5-ade6-e20566eb0b67",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "nit: unnecessary two empty lines - one empty line is enough",
+        "createdAt" : "2019-10-04T08:17:30Z",
+        "updatedAt" : "2019-10-16T15:23:01Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "46715b3d2c52acd97fdca2e2034393f7e49e1b4f",
+    "line" : 67,
+    "diffHunk" : "@@ -1,1 +146,150 @@              }\n            }\n\n          kvstore.view(classOf[TaskDataWrapper])\n            .parent(Array(stageId, stageAttempt))"
+  },
+  {
+    "id" : "33fac5cb-6e44-4a57-bec3-dbc4d099f642",
+    "prId" : 25943,
+    "prUrl" : "https://github.com/apache/spark/pull/25943#pullrequestreview-300189695",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9c6bb7c0-ebdf-47eb-ab66-30a5512c3a22",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Safer condition would be either `UNKNOWN` or `RUNNING`, but I guess it shouldn't be UNKNOWN so seems OK.",
+        "createdAt" : "2019-10-07T02:50:09Z",
+        "updatedAt" : "2019-10-16T15:23:01Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "bf1ba6b8-3d00-475d-8b49-6204a3941580",
+        "parentId" : "9c6bb7c0-ebdf-47eb-ab66-30a5512c3a22",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Yeah. I didn't see any place we set Job status to `UNKNOWN`.",
+        "createdAt" : "2019-10-10T16:13:40Z",
+        "updatedAt" : "2019-10-16T15:23:01Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "46715b3d2c52acd97fdca2e2034393f7e49e1b4f",
+    "line" : 30,
+    "diffHunk" : "@@ -1,1 +109,113 @@    if (!live) {\n      kvstore.view(classOf[JobDataWrapper])\n        .asScala.filter(_.info.status == JobExecutionStatus.RUNNING)\n        .map(_.toLiveJob).foreach(job => liveJobs.put(job.jobId, job))\n"
+  },
+  {
+    "id" : "53a84b57-3a91-4127-9172-4a18390cab2c",
+    "prId" : 25943,
+    "prUrl" : "https://github.com/apache/spark/pull/25943#pullrequestreview-301353128",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "43ea8f82-da35-4b0a-8319-80a9a347c587",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "Logically, `activeTasks > 0` is counted in `liveStages` regardless of status:\r\n\r\nhttps://github.com/apache/spark/blob/5a512e86e94593bc004a35101ad6497e20c13e0a/core/src/main/scala/org/apache/spark/status/AppStatusListener.scala#L605-L614\r\n\r\nhttps://github.com/apache/spark/blob/5a512e86e94593bc004a35101ad6497e20c13e0a/core/src/main/scala/org/apache/spark/status/AppStatusListener.scala#L743-L748\r\n\r\n... except status is SKIPPED:\r\n\r\nhttps://github.com/apache/spark/blob/5a512e86e94593bc004a35101ad6497e20c13e0a/core/src/main/scala/org/apache/spark/status/AppStatusListener.scala#L408-L429\r\n\r\nso the condition is actually much complicated than that.",
+        "createdAt" : "2019-10-07T03:20:44Z",
+        "updatedAt" : "2019-10-16T15:23:01Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "718d4b5a-ac98-49e0-bd74-eaa4471b72f7",
+        "parentId" : "43ea8f82-da35-4b0a-8319-80a9a347c587",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Good catch here ! And I attached another possible condition for this:\r\n\r\n`(stageData.info.numActiveTasks > 0 && stageData.info.status != v1.StageStatus.SKIPPED)`",
+        "createdAt" : "2019-10-14T14:44:17Z",
+        "updatedAt" : "2019-10-16T15:23:01Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "46715b3d2c52acd97fdca2e2034393f7e49e1b4f",
+    "line" : 41,
+    "diffHunk" : "@@ -1,1 +120,124 @@      kvstore.view(classOf[StageDataWrapper]).asScala\n        .filter { stageData =>\n          stageData.info.status == v1.StageStatus.PENDING ||\n            stageData.info.status == v1.StageStatus.ACTIVE ||\n            (stageData.info.numActiveTasks > 0 && stageData.info.status != v1.StageStatus.SKIPPED)"
   }
 ]

@@ -42,5 +42,258 @@
     "commit" : "b6b2c5a3cc46d25595bfa7e187846187dd5ac806",
     "line" : 31,
     "diffHunk" : "@@ -1,1 +464,468 @@  @KVIndex @JsonIgnore\n  def key: Array[Option[String]] = Array(Some(appId), attemptId)\n}\n/**\n * A class with information about an app, to be used by the UI. There's only one instance of"
+  },
+  {
+    "id" : "c57f6346-f66c-46ac-bf85-9b0171eb4a8b",
+    "prId" : 25943,
+    "prUrl" : "https://github.com/apache/spark/pull/25943#pullrequestreview-304959686",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "507aa5ed-6d95-4f1b-b75a-6ad9a9cb9c6e",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "`completedIndices` and `completedStages` are not assigned, and they're not computed from `AppStatusListener.recoverLiveEntities`. Is it missing, or valid reason to do so, or technical issue?",
+        "createdAt" : "2019-10-07T04:29:18Z",
+        "updatedAt" : "2019-10-16T15:23:01Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0ace4072-2e95-4727-90da-ab1244e2bf72",
+        "parentId" : "507aa5ed-6d95-4f1b-b75a-6ad9a9cb9c6e",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "While converting `LiveJob` to `JobDataWrapper`,  only `completedIndices.size`/`completedStages.size` are written into KVStore. So, it's impossible to recover the detail `completedIndices`/`completedStages`. So, as a compromises, we only recover the number in this case. \r\n\r\nAnd this brings a problem that the recovered live job wouldn't be 100% the same as the previous one. But, this can be acceptable when you look at their(`completedIndices`, `completedStages`) usages in `AppStatusListener`, as it does not mistake the final result(that is number).",
+        "createdAt" : "2019-10-10T17:05:19Z",
+        "updatedAt" : "2019-10-16T15:23:01Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "fe9b6042-3f39-4bd2-9f9f-2c92eeb98f37",
+        "parentId" : "507aa5ed-6d95-4f1b-b75a-6ad9a9cb9c6e",
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "you can get multiple taskend events for the same `taskInfo.index` however, so you actually need those indices",
+        "createdAt" : "2019-10-10T20:20:01Z",
+        "updatedAt" : "2019-10-16T15:23:01Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e5d6caea-6555-4d03-b92d-3d928c5dcd5d",
+        "parentId" : "507aa5ed-6d95-4f1b-b75a-6ad9a9cb9c6e",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Yeah, I can see how that would happen. But I think there would be only one successful task out of those end tasks, right ? And we only update `completedIndices` when we receive a successful end task:\r\n\r\nhttps://github.com/apache/spark/blob/d2f21b019909e66bf49ad764b851b4a65c2438f8/core/src/main/scala/org/apache/spark/status/AppStatusListener.scala#L579-L588\r\n\r\nhttps://github.com/apache/spark/blob/d2f21b019909e66bf49ad764b851b4a65c2438f8/core/src/main/scala/org/apache/spark/status/AppStatusListener.scala#L621-L623\r\n\r\nWDYT ? @squito \r\n\r\n",
+        "createdAt" : "2019-10-11T14:29:06Z",
+        "updatedAt" : "2019-10-16T15:23:01Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a96caf2a-9bbb-4d07-aa43-33be24b68e24",
+        "parentId" : "507aa5ed-6d95-4f1b-b75a-6ad9a9cb9c6e",
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "two speculative tasks can both complete successfully.  And the scheduler intentionally posts TaskEnd events for both of them:\r\n\r\nhttps://github.com/apache/spark/blob/6390f02f9fba059ec5d089a68c8d758aca35c9cd/core/src/main/scala/org/apache/spark/scheduler/DAGScheduler.scala#L1369-L1375",
+        "createdAt" : "2019-10-11T15:04:25Z",
+        "updatedAt" : "2019-10-16T15:23:01Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "64370222-a6e9-446e-af8d-0a4a91f05221",
+        "parentId" : "507aa5ed-6d95-4f1b-b75a-6ad9a9cb9c6e",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Oh, I see. Then, this could really be a problem which needs to be fixed.",
+        "createdAt" : "2019-10-11T15:14:36Z",
+        "updatedAt" : "2019-10-16T15:23:01Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "9bf62964-7ed0-4b3f-adf5-01578b5abe14",
+        "parentId" : "507aa5ed-6d95-4f1b-b75a-6ad9a9cb9c6e",
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "This is just a brainstorm, and not something I'm sure is the right approach at all yet --\r\n\r\nwe could also consider just letting some details like this be lossy.  But if we were go down that road, I'd like some mechanism to ensure that we only accepted lost info where it \"probably\" didn't matter.  Eg. we'd save metadata in such a way that the SHS would know to replay currently running jobs from the event log, even though some of that info had already been parsed and stored in the snapshot.  But say there was some really late speculative task completion, from a job that had finished long ago -- that may not be represented at full-fidelity.\r\n\r\nI feel like this would cover streaming pretty well.  It would not work as well for job-server style deployments ... but, really, I can't think of anything which covers that very well.",
+        "createdAt" : "2019-10-11T20:11:27Z",
+        "updatedAt" : "2019-10-16T15:23:01Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3ff8d6a1-3d8d-444a-9df4-a85f2bc1c2f6",
+        "parentId" : "507aa5ed-6d95-4f1b-b75a-6ad9a9cb9c6e",
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "I wrote down my thoughts on this idea a little bit more here (I think it might be useful to collect the main ideas discussed somewhere as the discussion in comments is getting long and scattered): https://docs.google.com/document/d/1LbPflpEyrh9jDunwmDnrTjtMybAXcGimy36AWcUQsq8/edit?usp=sharing",
+        "createdAt" : "2019-10-14T15:46:18Z",
+        "updatedAt" : "2019-10-16T15:23:01Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ff40f8b9-c310-48dd-bd25-30290a131167",
+        "parentId" : "507aa5ed-6d95-4f1b-b75a-6ad9a9cb9c6e",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Well, a more simple and direct way here maybe is just to write `completedIndices` and `completedStages` out to the KVStore, too. Then, we could simply restore it later, though this would require more memory than before.",
+        "createdAt" : "2019-10-15T15:29:45Z",
+        "updatedAt" : "2019-10-16T15:23:01Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "8ec5669f-b3f3-476b-b0bc-e810cdfa55a6",
+        "parentId" : "507aa5ed-6d95-4f1b-b75a-6ad9a9cb9c6e",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Well, a more simple and direct way here maybe is just to write `completedIndices` and `completedStages` out to the KVStore, too. Then, we could simply restore it later, though this would require more memory than before.",
+        "createdAt" : "2019-10-15T15:30:17Z",
+        "updatedAt" : "2019-10-16T15:23:01Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cc8db811-e170-45ff-a059-442950d336f6",
+        "parentId" : "507aa5ed-6d95-4f1b-b75a-6ad9a9cb9c6e",
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "where would you store it?  those could be sets of size 100K, I would want to make sure we aren't writing it out on every task complete.\r\n\r\n(but to the more general point -- yes, we can go for both solutions.  Store more info when possible, but perhaps also accept some loss of info.)",
+        "createdAt" : "2019-10-15T18:30:30Z",
+        "updatedAt" : "2019-10-16T15:23:01Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2fa9018a-5075-46a3-85c7-a876f01c4ae6",
+        "parentId" : "507aa5ed-6d95-4f1b-b75a-6ad9a9cb9c6e",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "We'd write them out whenever a live job needs to be updated into KVStore with current updated logic. As it doesn't write out on every task complete but would update when exceeds configured `liveUpdatePeriodNs` or some \"last\" behavior happens.\r\n\r\nBut as you mentioned, this could require much memory and pay pressure on snapshotting. \r\n\r\nBut can this info be lossy ? User may find that a Job consists of X tasks would have X + m finished tasks where extra m tasks are those duplicate completed indices with speculative enabled. \r\n\r\n\r\nWe may use some known and accurate infos, e.g `numTasks`, `activeTasks`, `completedTasks`, `failedTasks`, to calculate the correct `completedIndices.size / completedStages.size` when a job finished.",
+        "createdAt" : "2019-10-16T14:53:17Z",
+        "updatedAt" : "2019-10-16T15:23:01Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "022e7b26-a9ff-4669-bf36-74be287b86a1",
+        "parentId" : "507aa5ed-6d95-4f1b-b75a-6ad9a9cb9c6e",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Any thoughts here ? @HeartSaVioR ",
+        "createdAt" : "2019-10-16T14:53:43Z",
+        "updatedAt" : "2019-10-16T15:23:01Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "ff7877e2-c217-4b34-8c6f-b16e0f1d6a19",
+        "parentId" : "507aa5ed-6d95-4f1b-b75a-6ad9a9cb9c6e",
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "I'm not sure we are OK with lossy information - we shouldn't let developer access information to do something which can be lost after restoring, but how? Leaving comments? Whenever we modify AppStatusListener to add some feature, we may have to struggle with both things - compatibility with old snapshot of state, and uncertain of lossy information if we cannot control well.\r\n\r\nIdeally we would have to restore state of listener as same as it was; if we have to snapshot the state of listener in driver, memory consumption and performance would really matter as it affects live application. For SHS, we will have less pressure on this, and actually memory consumption would less matter as in fact we are not tied to store the state of listener in \"KVStore\". It could be another file along with snapshot file on KVStore.",
+        "createdAt" : "2019-10-16T21:22:02Z",
+        "updatedAt" : "2019-10-16T21:22:02Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "b28aacc9-1a00-4fc0-b5cb-e6cfec2e95ea",
+        "parentId" : "507aa5ed-6d95-4f1b-b75a-6ad9a9cb9c6e",
+        "authorId" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "body" : "I haven't fully followed the discussion here, not yet thought thoroughly about all the implications of the snapshotting approaches being discussed. But I just wanted to point out that the problems being talked about here (snapshotting a potentially large amount of data) are ridiculously worse on the SQL side.\r\n\r\nBecause of the way SQL metrics are calculated you need to have all data points, meaning that a snapshot taken in the middle of a stage of a SQL query can have a humongous amount of data.\r\n\r\nThe 100k task stage here could be encoded with 25k characters if you encode the bit set as hex characters (4 bits per char). That's not so bad. But on the SQL side, if you have let's say half of the tasks finished, you have to encode 50k longs * number of metrics being tracked by the stage, which is a lot more data to encode in json.",
+        "createdAt" : "2019-10-16T22:15:37Z",
+        "updatedAt" : "2019-10-16T22:15:37Z",
+        "lastEditedBy" : "0b3111e2-9584-4813-8cb5-8f40e119f71c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d6a1ce20-8399-44ef-b823-f37e09f4ac5a",
+        "parentId" : "507aa5ed-6d95-4f1b-b75a-6ad9a9cb9c6e",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "So, will it be acceptable if we only consider snapshotting in the SHS ?",
+        "createdAt" : "2019-10-19T15:11:36Z",
+        "updatedAt" : "2019-10-19T15:11:36Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "78118c9f-52bd-4eef-862f-071294d076d6",
+        "parentId" : "507aa5ed-6d95-4f1b-b75a-6ad9a9cb9c6e",
+        "authorId" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "body" : "well, the concerns about putting excess work on the driver are certainly not as important on the SHS.  Performance still matters, of course, but there maybe more options to speed things up (eg., running multiple processes to create snapshots in parallel).  And we're still concerned about having a small snapshot file (if its too big, it won't be fast to load, of course).  We dont' know for sure what that file size will be till we actually build it ... but my gut is that we can store all the required info in the snapshot file and keep things reasonably sized.",
+        "createdAt" : "2019-10-22T04:33:34Z",
+        "updatedAt" : "2019-10-22T04:33:34Z",
+        "lastEditedBy" : "e913f9af-103d-40d4-976e-9aa8e12e7211",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "46715b3d2c52acd97fdca2e2034393f7e49e1b4f",
+    "line" : 55,
+    "diffHunk" : "@@ -1,1 +112,116 @@  private def completionTime: Long = info.completionTime.map(_.getTime).getOrElse(-1L)\n\n  def toLiveJob: LiveJob = {\n    val liveJob = new LiveJob(\n      info.jobId,"
+  },
+  {
+    "id" : "25d2d0fd-1be4-4908-ab71-a41b684b516e",
+    "prId" : 25943,
+    "prUrl" : "https://github.com/apache/spark/pull/25943#pullrequestreview-298501257",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ff116282-e921-4c48-8f25-50f369c86d1d",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "`parentIds`, `taskMetrics`, `taskLocalityPreference`, `shuffleDepId` are not assigned here as well. May want to leave comments to ensure we're OK with this.",
+        "createdAt" : "2019-10-08T02:14:15Z",
+        "updatedAt" : "2019-10-16T15:23:01Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "46715b3d2c52acd97fdca2e2034393f7e49e1b4f",
+    "line" : 136,
+    "diffHunk" : "@@ -1,1 +205,209 @@      info.numTasks,\n      idAwareRDDInfos(info.rddIds),\n      Nil, // parentIds\n      info.details)\n    stageInfo.submissionTime = info.submissionTime.map(_.getTime)"
+  },
+  {
+    "id" : "4dd02f3f-092d-4281-b436-8bab2b40a284",
+    "prId" : 25943,
+    "prUrl" : "https://github.com/apache/spark/pull/25943#pullrequestreview-300756027",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "1eec46ed-380b-4b32-8256-dccc615ecb52",
+        "parentId" : null,
+        "authorId" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "body" : "It might be better to leave a comment that `executorSummaries`, `activeTasksPerExecutor`, `blackListedExecutors`, and `savedTasks` are computed later from `recoverLiveEntities`.",
+        "createdAt" : "2019-10-08T02:19:29Z",
+        "updatedAt" : "2019-10-16T15:23:01Z",
+        "lastEditedBy" : "0c28e5da-df9b-4076-bb67-3b6878f1f4ce",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "6597ea4b-a247-424d-928e-7f291962e7e6",
+        "parentId" : "1eec46ed-380b-4b32-8256-dccc615ecb52",
+        "authorId" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "body" : "Good idea!",
+        "createdAt" : "2019-10-11T15:16:55Z",
+        "updatedAt" : "2019-10-16T15:23:01Z",
+        "lastEditedBy" : "171fe41b-96df-4362-a600-2d1f030de577",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "46715b3d2c52acd97fdca2e2034393f7e49e1b4f",
+    "line" : 157,
+    "diffHunk" : "@@ -1,1 +226,230 @@    liveStage.firstLaunchTime = firstLaunchTime\n    liveStage.localitySummary = locality\n    liveStage.metrics = metrics\n    liveStage\n  }"
   }
 ]

@@ -900,5 +900,82 @@
     "commit" : "37ba243320ecf4029dfbd1f9dc4ffdc886770d5c",
     "line" : 10,
     "diffHunk" : "@@ -1,1 +97,101 @@        val accessedExpressions = c.children.filter { e =>\n          val udes = e.collect { case u: UserDefinedExpression => u }\n          udes.nonEmpty && firstUdes.containsSlice(udes)\n        }\n        if (accessedExpressions.nonEmpty) {"
+  },
+  {
+    "id" : "aa68a74d-4db0-44d4-accc-1b0bddfd7ec5",
+    "prId" : 25925,
+    "prUrl" : "https://github.com/apache/spark/pull/25925#pullrequestreview-293498085",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "b92fba71-bb18-4d33-aa94-4973a57b19ac",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Just for curiosity, does this issue happen in interpreted code path as well? e.g. we send `PlanExpression` to executor side and eval it, and hit NPE.",
+        "createdAt" : "2019-09-26T05:28:46Z",
+        "updatedAt" : "2019-09-26T05:28:46Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f92304be-18dc-4097-b128-764a9d2da62e",
+        "parentId" : "b92fba71-bb18-4d33-aa94-4973a57b19ac",
+        "authorId" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "body" : "IIUC,`EquivalentExpressions` is only used in the codegen mode now, e.g., `GenerateUnsafeProjection` uses this class in common subexpr elimination, but `InterpretedUnsafeProject does not elimnate common subexprs.",
+        "createdAt" : "2019-09-26T05:41:47Z",
+        "updatedAt" : "2019-09-26T05:41:47Z",
+        "lastEditedBy" : "044062b3-9d96-4ec3-a1e2-3a2f595bbc02",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "13f13cd1-3acf-45e0-8ff4-158e52696a08",
+        "parentId" : "b92fba71-bb18-4d33-aa94-4973a57b19ac",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Not sure I understand your question correctly. But PlanExpressions of a SparkPlan are evaluated and updated (e.g., ExecSubqueryExpression.updateResult) with values before a query begins to run. The values are kept in PlanExpression, and on executor side when to call eval of PlanExpression, it simply returns the kept value. I think we do not really evaluate a PlanExpression at executor side.\r\n\r\n\r\n",
+        "createdAt" : "2019-09-26T05:44:41Z",
+        "updatedAt" : "2019-09-26T05:44:41Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2f2e072c-7850-4a05-99f3-e7f2cc9a6548",
+        "parentId" : "b92fba71-bb18-4d33-aa94-4973a57b19ac",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "ah got it, so the kept value is serialized and sent to executor side in interpreted code path.",
+        "createdAt" : "2019-09-26T05:48:05Z",
+        "updatedAt" : "2019-09-26T05:48:06Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "921daffa-0d2f-4890-83fd-90b75c62fa90",
+        "parentId" : "b92fba71-bb18-4d33-aa94-4973a57b19ac",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "This issue also reminds me that it's better to always do codegen at driver side, even if whole-stage-codegen is false. We can investigate it later.",
+        "createdAt" : "2019-09-26T05:49:40Z",
+        "updatedAt" : "2019-09-26T05:49:40Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a24370f1-bf41-4349-a16c-6803d7fb8fbc",
+        "parentId" : "b92fba71-bb18-4d33-aa94-4973a57b19ac",
+        "authorId" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "body" : "Ok. Please let me know if you have some ideas later.",
+        "createdAt" : "2019-09-26T05:58:52Z",
+        "updatedAt" : "2019-09-26T05:58:53Z",
+        "lastEditedBy" : "5e28de51-305c-4276-b3a0-78bcc74eb6f2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "75109a01011e313ede4ceedc92139ef10f972e53",
+    "line" : 16,
+    "diffHunk" : "@@ -1,1 +77,81 @@      // `PlanExpression` wraps query plan. To compare query plans of `PlanExpression` on executor,\n      // can cause error like NPE.\n      (expr.isInstanceOf[PlanExpression[_]] && TaskContext.get != null)\n\n    // There are some special expressions that we should not recurse into all of its children."
   }
 ]

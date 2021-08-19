@@ -1340,5 +1340,269 @@
     "commit" : "a55fe7b6e4e0d81287137b8640460e4250e789c8",
     "line" : 46,
     "diffHunk" : "@@ -1,1 +1704,1708 @@  private val returnInterval: Boolean = {\n    val isSparkDialect = SQLConf.get.getConf(DIALECT) == Dialect.SPARK.toString()\n    SQLConf.get.ansiEnabled && isSparkDialect\n  }\n  override def dataType: DataType = if (returnInterval) CalendarIntervalType else IntegerType"
+  },
+  {
+    "id" : "15609825-caf9-4dea-a5b2-971f2ccb5c14",
+    "prId" : 25981,
+    "prUrl" : "https://github.com/apache/spark/pull/25981#pullrequestreview-295980427",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "92dbb22b-a42e-4778-94ca-b67891ef5ebb",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "So, the difference is only excluding the following?\r\n```\r\n\"ISOYEAR\",\r\n\"WEEK\", (\"W\", \"WEEKS\"),\r\n\"DAYOFWEEK\",\r\n\"DOW\",\r\n\"ISODOW\",\r\n\"DOY\",\r\n```",
+        "createdAt" : "2019-10-01T03:33:58Z",
+        "updatedAt" : "2019-10-18T07:28:33Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c13fe585-b8c4-46b3-b6c0-68edcb2dd863",
+        "parentId" : "92dbb22b-a42e-4778-94ca-b67891ef5ebb",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "Yes, do you want to point out the difference only?",
+        "createdAt" : "2019-10-01T05:15:31Z",
+        "updatedAt" : "2019-10-18T07:28:33Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "0ff6075a-4e17-417f-a855-016d4670d6d7",
+        "parentId" : "92dbb22b-a42e-4778-94ca-b67891ef5ebb",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "For now, the enumeration also looks enough. I also verified those cases in PostgreSQL.",
+        "createdAt" : "2019-10-02T01:55:44Z",
+        "updatedAt" : "2019-10-18T07:28:33Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5620472a26f57590f2d5a67b24b5295980641f1c",
+    "line" : 28,
+    "diffHunk" : "@@ -1,1 +2057,2061 @@                 \"MICROSECONDS\", (\"USEC\", \"USECS\", \"USECONDS\", \"MICROSECON\", \"US\"),\n                 \"EPOCH\"]\n                Supported string values of `field` for intervals are:\n                 [\"MILLENNIUM\", (\"MILLENNIA\", \"MIL\", \"MILS\"),\n                   \"CENTURY\", (\"CENTURIES\", \"C\", \"CENT\"),"
+  },
+  {
+    "id" : "a94f8448-a456-42d7-aefc-046ce5405ab1",
+    "prId" : 25981,
+    "prUrl" : "https://github.com/apache/spark/pull/25981#pullrequestreview-298846287",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "297b5066-eacc-4f79-b1c4-ec648e5a527a",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "So, feel free to tell me to go look up a reference, but I am sort of confused about the semantics. The \"days\" part of \"interval 1 year 10 months 5 days\" is 5 days, not the interval days (roughly 365 + 10 *31 + 5).\r\n\r\nBut below, the \"seconds\" part of \"30 seconds 1 ms 1 us\" is 30.001001, not 30.\r\n\r\nSo what's the number of days in \"interval 1 year 10 months 5 days 12 hours\"? 5 or 5.5?",
+        "createdAt" : "2019-10-07T18:33:14Z",
+        "updatedAt" : "2019-10-18T07:28:33Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "868c125e-96cc-4d69-a780-479dccc3399d",
+        "parentId" : "297b5066-eacc-4f79-b1c4-ec648e5a527a",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Sort of answering my own question. From PostgreSQL, at least:\r\nhttps://www.postgresql.org/docs/9.1/functions-datetime.html#FUNCTIONS-DATETIME-EXTRACT\r\n\r\n```\r\nSELECT date_part('day', TIMESTAMP '2001-02-16 20:38:40');\r\nResult: 16\r\n\r\nSELECT date_part('hour', INTERVAL '4 hours 3 minutes');\r\nResult: 4\r\n```\r\n\r\nIt seems like the answer to the second example here should be 30?\r\n\r\nI'm getting off on a tangent, but, can you specify \"interval 5 minutes 90 seconds\"? if so, what's the minute part -- 5 or 6? if you can't specify that, can you specify \"interval 90 seconds\"? if not why not?\r\n\r\nJust getting confused about the intended semantics of the date part of an interval!",
+        "createdAt" : "2019-10-07T18:37:26Z",
+        "updatedAt" : "2019-10-18T07:28:33Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "5eeb4827-9d88-4fc7-9377-38d9d4e32676",
+        "parentId" : "297b5066-eacc-4f79-b1c4-ec648e5a527a",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "> So, feel free to tell me to go look up a reference, but I am sort of confused about the semantics.\r\n\r\nSemantic is defined by internal representation of Catalyst's `CalendarIntervalType`. Purpose of the type is to represent components of an interval not duration of interval (see the discussions in https://github.com/apache/spark/pull/25022). `CalendarIntervalType` stores the `year`, `months`, `weeks`, `days`, `hours`, `minutes`, `seconds`, `milliseconds`, `microseconds` components in 2 independent variables  - `months` and `microseconds`. Due to independence and unlimited (limited by long/int size) of the `microseconds` field, we can store more than 31 days in `microseconds`. \r\nBecause purpose of `CalendarIntervalType` is to represent interval as components but not duration, the same duration in microseconds can have multiple representations in Catalyst `INTERVAL` type. Let's say:\r\n390000000 microseconds = `interval 5 minutes 90 seconds` = `interval 6 minutes 30 seconds` = `interval 1 minute 330 seconds` and so on. \r\n\r\nWhen an user request components of an interval, we need to select one of its representation. We do that by constructing \"normalized\" representation in where number of `years` and `days` is unlimited (limited by int or long) and `months` should be in `[0..12)`, `hours` is in `[0, 12)`, `minutes` is `[0, 60)` ... `microseconds` is in `[0, 1000000)`. `seconds` and `milliseconds` are special cases because they have the fractional part as well but they limited too. `seconds` - `[0, 59.999999]`, milliseconds - `[0, 59999.999]`. This behavior is inherited from PostgreSQL. In this way, there is only one \"normalized\" representation of any interval from which the `date_part()` function extracts components.",
+        "createdAt" : "2019-10-07T19:25:06Z",
+        "updatedAt" : "2019-10-18T07:28:33Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "f0384a8e-2fe7-4cb9-92d8-bbbf61eb3b34",
+        "parentId" : "297b5066-eacc-4f79-b1c4-ec648e5a527a",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Yeah I get why we split the months and ms part, and can see what the convenient implementation is w.r.t. the current implementation. Maybe the details of the semantics aren't that important for practical purposes.\r\n\r\nBut it does seem like this proposal doesn't match PostgreSQL in the `SELECT date_part('hour', INTERVAL '4 hours 3 minutes');` case, at least. But it's impractical to follow this behavior given the internal representation.\r\n\r\n`SELECT date_part('hour', INTERVAL '1 month 1 day');` gives 24, right? because the days are separable from the months.\r\n\r\n`SELECT date_part('month', INTERVAL '1 year 1 month');` gives 13, not 1, right? because the month part isn't separable.\r\n\r\nThis feels inconsistent. What if we construed the semantics to always mean 'the given interval in the given units'? that's consistent, but doesn't quite sound like what `date_part` does, as it's no longer a 'part'.\r\n\r\nAm I right about that so far?",
+        "createdAt" : "2019-10-07T20:02:36Z",
+        "updatedAt" : "2019-10-18T07:28:33Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "dba902e2-f746-4f86-bcd0-c94a89841a71",
+        "parentId" : "297b5066-eacc-4f79-b1c4-ec648e5a527a",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "> But it does seem like this proposal doesn't match PostgreSQL in the `SELECT date_part('hour', INTERVAL '4 hours 3 minutes')`;\r\n\r\nIt does. In PostgreSQL:\r\n```sql\r\nmaxim=# SELECT date_part('hour', INTERVAL '4 hours 3 minutes');\r\n date_part \r\n-----------\r\n         4\r\n```\r\nIn SparkSQL:\r\n```sql\r\nspark-sql> SELECT date_part('hour', interval 4 hours 3 minutes);\r\n4\r\n```\r\n\r\n> SELECT date_part('hour', INTERVAL '1 month 1 day'); gives 24, right? because the days are separable from the months.\r\n\r\nNo, it is 0 because the range of hours is `[0, 23]`:\r\nIn PostgreSQL:\r\n```sql\r\nmaxim=# SELECT date_part('hour', INTERVAL '1 month 1 day');\r\n date_part \r\n-----------\r\n         0\r\n```\r\nIn SparkSQL:\r\n```sql\r\nspark-sql> SELECT date_part('hour', INTERVAL 1 month 1 day);\r\n0\r\n```\r\n\r\n> SELECT date_part('month', INTERVAL '1 year 1 month'); gives 13, not 1, right? because the month part isn't separable.\r\n\r\nNo, it gives 1.\r\nIn PostgreSQL:\r\n```sql\r\nmaxim=# SELECT date_part('month', INTERVAL '1 year 1 month');\r\n date_part \r\n-----------\r\n         1\r\n```\r\nIn SparkSQL:\r\n```sql\r\nspark-sql> SELECT date_part('month', INTERVAL 1 year 1 month);\r\n1\r\n```\r\n\r\n> This feels inconsistent.\r\n\r\nI cannot agree with you so far.",
+        "createdAt" : "2019-10-07T20:24:28Z",
+        "updatedAt" : "2019-10-18T07:28:33Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "70a4dfb8-28e0-494e-9911-2c27c942b4ee",
+        "parentId" : "297b5066-eacc-4f79-b1c4-ec648e5a527a",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "I see, that's good. So as far as you know it's consistent with PostgreSQL? and correctly returns the time-unit part of an interval, not the interval in the time-unit? in that case I'm not sure why this is correct:\r\n\r\n```\r\ndate_part('seconds', interval 30 seconds 1 milliseconds 1 microseconds);\r\n       30.001001\r\n```\r\n\r\nShouldn't it be 30?",
+        "createdAt" : "2019-10-07T23:04:14Z",
+        "updatedAt" : "2019-10-18T07:28:33Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "4b9e9295-f5c9-4754-9499-dda36c86c990",
+        "parentId" : "297b5066-eacc-4f79-b1c4-ec648e5a527a",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "> Shouldn't it be 30?\r\n\r\nI agree with you that `seconds` should be `30`, `milliseconds` should be `1`, and `microseconds` is `1` but PostgreSQL developers decided to implement this in different way. Maybe this is because `seconds`, `milliseconds` are always have the fractional part in other PostgreSQL functions.\r\n\r\nFor `seconds`, it looks reasonable but I don't know what PostgreSQL developers thought of when they defined `milliseconds` as milliseconds in a minute:\r\n```sql\r\nmaxim=# select date_part('milliseconds', interval '30 seconds 1 milliseconds 1 microseconds');\r\n date_part \r\n-----------\r\n 30001.001\r\n``` \r\n```sql\r\nmaxim=# select date_part('microseconds', interval '30 seconds 1 milliseconds 1 microseconds');\r\n date_part \r\n-----------\r\n  30001001\r\n```\r\n\r\nI interpret this as the `second`, `millisecond`, `microsecond` form one interval component with values in the range `[0, 6000000)` where 0-1 digits belongs to seconds, 2-4 digits to milliseconds, and 5-7 digits to microseconds. \r\n\r\nPrecisely follow PostgreSQL implementation is still open question for me. I believe PostgreSQL has badly designed date-time API. As you can see similar `date_part('HOUR', <interval>)` and `date_part('MILLISECONDS', <interval>)` must have similar semantic but they don't. ",
+        "createdAt" : "2019-10-08T08:35:21Z",
+        "updatedAt" : "2019-10-18T07:28:33Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "98af3a28-60f0-467a-b98f-d6b0ed320581",
+        "parentId" : "297b5066-eacc-4f79-b1c4-ec648e5a527a",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Yeah, it seems inconsistent. Sometimes the entire interval's length is return in the given unit, sometimes just a portion of the interval matching that unit is returned. I wonder if there is any other standard to look at.\r\n\r\nDoesn't this current PR have the same consistency question, given the current test output?\r\n\r\nI'm mostly concerned with having consistent semantics, whatever they are. If it can't be done reasonably, hm, should we implement this?\r\n\r\nI'm trying to figure out the use case for \"a date part of an interval\". I can only think of cases where the interval should be converted entirely into some unit.",
+        "createdAt" : "2019-10-08T12:34:41Z",
+        "updatedAt" : "2019-10-18T07:28:33Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c664ac0f-b3a8-4423-9175-526bab11fffe",
+        "parentId" : "297b5066-eacc-4f79-b1c4-ec648e5a527a",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "> Sometimes the entire interval's length is return in the given unit ...\r\n\r\nThe entire interval's length is returned for `EPOCH` only, and components for other `field` values.\r\n\r\n> I wonder if there is any other standard to look at.\r\n\r\nI like java 8 approach where there are 2 types `java.time.Duration` and `java.time.Period`. The first one is to store interval duration in nanosecond precision, the second one is to store components `year`, `months`, `days`. I would reuse this model and extend the types slightly:\r\n- `DURATION` type is to store interval duration in microseconds. `long` should be enough to store difference between any supported timestamps.\r\n- `PERIOD` type should store `years`, `months`, `days`, `hours`, `minutes`, `seconds`, `milliseconds` and `microseconds`. For example, (-10 years, 5 months, -3 hours, 100 microseconds).\r\n\r\n> I'm mostly concerned with having consistent semantics, whatever they are. If it can't be done reasonably, hm, should we implement this?\r\n\r\nI don't know. From my point of semantic of each extraction field is well defined. There is a difference in implementation of this PR and PostgreSQL. As I wrote above Spark store interval in 2 variables - `months` and `microseconds`, but PostgreSQL uses 3 vars - `month`, `day` and `time` (in microseconds). In this way, `days` are independent from other components. And as consequence, `hours` are not limited by `[0, 24)`:\r\n```sql\r\nmaxim=# SELECT interval '-100 years 100 days -100 hours'; \r\n            interval             \r\n---------------------------------\r\n -100 years +100 days -100:00:00\r\n(1 row)\r\n```\r\n\r\n> I'm trying to figure out the use case for \"a date part of an interval\". I can only think of cases where the interval should be converted entirely into some unit.\r\n\r\nI can image at least 2 use cases:\r\n- Adjusting some of timestamp/date components. For example, we have `timestamp '2019-10-08 10:11:12.123456'`, and we want to adjust it by `-1 year 10 hours`. As result, we will have `timestamp '2018-10-08 20:11:12.123456'`. The `PERIOD` type could be useful here.\r\n- When we need `Ordered` (and comparable) intervals. We can calculate absolute interval duration in some units. For example, in the query:\r\n```sql\r\nSELECT name, place\r\nFROM t1, t2\r\nWHERE t1.sellTimestamp - t2.deliveredTimestamp < interval 1 month 15 days;\r\n```\r\nHere, the `DURATION` should be used. We cannot use `PERIOD` because its values cannot be ordered. Spark's CalendarIntervalType cannot be used here too. ",
+        "createdAt" : "2019-10-08T15:13:45Z",
+        "updatedAt" : "2019-10-18T07:28:33Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e0475448-a940-49e0-8252-6b9b47c27ff5",
+        "parentId" : "297b5066-eacc-4f79-b1c4-ec648e5a527a",
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "> The entire interval's length is returned for `EPOCH` only, and components for other `field` values.\r\n\r\nHm, but then back to the original question; why is the answer not 30 below?\r\n```\r\nSELECT _FUNC_('seconds', interval 30 seconds 1 milliseconds 1 microseconds);\r\n       30.001001\r\n```\r\n\r\nI'm not concerned necessarily about matching PostgreSQL, but am concerned about internal consistency. Unless I'm really missing something, these two examples here seem to have different semantics. I understand if you mean it's the natural way to implement this given the representation, but, I'm not sure that makes it right?\r\n\r\nI think the discussion of `PERIOD` is separate. Here the question is the use case for `date_part` on an interval. I'm sort of struggling to think of when that's useful, though I accept it exists in other DBs. Your example doesn't show using `date_part`. I can imagine wanting to render an interval in given units -- what is the length of this whole interval in seconds? -- but that's not what this does, nor what the function name seems to imply.\r\n\r\nThat's why I'm questioning supporting this at all.",
+        "createdAt" : "2019-10-08T15:24:35Z",
+        "updatedAt" : "2019-10-18T07:28:33Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5620472a26f57590f2d5a67b24b5295980641f1c",
+    "line" : 50,
+    "diffHunk" : "@@ -1,1 +2083,2087 @@      > SELECT _FUNC_('SECONDS', timestamp'2019-10-01 00:00:01.000001');\n       1.000001\n      > SELECT _FUNC_('days', interval 1 year 10 months 5 days);\n       5\n      > SELECT _FUNC_('seconds', interval 5 hours 30 seconds 1 milliseconds 1 microseconds);"
+  },
+  {
+    "id" : "bc5bd3c6-f7de-40e7-9150-68617fa6e804",
+    "prId" : 25981,
+    "prUrl" : "https://github.com/apache/spark/pull/25981#pullrequestreview-298853434",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "cb052bb5-163e-44d6-ad7f-5df842aa141e",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "Nit: is this missing parens, or space, after `timestamp` or am I missing something?",
+        "createdAt" : "2019-10-08T15:20:15Z",
+        "updatedAt" : "2019-10-18T07:28:33Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "646fc23d-7c3a-4fc1-bf36-c27279bfc3c0",
+        "parentId" : "cb052bb5-163e-44d6-ad7f-5df842aa141e",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "This code is executed by the https://github.com/apache/spark/blob/7aca0dd658b8bda05574b3df3254aaf66eb2a174/sql/core/src/test/scala/org/apache/spark/sql/SQLQuerySuite.scala#L149-L197 , and this is the syntax of timestamp literals.",
+        "createdAt" : "2019-10-08T15:29:53Z",
+        "updatedAt" : "2019-10-18T07:28:33Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5620472a26f57590f2d5a67b24b5295980641f1c",
+    "line" : 48,
+    "diffHunk" : "@@ -1,1 +2081,2085 @@      > SELECT _FUNC_('doy', DATE'2019-08-12');\n       224\n      > SELECT _FUNC_('SECONDS', timestamp'2019-10-01 00:00:01.000001');\n       1.000001\n      > SELECT _FUNC_('days', interval 1 year 10 months 5 days);"
+  },
+  {
+    "id" : "c6b5f5ca-e4f3-461b-a31f-0d5c224aaf60",
+    "prId" : 25942,
+    "prUrl" : "https://github.com/apache/spark/pull/25942#pullrequestreview-293918271",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6e2ee82e-d8a3-4430-9d7f-fe324cc9f228",
+        "parentId" : null,
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Oh, surprising.",
+        "createdAt" : "2019-09-26T15:58:06Z",
+        "updatedAt" : "2019-09-27T05:51:10Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "73ca16c5-4559-41d1-8f91-a073f66d054f",
+        "parentId" : "6e2ee82e-d8a3-4430-9d7f-fe324cc9f228",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "The `yyyy-MM-dd HH:mm:ss` pattern does not contain the time zone sub-pattern. If you point out it, you will see something like:\r\n```\r\nspark-sql> SELECT from_unixtime(0, 'yyyy-MM-dd HH:mm:ssXXX');\r\n1970-01-01 03:00:00+03:00\r\n```",
+        "createdAt" : "2019-09-26T16:22:36Z",
+        "updatedAt" : "2019-09-27T05:51:10Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "13e8c8a2-fb28-490e-a58f-6bc1d47fd7a9",
+        "parentId" : "6e2ee82e-d8a3-4430-9d7f-fe324cc9f228",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "And you can change your current time zone to `UTC` to see `1970-01-01 00:00:00`:\r\n```sql\r\nspark-sql> set spark.sql.session.timeZone=UTC;\r\nspark.sql.session.timeZone\tUTC\r\nspark-sql> SELECT from_unixtime(0, 'yyyy-MM-dd HH:mm:ssXXX');\r\n1970-01-01 00:00:00Z\r\n```",
+        "createdAt" : "2019-09-26T16:25:37Z",
+        "updatedAt" : "2019-09-27T05:51:10Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "74910772-3b92-488f-abf9-15ffac47fdd6",
+        "parentId" : "6e2ee82e-d8a3-4430-9d7f-fe324cc9f228",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Ya. The timezone issue will make a failure on different timezone machines.",
+        "createdAt" : "2019-09-26T16:29:18Z",
+        "updatedAt" : "2019-09-27T05:51:10Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "be2c070b-2f6c-405f-ac27-c5fbda9bcc07",
+        "parentId" : "6e2ee82e-d8a3-4430-9d7f-fe324cc9f228",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "but the time zone is forcibly set to `\"America/Los_Angeles\"` in tests:\r\nhttps://github.com/apache/spark/blob/97dc4c0bfc3a15d364a376c6f87cb921d8d6980d/sql/core/src/test/scala/org/apache/spark/sql/QueryTest.scala#L36\r\nhttps://github.com/apache/spark/blob/a1213d5f963f6e8815bbfaff308b0a24112fff54/sql/catalyst/src/main/scala/org/apache/spark/sql/internal/SQLConf.scala#L1384",
+        "createdAt" : "2019-09-26T18:25:26Z",
+        "updatedAt" : "2019-09-27T05:51:10Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "cee6709d24c41ebd1c17bad4b2acd26b24d67d08",
+    "line" : 14,
+    "diffHunk" : "@@ -1,1 +843,847 @@    Examples:\n      > SELECT _FUNC_(0, 'yyyy-MM-dd HH:mm:ss');\n       1969-12-31 16:00:00\n  \"\"\",\n  since = \"1.5.0\")"
   }
 ]

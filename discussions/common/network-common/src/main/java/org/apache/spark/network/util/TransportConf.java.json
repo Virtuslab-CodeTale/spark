@@ -196,5 +196,203 @@
     "commit" : "a3d399c4064f045158181186fd16af8245b3e299",
     "line" : 7,
     "diffHunk" : "@@ -1,1 +110,114 @@\n  /**\n   * Requested maximum length of the queue of incoming connections. If  &lt; 1,\n   * the default Netty value of {@link io.netty.util.NetUtil#SOMAXCONN} will be used.\n   * Default to -1."
+  },
+  {
+    "id" : "fcd75641-f314-49be-93ea-615b5fe4a938",
+    "prId" : 25907,
+    "prUrl" : "https://github.com/apache/spark/pull/25907#pullrequestreview-293373961",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "6755d112-d4c0-4dd0-a023-e981bb704c9f",
+        "parentId" : null,
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "ratio to me makes it sound like this is a float/double configuration, you are getting this as an Int.  And the way we define this it either needs to be double/float or back to a percent.  \r\nwe have a config for # server threads and this config has to apply to that. ",
+        "createdAt" : "2019-09-25T14:06:41Z",
+        "updatedAt" : "2019-09-25T14:36:46Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "63f50e36-46a3-4956-8e71-e4d6f5b35be4",
+        "parentId" : "6755d112-d4c0-4dd0-a023-e981bb704c9f",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "The thing this patches attempts to do is to guarantee the # server threads is a multiple of the # chunk fetch handler threads. Using the percent approach, it's tricky to configure things correctly, as discussed in the jira ticket.\r\n\r\nThe ratio parameter could probably use a better name. However, to make the chunk fetch handler EventLoopGroup truly eliminate the RPC message timeout issue, the condition of # server_threads = # chunk_fetch_handler_threads * int_ratio needs to be satisfied.\r\n\r\nThis would mean that we cannot directly use the user configured # server threads if it cannot be divided by the int_ratio. That's why the change to serverThreads() is introduced below.",
+        "createdAt" : "2019-09-25T19:21:27Z",
+        "updatedAt" : "2019-09-25T19:21:27Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "47d7e6b3-0525-44be-822f-6aa631bb8460",
+        "parentId" : "6755d112-d4c0-4dd0-a023-e981bb704c9f",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "I think we need to be more clear on the comment.  I realize you have the jira linked, but I think we should say here that this is the divisor or multiplier (depending on phrasing) and that we change the number server threads to make it a multiple based on this config.  The user may find it weird that they explicitly set server threads = 9 and then we change that to 10 based on this multiple.\r\nSo I think the comment needs to be very clear on the results they get.",
+        "createdAt" : "2019-09-25T21:25:53Z",
+        "updatedAt" : "2019-09-25T21:25:53Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a05b3605507aa7a7e7ce8eaa25f4d1519901122d",
+    "line" : 7,
+    "diffHunk" : "@@ -1,1 +113,117 @@\n  /**\n   * The configured ratio between number of server threads and number of chunk fetch handler\n   * threads. Default to 1, which sets the size of both thread pools to be equal. Number of\n   * server threads needs to be a multiple of this ratio. See SPARK-29206."
+  },
+  {
+    "id" : "9ea9626d-8a3b-41a8-bf45-dcf01bf222e6",
+    "prId" : 25907,
+    "prUrl" : "https://github.com/apache/spark/pull/25907#pullrequestreview-294634785",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "50646689-7cbd-4636-8ef7-a51d36dea58d",
+        "parentId" : null,
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "This logic  seems wrong. like I said above the Ratio is an int.\r\nIs also doesn't work with the default configuredServerThreads being 0.  0/X = 0\r\nIf we are leaving the configs like they were before you don't need to change serverThreads. That is what user configured or default and then the ratio/percent fetch handler config applies to that.",
+        "createdAt" : "2019-09-25T14:18:02Z",
+        "updatedAt" : "2019-09-25T14:36:46Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "7fad889d-d535-4809-83f2-4979faf40dd9",
+        "parentId" : "50646689-7cbd-4636-8ef7-a51d36dea58d",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "If we leave the config like before, user could configure serverThreads as 9, and the percent as 50%. It would then use 9 server threads and 5 chunk fetch handler threads. Since 9 is not a multiple of 5, with this config we might experience RPC message timeout issue again.\r\n\r\nWith the ratio config, user could configure serverThreads as 9 and ratio as 2. Then, with this patch, we would configure 10 server threads and 5 chunk fetch handler threads. This would guarantee to avoid the issue we saw.\r\n\r\nIt still works with the default case as serverThreads() will still return 0 here. The # chunk fetch handler threads will then be configured as 2 * # cores, same as the number of server threads. This is the same as the current behavior.",
+        "createdAt" : "2019-09-25T19:26:30Z",
+        "updatedAt" : "2019-09-25T19:26:30Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "93d737e7-9e81-48eb-b606-521171ae2004",
+        "parentId" : "50646689-7cbd-4636-8ef7-a51d36dea58d",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "right the server threads stay 0 but the chunk fetcher threads stays 0 as well, that is different than the previous config, which would still take 2*availablecores * chunkFetchHandlerThreadsPercent/100.\r\nso this requires you to set server threads for the config to work whereas previously it didn't. I would like to keep the behavior of it applying even if don't explicitly set server threads.\r\n\r\nthe logic here also still seems wrong but maybe I'm still missing what your config is.\r\n\r\nI configure server threads to 10 and thread ratio to 2. \r\n(int) Math.ceil(configuredServerThreads / (chunkFetchHandlerThreadsRatio * 1.0)) = 5 server threads which is not close to what I set the config to (10).  I would have expected server threads to stay 10 and the chunk fetch handler threads to be 5.  You are missing a multiply back by chunkFetchHandlerThreadsRatio.",
+        "createdAt" : "2019-09-25T21:20:39Z",
+        "updatedAt" : "2019-09-25T21:20:39Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c8a91edb-a45a-40d0-a148-8eaea63e0726",
+        "parentId" : "50646689-7cbd-4636-8ef7-a51d36dea58d",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "If the server threads is 0, the logic in this patch would configure the number of chunk fetch handler threads to be 2 * # cores. The current default behavior would set server threads to 2 * # cores and set the percent to 100%. So the number of chunk fetch handler threads is also 2 * # cores.\r\n\r\nLine 362-363 in this patch:\r\nreturn this.serverThreads() > 0 ? this.serverThreads() / chunkFetchHandlerThreadsRatio :\r\n    2 * NettyRuntime.availableProcessors();",
+        "createdAt" : "2019-09-25T21:31:34Z",
+        "updatedAt" : "2019-09-25T21:31:34Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "cf83ecd8-c255-44f9-ab01-758d3afd2932",
+        "parentId" : "50646689-7cbd-4636-8ef7-a51d36dea58d",
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "I understand and agree if you don't set anything then the default is the same, but In the existing code before this change, if I don't set server threads and I set spark.shuffle.server.chunkFetchHandlerThreadsPercent=80, then the code below will apply it: (assume available processors =16)\r\n\r\n (logic below in line 337-341):\r\n\r\nint chunkFetchHandlerThreadsPercent = 80\r\nint threads = 2 * NettyRuntime.availableProcessors(); = 32\r\nreturn (int) Math.ceil(threads * (chunkFetchHandlerThreadsPercent / 100.0)); = 26\r\n\r\nthus chunk fetcher threads is 26 and server threads is 32. Your patch here doesn't keep similar behavior. The only way for the config spark.shuffle.server.chunkFetchHandlerThreadsRatio to apply is by also setting the server threads explicitly.\r\n\r\nAgain you also need to fix your rounding code above, you are missing the multiply.",
+        "createdAt" : "2019-09-26T14:57:23Z",
+        "updatedAt" : "2019-09-26T14:57:23Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "525d8315-4f05-44b7-8b91-9db94e8d326b",
+        "parentId" : "50646689-7cbd-4636-8ef7-a51d36dea58d",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "The reason for not applying spark.shuffle.server.chunkFetchHandlerThreadsRatio when server threads is not explicitly configured is because the behavior to set # server threads to 2 * cores is inside Netty. We cannot guarantee 2 * cores can be divided by the int_ratio or multiplier for a better name, unless we also overwrite the # server threads when it's not configured.\r\n\r\nI was previously thinking maybe the default behavior of server threads being 2 * cores should be preserved, but I think you are right in that if spark.shuffle.server.chunkFetchHandlerThreadsRatio is configured, it should be honored.",
+        "createdAt" : "2019-09-28T12:20:26Z",
+        "updatedAt" : "2019-09-28T12:20:26Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a05b3605507aa7a7e7ce8eaa25f4d1519901122d",
+    "line" : 25,
+    "diffHunk" : "@@ -1,1 +131,135 @@    if (this.getModuleName().equalsIgnoreCase(\"shuffle\")) {\n      int chunkFetchHandlerThreadsRatio = getChunkFetchHandlerThreadsRatio();\n      return (int) Math.ceil(configuredServerThreads / (chunkFetchHandlerThreadsRatio * 1.0));\n    } else {\n      return configuredServerThreads;"
+  },
+  {
+    "id" : "8168dd1a-3cb7-4152-9141-042de097e337",
+    "prId" : 25907,
+    "prUrl" : "https://github.com/apache/spark/pull/25907#pullrequestreview-294998166",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "99d5a58e-6b19-47f2-912d-aade172a0bc9",
+        "parentId" : null,
+        "authorId" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "body" : "ok this makes a bit more sense but it doesn't work with the above logic..\r\n9/2 = 4  and server threads ends up with same value, you need one or the other.",
+        "createdAt" : "2019-09-25T14:24:03Z",
+        "updatedAt" : "2019-09-25T14:36:46Z",
+        "lastEditedBy" : "bea80117-7be3-4703-8d54-02b7bf73632c",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d462265c-7daf-486a-9d45-69be21f1cc91",
+        "parentId" : "99d5a58e-6b19-47f2-912d-aade172a0bc9",
+        "authorId" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "body" : "It won't be 9/2, it would be 10/2.\r\nthis.serverThreads will change the configured 9 server threads to 10 to make sure it can be divided by the int ratio.",
+        "createdAt" : "2019-09-25T19:28:05Z",
+        "updatedAt" : "2019-09-25T19:28:05Z",
+        "lastEditedBy" : "15ef9b5b-1583-47d9-b883-14ebfd23a00a",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "76992cc0-6838-4fd7-b8fa-4956ad1153a5",
+        "parentId" : "99d5a58e-6b19-47f2-912d-aade172a0bc9",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "In the calculation of `chunkFetchHandlerThreads()` the `chunkFetchHandlerThreadsRatio` is applied twice (once within the  serverThreads def) which gives quite a few choices and with quite low values for `chunkFetchHandlerThreads`. For example let's see the case where the availableProcessors is 16 and depending on the value of SPARK_NETWORK_IO_SERVERTHREADS_KEY we got the followings:\r\n\r\nSPARK_NETWORK_IO_SERVERTHREADS_KEY = 0\r\n\r\nchunkFetchHandlerThreadsRatio |  serverThreads() | chunkFetchHandlerThreads()\r\n------|-------------|----------------| \r\n1   |     0       |   32           |\r\n2   |     0       |   32           |\r\n3   |     0       |   32           |\r\n4   |     0       |   32           |\r\n5   |     0       |   32           |\r\n\r\n*So in this case ratio ha no effect at all.* The `chunkFetchHandlerThreads` is always the double of the available processors.\r\n\r\nSPARK_NETWORK_IO_SERVERTHREADS_KEY = 4 \r\n\r\nchunkFetchHandlerThreadsRatio |  serverThreads() | chunkFetchHandlerThreads()\r\n------|-------------|----------------| \r\n1   |     4       |   4           |\r\n2   |     2       |   1           |\r\n3   |     2       |   0           |\r\n4   |     1       |   0           |\r\n5   |     1       |   0           |\r\n\r\n\r\nSPARK_NETWORK_IO_SERVERTHREADS_KEY = 8\r\n\r\nchunkFetchHandlerThreadsRatio |  serverThreads() | chunkFetchHandlerThreads()\r\n------|-------------|----------------| \r\n1   |     8       |   8           |\r\n2   |     4       |   2           |\r\n3   |     3       |   1           |\r\n4   |     2       |   0           |\r\n5   |     2       |   0           |\r\n\r\n\r\n## Before this change \r\n\r\nFor comparisation here are the values for the different `chunkFetchHandlerThreadsPercent`:\r\n\r\nSPARK_NETWORK_IO_SERVERTHREADS_KEY = 0\r\n\r\nchunkFetchHandlerThreadsPercent |  serverThreads() | chunkFetchHandlerThreads()\r\n------|-------------|----------------| \r\n25%   |     0       |   8            |\r\n50%   |     0       |   16           |\r\n75%   |     0       |   24           |\r\n100%  |     0       |   32           |\r\n\r\n\r\nSPARK_NETWORK_IO_SERVERTHREADS_KEY = 4\r\n\r\nchunkFetchHandlerThreadsPercent |  serverThreads() | chunkFetchHandlerThreads()\r\n------|-------------|----------------| \r\n25%   |     4       |   1           |\r\n50%   |     4       |   2           |\r\n75%   |     4       |   3           |\r\n100%  |     4       |   4           |\r\n\r\nSPARK_NETWORK_IO_SERVERTHREADS_KEY = 8\r\n\r\nchunkFetchHandlerThreadsPercent |  serverThreads() | chunkFetchHandlerThreads()\r\n------|-------------|----------------| \r\n25%   |     8       |   2           |\r\n50%   |     8       |   4           |\r\n75%   |     8       |   6           |\r\n100%  |     8       |   8           |\r\n\r\n \r\n\r\n ",
+        "createdAt" : "2019-09-30T13:52:52Z",
+        "updatedAt" : "2019-09-30T13:53:01Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "385c676f-b53e-4bbb-9f78-1e1e852777b9",
+        "parentId" : "99d5a58e-6b19-47f2-912d-aade172a0bc9",
+        "authorId" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "body" : "The other problem I see regarding this when `chunkFetchHandlerThreads` reaches 0 then it is handled as 2x#cores by Netty which is greater than `serverThreads` for those cases. \r\n\r\nWhat about setting `chunkFetchHandlerThreads` to 1 in that case?",
+        "createdAt" : "2019-09-30T14:04:20Z",
+        "updatedAt" : "2019-09-30T14:55:14Z",
+        "lastEditedBy" : "123cc67f-f678-49be-8742-95bc35d8c5c4",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a05b3605507aa7a7e7ce8eaa25f4d1519901122d",
+    "line" : 75,
+    "diffHunk" : "@@ -1,1 +360,364 @@    }\n    int chunkFetchHandlerThreadsRatio = getChunkFetchHandlerThreadsRatio();\n    return this.serverThreads() > 0 ? this.serverThreads() / chunkFetchHandlerThreadsRatio :\n        2 * NettyRuntime.availableProcessors();\n  }"
+  },
+  {
+    "id" : "ca48dbc9-5343-4dd1-bd33-2c7d6778d910",
+    "prId" : 25907,
+    "prUrl" : "https://github.com/apache/spark/pull/25907#pullrequestreview-297690379",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "fe15635d-e136-4251-85c4-73c5208046eb",
+        "parentId" : null,
+        "authorId" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "body" : "This removes an existing setting and introduces a new one (which would need to use the new config system anyway). Why not simply round up the user's configured number to the next multiple? That's kind of what happens here anyway. Why do we need them to specify this differently?",
+        "createdAt" : "2019-10-04T20:02:59Z",
+        "updatedAt" : "2019-10-04T20:03:00Z",
+        "lastEditedBy" : "707cf6e1-750c-4aea-8774-f79c13fb7add",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "a05b3605507aa7a7e7ce8eaa25f4d1519901122d",
+    "line" : 12,
+    "diffHunk" : "@@ -1,1 +118,122 @@   */\n  private int getChunkFetchHandlerThreadsRatio() {\n    return conf.getInt(\"spark.shuffle.server.chunkFetchHandlerThreadsRatio\", 1);\n  }\n"
   }
 ]

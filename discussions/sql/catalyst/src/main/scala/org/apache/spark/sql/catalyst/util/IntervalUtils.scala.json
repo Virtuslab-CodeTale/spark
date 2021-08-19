@@ -1373,5 +1373,93 @@
     "commit" : "2f901894eb24d7deec31947708b9afdaae2a4866",
     "line" : 23,
     "diffHunk" : "@@ -1,1 +94,98 @@    result += DateTimeUtils.MICROS_PER_DAY * interval.days\n    result += MICROS_PER_YEAR * (interval.months / MONTHS_PER_YEAR)\n    result += MICROS_PER_MONTH * (interval.months % MONTHS_PER_YEAR)\n    Decimal(result, 18, 6)\n  }"
+  },
+  {
+    "id" : "8939cad9-075f-43c2-9e24-16a830c7e791",
+    "prId" : 25981,
+    "prUrl" : "https://github.com/apache/spark/pull/25981#pullrequestreview-295896423",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ce03f348-ba9f-4427-9271-014767506c0c",
+        "parentId" : null,
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "This is from https://github.com/postgres/postgres/blob/97c39498e5ca9208d3de5a443a2282923619bf91/src/include/datatype/timestamp.h#L68",
+        "createdAt" : "2019-09-30T19:01:28Z",
+        "updatedAt" : "2019-10-18T07:28:33Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "60fbb391-1aa3-47d4-af78-db8f41a53911",
+        "parentId" : "ce03f348-ba9f-4427-9271-014767506c0c",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "Is this consistent with Spark's existing behavior, too?",
+        "createdAt" : "2019-10-01T03:44:51Z",
+        "updatedAt" : "2019-10-18T07:28:33Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "a152e39f-9cef-4dff-b209-64aedf63e6a5",
+        "parentId" : "ce03f348-ba9f-4427-9271-014767506c0c",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "We have the hard-coded `31` days per month in one place: https://github.com/apache/spark/blob/051e691029c456fc2db5f229485d3fb8f5d0e84c/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/util/DateTimeUtils.scala#L614 which looks much more strange than `365.25 days per year`.",
+        "createdAt" : "2019-10-01T05:14:38Z",
+        "updatedAt" : "2019-10-18T07:28:33Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "e4758b6f-1dba-434c-bbf6-697bb8c4d259",
+        "parentId" : "ce03f348-ba9f-4427-9271-014767506c0c",
+        "authorId" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "body" : "What I mean is the possibility of returning different values in a single Apache Spark version. We don't want to see the inconsistency between functions.",
+        "createdAt" : "2019-10-01T18:22:10Z",
+        "updatedAt" : "2019-10-18T07:28:33Z",
+        "lastEditedBy" : "7694af3d-5af2-4788-8413-c0558915c452",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "80189c10-c92d-4e0c-bbb6-17cb0da4ed52",
+        "parentId" : "ce03f348-ba9f-4427-9271-014767506c0c",
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "Probably, such inconsistency exists on exotic examples because of `monthsBetween` assumes 31 days per months and new functions `getEpoch()` assumes 365.25 / 12 = 30.4375 but on regular examples like:\r\n```sql\r\nspark-sql> select date_part('epoch', '2019-10-01');\r\n1569888000\r\nspark-sql> select months_between('2019-10-01', '1970-01-01');\r\n597.0\r\nspark-sql> select timestamp'1970-01-01 00:00:00' + cast('interval 1569888000 seconds' as interval) - cast('interval 597 months' as interval);\r\n1970-01-01 00:00:00\r\n```\r\nbehavior looks consistent.",
+        "createdAt" : "2019-10-01T21:11:06Z",
+        "updatedAt" : "2019-10-18T07:28:33Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5620472a26f57590f2d5a67b24b5295980641f1c",
+    "line" : 33,
+    "diffHunk" : "@@ -1,1 +31,35 @@  val DAYS_PER_MONTH: Byte = 30\n  val MICROS_PER_MONTH: Long = DAYS_PER_MONTH * DateTimeUtils.SECONDS_PER_DAY\n  /* 365.25 days per year assumes leap year every four years */\n  val MICROS_PER_YEAR: Long = (36525L * DateTimeUtils.MICROS_PER_DAY) / 100\n"
+  },
+  {
+    "id" : "6c2b0ca0-8f92-4f1a-a96f-9543af5b935e",
+    "prId" : 25981,
+    "prUrl" : "https://github.com/apache/spark/pull/25981#pullrequestreview-297859786",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "e1fa6d3c-c669-4a93-a50b-8accf7e48958",
+        "parentId" : null,
+        "authorId" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "body" : "This implemented as in PostgreSQL https://github.com/postgres/postgres/blob/bffe1bd68457e43925c362d8728ce3b25bdf1c94/src/backend/utils/adt/timestamp.c#L5016-L5022",
+        "createdAt" : "2019-10-06T20:47:58Z",
+        "updatedAt" : "2019-10-18T07:28:33Z",
+        "lastEditedBy" : "5c8bf89e-8bb3-4151-8b92-286da26c827e",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "5620472a26f57590f2d5a67b24b5295980641f1c",
+    "line" : 85,
+    "diffHunk" : "@@ -1,1 +83,87 @@\n  // Returns total number of seconds with microseconds fractional part in the given interval.\n  def getEpoch(interval: CalendarInterval): Decimal = {\n    var result = interval.microseconds\n    result += MICROS_PER_YEAR * (interval.months / MONTHS_PER_YEAR)"
   }
 ]

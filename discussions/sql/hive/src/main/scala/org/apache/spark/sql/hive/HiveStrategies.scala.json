@@ -152,5 +152,104 @@
     "commit" : "c5297d48fce32b584718c04b85dd06a293bc2c2b",
     "line" : 6,
     "diffHunk" : "@@ -1,1 +141,145 @@    case relation: HiveTableRelation\n      if DDLUtils.isHiveTable(relation.tableMeta) && relation.tableMeta.stats.isEmpty &&\n        !RelationConversions.isConvertible(relation) =>\n      hiveTableWithStats(relation)\n"
+  },
+  {
+    "id" : "258f396a-04dc-4b65-a5d7-2587e2e6fc8d",
+    "prId" : 25919,
+    "prUrl" : "https://github.com/apache/spark/pull/25919#pullrequestreview-294676175",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "695fc7f3-49d4-4b30-b150-dbc412e17369",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "so we list partitions here just to get statistic, and we will list partitions again at runtime?",
+        "createdAt" : "2019-09-24T16:42:33Z",
+        "updatedAt" : "2019-10-26T04:14:03Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d55538e2-2de8-4032-a642-6784820336bd",
+        "parentId" : "695fc7f3-49d4-4b30-b150-dbc412e17369",
+        "authorId" : "8e87861a-4202-49a2-baf7-6d51f6aaa5a2",
+        "body" : "Currently, yes. And I didn't find an easy way to avoid the list partitions operation.",
+        "createdAt" : "2019-09-25T02:23:57Z",
+        "updatedAt" : "2019-10-26T04:14:03Z",
+        "lastEditedBy" : "8e87861a-4202-49a2-baf7-6d51f6aaa5a2",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "3c869164-89df-4cdd-ac37-b9fda5610327",
+        "parentId" : "695fc7f3-49d4-4b30-b150-dbc412e17369",
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Then this may make the performance worse. How about we keep the listed partitions in `HiveTableRelation`?\r\n\r\n",
+        "createdAt" : "2019-09-26T06:08:20Z",
+        "updatedAt" : "2019-10-26T04:14:03Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "d7c9050a-7a2d-483e-99a7-b3b36b5aaa4e",
+        "parentId" : "695fc7f3-49d4-4b30-b150-dbc412e17369",
+        "authorId" : "8e87861a-4202-49a2-baf7-6d51f6aaa5a2",
+        "body" : "> How about we keep the listed partitions in HiveTableRelation?\r\n\r\nThis is a good one. However, we may have to add two fields: `pruningFilters: Seq[Expression]` and `prunedPartitions: Seq[CatalogTablePartition]`, and I believe they are complicating the `HiveTableRelation`. Another things is that `HiveTableRelation` might be copied multiple times, we may lost the `prunedPartitions` field by accident if not copied carefully. \r\n\r\nIf that's not the problem, storing listed partitions in `HiveTableRelation` is a good choice. \r\nWDYT @cloud-fan?",
+        "createdAt" : "2019-09-29T09:44:50Z",
+        "updatedAt" : "2019-10-26T04:14:03Z",
+        "lastEditedBy" : "8e87861a-4202-49a2-baf7-6d51f6aaa5a2",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ecfbe4d975aeee1da38240753c99a6927a8aa690",
+    "line" : 45,
+    "diffHunk" : "@@ -1,1 +255,259 @@      val conf = session.sessionState.conf\n      if (conf.metastorePartitionPruning && pruningPredicates.nonEmpty && !hasScalarSubquery) {\n        val prunedPartitions = session.sharedState.externalCatalog.listPartitionsByFilter(\n          relation.tableMeta.database,\n          relation.tableMeta.identifier.table,"
+  },
+  {
+    "id" : "4d39ed02-c85e-4989-b54e-083cd1d842a2",
+    "prId" : 25919,
+    "prUrl" : "https://github.com/apache/spark/pull/25919#pullrequestreview-325043885",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "ad900b90-cb75-4ae1-9bd2-dddf519a3ef1",
+        "parentId" : null,
+        "authorId" : "f06b291a-bc5c-4fd8-9bac-e5a6d035891b",
+        "body" : "It skips all subqueries instead of scalar subqueries.",
+        "createdAt" : "2019-12-02T06:59:11Z",
+        "updatedAt" : "2019-12-02T09:12:27Z",
+        "lastEditedBy" : "f06b291a-bc5c-4fd8-9bac-e5a6d035891b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ecfbe4d975aeee1da38240753c99a6927a8aa690",
+    "line" : 42,
+    "diffHunk" : "@@ -1,1 +252,256 @@      }\n      // SPARK-24085: scalar subquery should be skipped for partition pruning\n      val hasScalarSubquery = pruningPredicates.exists(SubqueryExpression.hasSubquery)\n      val conf = session.sessionState.conf\n      if (conf.metastorePartitionPruning && pruningPredicates.nonEmpty && !hasScalarSubquery) {"
+  },
+  {
+    "id" : "fe3f577d-60d9-4e35-af03-51eceabbbfe3",
+    "prId" : 25919,
+    "prUrl" : "https://github.com/apache/spark/pull/25919#pullrequestreview-325068410",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "9ab90a4e-6506-4350-a7ec-bfb92e0b7e73",
+        "parentId" : null,
+        "authorId" : "f06b291a-bc5c-4fd8-9bac-e5a6d035891b",
+        "body" : "Per the doc of the conf \"spark.sql.statistics.fallBackToHdfs\", it is only for non-partitioned hive table : \r\n\"This flag is effective only for non-partitioned Hive tables.\"",
+        "createdAt" : "2019-12-02T08:13:11Z",
+        "updatedAt" : "2019-12-02T08:13:11Z",
+        "lastEditedBy" : "f06b291a-bc5c-4fd8-9bac-e5a6d035891b",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "ecfbe4d975aeee1da38240753c99a6927a8aa690",
+    "line" : 58,
+    "diffHunk" : "@@ -1,1 +268,272 @@            } else if (totalSize.isDefined && totalSize.get > 0L) {\n              totalSize.get\n            } else if (conf.fallBackToHdfsForStatsEnabled) {\n              CommandUtils.calculateLocationSize(\n                session.sessionState, relation.tableMeta.identifier, part.storage.locationUri)"
   }
 ]

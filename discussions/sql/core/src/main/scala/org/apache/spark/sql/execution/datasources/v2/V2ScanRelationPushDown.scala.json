@@ -240,5 +240,82 @@
     "commit" : "782a0a827fbb1e60b8673d533cbda618df65dc96",
     "line" : 28,
     "diffHunk" : "@@ -1,1 +36,40 @@\n  override def apply(plan: LogicalPlan): LogicalPlan = plan transformDown {\n    case Aggregate(groupingExpressions, resultExpressions, child) =>\n      child match {\n        case ScanOperation(project, filters, relation: DataSourceV2Relation) =>"
+  },
+  {
+    "id" : "d8a20594-cf1c-4a96-986d-037ce07e26c7",
+    "prId" : 25955,
+    "prUrl" : "https://github.com/apache/spark/pull/25955#pullrequestreview-297206140",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "2ccb973a-a33f-4e86-b9c3-c7b92ca079b1",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "do we always need to create a `DataSourceV2ScanRelation` even if there is no filter/project above?",
+        "createdAt" : "2019-10-02T03:35:17Z",
+        "updatedAt" : "2019-10-30T18:21:04Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "2e292e9a-5610-43f2-b3b1-0b3551eb63ba",
+        "parentId" : "2ccb973a-a33f-4e86-b9c3-c7b92ca079b1",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "No, we don't need to. That would allow us to push down different filters later, after the \"dynamic\" predicate pushdown happens.",
+        "createdAt" : "2019-10-02T15:38:59Z",
+        "updatedAt" : "2019-10-30T18:21:04Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "98c6da9a-f6b9-44f1-b299-0ee54823af65",
+        "parentId" : "2ccb973a-a33f-4e86-b9c3-c7b92ca079b1",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "I implemented this, but I didn't push it because it would cause test failures when `computeStats` is called on the `DataSourceV2Relation`.\r\n\r\nBut, that raises another problem with not converting to a scan relation. If stats are used in the optimizer, we have to convert to scan relation to avoid planning the query splits twice. Otherwise, a scan is built for `computeStats` and then another scan is built when converting to the physical plan. Both may have to plan splits. So I think I'll leave this as it is to catch as many cases as possible.",
+        "createdAt" : "2019-10-03T23:40:11Z",
+        "updatedAt" : "2019-10-30T18:21:04Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c223e0537796c1e0a52bc5a655660f89ab539192",
+    "line" : 53,
+    "diffHunk" : "@@ -1,1 +51,55 @@         \"\"\".stripMargin)\n\n      val scanRelation = DataSourceV2ScanRelation(relation.table, scan, output)\n\n      val filterCondition = postScanFilters.reduceLeftOption(And)"
+  },
+  {
+    "id" : "9577e74b-133d-47e6-9a4f-c56d1c1c2673",
+    "prId" : 25955,
+    "prUrl" : "https://github.com/apache/spark/pull/25955#pullrequestreview-304682578",
+    "prSource" : "GitHub",
+    "comments" : [
+      {
+        "id" : "8ca07a53-edae-4373-ba47-aeac75bb0bb2",
+        "parentId" : null,
+        "authorId" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "body" : "Now we only do pushdown in this rule. Do we still need `PushDownUtils`?",
+        "createdAt" : "2019-10-21T11:56:23Z",
+        "updatedAt" : "2019-10-30T18:21:04Z",
+        "lastEditedBy" : "b1f2cebb-db23-4759-b446-886279d07e99",
+        "tags" : [
+        ]
+      },
+      {
+        "id" : "c7fe8768-7d94-494e-b147-e37f86142c44",
+        "parentId" : "8ca07a53-edae-4373-ba47-aeac75bb0bb2",
+        "authorId" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "body" : "I'd rather have this separated into utils than keep the methods embedded in the rule.",
+        "createdAt" : "2019-10-21T16:15:34Z",
+        "updatedAt" : "2019-10-30T18:21:04Z",
+        "lastEditedBy" : "0fc9f1bc-0097-451e-915f-52da69a366f3",
+        "tags" : [
+        ]
+      }
+    ],
+    "commit" : "c223e0537796c1e0a52bc5a655660f89ab539192",
+    "line" : 26,
+    "diffHunk" : "@@ -1,1 +24,28 @@import org.apache.spark.sql.execution.datasources.DataSourceStrategy\n\nobject V2ScanRelationPushDown extends Rule[LogicalPlan] {\n  import DataSourceV2Implicits._\n"
   }
 ]
